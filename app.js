@@ -35,6 +35,7 @@ const state = {
     username: "",
     isAdmin: false,
     intent: "register",
+    mobileAuthVisible: false,
     sessionCheckVersion: 0,
     resetToken: "",
     resetTokenStatus: "idle"
@@ -199,6 +200,7 @@ init();
 function init() {
   state.auth.resetToken = getResetTokenFromUrl();
   state.auth.resetTokenStatus = state.auth.resetToken ? "pending" : "idle";
+  state.auth.mobileAuthVisible = !isCompactAuthViewport() || Boolean(state.auth.resetToken);
   collapseAdminPanels();
   loadState();
   applyInitialDates();
@@ -348,6 +350,10 @@ function bindEvents() {
   ui.saveReplayBtn.addEventListener("click", saveReplayNotes);
 
   window.addEventListener("resize", debounce(() => {
+    if (!isCompactAuthViewport()) {
+      state.auth.mobileAuthVisible = true;
+    }
+    updateAuthUi();
     if (state.analytics) {
       renderCharts(state.analytics);
     }
@@ -422,6 +428,10 @@ function isMobileViewport() {
   return window.matchMedia("(max-width: 1024px)").matches;
 }
 
+function isCompactAuthViewport() {
+  return window.matchMedia("(max-width: 760px)").matches;
+}
+
 function toggleMobileNav(forceState) {
   if (!ui.sidebar || !ui.navToggleBtn || !isMobileViewport()) {
     return;
@@ -456,6 +466,7 @@ function setAuthIntent(intent, options = {}) {
   }
 
   state.auth.intent = intent;
+  state.auth.mobileAuthVisible = true;
   updateAuthUi();
 
   if (options.focus && !state.auth.isAuthenticated) {
@@ -511,11 +522,13 @@ async function validateResetToken() {
     if (!response.ok || !body.ok || !body.valid) {
       throw new Error(body.error || "Reset link is invalid or expired.");
     }
+    state.auth.mobileAuthVisible = true;
     state.auth.resetTokenStatus = "valid";
     updateAuthUi();
   } catch (error) {
     state.auth.resetToken = "";
     state.auth.resetTokenStatus = "invalid";
+    state.auth.mobileAuthVisible = true;
     setResetTokenInUrl("");
     updateAuthUi();
     setMessage(ui.authMessage, error.message || "Reset link is invalid or expired.", "error");
@@ -530,10 +543,6 @@ function updateAccessGate() {
   document.body.classList.toggle("auth-locked", locked);
   document.body.classList.toggle("auth-ready", state.auth.checked);
   document.body.classList.toggle("is-authenticated", authenticated);
-
-  if (ui.authPanel) {
-    ui.authPanel.hidden = authenticated;
-  }
 
   ui.navButtons.forEach((btn) => {
     btn.disabled = disableNavigation;
@@ -612,6 +621,7 @@ async function checkAuthSession() {
       state.auth.isAuthenticated = false;
       state.auth.username = "";
       state.auth.isAdmin = false;
+      state.auth.mobileAuthVisible = !isCompactAuthViewport() || Boolean(state.auth.resetToken);
     }
   } catch (error) {
     if (checkVersion !== state.auth.sessionCheckVersion) {
@@ -621,6 +631,7 @@ async function checkAuthSession() {
     state.auth.isAuthenticated = false;
     state.auth.username = "";
     state.auth.isAdmin = false;
+    state.auth.mobileAuthVisible = true;
     setMessage(ui.authMessage, "Auth service unavailable. Ensure PHP server and PostgreSQL are running.", "error");
   }
 
@@ -691,6 +702,7 @@ async function handleLogout() {
   state.auth.username = "";
   state.auth.isAdmin = false;
   state.auth.intent = "register";
+  state.auth.mobileAuthVisible = !isCompactAuthViewport();
   state.loginLogs = [];
   state.adminUsers = [];
   renderLoginLogs();
@@ -752,6 +764,12 @@ function updateAuthUi() {
   const isResetPending = hasResetToken && state.auth.resetTokenStatus === "pending";
   const isResetMode = hasResetToken && state.auth.resetTokenStatus === "valid";
   const loginMode = state.auth.intent === "login";
+  const collapseForCompactMobile =
+    !state.auth.isAuthenticated &&
+    isCompactAuthViewport() &&
+    !state.auth.mobileAuthVisible &&
+    !isResetMode &&
+    !isResetPending;
 
   if (ui.authTitle) {
     ui.authTitle.textContent = isResetMode
@@ -768,8 +786,8 @@ function updateAuthUi() {
       : isResetPending
         ? "Checking that your password reset link is still valid."
       : loginMode
-        ? "Use your username or email and password to continue."
-        : "Start with a username or email and a password. Your journal stays free.";
+        ? "Use your username or email to continue."
+        : "Start free with a username or email.";
   }
   if (ui.authPassword) {
     ui.authPassword.autocomplete = loginMode ? "current-password" : "new-password";
@@ -792,11 +810,15 @@ function updateAuthUi() {
   if (ui.forgotPasswordBtn) {
     ui.forgotPasswordBtn.hidden = isResetMode || isResetPending;
   }
+  if (ui.authShell) {
+    ui.authShell.classList.toggle("mobile-auth-expanded", !collapseForCompactMobile);
+    ui.authShell.classList.toggle("mobile-auth-collapsed", collapseForCompactMobile);
+  }
 
   if (!state.auth.checked) {
     ui.authStatus.textContent = isResetPending ? "Verifying reset link..." : "";
     if (ui.authPanel) {
-      ui.authPanel.hidden = false;
+      ui.authPanel.hidden = collapseForCompactMobile;
     }
     ui.desktopLogoutBtn.hidden = true;
     ui.mobileLogoutBtn.hidden = true;
@@ -838,7 +860,7 @@ function updateAuthUi() {
     ui.desktopLogoutBtn.hidden = true;
     ui.mobileLogoutBtn.hidden = true;
     if (ui.authPanel) {
-      ui.authPanel.hidden = false;
+      ui.authPanel.hidden = collapseForCompactMobile;
     }
     if (ui.authIdentifier) {
       ui.authIdentifier.disabled = false;
@@ -910,6 +932,7 @@ function clearResetTokenState(clearMessage = false) {
   state.auth.resetToken = "";
   state.auth.resetTokenStatus = "idle";
   state.auth.intent = "login";
+  state.auth.mobileAuthVisible = true;
   setResetTokenInUrl("");
   if (ui.resetPassword) {
     ui.resetPassword.value = "";

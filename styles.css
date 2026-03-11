@@ -114,8 +114,8 @@ body.is-authenticated .auth-shell {
 
 .auth-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 420px);
-  gap: 40px;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
+  gap: 30px;
   align-items: center;
   min-height: 62vh;
 }
@@ -124,7 +124,7 @@ body.is-authenticated .auth-shell {
   padding: 6px 8px 6px 0;
   animation: fadeUp 480ms ease;
   width: 100%;
-  max-width: 720px;
+  max-width: 680px;
 }
 
 .auth-hero-copy h2 {
@@ -214,8 +214,8 @@ body.is-authenticated .auth-shell {
 }
 
 .auth-panel {
-  justify-self: center;
-  width: min(100%, 410px);
+  justify-self: start;
+  width: min(100%, 440px);
   animation: fadeUp 620ms ease;
 }
 
@@ -379,8 +379,8 @@ h1 {
 .auth-copy {
   margin: 0;
   color: var(--text-soft);
-  font-size: 0.94rem;
-  line-height: 1.55;
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 #resetPasswordView {
@@ -416,13 +416,14 @@ h1 {
   padding: 0;
   border: 0;
   background: transparent;
-  color: #a9bbe1;
+  color: rgba(169, 187, 225, 0.8);
   cursor: pointer;
-  font: 600 0.83rem/1.4 "JetBrains Mono", "Consolas", monospace;
+  font: 500 0.76rem/1.35 "JetBrains Mono", "Consolas", monospace;
+  letter-spacing: 0.02em;
 }
 
 .auth-link-btn:hover {
-  color: #d9e8ff;
+  color: #c8dafd;
   text-decoration: underline;
 }
 
@@ -731,6 +732,25 @@ textarea:focus {
   outline: none;
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(87, 161, 255, 0.2);
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+  border: 1px solid rgba(107, 133, 191, 0.4);
+  box-shadow:
+    0 0 0 1000px rgba(7, 13, 26, 0.95) inset,
+    0 0 0 0 rgba(87, 161, 255, 0);
+  transition: background-color 9999s ease-out 0s;
+}
+
+input:-webkit-autofill:focus {
+  box-shadow:
+    0 0 0 1000px rgba(7, 13, 26, 0.95) inset,
+    0 0 0 3px rgba(87, 161, 255, 0.2);
 }
 
 .compact-form {
@@ -1330,8 +1350,28 @@ body.auth-locked .view {
   margin: 0;
 }
 
-.footer-donation + .footer-donation {
-  margin-top: 4px;
+.footer-support {
+  margin-top: 6px;
+}
+
+.footer-support summary {
+  cursor: pointer;
+  color: rgba(169, 187, 225, 0.86);
+  list-style: none;
+}
+
+.footer-support summary::-webkit-details-marker {
+  display: none;
+}
+
+.footer-support summary:hover {
+  color: #d5e5ff;
+}
+
+.footer-support-body {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
 }
 
 .site-footer code {
@@ -1738,7 +1778,7 @@ body.auth-locked .view {
   }
 
   .auth-hero-copy h2 {
-    font-size: clamp(2.1rem, 11vw, 3.3rem);
+    font-size: clamp(1.9rem, 9.8vw, 3rem);
     line-height: 1;
     letter-spacing: -0.045em;
   }
@@ -1763,6 +1803,11 @@ body.auth-locked .view {
   }
 
   .auth-proof-grid {
+    display: none;
+  }
+
+  .auth-shell.mobile-auth-expanded .hero-cta-row,
+  .auth-shell.mobile-auth-expanded .hero-cta-note {
     display: none;
   }
 
