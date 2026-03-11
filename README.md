@@ -51,3 +51,4 @@ PHP data will be stored at:
 # chester-trading-journal
 # chester-trading-journal
 # chester-trading-journal
+# chester-trading-journal
