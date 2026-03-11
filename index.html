@@ -20,11 +20,33 @@
 
       <div class="auth-hero">
         <section class="auth-hero-copy">
+          <div class="auth-hero-badges" aria-hidden="true">
+            <span>Trader Development</span>
+            <span>Execution Review</span>
+            <span>Discipline Tracking</span>
+          </div>
           <h2>Build the trading routine that compounds with you.</h2>
           <p class="auth-hero-text">
             Track your execution, review your discipline, and see your edge develop over time in one focused trading
             journal.
           </p>
+          <div class="auth-hero-stage" aria-hidden="true">
+            <article class="hero-stage-card hero-stage-card-main">
+              <p>Weekly Discipline</p>
+              <strong>86%</strong>
+              <span>3 clean sessions, 1 rule break, 12 reviewed trades</span>
+            </article>
+            <article class="hero-stage-card">
+              <p>Best Performing Asset</p>
+              <strong>XAUUSD</strong>
+              <span>4 trades, +2.8R, strongest execution score</span>
+            </article>
+            <article class="hero-stage-card">
+              <p>Current Focus</p>
+              <strong>Protect Drawdown</strong>
+              <span>Daily loss guardrails and reflection checkpoints active</span>
+            </article>
+          </div>
           <div class="auth-hero-metrics">
             <article>
               <strong>Calendar P&amp;L</strong>
@@ -36,7 +58,7 @@
             </article>
             <article>
               <strong>Secure Cloud Save</strong>
-              <span>Email-based login backed by PostgreSQL.</span>
+              <span>Username or email login backed by PostgreSQL.</span>
             </article>
           </div>
         </section>
@@ -45,13 +67,19 @@
           <p class="auth-title">Sign In To Your Journal</p>
           <p class="auth-status" id="authStatus">Checking session...</p>
           <p class="auth-copy">
-            Sign in with your email and password, or create a new account with the same email-based flow.
+            Sign in with your username or email and password, or create a new account using the same single field.
           </p>
 
           <div id="authControls">
             <label>
-              Email
-              <input id="authEmail" type="email" maxlength="190" placeholder="you@example.com" autocomplete="email" />
+              Username or Email
+              <input
+                id="authIdentifier"
+                type="text"
+                maxlength="190"
+                placeholder="username or you@example.com"
+                autocomplete="username"
+              />
             </label>
             <label>
               Password
@@ -61,16 +89,6 @@
                 maxlength="72"
                 placeholder="Minimum 8 characters"
                 autocomplete="current-password"
-              />
-            </label>
-            <label>
-              Confirm Password
-              <input
-                id="authPasswordConfirm"
-                type="password"
-                maxlength="72"
-                placeholder="Repeat for account creation"
-                autocomplete="new-password"
               />
             </label>
 

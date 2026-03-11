@@ -42,8 +42,8 @@ try {
 
     if ($action === 'register') {
         requireMethod('POST');
-        [$password, $email] = readCredentials(true);
-        $username = createUsernameFromEmail($pdo, $email);
+        [$identifier, $password, $email] = readCredentials(true);
+        $username = resolveRegistrationUsername($pdo, $identifier, $email);
 
         $hash = password_hash($password, PASSWORD_DEFAULT);
         if (!is_string($hash) || $hash === '') {
@@ -74,7 +74,7 @@ try {
             }
 
             if (isUniqueViolation($error)) {
-                respond(409, ['ok' => false, 'error' => 'Account already exists for that email.']);
+                respond(409, ['ok' => false, 'error' => 'Account already exists for that username or email.']);
             }
 
             throw $error;
@@ -89,8 +89,8 @@ try {
 
     if ($action === 'login') {
         requireMethod('POST');
-        [$password, $email] = readCredentials(false);
-        $username = $email;
+        [$identifier, $password] = readCredentials(false);
+        $username = $identifier;
 
         $user = findUserByIdentifier($pdo, $username);
         if ($user === null || !password_verify($password, $user['passwordHash'])) {
@@ -548,18 +548,27 @@ function requireMethod(string $method): void
 function readCredentials(bool $forRegister = false): array
 {
     $decoded = readJsonBody();
+    $identifierRaw = strtolower(trim((string) ($decoded['identifier'] ?? $decoded['email'] ?? $decoded['username'] ?? '')));
     $emailRaw = isset($decoded['email']) ? strtolower(trim((string) $decoded['email'])) : '';
     $password = isset($decoded['password']) ? (string) $decoded['password'] : '';
 
-    if ($emailRaw === '' || !filter_var($emailRaw, FILTER_VALIDATE_EMAIL)) {
-        respond(422, ['ok' => false, 'error' => 'Enter a valid email address.']);
+    if ($identifierRaw === '') {
+        respond(422, ['ok' => false, 'error' => 'Enter a username or email address.']);
     }
 
     if (strlen($password) < 8) {
         respond(422, ['ok' => false, 'error' => 'Password must be at least 8 characters.']);
     }
 
-    return [$password, $emailRaw];
+    if ($forRegister) {
+        if (filter_var($identifierRaw, FILTER_VALIDATE_EMAIL)) {
+            $emailRaw = $identifierRaw;
+        } elseif (!preg_match('/^[a-z0-9._-]{3,32}$/', $identifierRaw)) {
+            respond(422, ['ok' => false, 'error' => 'Username must be 3-32 chars or use a valid email address.']);
+        }
+    }
+
+    return [$identifierRaw, $password, $emailRaw];
 }
 
 function readJsonBody(): array
@@ -615,6 +624,15 @@ function createUsernameFromEmail(PDO $pdo, string $email): string
     }
 
     return $candidate;
+}
+
+function resolveRegistrationUsername(PDO $pdo, string $identifier, string $email): string
+{
+    if ($email !== '') {
+        return createUsernameFromEmail($pdo, $email);
+    }
+
+    return $identifier;
 }
 
 function ensurePasswordResetRequest(PDO $pdo, string $email): void

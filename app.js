@@ -65,9 +65,8 @@ const ui = {
   lastSaved: document.getElementById("lastSaved"),
   authStatus: document.getElementById("authStatus"),
   authMessage: document.getElementById("authMessage"),
-  authEmail: document.getElementById("authEmail"),
+  authIdentifier: document.getElementById("authIdentifier"),
   authPassword: document.getElementById("authPassword"),
-  authPasswordConfirm: document.getElementById("authPasswordConfirm"),
   loginBtn: document.getElementById("loginBtn"),
   registerBtn: document.getElementById("registerBtn"),
   forgotPasswordBtn: document.getElementById("forgotPasswordBtn"),
@@ -410,12 +409,11 @@ function updateAccessGate() {
 }
 
 function readAuthForm(forRegister = false) {
-  const email = (ui.authEmail?.value || "").trim().toLowerCase();
+  const identifier = (ui.authIdentifier?.value || "").trim().toLowerCase();
   const password = ui.authPassword?.value || "";
-  const passwordConfirm = ui.authPasswordConfirm?.value || "";
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { ok: false, error: "Enter a valid email address." };
+  if (!identifier) {
+    return { ok: false, error: "Enter a username or email address." };
   }
 
   if (password.length < 8) {
@@ -423,15 +421,14 @@ function readAuthForm(forRegister = false) {
   }
 
   if (forRegister) {
-    if (passwordConfirm.length < 8) {
-      return { ok: false, error: "Confirm your password to create an account." };
-    }
-    if (password !== passwordConfirm) {
-      return { ok: false, error: "Password and confirm password do not match." };
+    const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+    const validUsername = /^[a-zA-Z0-9._-]{3,32}$/.test(identifier);
+    if (!validEmail && !validUsername) {
+      return { ok: false, error: "Use a valid email address or a 3-32 character username." };
     }
   }
 
-  return { ok: true, email, password };
+  return { ok: true, identifier, password };
 }
 
 async function checkAuthSession() {
@@ -501,7 +498,7 @@ async function handleLogin() {
     return;
   }
 
-  await submitAuth("login", credentials.password, "Logged in.", credentials.email);
+  await submitAuth("login", credentials.password, "Logged in.", credentials.identifier);
 }
 
 async function handleRegister() {
@@ -511,7 +508,7 @@ async function handleRegister() {
     return;
   }
 
-  await submitAuth("register", credentials.password, "Account created and logged in.", credentials.email);
+  await submitAuth("register", credentials.password, "Account created and logged in.", credentials.identifier);
 }
 
 async function handleLogout() {
@@ -543,14 +540,14 @@ async function handleLogout() {
   setMessage(ui.authMessage, "Logged out.", "success");
 }
 
-async function submitAuth(action, password, successMessage, email = "") {
+async function submitAuth(action, password, successMessage, identifier = "") {
   state.auth.sessionCheckVersion += 1;
   try {
     const response = await fetch(`trade_handler.php?action=${action}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ identifier, password })
     });
     const body = await response.json();
     if (!response.ok || !body.ok) {
@@ -559,7 +556,7 @@ async function submitAuth(action, password, successMessage, email = "") {
 
     state.auth.checked = true;
     state.auth.isAuthenticated = true;
-    state.auth.username = String(body.username || email);
+    state.auth.username = String(body.username || identifier);
     state.auth.isAdmin = Boolean(body.isAdmin);
     updateAuthUi();
 
@@ -604,13 +601,9 @@ function updateAuthUi() {
       ? `Logged in as ${state.auth.username} (Admin)`
       : `Logged in as ${state.auth.username}`;
     ui.authStatus.classList.add("is-on");
-    if (ui.authEmail) {
-      ui.authEmail.value = "";
-      ui.authEmail.disabled = true;
-    }
-    if (ui.authPasswordConfirm) {
-      ui.authPasswordConfirm.value = "";
-      ui.authPasswordConfirm.disabled = true;
+    if (ui.authIdentifier) {
+      ui.authIdentifier.value = "";
+      ui.authIdentifier.disabled = true;
     }
     ui.loginBtn.hidden = true;
     ui.registerBtn.hidden = true;
@@ -636,11 +629,8 @@ function updateAuthUi() {
     if (ui.authPanel) {
       ui.authPanel.hidden = false;
     }
-    if (ui.authEmail) {
-      ui.authEmail.disabled = false;
-    }
-    if (ui.authPasswordConfirm) {
-      ui.authPasswordConfirm.disabled = false;
+    if (ui.authIdentifier) {
+      ui.authIdentifier.disabled = false;
     }
     if (ui.authPassword) {
       ui.authPassword.disabled = false;
@@ -652,9 +642,9 @@ function updateAuthUi() {
 }
 
 async function handleForgotPassword() {
-  const email = (ui.authEmail?.value || "").trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    setMessage(ui.authMessage, "Enter your email address first.", "error");
+  const identifier = (ui.authIdentifier?.value || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
+    setMessage(ui.authMessage, "Enter the account email address first.", "error");
     return;
   }
 
@@ -663,7 +653,7 @@ async function handleForgotPassword() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ email: identifier })
     });
     const body = await response.json();
     if (!response.ok || !body.ok) {
