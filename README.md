@@ -49,3 +49,4 @@ PHP data will be stored at:
 - `Cmd/Ctrl + S` while on Trade Entry: save trade
 - `/` anywhere: jump to journal search filter
 # chester-trading-journal
+# chester-trading-journal
