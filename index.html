@@ -81,6 +81,7 @@
                 autocomplete="username"
               />
             </label>
+            <p class="auth-field-hint">Use your email if you want password recovery for this account.</p>
             <label>
               Password
               <input
@@ -96,6 +97,36 @@
               <button id="loginBtn" class="btn primary" type="button">Login</button>
               <button id="registerBtn" class="btn" type="button">Create Account</button>
               <button id="forgotPasswordBtn" class="btn" type="button">Forgot Password</button>
+            </div>
+          </div>
+
+          <div id="resetPasswordView" hidden>
+            <p class="auth-copy">
+              Set a new password for your account. Reset links expire automatically for security.
+            </p>
+            <label>
+              New Password
+              <input
+                id="resetPassword"
+                type="password"
+                maxlength="72"
+                placeholder="Minimum 8 characters"
+                autocomplete="new-password"
+              />
+            </label>
+            <label>
+              Confirm New Password
+              <input
+                id="resetPasswordConfirm"
+                type="password"
+                maxlength="72"
+                placeholder="Repeat your new password"
+                autocomplete="new-password"
+              />
+            </label>
+            <div class="form-actions auth-form-actions">
+              <button id="resetPasswordBtn" class="btn primary" type="button">Reset Password</button>
+              <button id="cancelResetBtn" class="btn" type="button">Back To Login</button>
             </div>
           </div>
 

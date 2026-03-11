@@ -115,8 +115,30 @@ try {
             respond(422, ['ok' => false, 'error' => 'Enter a valid email address.']);
         }
 
-        ensurePasswordResetRequest($pdo, $email);
-        respond(200, ['ok' => true, 'message' => 'If the email exists, a reset request has been recorded.']);
+        $resetUrl = ensurePasswordResetRequest($pdo, $email);
+        $message = 'If the email exists, a reset link has been sent.';
+        $payload = ['ok' => true, 'message' => $message];
+        if ($resetUrl !== null && shouldExposeResetUrl()) {
+            $payload['resetUrl'] = $resetUrl;
+        }
+        respond(200, $payload);
+    }
+
+    if ($action === 'reset_password') {
+        requireMethod('POST');
+        $decoded = readJsonBody();
+        $token = trim((string) ($decoded['token'] ?? ''));
+        $password = isset($decoded['password']) ? (string) $decoded['password'] : '';
+
+        if ($token === '') {
+            respond(422, ['ok' => false, 'error' => 'Reset token is required.']);
+        }
+        if (strlen($password) < 8) {
+            respond(422, ['ok' => false, 'error' => 'Password must be at least 8 characters.']);
+        }
+
+        resetPasswordWithToken($pdo, $token, $password);
+        respond(200, ['ok' => true, 'message' => 'Password updated. You can log in now.']);
     }
 
     if ($action === 'logout') {
@@ -325,7 +347,11 @@ function ensureSchema(PDO $pdo): void
         CREATE TABLE IF NOT EXISTS password_reset_requests (
             id BIGSERIAL PRIMARY KEY,
             email VARCHAR(190) NOT NULL,
-            requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            user_id BIGINT NULL REFERENCES journal_users(id) ON DELETE CASCADE,
+            token_hash VARCHAR(64) NULL,
+            requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            expires_at TIMESTAMPTZ NULL,
+            used_at TIMESTAMPTZ NULL
         )
         SQL
     );
@@ -392,6 +418,10 @@ function ensureSchema(PDO $pdo): void
     $pdo->exec('ALTER TABLE journal_users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(24) NOT NULL DEFAULT \'email\'');
     $pdo->exec('ALTER TABLE journal_users ADD COLUMN IF NOT EXISTS oauth_subject TEXT');
     $pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_users_email ON journal_users (email)');
+    $pdo->exec('ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS user_id BIGINT');
+    $pdo->exec('ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS token_hash VARCHAR(64)');
+    $pdo->exec('ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ');
+    $pdo->exec('ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS used_at TIMESTAMPTZ');
 
     $pdo->exec('ALTER TABLE trades ADD COLUMN IF NOT EXISTS user_id BIGINT');
     $pdo->exec('ALTER TABLE trades ADD COLUMN IF NOT EXISTS payload JSONB NOT NULL DEFAULT \'[]\'::jsonb');
@@ -441,6 +471,18 @@ function ensureSchema(PDO $pdo): void
         'trades',
         ['user_id'],
         'CREATE UNIQUE INDEX IF NOT EXISTS idx_trades_user_id ON trades (user_id)'
+    );
+    createIndexIfColumnsExist(
+        $pdo,
+        'password_reset_requests',
+        ['token_hash'],
+        'CREATE INDEX IF NOT EXISTS idx_password_reset_requests_token_hash ON password_reset_requests (token_hash)'
+    );
+    createIndexIfColumnsExist(
+        $pdo,
+        'password_reset_requests',
+        ['email', 'requested_at'],
+        'CREATE INDEX IF NOT EXISTS idx_password_reset_requests_email_requested ON password_reset_requests (email, requested_at DESC)'
     );
 }
 
@@ -635,12 +677,148 @@ function resolveRegistrationUsername(PDO $pdo, string $identifier, string $email
     return $identifier;
 }
 
-function ensurePasswordResetRequest(PDO $pdo, string $email): void
+function ensurePasswordResetRequest(PDO $pdo, string $email): ?string
 {
+    $user = findUserByIdentifier($pdo, $email);
+    if ($user === null || ($user['email'] ?? '') === '') {
+        return null;
+    }
+
+    $token = bin2hex(random_bytes(32));
+    $tokenHash = hash('sha256', $token);
+
     $stmt = $pdo->prepare(
-        'INSERT INTO password_reset_requests (email, requested_at) VALUES (:email, NOW())'
+        <<<SQL
+        INSERT INTO password_reset_requests (email, user_id, token_hash, requested_at, expires_at, used_at)
+        VALUES (:email, :user_id, :token_hash, NOW(), NOW() + INTERVAL '60 minutes', NULL)
+        SQL
     );
-    $stmt->execute([':email' => $email]);
+    $stmt->execute([
+        ':email' => $email,
+        ':user_id' => $user['id'],
+        ':token_hash' => $tokenHash,
+    ]);
+
+    $resetUrl = buildResetUrl($token);
+    sendPasswordResetEmail($email, $resetUrl, (string) $user['username']);
+
+    return $resetUrl;
+}
+
+function resetPasswordWithToken(PDO $pdo, string $token, string $password): void
+{
+    $tokenHash = hash('sha256', $token);
+    $stmt = $pdo->prepare(
+        <<<SQL
+        SELECT id, user_id
+        FROM password_reset_requests
+        WHERE token_hash = :token_hash
+          AND used_at IS NULL
+          AND expires_at IS NOT NULL
+          AND expires_at > NOW()
+        ORDER BY requested_at DESC
+        LIMIT 1
+        SQL
+    );
+    $stmt->execute([':token_hash' => $tokenHash]);
+    $row = $stmt->fetch();
+    if (!is_array($row)) {
+        respond(422, ['ok' => false, 'error' => 'Reset link is invalid or expired.']);
+    }
+
+    $hash = password_hash($password, PASSWORD_DEFAULT);
+    if (!is_string($hash) || $hash === '') {
+        respond(500, ['ok' => false, 'error' => 'Failed to secure password.']);
+    }
+
+    $pdo->beginTransaction();
+    try {
+        $updateUser = $pdo->prepare('UPDATE journal_users SET password_hash = :password_hash WHERE id = :user_id');
+        $updateUser->execute([
+            ':password_hash' => $hash,
+            ':user_id' => (int) $row['user_id'],
+        ]);
+
+        $markUsed = $pdo->prepare('UPDATE password_reset_requests SET used_at = NOW() WHERE id = :id');
+        $markUsed->execute([':id' => (int) $row['id']]);
+
+        $invalidateOthers = $pdo->prepare(
+            'UPDATE password_reset_requests SET used_at = NOW() WHERE user_id = :user_id AND used_at IS NULL AND id <> :id'
+        );
+        $invalidateOthers->execute([
+            ':user_id' => (int) $row['user_id'],
+            ':id' => (int) $row['id'],
+        ]);
+
+        $pdo->commit();
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $error;
+    }
+}
+
+function buildResetUrl(string $token): string
+{
+    $baseUrl = trim((string) getenv('APP_URL'));
+    if ($baseUrl === '') {
+        $railwayDomain = trim((string) getenv('RAILWAY_PUBLIC_DOMAIN'));
+        if ($railwayDomain !== '') {
+            $baseUrl = 'https://' . $railwayDomain;
+        }
+    }
+    if ($baseUrl === '') {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = trim((string) ($_SERVER['HTTP_HOST'] ?? ''));
+        $scriptName = trim((string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+        $dir = rtrim(str_replace('\\', '/', dirname($scriptName)), '/.');
+        if ($host !== '') {
+            $baseUrl = $scheme . '://' . $host . ($dir !== '' ? $dir : '');
+        }
+    }
+
+    if ($baseUrl === '') {
+        return '?reset=' . rawurlencode($token);
+    }
+
+    return rtrim($baseUrl, '/') . '/?reset=' . rawurlencode($token);
+}
+
+function sendPasswordResetEmail(string $email, string $resetUrl, string $username): void
+{
+    if (!function_exists('mail')) {
+        return;
+    }
+
+    $subject = 'Your Journal password reset';
+    $safeUsername = $username !== '' ? $username : 'trader';
+    $message = implode("\r\n", [
+        "Hello {$safeUsername},",
+        '',
+        'A password reset was requested for your Your Journal account.',
+        'Open the link below to set a new password:',
+        $resetUrl,
+        '',
+        'This link expires in 60 minutes.',
+        'If you did not request this, you can ignore this email.',
+    ]);
+
+    $fromAddress = trim((string) getenv('MAIL_FROM'));
+    $headers = [];
+    if ($fromAddress !== '') {
+        $headers[] = 'From: ' . $fromAddress;
+        $headers[] = 'Reply-To: ' . $fromAddress;
+    }
+    $headers[] = 'Content-Type: text/plain; charset=UTF-8';
+
+    @mail($email, $subject, $message, implode("\r\n", $headers));
+}
+
+function shouldExposeResetUrl(): bool
+{
+    $debug = strtolower(trim((string) getenv('APP_DEBUG')));
+    return in_array($debug, ['1', 'true', 'yes'], true);
 }
 
 function isAdminUsername(PDO $pdo, string $username): bool
@@ -928,7 +1106,7 @@ function encodeJsonForDb($value): string
 function sanitizeSettings(array $settings): array
 {
     return [
-        'journalName' => sanitizeJournalName($settings['journalName'] ?? 'Chester'),
+        'journalName' => sanitizeJournalName($settings['journalName'] ?? 'Your'),
         'startingBalance' => positiveNumber($settings['startingBalance'] ?? 10000, 10000),
         'balanceOverride' => nonNegativeNumber($settings['balanceOverride'] ?? 0, 0),
         'dailyMaxLoss' => nonNegativeNumber($settings['dailyMaxLoss'] ?? 300, 300),
@@ -947,7 +1125,7 @@ function sanitizeJournalName($value): string
     }
 
     if ($name === '') {
-        return 'Chester';
+        return 'Your';
     }
 
     if (function_exists('mb_substr')) {

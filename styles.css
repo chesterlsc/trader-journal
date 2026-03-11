@@ -451,6 +451,17 @@ h1 {
   line-height: 1.5;
 }
 
+.auth-field-hint {
+  margin: -4px 0 2px;
+  color: #8ea6d8;
+  font: 500 11px/1.45 "JetBrains Mono", "Consolas", monospace;
+}
+
+#resetPasswordView {
+  display: grid;
+  gap: 12px;
+}
+
 .auth-form-actions .btn {
   flex: 1 1 180px;
 }

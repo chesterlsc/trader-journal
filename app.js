@@ -34,7 +34,8 @@ const state = {
     isAuthenticated: false,
     username: "",
     isAdmin: false,
-    sessionCheckVersion: 0
+    sessionCheckVersion: 0,
+    resetToken: ""
   },
   serverSync: {
     timerId: null,
@@ -65,11 +66,17 @@ const ui = {
   lastSaved: document.getElementById("lastSaved"),
   authStatus: document.getElementById("authStatus"),
   authMessage: document.getElementById("authMessage"),
+  authControls: document.getElementById("authControls"),
   authIdentifier: document.getElementById("authIdentifier"),
   authPassword: document.getElementById("authPassword"),
   loginBtn: document.getElementById("loginBtn"),
   registerBtn: document.getElementById("registerBtn"),
   forgotPasswordBtn: document.getElementById("forgotPasswordBtn"),
+  resetPasswordView: document.getElementById("resetPasswordView"),
+  resetPassword: document.getElementById("resetPassword"),
+  resetPasswordConfirm: document.getElementById("resetPasswordConfirm"),
+  resetPasswordBtn: document.getElementById("resetPasswordBtn"),
+  cancelResetBtn: document.getElementById("cancelResetBtn"),
   desktopLogoutBtn: document.getElementById("desktopLogoutBtn"),
   mobileLogoutBtn: document.getElementById("mobileLogoutBtn"),
   metricNodes: Array.from(document.querySelectorAll("[data-metric]")),
@@ -180,6 +187,7 @@ const ui = {
 init();
 
 function init() {
+  state.auth.resetToken = getResetTokenFromUrl();
   loadState();
   applyInitialDates();
   hydrateRiskForm();
@@ -219,9 +227,26 @@ function bindEvents() {
       }
     });
   }
+  [ui.resetPassword, ui.resetPasswordConfirm].forEach((input) => {
+    if (!input) {
+      return;
+    }
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        handlePasswordReset();
+      }
+    });
+  });
 
   if (ui.forgotPasswordBtn) {
     ui.forgotPasswordBtn.addEventListener("click", handleForgotPassword);
+  }
+  if (ui.resetPasswordBtn) {
+    ui.resetPasswordBtn.addEventListener("click", handlePasswordReset);
+  }
+  if (ui.cancelResetBtn) {
+    ui.cancelResetBtn.addEventListener("click", () => clearResetTokenState(true));
   }
 
   if (ui.navToggleBtn) {
@@ -385,6 +410,29 @@ function canAccessApp() {
   return state.auth.checked && state.auth.isAuthenticated;
 }
 
+function getResetTokenFromUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return (params.get("reset") || "").trim();
+  } catch (error) {
+    return "";
+  }
+}
+
+function setResetTokenInUrl(token) {
+  try {
+    const nextUrl = new URL(window.location.href);
+    if (token) {
+      nextUrl.searchParams.set("reset", token);
+    } else {
+      nextUrl.searchParams.delete("reset");
+    }
+    window.history.replaceState({}, "", nextUrl.toString());
+  } catch (error) {
+    // Ignore URL updates when unavailable.
+  }
+}
+
 function updateAccessGate() {
   const locked = state.auth.checked && !state.auth.isAuthenticated;
   const disableNavigation = !canAccessApp();
@@ -429,6 +477,25 @@ function readAuthForm(forRegister = false) {
   }
 
   return { ok: true, identifier, password };
+}
+
+function readResetPasswordForm() {
+  const password = ui.resetPassword?.value || "";
+  const confirm = ui.resetPasswordConfirm?.value || "";
+
+  if (!state.auth.resetToken) {
+    return { ok: false, error: "Reset link is missing or invalid." };
+  }
+
+  if (password.length < 8) {
+    return { ok: false, error: "Password must be at least 8 characters." };
+  }
+
+  if (password !== confirm) {
+    return { ok: false, error: "Passwords do not match." };
+  }
+
+  return { ok: true, password };
 }
 
 async function checkAuthSession() {
@@ -558,6 +625,8 @@ async function submitAuth(action, password, successMessage, identifier = "") {
     state.auth.isAuthenticated = true;
     state.auth.username = String(body.username || identifier);
     state.auth.isAdmin = Boolean(body.isAdmin);
+    state.auth.resetToken = "";
+    setResetTokenInUrl("");
     updateAuthUi();
 
     const loaded = await loadFromPhpStorage({ silent: true, source: "auth", preferLocalIfServerEmpty: true });
@@ -583,9 +652,20 @@ function updateAuthUi() {
   }
 
   ui.authStatus.classList.remove("is-on", "is-off");
+  const isResetMode = Boolean(state.auth.resetToken) && !state.auth.isAuthenticated;
+
+  if (ui.authControls) {
+    ui.authControls.hidden = isResetMode;
+  }
+  if (ui.resetPasswordView) {
+    ui.resetPasswordView.hidden = !isResetMode;
+  }
+  if (ui.forgotPasswordBtn) {
+    ui.forgotPasswordBtn.hidden = isResetMode;
+  }
 
   if (!state.auth.checked) {
-    ui.authStatus.textContent = "Checking session...";
+    ui.authStatus.textContent = isResetMode ? "Reset your password" : "Checking session...";
     if (ui.authPanel) {
       ui.authPanel.hidden = false;
     }
@@ -619,11 +699,11 @@ function updateAuthUi() {
       ui.authPassword.value = "";
     }
   } else {
-    ui.authStatus.textContent = "Not logged in";
+    ui.authStatus.textContent = isResetMode ? "Reset your password" : "Not logged in";
     ui.authStatus.classList.add("is-off");
     state.auth.isAdmin = false;
-    ui.loginBtn.hidden = false;
-    ui.registerBtn.hidden = false;
+    ui.loginBtn.hidden = isResetMode;
+    ui.registerBtn.hidden = isResetMode;
     ui.desktopLogoutBtn.hidden = true;
     ui.mobileLogoutBtn.hidden = true;
     if (ui.authPanel) {
@@ -662,6 +742,50 @@ async function handleForgotPassword() {
     setMessage(ui.authMessage, body.message || "Reset request recorded.", "success");
   } catch (error) {
     setMessage(ui.authMessage, error.message || "Password reset request failed.", "error");
+  }
+}
+
+async function handlePasswordReset() {
+  const payload = readResetPasswordForm();
+  if (!payload.ok) {
+    setMessage(ui.authMessage, payload.error, "error");
+    return;
+  }
+
+  try {
+    const response = await fetch("trade_handler.php?action=reset_password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        token: state.auth.resetToken,
+        password: payload.password
+      })
+    });
+    const body = await response.json();
+    if (!response.ok || !body.ok) {
+      throw new Error(body.error || "Password reset failed.");
+    }
+
+    clearResetTokenState(false);
+    setMessage(ui.authMessage, body.message || "Password reset complete. You can log in now.", "success");
+  } catch (error) {
+    setMessage(ui.authMessage, error.message || "Password reset failed.", "error");
+  }
+}
+
+function clearResetTokenState(clearMessage = false) {
+  state.auth.resetToken = "";
+  setResetTokenInUrl("");
+  if (ui.resetPassword) {
+    ui.resetPassword.value = "";
+  }
+  if (ui.resetPasswordConfirm) {
+    ui.resetPasswordConfirm.value = "";
+  }
+  updateAuthUi();
+  if (clearMessage) {
+    setMessage(ui.authMessage, "", "");
   }
 }
 
