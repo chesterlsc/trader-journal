@@ -406,10 +406,6 @@ h1 {
   gap: 10px;
 }
 
-.sidebar-foot-actions {
-  display: flex;
-}
-
 .sidebar-foot p {
   margin: 0;
   font: 500 12px/1.4 "JetBrains Mono", "Consolas", monospace;
@@ -501,8 +497,50 @@ body.is-authenticated .auth-panel {
   display: none !important;
 }
 
+.desktop-nav {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(160deg, rgba(14, 24, 45, 0.94), rgba(9, 16, 30, 0.94));
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 18px;
+  z-index: 5;
+}
+
+.desktop-nav-links {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  gap: 10px;
+  flex: 1 1 auto;
+}
+
+.desktop-nav-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+}
+
+.nav-btn-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 10px 8px;
+  min-height: 46px;
+  white-space: nowrap;
+}
+
+.nav-btn-top:hover {
+  transform: translateY(-1px);
+}
+
 .nav-logout-desktop {
-  width: 100%;
+  min-width: 108px;
 }
 
 .nav-logout-mobile {
@@ -1117,6 +1155,7 @@ td {
   color: var(--text-soft);
 }
 
+body.auth-locked .desktop-nav,
 body.auth-locked .view {
   display: none !important;
 }
@@ -1161,6 +1200,16 @@ body.auth-locked .view {
   background: rgba(18, 29, 56, 0.88);
   color: #d7e8ff;
   word-break: break-all;
+}
+
+@media (min-width: 1025px) {
+  .desktop-nav {
+    display: flex;
+  }
+
+  .sidebar .main-nav {
+    display: none;
+  }
 }
 
 @media (max-width: 1300px) {
@@ -1237,6 +1286,10 @@ body.auth-locked .view {
     grid-template-columns: 1fr;
     width: min(100%, calc(100vw - 12px));
     margin: 8px auto 18px;
+  }
+
+  .desktop-nav {
+    display: none;
   }
 
   .sidebar {
@@ -1610,8 +1663,13 @@ body.auth-locked .view {
 }
 
 @media (max-width: 1180px) and (min-width: 1025px) {
-  .nav-btn {
-    font-size: 0.9rem;
+  .desktop-nav-links {
+    grid-template-columns: repeat(5, minmax(100px, 1fr));
+  }
+
+  .nav-btn-top {
+    font-size: 0.86rem;
+    padding: 9px 6px;
   }
 }
 
