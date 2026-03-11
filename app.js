@@ -1,0 +1,1786 @@
+"use strict";
+
+const STORAGE_KEYS = {
+  trades: "axiom_journal_trades_v1",
+  settings: "axiom_journal_settings_v1",
+  reflections: "axiom_journal_reflections_v1",
+  replay: "axiom_journal_replay_v1",
+  lastSaved: "axiom_journal_last_saved_v1"
+};
+
+const DEFAULT_SETTINGS = {
+  startingBalance: 10000,
+  balanceOverride: 0,
+  dailyMaxLoss: 300,
+  weeklyMaxLoss: 1000,
+  riskPerTrade: 1,
+  equityGoal: 15000
+};
+
+const state = {
+  trades: [],
+  settings: { ...DEFAULT_SETTINGS },
+  reflections: [],
+  replayNotes: {},
+  filters: {
+    dateFrom: "",
+    dateTo: "",
+    market: "all",
+    setup: "all",
+    timeframe: "all",
+    result: "all",
+    psychology: "all",
+    search: ""
+  },
+  analytics: null
+};
+
+const ui = {
+  sidebar: document.getElementById("sidebar"),
+  mainNav: document.getElementById("mainNav"),
+  navToggleBtn: document.getElementById("navToggleBtn"),
+  navButtons: Array.from(document.querySelectorAll(".nav-btn")),
+  views: Array.from(document.querySelectorAll(".view")),
+  lastSaved: document.getElementById("lastSaved"),
+  metricNodes: Array.from(document.querySelectorAll("[data-metric]")),
+  riskForm: document.getElementById("riskForm"),
+  riskFormMessage: document.getElementById("riskFormMessage"),
+  riskInputs: {
+    startingBalance: document.getElementById("startingBalance"),
+    balanceOverride: document.getElementById("balanceOverride"),
+    dailyMaxLoss: document.getElementById("dailyMaxLoss"),
+    weeklyMaxLoss: document.getElementById("weeklyMaxLoss"),
+    riskPerTrade: document.getElementById("riskPerTrade"),
+    equityGoal: document.getElementById("equityGoal")
+  },
+  disciplineScore: document.getElementById("disciplineScore"),
+  dailyTradingScore: document.getElementById("dailyTradingScore"),
+  goalProgress: document.getElementById("goalProgress"),
+  riskViolations: document.getElementById("riskViolations"),
+  edgeRows: document.getElementById("edgeRows"),
+  equityChart: document.getElementById("equityChart"),
+  drawdownChart: document.getElementById("drawdownChart"),
+  outcomeChart: document.getElementById("outcomeChart"),
+
+  tradeForm: document.getElementById("tradeForm"),
+  tradeSubmitBtn: document.getElementById("tradeSubmitBtn"),
+  tradeResetBtn: document.getElementById("tradeResetBtn"),
+  tradeFormMessage: document.getElementById("tradeFormMessage"),
+  tradeFields: {
+    tradeId: document.getElementById("tradeId"),
+    tradeDate: document.getElementById("tradeDate"),
+    session: document.getElementById("session"),
+    market: document.getElementById("market"),
+    asset: document.getElementById("asset"),
+    direction: document.getElementById("direction"),
+    entryPrice: document.getElementById("entryPrice"),
+    stopLoss: document.getElementById("stopLoss"),
+    takeProfit: document.getElementById("takeProfit"),
+    exitPrice: document.getElementById("exitPrice"),
+    riskPercent: document.getElementById("riskPercent"),
+    positionSize: document.getElementById("positionSize"),
+    tradeResult: document.getElementById("tradeResult"),
+    setupType: document.getElementById("setupType"),
+    timeframe: document.getElementById("timeframe"),
+    psychology: document.getElementById("psychology"),
+    executionQuality: document.getElementById("executionQuality"),
+    screenshot: document.getElementById("screenshot"),
+    screenshotData: document.getElementById("screenshotData"),
+    screenshotLabel: document.getElementById("screenshotLabel"),
+    screenshotPreview: document.getElementById("screenshotPreview"),
+    tradeNotes: document.getElementById("tradeNotes")
+  },
+
+  tradesBody: document.getElementById("tradesBody"),
+  journalMessage: document.getElementById("journalMessage"),
+  filters: {
+    dateFrom: document.getElementById("filterDateFrom"),
+    dateTo: document.getElementById("filterDateTo"),
+    market: document.getElementById("filterMarket"),
+    setup: document.getElementById("filterSetup"),
+    timeframe: document.getElementById("filterTimeframe"),
+    result: document.getElementById("filterResult"),
+    psychology: document.getElementById("filterPsychology"),
+    search: document.getElementById("filterSearch")
+  },
+  clearFiltersBtn: document.getElementById("clearFiltersBtn"),
+  exportCsvBtn: document.getElementById("exportCsvBtn"),
+  backupJsonBtn: document.getElementById("backupJsonBtn"),
+  importJsonBtn: document.getElementById("importJsonBtn"),
+  jsonImportInput: document.getElementById("jsonImportInput"),
+  savePhpBtn: document.getElementById("savePhpBtn"),
+  loadPhpBtn: document.getElementById("loadPhpBtn"),
+
+  reflectionForm: document.getElementById("reflectionForm"),
+  reflectionMessage: document.getElementById("reflectionMessage"),
+  reflectionsList: document.getElementById("reflectionsList"),
+
+  reviewMonth: document.getElementById("reviewMonth"),
+  monthlyNet: document.getElementById("monthlyNet"),
+  monthlyWinRate: document.getElementById("monthlyWinRate"),
+  monthlyTrades: document.getElementById("monthlyTrades"),
+  monthlyBestSetup: document.getElementById("monthlyBestSetup"),
+  replayNotes: document.getElementById("replayNotes"),
+  saveReplayBtn: document.getElementById("saveReplayBtn"),
+  replayMessage: document.getElementById("replayMessage")
+};
+
+init();
+
+function init() {
+  loadState();
+  applyInitialDates();
+  hydrateRiskForm();
+  hydrateReviewMonth();
+  bindEvents();
+  syncMobileNavState();
+  renderAll();
+  renderLastSaved();
+}
+
+function bindEvents() {
+  if (ui.navToggleBtn) {
+    ui.navToggleBtn.addEventListener("click", () => {
+      toggleMobileNav();
+    });
+  }
+
+  ui.navButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      switchView(btn.dataset.target);
+    });
+  });
+
+  ui.riskForm.addEventListener("submit", handleRiskSubmit);
+  ui.tradeForm.addEventListener("submit", handleTradeSubmit);
+  ui.tradeResetBtn.addEventListener("click", () => resetTradeForm(false));
+  ui.tradeFields.screenshot.addEventListener("change", handleScreenshotUpload);
+
+  Object.values(ui.filters).forEach((input) => {
+    input.addEventListener("input", handleFilterChange);
+    input.addEventListener("change", handleFilterChange);
+  });
+
+  ui.clearFiltersBtn.addEventListener("click", clearFilters);
+  ui.tradesBody.addEventListener("click", handleTradeTableClick);
+
+  ui.exportCsvBtn.addEventListener("click", exportTradesCsv);
+  ui.backupJsonBtn.addEventListener("click", exportBackupJson);
+  ui.importJsonBtn.addEventListener("click", () => ui.jsonImportInput.click());
+  ui.jsonImportInput.addEventListener("change", importBackupJson);
+
+  ui.savePhpBtn.addEventListener("click", saveToPhpStorage);
+  ui.loadPhpBtn.addEventListener("click", loadFromPhpStorage);
+
+  ui.reflectionForm.addEventListener("submit", handleReflectionSubmit);
+  ui.reviewMonth.addEventListener("change", renderMonthlyReview);
+  ui.saveReplayBtn.addEventListener("click", saveReplayNotes);
+
+  window.addEventListener("resize", debounce(() => {
+    if (state.analytics) {
+      renderCharts(state.analytics);
+    }
+    syncMobileNavState();
+  }, 120));
+
+  window.addEventListener("keydown", (event) => {
+    const mod = event.metaKey || event.ctrlKey;
+    if (mod && event.key.toLowerCase() === "s") {
+      if (isViewActive("trade-entry")) {
+        event.preventDefault();
+        ui.tradeForm.requestSubmit();
+      }
+    }
+
+    if (!mod && event.key === "/") {
+      event.preventDefault();
+      switchView("journal");
+      ui.filters.search.focus();
+    }
+
+    if (event.key === "Escape") {
+      toggleMobileNav(false);
+    }
+  });
+}
+
+function switchView(id) {
+  ui.navButtons.forEach((btn) => {
+    btn.classList.toggle("is-active", btn.dataset.target === id);
+  });
+
+  ui.views.forEach((view) => {
+    view.classList.toggle("is-active", view.id === id);
+  });
+
+  if (isMobileViewport()) {
+    toggleMobileNav(false);
+  }
+}
+
+function isMobileViewport() {
+  return window.matchMedia("(max-width: 1024px)").matches;
+}
+
+function toggleMobileNav(forceState) {
+  if (!ui.sidebar || !ui.navToggleBtn || !isMobileViewport()) {
+    return;
+  }
+
+  const isOpen = ui.sidebar.classList.contains("nav-open");
+  const nextState = typeof forceState === "boolean" ? forceState : !isOpen;
+  ui.sidebar.classList.toggle("nav-open", nextState);
+  ui.navToggleBtn.classList.toggle("is-open", nextState);
+  ui.navToggleBtn.setAttribute("aria-expanded", String(nextState));
+}
+
+function syncMobileNavState() {
+  if (!ui.sidebar || !ui.navToggleBtn) {
+    return;
+  }
+
+  if (!isMobileViewport()) {
+    ui.sidebar.classList.remove("nav-open");
+    ui.navToggleBtn.classList.remove("is-open");
+    ui.navToggleBtn.setAttribute("aria-expanded", "false");
+  }
+}
+
+function isViewActive(id) {
+  const view = document.getElementById(id);
+  return view && view.classList.contains("is-active");
+}
+
+function applyInitialDates() {
+  const today = toDateInputValue(new Date());
+  const thisMonth = today.slice(0, 7);
+
+  if (!ui.tradeFields.tradeDate.value) {
+    ui.tradeFields.tradeDate.value = today;
+  }
+
+  ui.tradeFields.riskPercent.value = String(state.settings.riskPerTrade);
+
+  const reflectionDate = document.getElementById("reflectionDate");
+  if (!reflectionDate.value) {
+    reflectionDate.value = today;
+  }
+
+  if (!ui.reviewMonth.value) {
+    ui.reviewMonth.value = thisMonth;
+  }
+}
+
+function hydrateRiskForm() {
+  ui.riskInputs.startingBalance.value = state.settings.startingBalance;
+  ui.riskInputs.balanceOverride.value = state.settings.balanceOverride > 0 ? state.settings.balanceOverride : "";
+  ui.riskInputs.dailyMaxLoss.value = state.settings.dailyMaxLoss;
+  ui.riskInputs.weeklyMaxLoss.value = state.settings.weeklyMaxLoss;
+  ui.riskInputs.riskPerTrade.value = state.settings.riskPerTrade;
+  ui.riskInputs.equityGoal.value = state.settings.equityGoal;
+}
+
+function hydrateReviewMonth() {
+  const todayMonth = toDateInputValue(new Date()).slice(0, 7);
+  if (!ui.reviewMonth.value) {
+    ui.reviewMonth.value = todayMonth;
+  }
+
+  ui.replayNotes.value = state.replayNotes[ui.reviewMonth.value] || "";
+}
+
+function handleRiskSubmit(event) {
+  event.preventDefault();
+
+  const parsedOverride = parseNumber(ui.riskInputs.balanceOverride.value);
+  const nextSettings = {
+    startingBalance: parseNumber(ui.riskInputs.startingBalance.value),
+    balanceOverride: Number.isFinite(parsedOverride) && parsedOverride >= 0 ? parsedOverride : 0,
+    dailyMaxLoss: parseNumber(ui.riskInputs.dailyMaxLoss.value),
+    weeklyMaxLoss: parseNumber(ui.riskInputs.weeklyMaxLoss.value),
+    riskPerTrade: parseNumber(ui.riskInputs.riskPerTrade.value),
+    equityGoal: parseNumber(ui.riskInputs.equityGoal.value)
+  };
+
+  if (
+    nextSettings.startingBalance <= 0 ||
+    nextSettings.balanceOverride < 0 ||
+    nextSettings.dailyMaxLoss < 0 ||
+    nextSettings.weeklyMaxLoss < 0 ||
+    nextSettings.riskPerTrade < 0 ||
+    nextSettings.equityGoal <= 0
+  ) {
+    setMessage(ui.riskFormMessage, "Use valid positive values for all risk fields.", "error");
+    return;
+  }
+
+  state.settings = nextSettings;
+  persistState();
+  renderAll();
+  setMessage(ui.riskFormMessage, "Risk settings updated.", "success");
+}
+
+function handleTradeSubmit(event) {
+  event.preventDefault();
+
+  const payload = readTradeForm();
+  if (!payload.ok) {
+    setMessage(ui.tradeFormMessage, payload.error, "error");
+    return;
+  }
+
+  const existingId = ui.tradeFields.tradeId.value.trim();
+  const now = new Date().toISOString();
+  const metrics = calculateTradeMetrics(payload.value);
+
+  const resolvedResult = payload.value.tradeResult === "Auto" ? metrics.autoResult : payload.value.tradeResult;
+
+  const trade = {
+    id: existingId || createId(),
+    createdAt: existingId ? getExistingTrade(existingId)?.createdAt || now : now,
+    updatedAt: now,
+    ...payload.value,
+    result: resolvedResult,
+    netPnl: metrics.netPnl,
+    riskAmount: metrics.riskAmount,
+    rMultiple: metrics.rMultiple,
+    rrRatio: metrics.rrRatio
+  };
+
+  if (existingId) {
+    state.trades = state.trades.map((item) => (item.id === existingId ? trade : item));
+  } else {
+    state.trades.push(trade);
+  }
+
+  persistState();
+  renderAll();
+  resetTradeForm(true);
+  setMessage(ui.tradeFormMessage, existingId ? "Trade updated." : "Trade saved.", "success");
+}
+
+function getExistingTrade(id) {
+  return state.trades.find((trade) => trade.id === id);
+}
+
+function readTradeForm() {
+  const screenshotFile = ui.tradeFields.screenshot.files?.[0] || null;
+  const screenshotLabel = ui.tradeFields.screenshotLabel.textContent || "";
+  const hasStoredLabel =
+    screenshotLabel !== "No screenshot selected" &&
+    screenshotLabel !== "Screenshot filename stored.";
+
+  const value = {
+    date: ui.tradeFields.tradeDate.value,
+    session: ui.tradeFields.session.value,
+    market: ui.tradeFields.market.value,
+    asset: ui.tradeFields.asset.value.trim().toUpperCase(),
+    direction: ui.tradeFields.direction.value,
+    entryPrice: parseNumber(ui.tradeFields.entryPrice.value),
+    stopLoss: parseNumber(ui.tradeFields.stopLoss.value),
+    takeProfit: parseNumber(ui.tradeFields.takeProfit.value),
+    exitPrice: parseNumber(ui.tradeFields.exitPrice.value),
+    riskPercent: parseNumber(ui.tradeFields.riskPercent.value),
+    positionSize: parseNumber(ui.tradeFields.positionSize.value),
+    tradeResult: ui.tradeFields.tradeResult.value,
+    setupType: ui.tradeFields.setupType.value,
+    timeframe: ui.tradeFields.timeframe.value,
+    psychology: ui.tradeFields.psychology.value,
+    executionQuality: ui.tradeFields.executionQuality.value,
+    screenshotName: screenshotFile ? screenshotFile.name : hasStoredLabel ? screenshotLabel : "",
+    screenshotData: ui.tradeFields.screenshotData.value || "",
+    notes: ui.tradeFields.tradeNotes.value.trim()
+  };
+
+  if (!value.date || !value.asset) {
+    return { ok: false, error: "Date and Asset are required." };
+  }
+
+  const numericFields = [
+    ["Entry Price", value.entryPrice],
+    ["Stop Loss", value.stopLoss],
+    ["Take Profit", value.takeProfit],
+    ["Exit Price", value.exitPrice],
+    ["Risk %", value.riskPercent],
+    ["Position Size", value.positionSize]
+  ];
+
+  for (const [label, amount] of numericFields) {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return { ok: false, error: `${label} must be greater than zero.` };
+    }
+  }
+
+  if (value.direction === "Buy" && value.stopLoss >= value.entryPrice) {
+    return { ok: false, error: "For Buy trades, stop loss should be below entry price." };
+  }
+
+  if (value.direction === "Sell" && value.stopLoss <= value.entryPrice) {
+    return { ok: false, error: "For Sell trades, stop loss should be above entry price." };
+  }
+
+  return { ok: true, value };
+}
+
+function calculateTradeMetrics(trade) {
+  const directionFactor = trade.direction === "Buy" ? 1 : -1;
+  const netPnl = round((trade.exitPrice - trade.entryPrice) * trade.positionSize * directionFactor);
+
+  const riskFromStructure = Math.abs(trade.entryPrice - trade.stopLoss) * trade.positionSize;
+  const fallbackRisk = state.settings.startingBalance * (trade.riskPercent / 100);
+  const riskAmount = round(riskFromStructure > 0 ? riskFromStructure : fallbackRisk);
+  const rMultiple = riskAmount > 0 ? round(netPnl / riskAmount) : 0;
+
+  const rrDenominator = Math.abs(trade.entryPrice - trade.stopLoss);
+  const rrNumerator = Math.abs(trade.takeProfit - trade.entryPrice);
+  const rrRatio = rrDenominator > 0 ? round(rrNumerator / rrDenominator) : 0;
+
+  let autoResult = "Break Even";
+  if (netPnl > 0) {
+    autoResult = "Win";
+  } else if (netPnl < 0) {
+    autoResult = "Loss";
+  }
+
+  return { netPnl, riskAmount, rMultiple, rrRatio, autoResult };
+}
+
+function handleScreenshotUpload(event) {
+  const file = event.target.files?.[0];
+  if (!file) {
+    clearScreenshotPreview();
+    return;
+  }
+
+  ui.tradeFields.screenshotLabel.textContent = file.name;
+
+  const maxInlineBytes = 350 * 1024;
+  if (file.size > maxInlineBytes) {
+    ui.tradeFields.screenshotData.value = "";
+    ui.tradeFields.screenshotPreview.textContent = "Screenshot attached (too large for inline storage).";
+    setMessage(
+      ui.tradeFormMessage,
+      "Screenshot name saved, but image data skipped (file too large for localStorage).",
+      "error"
+    );
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const result = typeof reader.result === "string" ? reader.result : "";
+    ui.tradeFields.screenshotData.value = result;
+    ui.tradeFields.screenshotPreview.innerHTML = `<img src="${result}" alt="Trade screenshot preview" />`;
+    setMessage(ui.tradeFormMessage, "Screenshot embedded with this trade.", "success");
+  };
+  reader.onerror = () => {
+    ui.tradeFields.screenshotData.value = "";
+    setMessage(ui.tradeFormMessage, "Failed to read screenshot file.", "error");
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearScreenshotPreview() {
+  ui.tradeFields.screenshotData.value = "";
+  ui.tradeFields.screenshotLabel.textContent = "No screenshot selected";
+  ui.tradeFields.screenshotPreview.textContent = "No preview";
+}
+
+function resetTradeForm(keepDate) {
+  const currentDate = ui.tradeFields.tradeDate.value;
+  ui.tradeForm.reset();
+  ui.tradeFields.tradeId.value = "";
+  ui.tradeFields.tradeResult.value = "Auto";
+  ui.tradeFields.riskPercent.value = String(state.settings.riskPerTrade);
+  ui.tradeFields.screenshot.value = "";
+  clearScreenshotPreview();
+  ui.tradeSubmitBtn.textContent = "Save Trade";
+
+  if (keepDate) {
+    ui.tradeFields.tradeDate.value = currentDate || toDateInputValue(new Date());
+  } else {
+    ui.tradeFields.tradeDate.value = toDateInputValue(new Date());
+  }
+}
+
+function handleFilterChange() {
+  state.filters.dateFrom = ui.filters.dateFrom.value;
+  state.filters.dateTo = ui.filters.dateTo.value;
+  state.filters.market = ui.filters.market.value;
+  state.filters.setup = ui.filters.setup.value;
+  state.filters.timeframe = ui.filters.timeframe.value;
+  state.filters.result = ui.filters.result.value;
+  state.filters.psychology = ui.filters.psychology.value;
+  state.filters.search = ui.filters.search.value.trim().toLowerCase();
+  renderJournalTable();
+}
+
+function clearFilters() {
+  ui.filters.dateFrom.value = "";
+  ui.filters.dateTo.value = "";
+  ui.filters.market.value = "all";
+  ui.filters.setup.value = "all";
+  ui.filters.timeframe.value = "all";
+  ui.filters.result.value = "all";
+  ui.filters.psychology.value = "all";
+  ui.filters.search.value = "";
+  handleFilterChange();
+}
+
+function handleTradeTableClick(event) {
+  const button = event.target.closest("button[data-action]");
+  if (!button) {
+    return;
+  }
+
+  const id = button.dataset.id;
+  if (!id) {
+    return;
+  }
+
+  if (button.dataset.action === "delete") {
+    deleteTrade(id);
+    return;
+  }
+
+  if (button.dataset.action === "edit") {
+    loadTradeIntoForm(id);
+  }
+}
+
+function deleteTrade(id) {
+  const trade = getExistingTrade(id);
+  if (!trade) {
+    return;
+  }
+
+  const confirmed = window.confirm(`Delete trade ${trade.asset} on ${trade.date}?`);
+  if (!confirmed) {
+    return;
+  }
+
+  state.trades = state.trades.filter((item) => item.id !== id);
+  persistState();
+  renderAll();
+  setMessage(ui.journalMessage, "Trade deleted.", "success");
+}
+
+function loadTradeIntoForm(id) {
+  const trade = getExistingTrade(id);
+  if (!trade) {
+    return;
+  }
+
+  ui.tradeFields.tradeId.value = trade.id;
+  ui.tradeFields.tradeDate.value = trade.date;
+  ui.tradeFields.session.value = trade.session;
+  ui.tradeFields.market.value = trade.market;
+  ui.tradeFields.asset.value = trade.asset;
+  ui.tradeFields.direction.value = trade.direction;
+  ui.tradeFields.entryPrice.value = trade.entryPrice;
+  ui.tradeFields.stopLoss.value = trade.stopLoss;
+  ui.tradeFields.takeProfit.value = trade.takeProfit;
+  ui.tradeFields.exitPrice.value = trade.exitPrice;
+  ui.tradeFields.riskPercent.value = trade.riskPercent;
+  ui.tradeFields.positionSize.value = trade.positionSize;
+  ui.tradeFields.tradeResult.value = trade.tradeResult === "Auto" ? "Auto" : trade.result;
+  ui.tradeFields.setupType.value = trade.setupType;
+  ui.tradeFields.timeframe.value = trade.timeframe;
+  ui.tradeFields.psychology.value = trade.psychology;
+  ui.tradeFields.executionQuality.value = trade.executionQuality;
+  ui.tradeFields.tradeNotes.value = trade.notes || "";
+  ui.tradeFields.screenshotData.value = trade.screenshotData || "";
+
+  if (trade.screenshotData) {
+    ui.tradeFields.screenshotPreview.innerHTML = `<img src="${trade.screenshotData}" alt="Trade screenshot preview" />`;
+  } else if (trade.screenshotName) {
+    ui.tradeFields.screenshotPreview.textContent = "Screenshot filename stored.";
+  } else {
+    ui.tradeFields.screenshotPreview.textContent = "No preview";
+  }
+
+  ui.tradeFields.screenshotLabel.textContent = trade.screenshotName || "No screenshot selected";
+  ui.tradeSubmitBtn.textContent = "Update Trade";
+
+  switchView("trade-entry");
+  setMessage(ui.tradeFormMessage, "Editing trade entry.", "success");
+}
+
+function handleReflectionSubmit(event) {
+  event.preventDefault();
+
+  const date = document.getElementById("reflectionDate").value;
+  const wentWell = document.getElementById("wentWell").value.trim();
+  const mistake = document.getElementById("mistake").value.trim();
+  const followRules = document.getElementById("followRules").value;
+  const improveTomorrow = document.getElementById("improveTomorrow").value.trim();
+  const tags = Array.from(document.querySelectorAll("input[name='reflectionTag']:checked")).map((node) => node.value);
+
+  if (!date || !wentWell || !mistake || !improveTomorrow) {
+    setMessage(ui.reflectionMessage, "Complete all reflection fields.", "error");
+    return;
+  }
+
+  state.reflections.unshift({
+    id: createId(),
+    date,
+    wentWell,
+    mistake,
+    followRules,
+    improveTomorrow,
+    tags,
+    createdAt: new Date().toISOString()
+  });
+
+  if (state.reflections.length > 180) {
+    state.reflections = state.reflections.slice(0, 180);
+  }
+
+  persistState();
+  renderAll();
+  ui.reflectionForm.reset();
+  document.getElementById("reflectionDate").value = toDateInputValue(new Date());
+  setMessage(ui.reflectionMessage, "Reflection saved.", "success");
+}
+
+function saveReplayNotes() {
+  const month = ui.reviewMonth.value;
+  if (!month) {
+    setMessage(ui.replayMessage, "Select a review month first.", "error");
+    return;
+  }
+
+  state.replayNotes[month] = ui.replayNotes.value;
+  persistState();
+  setMessage(ui.replayMessage, "Replay notes saved.", "success");
+}
+
+function exportTradesCsv() {
+  if (!state.trades.length) {
+    setMessage(ui.journalMessage, "No trades to export.", "error");
+    return;
+  }
+
+  const headers = [
+    "date",
+    "session",
+    "market",
+    "asset",
+    "direction",
+    "entryPrice",
+    "stopLoss",
+    "takeProfit",
+    "exitPrice",
+    "riskPercent",
+    "positionSize",
+    "setupType",
+    "timeframe",
+    "psychology",
+    "executionQuality",
+    "result",
+    "netPnl",
+    "rMultiple",
+    "rrRatio",
+    "notes"
+  ];
+
+  const rows = state.trades.map((trade) => {
+    return headers.map((field) => escapeCsvValue(trade[field] ?? "")).join(",");
+  });
+
+  const csv = [headers.join(","), ...rows].join("\n");
+  triggerDownload(new Blob([csv], { type: "text/csv;charset=utf-8" }), `trading-journal-${Date.now()}.csv`);
+  setMessage(ui.journalMessage, "CSV exported.", "success");
+}
+
+function exportBackupJson() {
+  const backup = {
+    exportedAt: new Date().toISOString(),
+    settings: state.settings,
+    trades: state.trades,
+    reflections: state.reflections,
+    replayNotes: state.replayNotes
+  };
+
+  const payload = JSON.stringify(backup, null, 2);
+  triggerDownload(new Blob([payload], { type: "application/json" }), `trading-journal-backup-${Date.now()}.json`);
+  setMessage(ui.journalMessage, "JSON backup exported.", "success");
+}
+
+function importBackupJson(event) {
+  const file = event.target.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(String(reader.result || "{}"));
+
+      if (!window.confirm("Import backup and replace current journal data?")) {
+        event.target.value = "";
+        return;
+      }
+
+      state.settings = normalizeSettings(parsed.settings);
+      state.trades = normalizeTrades(parsed.trades);
+      state.reflections = normalizeReflections(parsed.reflections);
+      state.replayNotes = normalizeReplayNotes(parsed.replayNotes);
+
+      persistState();
+      hydrateRiskForm();
+      renderAll();
+      setMessage(ui.journalMessage, "Backup imported.", "success");
+    } catch (error) {
+      setMessage(ui.journalMessage, "Invalid JSON backup file.", "error");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  reader.onerror = () => {
+    setMessage(ui.journalMessage, "Failed to read JSON file.", "error");
+    event.target.value = "";
+  };
+
+  reader.readAsText(file);
+}
+
+async function saveToPhpStorage() {
+  const payload = {
+    settings: state.settings,
+    trades: state.trades,
+    reflections: state.reflections,
+    replayNotes: state.replayNotes
+  };
+
+  try {
+    const response = await fetch("trade_handler.php?action=save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const body = await response.json();
+    if (!response.ok || !body.ok) {
+      throw new Error(body.error || "PHP save failed");
+    }
+
+    setMessage(ui.journalMessage, "Saved to PHP JSON storage.", "success");
+  } catch (error) {
+    setMessage(
+      ui.journalMessage,
+      "PHP save failed. Start with `php -S localhost:8000` and open via http://localhost:8000.",
+      "error"
+    );
+  }
+}
+
+async function loadFromPhpStorage() {
+  try {
+    const response = await fetch("trade_handler.php?action=load", {
+      method: "GET"
+    });
+
+    const body = await response.json();
+    if (!response.ok || !body.ok || !body.data) {
+      throw new Error(body.error || "PHP load failed");
+    }
+
+    state.settings = normalizeSettings(body.data.settings);
+    state.trades = normalizeTrades(body.data.trades);
+    state.reflections = normalizeReflections(body.data.reflections);
+    state.replayNotes = normalizeReplayNotes(body.data.replayNotes);
+
+    persistState();
+    hydrateRiskForm();
+    renderAll();
+    setMessage(ui.journalMessage, "Loaded from PHP JSON storage.", "success");
+  } catch (error) {
+    setMessage(
+      ui.journalMessage,
+      "PHP load failed. Start with `php -S localhost:8000` and open via http://localhost:8000.",
+      "error"
+    );
+  }
+}
+
+function renderAll() {
+  state.analytics = calculateAnalytics(state.trades, state.settings, state.reflections);
+  renderDashboardMetrics(state.analytics);
+  renderRiskViolations(state.analytics);
+  renderEdgeTable(state.analytics);
+  renderCharts(state.analytics);
+  hydrateSetupFilter();
+  renderJournalTable();
+  renderReflections();
+  renderMonthlyReview();
+}
+
+function calculateAnalytics(trades, settings, reflections) {
+  const ordered = [...trades].sort(sortTradesAsc);
+  const equity = [settings.startingBalance];
+  const drawdowns = [0];
+
+  let peak = settings.startingBalance;
+  let grossProfit = 0;
+  let grossLoss = 0;
+  let totalPnl = 0;
+  let wins = 0;
+  let losses = 0;
+  let breakeven = 0;
+  let rrSum = 0;
+  let rrCount = 0;
+  let rSum = 0;
+  let rCount = 0;
+  let maxDrawdown = 0;
+  let drawdownSum = 0;
+  let drawdownCount = 0;
+  let maxWinStreak = 0;
+  let maxLossStreak = 0;
+  let currentWinStreak = 0;
+  let currentLossStreak = 0;
+
+  const dailyPnl = new Map();
+  const weeklyPnl = new Map();
+  const setupStats = new Map();
+
+  for (const trade of ordered) {
+    totalPnl += trade.netPnl;
+
+    if (trade.netPnl > 0) {
+      wins += 1;
+      grossProfit += trade.netPnl;
+      currentWinStreak += 1;
+      currentLossStreak = 0;
+      maxWinStreak = Math.max(maxWinStreak, currentWinStreak);
+    } else if (trade.netPnl < 0) {
+      losses += 1;
+      grossLoss += trade.netPnl;
+      currentLossStreak += 1;
+      currentWinStreak = 0;
+      maxLossStreak = Math.max(maxLossStreak, currentLossStreak);
+    } else {
+      breakeven += 1;
+      currentWinStreak = 0;
+      currentLossStreak = 0;
+    }
+
+    if (Number.isFinite(trade.rrRatio) && trade.rrRatio > 0) {
+      rrSum += trade.rrRatio;
+      rrCount += 1;
+    }
+
+    if (Number.isFinite(trade.rMultiple)) {
+      rSum += trade.rMultiple;
+      rCount += 1;
+    }
+
+    const nextEquity = round(equity[equity.length - 1] + trade.netPnl);
+    equity.push(nextEquity);
+
+    if (nextEquity > peak) {
+      peak = nextEquity;
+    }
+
+    const dd = round(peak - nextEquity);
+    drawdowns.push(dd);
+    if (dd > 0) {
+      drawdownSum += dd;
+      drawdownCount += 1;
+    }
+    maxDrawdown = Math.max(maxDrawdown, dd);
+
+    dailyPnl.set(trade.date, round((dailyPnl.get(trade.date) || 0) + trade.netPnl));
+
+    const weekKey = getWeekKey(trade.date);
+    weeklyPnl.set(weekKey, round((weeklyPnl.get(weekKey) || 0) + trade.netPnl));
+
+    const setupKey = trade.setupType || "Unknown";
+    const setupBucket = setupStats.get(setupKey) || {
+      setup: setupKey,
+      trades: 0,
+      wins: 0,
+      netPnl: 0,
+      rTotal: 0,
+      rCount: 0
+    };
+
+    setupBucket.trades += 1;
+    setupBucket.netPnl = round(setupBucket.netPnl + trade.netPnl);
+    if (trade.result === "Win") {
+      setupBucket.wins += 1;
+    }
+    if (Number.isFinite(trade.rMultiple)) {
+      setupBucket.rTotal += trade.rMultiple;
+      setupBucket.rCount += 1;
+    }
+
+    setupStats.set(setupKey, setupBucket);
+  }
+
+  const calculatedBalance = equity[equity.length - 1] || settings.startingBalance;
+  const currentBalance = settings.balanceOverride > 0 ? settings.balanceOverride : calculatedBalance;
+  const totalTrades = ordered.length;
+  const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
+  const avgWin = wins > 0 ? grossProfit / wins : 0;
+  const avgLoss = losses > 0 ? grossLoss / losses : 0;
+  const avgRR = rrCount > 0 ? rrSum / rrCount : 0;
+  const avgR = rCount > 0 ? rSum / rCount : 0;
+  const profitFactor = grossLoss < 0 ? grossProfit / Math.abs(grossLoss) : grossProfit > 0 ? 999 : 0;
+  const expectancy = totalTrades > 0 ? totalPnl / totalTrades : 0;
+  const averageDrawdown = drawdownCount > 0 ? drawdownSum / drawdownCount : 0;
+
+  const bestDay = getExtremeDay(dailyPnl, "max");
+  const worstDay = getExtremeDay(dailyPnl, "min");
+
+  const dailyViolations = Array.from(dailyPnl.entries())
+    .filter(([, pnl]) => pnl < -settings.dailyMaxLoss)
+    .map(([day, pnl]) => ({ type: "daily", key: day, pnl }));
+
+  const weeklyViolations = Array.from(weeklyPnl.entries())
+    .filter(([, pnl]) => pnl < -settings.weeklyMaxLoss)
+    .map(([week, pnl]) => ({ type: "weekly", key: week, pnl }));
+
+  const riskPerTradeViolations = ordered
+    .filter((trade) => trade.riskPercent > settings.riskPerTrade)
+    .map((trade) => ({ type: "risk", key: `${trade.date} ${trade.asset}`, riskPercent: trade.riskPercent }));
+
+  const disciplineScore = computeDisciplineScore(ordered, reflections, {
+    dailyViolations,
+    weeklyViolations,
+    riskPerTradeViolations
+  });
+
+  const dailyTradingScore = computeDailyTradingScore(ordered, reflections, dailyViolations);
+
+  const goalRange = Math.max(settings.equityGoal - settings.startingBalance, 1);
+  const goalProgress = ((currentBalance - settings.startingBalance) / goalRange) * 100;
+
+  return {
+    totalTrades,
+    wins,
+    losses,
+    breakeven,
+    winRate,
+    avgWin,
+    avgLoss,
+    avgRR,
+    avgR,
+    profitFactor,
+    expectancy,
+    totalPnl,
+    accountBalance: currentBalance,
+    currentDrawdown: drawdowns[drawdowns.length - 1] || 0,
+    maxDrawdown,
+    averageDrawdown,
+    bestDay,
+    worstDay,
+    maxWinStreak,
+    maxLossStreak,
+    dailyViolations,
+    weeklyViolations,
+    riskPerTradeViolations,
+    equity,
+    drawdowns,
+    setupStats: Array.from(setupStats.values()),
+    disciplineScore,
+    dailyTradingScore,
+    goalProgress
+  };
+}
+
+function computeDisciplineScore(trades, reflections, violations) {
+  let score = 100;
+  const emotionalCount = trades.filter((trade) => trade.psychology === "Emotional" || trade.psychology === "Revenge Trade").length;
+  const poorExecution = trades.filter((trade) => trade.executionQuality === "C" || trade.executionQuality === "F").length;
+  const noRuleFollowCount = reflections.filter((entry) => entry.followRules === "No").length;
+  const partialRuleCount = reflections.filter((entry) => entry.followRules === "Partially").length;
+
+  score -= violations.riskPerTradeViolations.length * 10;
+  score -= violations.dailyViolations.length * 8;
+  score -= violations.weeklyViolations.length * 10;
+  score -= emotionalCount * 5;
+  score -= poorExecution * 4;
+  score -= noRuleFollowCount * 6;
+  score -= partialRuleCount * 3;
+
+  const perfectExecution = trades.filter(
+    (trade) => trade.executionQuality === "A+" || trade.psychology === "Perfect Execution"
+  ).length;
+
+  score += perfectExecution * 2;
+
+  return clamp(Math.round(score), 0, 100);
+}
+
+function computeDailyTradingScore(trades, reflections, dailyViolations) {
+  if (!trades.length) {
+    return 0;
+  }
+
+  const sorted = [...trades].sort(sortTradesAsc);
+  const latestDate = sorted[sorted.length - 1].date;
+  const dayTrades = sorted.filter((trade) => trade.date === latestDate);
+  const dayPnl = dayTrades.reduce((sum, trade) => sum + trade.netPnl, 0);
+  const hasViolation = dailyViolations.some((item) => item.key === latestDate);
+  const emotional = dayTrades.filter((trade) => trade.psychology === "Emotional" || trade.psychology === "Revenge Trade").length;
+  const cleanExec = dayTrades.filter((trade) => trade.executionQuality === "A+" || trade.executionQuality === "A").length;
+
+  let score = 50;
+  score += dayPnl > 0 ? 20 : dayPnl < 0 ? -10 : 0;
+  score += hasViolation ? -15 : 15;
+  score -= emotional * 10;
+  score += cleanExec * 5;
+
+  const dayReflection = reflections.find((entry) => entry.date === latestDate);
+  if (dayReflection) {
+    if (dayReflection.followRules === "Yes") {
+      score += 15;
+    } else if (dayReflection.followRules === "Partially") {
+      score += 5;
+    } else {
+      score -= 10;
+    }
+  }
+
+  return clamp(Math.round(score), 0, 100);
+}
+
+function getExtremeDay(dailyMap, mode) {
+  if (!dailyMap.size) {
+    return { day: "-", pnl: 0 };
+  }
+
+  let selected = null;
+  for (const [day, pnl] of dailyMap.entries()) {
+    if (!selected) {
+      selected = { day, pnl };
+      continue;
+    }
+
+    if (mode === "max" && pnl > selected.pnl) {
+      selected = { day, pnl };
+    }
+
+    if (mode === "min" && pnl < selected.pnl) {
+      selected = { day, pnl };
+    }
+  }
+
+  return selected;
+}
+
+function renderDashboardMetrics(analytics) {
+  const values = {
+    accountBalance: formatCurrency(analytics.accountBalance),
+    totalTrades: String(analytics.totalTrades),
+    winRate: `${analytics.winRate.toFixed(1)}%`,
+    avgRR: analytics.avgRR.toFixed(2),
+    profitFactor: analytics.profitFactor >= 999 ? "∞" : analytics.profitFactor.toFixed(2),
+    currentDrawdown: formatCurrency(analytics.currentDrawdown),
+    maxDrawdown: formatCurrency(analytics.maxDrawdown),
+    bestDay: analytics.bestDay.day === "-" ? "-" : `${formatCurrency(analytics.bestDay.pnl)} (${analytics.bestDay.day})`,
+    worstDay: analytics.worstDay.day === "-" ? "-" : `${formatCurrency(analytics.worstDay.pnl)} (${analytics.worstDay.day})`,
+    expectancy: formatCurrency(analytics.expectancy),
+    winningStreak: String(analytics.maxWinStreak),
+    losingStreak: String(analytics.maxLossStreak)
+  };
+
+  ui.metricNodes.forEach((node) => {
+    const key = node.dataset.metric;
+    if (key in values) {
+      node.textContent = values[key];
+
+      if (key === "accountBalance") {
+        toneBySign(node, analytics.accountBalance);
+      } else if (key === "expectancy") {
+        toneBySign(node, analytics.expectancy);
+      } else if (key === "bestDay") {
+        toneBySign(node, analytics.bestDay.pnl);
+      } else if (key === "worstDay") {
+        toneBySign(node, analytics.worstDay.pnl);
+      } else if (key === "currentDrawdown" || key === "maxDrawdown") {
+        toneBySign(node, analytics[key] > 0 ? -analytics[key] : 0);
+      } else {
+        node.classList.remove("pnl-positive", "pnl-negative");
+      }
+    }
+  });
+
+  ui.disciplineScore.textContent = String(analytics.disciplineScore);
+  ui.dailyTradingScore.textContent = String(analytics.dailyTradingScore);
+  ui.goalProgress.textContent = `${clamp(Math.round(analytics.goalProgress), 0, 300)}%`;
+}
+
+function toneBySign(node, value) {
+  node.classList.remove("pnl-positive", "pnl-negative");
+  if (value > 0) {
+    node.classList.add("pnl-positive");
+  } else if (value < 0) {
+    node.classList.add("pnl-negative");
+  }
+}
+
+function renderRiskViolations(analytics) {
+  const warnings = [];
+
+  analytics.dailyViolations.forEach((item) => {
+    warnings.push(`Daily loss limit broken on ${item.key} (${formatCurrency(item.pnl)}).`);
+  });
+
+  analytics.weeklyViolations.forEach((item) => {
+    warnings.push(`Weekly loss limit broken on ${item.key} (${formatCurrency(item.pnl)}).`);
+  });
+
+  analytics.riskPerTradeViolations.forEach((item) => {
+    warnings.push(`Risk per trade exceeded: ${item.key} at ${item.riskPercent.toFixed(2)}%.`);
+  });
+
+  if (!warnings.length) {
+    ui.riskViolations.innerHTML = '<li class="ok">No rule violations detected.</li>';
+    return;
+  }
+
+  ui.riskViolations.innerHTML = warnings.map((text) => `<li>${escapeHtml(text)}</li>`).join("");
+}
+
+function renderEdgeTable(analytics) {
+  const rows = analytics.setupStats
+    .map((setup) => {
+      const winRate = setup.trades > 0 ? (setup.wins / setup.trades) * 100 : 0;
+      const avgR = setup.rCount > 0 ? setup.rTotal / setup.rCount : 0;
+      const expectancy = setup.trades > 0 ? setup.netPnl / setup.trades : 0;
+      return {
+        ...setup,
+        winRate,
+        avgR,
+        expectancy
+      };
+    })
+    .sort((a, b) => b.expectancy - a.expectancy);
+
+  if (!rows.length) {
+    ui.edgeRows.innerHTML = '<tr class="empty-row"><td colspan="6">No setup data yet.</td></tr>';
+    return;
+  }
+
+  ui.edgeRows.innerHTML = rows
+    .map((row) => {
+      const netClass = row.netPnl >= 0 ? "pnl-positive" : "pnl-negative";
+      const expClass = row.expectancy >= 0 ? "pnl-positive" : "pnl-negative";
+      return `
+        <tr>
+          <td>${escapeHtml(row.setup)}</td>
+          <td>${row.trades}</td>
+          <td>${row.winRate.toFixed(1)}%</td>
+          <td class="${netClass}">${formatCurrency(row.netPnl)}</td>
+          <td>${row.avgR.toFixed(2)}R</td>
+          <td class="${expClass}">${formatCurrency(row.expectancy)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function renderCharts(analytics) {
+  drawLineChart(ui.equityChart, analytics.equity, {
+    lineColor: "#39d3ff",
+    fillColor: "rgba(57, 211, 255, 0.15)",
+    emptyLabel: "No equity data yet"
+  });
+
+  drawLineChart(ui.drawdownChart, analytics.drawdowns, {
+    lineColor: "#ff5a7e",
+    fillColor: "rgba(255, 90, 126, 0.16)",
+    emptyLabel: "No drawdown data yet"
+  });
+
+  drawOutcomeChart(ui.outcomeChart, {
+    win: analytics.wins,
+    loss: analytics.losses,
+    be: analytics.breakeven
+  });
+}
+
+function drawLineChart(canvas, data, options) {
+  const ctxData = getCanvasContext(canvas);
+  if (!ctxData) {
+    return;
+  }
+
+  const { ctx, width, height } = ctxData;
+  clearCanvas(ctx, width, height);
+
+  const pad = 24;
+  drawGrid(ctx, width, height, pad);
+
+  if (!Array.isArray(data) || data.length < 2) {
+    drawCenteredText(ctx, width, height, options.emptyLabel || "No data");
+    return;
+  }
+
+  let min = Math.min(...data);
+  let max = Math.max(...data);
+
+  if (min === max) {
+    min -= 1;
+    max += 1;
+  }
+
+  const points = data.map((value, index) => {
+    const x = pad + (index / (data.length - 1)) * (width - pad * 2);
+    const y = height - pad - ((value - min) / (max - min)) * (height - pad * 2);
+    return { x, y };
+  });
+
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i += 1) {
+    ctx.lineTo(points[i].x, points[i].y);
+  }
+
+  ctx.strokeStyle = options.lineColor;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.lineTo(points[points.length - 1].x, height - pad);
+  ctx.lineTo(points[0].x, height - pad);
+  ctx.closePath();
+  ctx.fillStyle = options.fillColor;
+  ctx.fill();
+
+  const last = data[data.length - 1];
+  ctx.fillStyle = "#d3e6ff";
+  ctx.font = "600 12px JetBrains Mono, Consolas, monospace";
+  ctx.fillText(`Last: ${formatCurrency(last)}`, pad, pad - 8);
+}
+
+function drawOutcomeChart(canvas, data) {
+  const ctxData = getCanvasContext(canvas);
+  if (!ctxData) {
+    return;
+  }
+
+  const { ctx, width, height } = ctxData;
+  clearCanvas(ctx, width, height);
+
+  const entries = [
+    { label: "Win", value: data.win, color: "#2ad48f" },
+    { label: "Loss", value: data.loss, color: "#ff5a7e" },
+    { label: "Break Even", value: data.be, color: "#ffbe4f" }
+  ];
+
+  const total = entries.reduce((sum, item) => sum + item.value, 0);
+  const pad = 28;
+
+  drawGrid(ctx, width, height, pad);
+
+  if (!total) {
+    drawCenteredText(ctx, width, height, "No outcome data yet");
+    return;
+  }
+
+  const maxValue = Math.max(...entries.map((item) => item.value), 1);
+  const barWidth = (width - pad * 2) / entries.length - 20;
+
+  entries.forEach((entry, index) => {
+    const x = pad + index * ((width - pad * 2) / entries.length) + 10;
+    const barHeight = (entry.value / maxValue) * (height - pad * 2 - 30);
+    const y = height - pad - barHeight;
+
+    ctx.fillStyle = entry.color;
+    ctx.fillRect(x, y, barWidth, barHeight);
+
+    ctx.fillStyle = "#d2e4ff";
+    ctx.font = "600 12px JetBrains Mono, Consolas, monospace";
+    ctx.fillText(String(entry.value), x + barWidth / 2 - 6, y - 6);
+
+    ctx.fillStyle = "#9db0d8";
+    ctx.font = "500 11px JetBrains Mono, Consolas, monospace";
+    ctx.fillText(entry.label, x + 3, height - pad + 16);
+  });
+}
+
+function getCanvasContext(canvas) {
+  if (!canvas) {
+    return null;
+  }
+
+  const ratio = window.devicePixelRatio || 1;
+  const width = canvas.clientWidth || 900;
+  const height = 280;
+
+  canvas.width = Math.floor(width * ratio);
+  canvas.height = Math.floor(height * ratio);
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return null;
+  }
+
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  return { ctx, width, height };
+}
+
+function clearCanvas(ctx, width, height) {
+  ctx.clearRect(0, 0, width, height);
+}
+
+function drawGrid(ctx, width, height, pad) {
+  ctx.strokeStyle = "rgba(130, 157, 210, 0.2)";
+  ctx.lineWidth = 1;
+
+  for (let i = 0; i <= 4; i += 1) {
+    const y = pad + (i / 4) * (height - pad * 2);
+    ctx.beginPath();
+    ctx.moveTo(pad, y);
+    ctx.lineTo(width - pad, y);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = "rgba(130, 157, 210, 0.35)";
+  ctx.beginPath();
+  ctx.moveTo(pad, height - pad);
+  ctx.lineTo(width - pad, height - pad);
+  ctx.stroke();
+}
+
+function drawCenteredText(ctx, width, height, text) {
+  ctx.fillStyle = "#9db0d8";
+  ctx.font = "500 12px JetBrains Mono, Consolas, monospace";
+  const textWidth = ctx.measureText(text).width;
+  ctx.fillText(text, (width - textWidth) / 2, height / 2);
+}
+
+function renderJournalTable() {
+  const filtered = getFilteredTrades();
+
+  if (!filtered.length) {
+    ui.tradesBody.innerHTML = '<tr class="empty-row"><td colspan="12">No trades match current filters.</td></tr>';
+    return;
+  }
+
+  const sorted = filtered.sort(sortTradesDesc);
+
+  ui.tradesBody.innerHTML = sorted
+    .map((trade) => {
+      const resultClass =
+        trade.result === "Win" ? "pill pill-win" : trade.result === "Loss" ? "pill pill-loss" : "pill pill-be";
+      const pnlClass = trade.netPnl >= 0 ? "pnl-positive" : "pnl-negative";
+
+      return `
+        <tr>
+          <td>${escapeHtml(trade.date)}</td>
+          <td>${escapeHtml(trade.asset)}</td>
+          <td>${escapeHtml(trade.market)}</td>
+          <td>${escapeHtml(trade.direction)}</td>
+          <td>${escapeHtml(trade.setupType)}</td>
+          <td>${escapeHtml(trade.timeframe)}</td>
+          <td><span class="${resultClass}">${escapeHtml(trade.result)}</span></td>
+          <td class="${pnlClass}">${formatCurrency(trade.netPnl)}</td>
+          <td>${Number.isFinite(trade.rMultiple) ? trade.rMultiple.toFixed(2) : "0.00"}R</td>
+          <td>${escapeHtml(trade.psychology)}</td>
+          <td>${escapeHtml(trade.executionQuality)}</td>
+          <td class="row-actions">
+            <button class="mini-btn" data-action="edit" data-id="${trade.id}" type="button">Edit</button>
+            <button class="mini-btn danger" data-action="delete" data-id="${trade.id}" type="button">Delete</button>
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function hydrateSetupFilter() {
+  const setups = Array.from(new Set(state.trades.map((trade) => trade.setupType).filter(Boolean))).sort();
+  const currentValue = ui.filters.setup.value;
+
+  ui.filters.setup.innerHTML = "";
+  const allOption = document.createElement("option");
+  allOption.value = "all";
+  allOption.textContent = "All";
+  ui.filters.setup.appendChild(allOption);
+
+  setups.forEach((setup) => {
+    const option = document.createElement("option");
+    option.value = setup;
+    option.textContent = setup;
+    ui.filters.setup.appendChild(option);
+  });
+
+  ui.filters.setup.value = setups.includes(currentValue) ? currentValue : "all";
+}
+
+function getFilteredTrades() {
+  return state.trades.filter((trade) => {
+    if (state.filters.dateFrom && trade.date < state.filters.dateFrom) {
+      return false;
+    }
+
+    if (state.filters.dateTo && trade.date > state.filters.dateTo) {
+      return false;
+    }
+
+    if (state.filters.market !== "all" && trade.market !== state.filters.market) {
+      return false;
+    }
+
+    if (state.filters.setup !== "all" && trade.setupType !== state.filters.setup) {
+      return false;
+    }
+
+    if (state.filters.timeframe !== "all" && trade.timeframe !== state.filters.timeframe) {
+      return false;
+    }
+
+    if (state.filters.result !== "all" && trade.result !== state.filters.result) {
+      return false;
+    }
+
+    if (state.filters.psychology !== "all" && trade.psychology !== state.filters.psychology) {
+      return false;
+    }
+
+    if (state.filters.search) {
+      const haystack = `${trade.asset} ${trade.setupType} ${trade.notes}`.toLowerCase();
+      if (!haystack.includes(state.filters.search)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
+function renderReflections() {
+  if (!state.reflections.length) {
+    ui.reflectionsList.innerHTML = '<li class="muted">No reflections yet.</li>';
+    return;
+  }
+
+  const recent = [...state.reflections].sort((a, b) => {
+    const byDate = b.date.localeCompare(a.date);
+    if (byDate !== 0) {
+      return byDate;
+    }
+
+    return (b.createdAt || "").localeCompare(a.createdAt || "");
+  });
+
+  ui.reflectionsList.innerHTML = recent
+    .slice(0, 40)
+    .map((entry) => {
+      const tagText = entry.tags?.length ? entry.tags.join(", ") : "no tags";
+      return `
+        <li>
+          <h4>${escapeHtml(entry.date)} | Followed Rules: ${escapeHtml(entry.followRules)}</h4>
+          <p><strong>Went Well:</strong> ${escapeHtml(entry.wentWell)}</p>
+          <p><strong>Mistake:</strong> ${escapeHtml(entry.mistake)}</p>
+          <p><strong>Improve:</strong> ${escapeHtml(entry.improveTomorrow)}</p>
+          <p><strong>Tags:</strong> ${escapeHtml(tagText)}</p>
+        </li>
+      `;
+    })
+    .join("");
+}
+
+function renderMonthlyReview() {
+  const month = ui.reviewMonth.value;
+  if (!month) {
+    return;
+  }
+
+  const monthTrades = state.trades.filter((trade) => trade.date.startsWith(month));
+  const total = monthTrades.length;
+  const net = monthTrades.reduce((sum, trade) => sum + trade.netPnl, 0);
+  const wins = monthTrades.filter((trade) => trade.result === "Win").length;
+  const winRate = total > 0 ? (wins / total) * 100 : 0;
+
+  const setupMap = new Map();
+  monthTrades.forEach((trade) => {
+    setupMap.set(trade.setupType, (setupMap.get(trade.setupType) || 0) + trade.netPnl);
+  });
+
+  let bestSetup = "-";
+  let bestSetupValue = Number.NEGATIVE_INFINITY;
+  setupMap.forEach((value, key) => {
+    if (value > bestSetupValue) {
+      bestSetupValue = value;
+      bestSetup = key;
+    }
+  });
+
+  ui.monthlyNet.textContent = formatCurrency(net);
+  ui.monthlyNet.classList.toggle("pnl-positive", net >= 0);
+  ui.monthlyNet.classList.toggle("pnl-negative", net < 0);
+  ui.monthlyWinRate.textContent = `${winRate.toFixed(1)}%`;
+  ui.monthlyTrades.textContent = String(total);
+  ui.monthlyBestSetup.textContent = bestSetup;
+
+  ui.replayNotes.value = state.replayNotes[month] || "";
+}
+
+function loadState() {
+  state.settings = normalizeSettings(readStorageJson(STORAGE_KEYS.settings, DEFAULT_SETTINGS));
+  state.trades = normalizeTrades(readStorageJson(STORAGE_KEYS.trades, []));
+  state.reflections = normalizeReflections(readStorageJson(STORAGE_KEYS.reflections, []));
+  state.replayNotes = normalizeReplayNotes(readStorageJson(STORAGE_KEYS.replay, {}));
+}
+
+function persistState() {
+  writeStorageJson(STORAGE_KEYS.settings, state.settings);
+  writeStorageJson(STORAGE_KEYS.trades, state.trades);
+  writeStorageJson(STORAGE_KEYS.reflections, state.reflections);
+  writeStorageJson(STORAGE_KEYS.replay, state.replayNotes);
+  try {
+    localStorage.setItem(STORAGE_KEYS.lastSaved, new Date().toISOString());
+  } catch (error) {
+    console.error("Storage write failed:", error);
+  }
+  renderLastSaved();
+}
+
+function renderLastSaved() {
+  let iso = null;
+  try {
+    iso = localStorage.getItem(STORAGE_KEYS.lastSaved);
+  } catch (error) {
+    ui.lastSaved.textContent = "Autosave: browser storage unavailable";
+    return;
+  }
+
+  if (!iso) {
+    ui.lastSaved.textContent = "Autosave: waiting for first update";
+    return;
+  }
+
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    ui.lastSaved.textContent = "Autosave: waiting for first update";
+    return;
+  }
+
+  ui.lastSaved.textContent = `Autosave: ${date.toLocaleString()}`;
+}
+
+function normalizeSettings(input) {
+  const value = input && typeof input === "object" ? input : {};
+  return {
+    startingBalance: ensurePositiveNumber(value.startingBalance, DEFAULT_SETTINGS.startingBalance),
+    balanceOverride: ensureNonNegative(value.balanceOverride, DEFAULT_SETTINGS.balanceOverride),
+    dailyMaxLoss: ensureNonNegative(value.dailyMaxLoss, DEFAULT_SETTINGS.dailyMaxLoss),
+    weeklyMaxLoss: ensureNonNegative(value.weeklyMaxLoss, DEFAULT_SETTINGS.weeklyMaxLoss),
+    riskPerTrade: ensureNonNegative(value.riskPerTrade, DEFAULT_SETTINGS.riskPerTrade),
+    equityGoal: ensurePositiveNumber(value.equityGoal, DEFAULT_SETTINGS.equityGoal)
+  };
+}
+
+function normalizeTrades(input) {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .filter((item) => item && typeof item === "object" && item.id && item.date)
+    .map((item) => ({
+      id: String(item.id),
+      createdAt: String(item.createdAt || ""),
+      updatedAt: String(item.updatedAt || ""),
+      date: String(item.date),
+      session: String(item.session || "Custom"),
+      market: String(item.market || "Forex"),
+      asset: String(item.asset || "UNKNOWN"),
+      direction: String(item.direction || "Buy"),
+      entryPrice: ensurePositiveNumber(item.entryPrice, 0),
+      stopLoss: ensurePositiveNumber(item.stopLoss, 0),
+      takeProfit: ensurePositiveNumber(item.takeProfit, 0),
+      exitPrice: ensurePositiveNumber(item.exitPrice, 0),
+      riskPercent: ensureNonNegative(item.riskPercent, 0),
+      positionSize: ensurePositiveNumber(item.positionSize, 0),
+      tradeResult: String(item.tradeResult || "Auto"),
+      setupType: String(item.setupType || "Custom"),
+      timeframe: String(item.timeframe || "M15"),
+      psychology: String(item.psychology || "Focused"),
+      executionQuality: String(item.executionQuality || "B"),
+      screenshotName: String(item.screenshotName || ""),
+      screenshotData: String(item.screenshotData || ""),
+      notes: String(item.notes || ""),
+      result: String(item.result || "Break Even"),
+      netPnl: ensureNumber(item.netPnl, 0),
+      riskAmount: ensureNonNegative(item.riskAmount, 0),
+      rMultiple: ensureNumber(item.rMultiple, 0),
+      rrRatio: ensureNonNegative(item.rrRatio, 0)
+    }));
+}
+
+function normalizeReflections(input) {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .filter((item) => item && typeof item === "object" && item.date)
+    .map((item) => ({
+      id: String(item.id || createId()),
+      date: String(item.date),
+      wentWell: String(item.wentWell || ""),
+      mistake: String(item.mistake || ""),
+      followRules: String(item.followRules || "Partially"),
+      improveTomorrow: String(item.improveTomorrow || ""),
+      tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
+      createdAt: String(item.createdAt || "")
+    }));
+}
+
+function normalizeReplayNotes(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return {};
+  }
+
+  const result = {};
+  Object.entries(input).forEach(([key, value]) => {
+    result[String(key)] = String(value || "");
+  });
+  return result;
+}
+
+function readStorageJson(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      return fallback;
+    }
+
+    return JSON.parse(raw);
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function writeStorageJson(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error("Storage write failed:", error);
+  }
+}
+
+function createId() {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function toDateInputValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function parseNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : NaN;
+}
+
+function ensureNumber(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function ensurePositiveNumber(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function ensureNonNegative(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function sortTradesAsc(a, b) {
+  const dateSort = String(a.date).localeCompare(String(b.date));
+  if (dateSort !== 0) {
+    return dateSort;
+  }
+
+  return String(a.createdAt || "").localeCompare(String(b.createdAt || ""));
+}
+
+function sortTradesDesc(a, b) {
+  return sortTradesAsc(b, a);
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2
+  }).format(value || 0);
+}
+
+function escapeCsvValue(value) {
+  const stringValue = String(value).replace(/"/g, '""');
+  return `"${stringValue}"`;
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function setMessage(node, text, kind) {
+  node.textContent = text;
+  node.classList.remove("success", "error");
+  if (kind) {
+    node.classList.add(kind);
+  }
+}
+
+function round(value) {
+  return Math.round(value * 100) / 100;
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function getWeekKey(dateString) {
+  const date = new Date(`${dateString}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) {
+    return "unknown-week";
+  }
+
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+function debounce(fn, delay) {
+  let timer = null;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}

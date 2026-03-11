@@ -38,6 +38,15 @@ PHP data will be stored at:
 
 - `data/journal_data.json`
 
+## Deploy on Railway
+
+This repo includes a `Dockerfile`, so Railway can build it without Railpack detection.
+
+1. Connect repo to Railway.
+2. Redeploy latest commit.
+3. Generate public domain in Railway Networking.
+4. Add a volume mounted at `/app/data` for persistent journal storage.
+
 ## Data Controls
 
 - Export CSV (trades)

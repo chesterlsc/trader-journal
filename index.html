@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chester Journal | Trading Analytics</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-one" aria-hidden="true"></div>
+    <div class="ambient ambient-two" aria-hidden="true"></div>
+
+    <div class="app-layout">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <div class="brand-block">
+            <p class="brand-kicker">Trader Development</p>
+            <h1>Chester Journal</h1>
+            <p class="brand-copy">Execution analytics, risk control, and discipline tracking in one local system.</p>
+          </div>
+          <button
+            class="nav-toggle"
+            id="navToggleBtn"
+            type="button"
+            aria-expanded="false"
+            aria-controls="mainNav"
+            aria-label="Toggle navigation"
+          >
+            <span class="nav-toggle-bars" aria-hidden="true"></span>
+            Menu
+          </button>
+        </div>
+
+        <nav class="main-nav" id="mainNav" aria-label="Main sections">
+          <button class="nav-btn is-active" type="button" data-target="dashboard">Dashboard</button>
+          <button class="nav-btn" type="button" data-target="trade-entry">Trade Entry</button>
+          <button class="nav-btn" type="button" data-target="journal">Trade Review</button>
+          <button class="nav-btn" type="button" data-target="reflections">Reflections</button>
+          <button class="nav-btn" type="button" data-target="monthly">Monthly Review</button>
+        </nav>
+
+        <div class="sidebar-foot">
+          <p id="lastSaved">Autosave: waiting for first update</p>
+          <p class="shortcut-hint">Shortcuts: <kbd>Cmd/Ctrl + S</kbd> save trade, <kbd>/</kbd> focus search</p>
+        </div>
+      </aside>
+
+      <main class="content">
+        <nav class="desktop-nav" aria-label="Desktop sections">
+          <button class="nav-btn nav-btn-top is-active" type="button" data-target="dashboard">Dashboard</button>
+          <button class="nav-btn nav-btn-top" type="button" data-target="trade-entry">Trade Entry</button>
+          <button class="nav-btn nav-btn-top" type="button" data-target="journal">Trade Review</button>
+          <button class="nav-btn nav-btn-top" type="button" data-target="reflections">Reflections</button>
+          <button class="nav-btn nav-btn-top" type="button" data-target="monthly">Monthly Review</button>
+        </nav>
+
+        <section class="view is-active" id="dashboard" aria-labelledby="dashboardHeading">
+          <header class="view-head">
+            <h2 id="dashboardHeading">Performance Dashboard</h2>
+            <p>Track equity growth, drawdown pressure, and edge quality at a glance.</p>
+          </header>
+
+          <section class="metric-grid" aria-label="Performance metrics">
+            <article class="metric-card">
+              <p class="metric-label">Account Balance (Custom)</p>
+              <p class="metric-value" data-metric="accountBalance">$0.00</p>
+            </article>
+            <article class="metric-card">
+              <p class="metric-label">Total Trades</p>
+              <p class="metric-value" data-metric="totalTrades">0</p>
+            </article>
+            <article class="metric-card">
+              <p class="metric-label">Win Rate</p>
+              <p class="metric-value" data-metric="winRate">0%</p>
+            </article>
+            <article class="metric-card">
+              <p class="metric-label">Average R:R</p>
+              <p class="metric-value" data-metric="avgRR">0.00</p>
+            </article>
+            <article class="metric-card">
+              <p class="metric-label">Profit Factor</p>
+              <p class="metric-value" data-metric="profitFactor">0.00</p>
+            </article>
+            <article class="metric-card">
+              <p class="metric-label">Current Drawdown</p>
+              <p class="metric-value" data-metric="currentDrawdown">$0.00</p>
+            </article>
+            <article class="metric-card">
+              <p class="metric-label">Max Drawdown</p>
+              <p class="metric-value" data-metric="maxDrawdown">$0.00</p>
+            </article>
+            <article class="metric-card">
+              <p class="metric-label">Best Day</p>
+              <p class="metric-value" data-metric="bestDay">$0.00</p>
+            </article>
+            <article class="metric-card">
+              <p class="metric-label">Worst Day</p>
+              <p class="metric-value" data-metric="worstDay">$0.00</p>
+            </article>
+            <article class="metric-card">
+              <p class="metric-label">Expectancy</p>
+              <p class="metric-value" data-metric="expectancy">$0.00</p>
+            </article>
+            <article class="metric-card">
+              <p class="metric-label">Winning Streak</p>
+              <p class="metric-value" data-metric="winningStreak">0</p>
+            </article>
+            <article class="metric-card">
+              <p class="metric-label">Losing Streak</p>
+              <p class="metric-value" data-metric="losingStreak">0</p>
+            </article>
+          </section>
+
+          <section class="panel-grid">
+            <article class="panel panel-chart">
+              <div class="panel-head">
+                <h3>Equity Curve</h3>
+                <p>Starting balance + trade sequence</p>
+              </div>
+              <canvas id="equityChart" width="900" height="280" aria-label="Equity curve chart"></canvas>
+            </article>
+            <article class="panel panel-chart">
+              <div class="panel-head">
+                <h3>Drawdown Curve</h3>
+                <p>Peak to trough pressure</p>
+              </div>
+              <canvas id="drawdownChart" width="900" height="280" aria-label="Drawdown curve chart"></canvas>
+            </article>
+            <article class="panel panel-chart">
+              <div class="panel-head">
+                <h3>Win vs Loss</h3>
+                <p>Distribution by trade outcomes</p>
+              </div>
+              <canvas id="outcomeChart" width="900" height="280" aria-label="Win loss chart"></canvas>
+            </article>
+          </section>
+
+          <section class="panel-grid panel-grid-two">
+            <article class="panel">
+              <div class="panel-head">
+                <h3>Risk Controls</h3>
+                <p>Enforce your max pain thresholds</p>
+              </div>
+              <form id="riskForm" class="compact-form" novalidate>
+                <label>
+                  Starting Balance (Custom)
+                  <input id="startingBalance" name="startingBalance" type="number" min="1" step="0.01" required />
+                </label>
+                <label>
+                  Account Balance Override ($)
+                  <input
+                    id="balanceOverride"
+                    name="balanceOverride"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Optional manual balance"
+                  />
+                </label>
+                <label>
+                  Daily Max Loss ($)
+                  <input id="dailyMaxLoss" name="dailyMaxLoss" type="number" min="0" step="0.01" required />
+                </label>
+                <label>
+                  Weekly Max Loss ($)
+                  <input id="weeklyMaxLoss" name="weeklyMaxLoss" type="number" min="0" step="0.01" required />
+                </label>
+                <label>
+                  Risk Per Trade (%)
+                  <input id="riskPerTrade" name="riskPerTrade" type="number" min="0" step="0.01" required />
+                </label>
+                <label>
+                  Equity Goal ($)
+                  <input id="equityGoal" name="equityGoal" type="number" min="0" step="0.01" required />
+                </label>
+                <div class="form-actions">
+                  <button class="btn primary" type="submit">Save Risk Settings</button>
+                </div>
+              </form>
+              <p id="riskFormMessage" class="form-message" aria-live="polite"></p>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <h3>Discipline Monitor</h3>
+                <p>Rule breaks and psychology pressure points</p>
+              </div>
+              <div class="score-stack">
+                <div class="score-item">
+                  <p>Discipline Score</p>
+                  <strong id="disciplineScore">100</strong>
+                </div>
+                <div class="score-item">
+                  <p>Daily Trading Score</p>
+                  <strong id="dailyTradingScore">0</strong>
+                </div>
+                <div class="score-item">
+                  <p>Equity Goal Progress</p>
+                  <strong id="goalProgress">0%</strong>
+                </div>
+              </div>
+              <ul id="riskViolations" class="warning-list">
+                <li class="muted">No violations detected.</li>
+              </ul>
+            </article>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h3>Edge Detection by Setup</h3>
+              <p>Find which setups actually produce positive expectancy.</p>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Setup</th>
+                    <th>Trades</th>
+                    <th>Win Rate</th>
+                    <th>Net P&amp;L</th>
+                    <th>Avg R</th>
+                    <th>Expectancy</th>
+                  </tr>
+                </thead>
+                <tbody id="edgeRows">
+                  <tr class="empty-row"><td colspan="6">No setup data yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="trade-entry" aria-labelledby="tradeEntryHeading">
+          <header class="view-head">
+            <h2 id="tradeEntryHeading">Trade Entry</h2>
+            <p>Capture all execution, risk, and psychology variables for each position.</p>
+          </header>
+
+          <section class="panel">
+            <form id="tradeForm" novalidate>
+              <input type="hidden" id="tradeId" />
+              <input type="hidden" id="screenshotData" />
+
+              <div class="form-grid">
+                <label>
+                  Date
+                  <input id="tradeDate" name="tradeDate" type="date" required />
+                </label>
+                <label>
+                  Session
+                  <select id="session" name="session" required>
+                    <option>London</option>
+                    <option>New York</option>
+                    <option>Asia</option>
+                    <option>Custom</option>
+                  </select>
+                </label>
+                <label>
+                  Market
+                  <select id="market" name="market" required>
+                    <option>Forex</option>
+                    <option>Crypto</option>
+                    <option>Stocks</option>
+                    <option>Indices</option>
+                    <option>Metals</option>
+                    <option>Commodities</option>
+                    <option>Futures</option>
+                    <option>ETFs</option>
+                    <option>Options</option>
+                    <option>Other</option>
+                  </select>
+                </label>
+                <label>
+                  Pair / Asset
+                  <input
+                    id="asset"
+                    name="asset"
+                    type="text"
+                    list="assetSuggestions"
+                    placeholder="XAUUSD / BTCUSDT / ETCUSDT"
+                    maxlength="24"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Direction
+                  <select id="direction" name="direction" required>
+                    <option>Buy</option>
+                    <option>Sell</option>
+                  </select>
+                </label>
+                <label>
+                  Entry Price
+                  <input id="entryPrice" name="entryPrice" type="number" min="0" step="0.0001" required />
+                </label>
+                <label>
+                  Stop Loss
+                  <input id="stopLoss" name="stopLoss" type="number" min="0" step="0.0001" required />
+                </label>
+                <label>
+                  Take Profit
+                  <input id="takeProfit" name="takeProfit" type="number" min="0" step="0.0001" required />
+                </label>
+
+                <label>
+                  Exit Price
+                  <input id="exitPrice" name="exitPrice" type="number" min="0" step="0.0001" required />
+                </label>
+                <label>
+                  Risk %
+                  <input id="riskPercent" name="riskPercent" type="number" min="0" step="0.01" required />
+                </label>
+                <label>
+                  Position Size
+                  <input id="positionSize" name="positionSize" type="number" min="0" step="0.0001" required />
+                </label>
+                <label>
+                  Trade Result
+                  <select id="tradeResult" name="tradeResult" required>
+                    <option value="Auto">Auto (from price)</option>
+                    <option value="Win">Win</option>
+                    <option value="Loss">Loss</option>
+                    <option value="Break Even">Break Even</option>
+                  </select>
+                </label>
+
+                <label>
+                  Setup Type
+                  <select id="setupType" name="setupType" required>
+                    <option>Breakout</option>
+                    <option>Liquidity Grab</option>
+                    <option>Trend Continuation</option>
+                    <option>Reversal</option>
+                    <option>Scalp</option>
+                    <option>Custom</option>
+                  </select>
+                </label>
+                <label>
+                  Timeframe
+                  <select id="timeframe" name="timeframe" required>
+                    <option>M1</option>
+                    <option>M5</option>
+                    <option>M15</option>
+                    <option>H1</option>
+                    <option>H4</option>
+                    <option>D1</option>
+                  </select>
+                </label>
+                <label>
+                  Psychology Rating
+                  <select id="psychology" name="psychology" required>
+                    <option>Focused</option>
+                    <option>Hesitant</option>
+                    <option>Emotional</option>
+                    <option>Revenge Trade</option>
+                    <option>Perfect Execution</option>
+                  </select>
+                </label>
+                <label>
+                  Execution Quality
+                  <select id="executionQuality" name="executionQuality" required>
+                    <option>A+</option>
+                    <option>A</option>
+                    <option>B</option>
+                    <option>C</option>
+                    <option>F</option>
+                  </select>
+                </label>
+
+                <label class="field-span-2">
+                  Screenshot Upload
+                  <input id="screenshot" name="screenshot" type="file" accept="image/*" />
+                  <small id="screenshotLabel" class="muted">No screenshot selected</small>
+                </label>
+                <div class="screenshot-preview" id="screenshotPreview">No preview</div>
+
+                <label class="field-span-all">
+                  Trade Notes
+                  <textarea id="tradeNotes" name="tradeNotes" rows="4" maxlength="600" placeholder="Setup rationale, execution notes, mistakes, plan adherence..."></textarea>
+                </label>
+              </div>
+
+              <div class="form-actions">
+                <button id="tradeSubmitBtn" class="btn primary" type="submit">Save Trade</button>
+                <button id="tradeResetBtn" class="btn" type="button">Reset</button>
+              </div>
+              <p id="tradeFormMessage" class="form-message" aria-live="polite"></p>
+            </form>
+
+            <datalist id="assetSuggestions">
+              <option value="XAUUSD"></option>
+              <option value="XAGUSD"></option>
+              <option value="BTCUSD"></option>
+              <option value="BTCUSDT"></option>
+              <option value="ETCUSD"></option>
+              <option value="ETCUSDT"></option>
+              <option value="ETHUSD"></option>
+              <option value="ETHUSDT"></option>
+              <option value="SOLUSDT"></option>
+              <option value="XRPUSDT"></option>
+              <option value="ADAUSDT"></option>
+              <option value="EURUSD"></option>
+              <option value="GBPUSD"></option>
+              <option value="USDJPY"></option>
+              <option value="US30"></option>
+              <option value="NAS100"></option>
+              <option value="SPX500"></option>
+              <option value="AAPL"></option>
+              <option value="TSLA"></option>
+              <option value="NVDA"></option>
+            </datalist>
+          </section>
+        </section>
+
+        <section class="view" id="journal" aria-labelledby="journalHeading">
+          <header class="view-head">
+            <h2 id="journalHeading">Trade Review</h2>
+            <p>Filter by setup, timeframe, psychology, and outcomes to isolate your edge.</p>
+          </header>
+
+          <section class="panel">
+            <div class="filter-grid">
+              <label>
+                Date From
+                <input id="filterDateFrom" type="date" />
+              </label>
+              <label>
+                Date To
+                <input id="filterDateTo" type="date" />
+              </label>
+              <label>
+                Market
+                <select id="filterMarket">
+                  <option value="all">All</option>
+                  <option value="Forex">Forex</option>
+                  <option value="Crypto">Crypto</option>
+                  <option value="Stocks">Stocks</option>
+                  <option value="Indices">Indices</option>
+                  <option value="Metals">Metals</option>
+                  <option value="Commodities">Commodities</option>
+                  <option value="Futures">Futures</option>
+                  <option value="ETFs">ETFs</option>
+                  <option value="Options">Options</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label>
+                Setup
+                <select id="filterSetup">
+                  <option value="all">All</option>
+                </select>
+              </label>
+              <label>
+                Timeframe
+                <select id="filterTimeframe">
+                  <option value="all">All</option>
+                  <option value="M1">M1</option>
+                  <option value="M5">M5</option>
+                  <option value="M15">M15</option>
+                  <option value="H1">H1</option>
+                  <option value="H4">H4</option>
+                  <option value="D1">D1</option>
+                </select>
+              </label>
+              <label>
+                Result
+                <select id="filterResult">
+                  <option value="all">All</option>
+                  <option value="Win">Win</option>
+                  <option value="Loss">Loss</option>
+                  <option value="Break Even">Break Even</option>
+                </select>
+              </label>
+              <label>
+                Psychology
+                <select id="filterPsychology">
+                  <option value="all">All</option>
+                  <option value="Focused">Focused</option>
+                  <option value="Hesitant">Hesitant</option>
+                  <option value="Emotional">Emotional</option>
+                  <option value="Revenge Trade">Revenge Trade</option>
+                  <option value="Perfect Execution">Perfect Execution</option>
+                </select>
+              </label>
+              <label class="field-span-2">
+                Search Asset or Notes
+                <input id="filterSearch" type="search" placeholder="Type symbol, setup, or note keyword" />
+              </label>
+            </div>
+
+            <div class="form-actions split-wrap">
+              <div>
+                <button id="clearFiltersBtn" class="btn" type="button">Clear Filters</button>
+              </div>
+              <div class="inline-actions">
+                <button id="exportCsvBtn" class="btn" type="button">Export CSV</button>
+                <button id="backupJsonBtn" class="btn" type="button">Backup JSON</button>
+                <button id="importJsonBtn" class="btn" type="button">Import JSON</button>
+                <button id="savePhpBtn" class="btn" type="button">Save to PHP JSON</button>
+                <button id="loadPhpBtn" class="btn" type="button">Load from PHP JSON</button>
+                <input id="jsonImportInput" type="file" accept="application/json" hidden />
+              </div>
+            </div>
+
+            <p id="journalMessage" class="form-message" aria-live="polite"></p>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Asset</th>
+                    <th>Market</th>
+                    <th>Dir</th>
+                    <th>Setup</th>
+                    <th>TF</th>
+                    <th>Result</th>
+                    <th>Net P&amp;L</th>
+                    <th>R-Multiple</th>
+                    <th>Psychology</th>
+                    <th>Execution</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="tradesBody">
+                  <tr class="empty-row">
+                    <td colspan="12">No trades logged yet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="reflections" aria-labelledby="reflectionHeading">
+          <header class="view-head">
+            <h2 id="reflectionHeading">Daily Reflection Journal</h2>
+            <p>Review your process daily to improve discipline and decision quality.</p>
+          </header>
+
+          <section class="panel-grid panel-grid-two">
+            <article class="panel">
+              <form id="reflectionForm" novalidate>
+                <label>
+                  Date
+                  <input id="reflectionDate" name="reflectionDate" type="date" required />
+                </label>
+                <label>
+                  What went well today?
+                  <textarea id="wentWell" name="wentWell" rows="2" required></textarea>
+                </label>
+                <label>
+                  What mistake did I make?
+                  <textarea id="mistake" name="mistake" rows="2" required></textarea>
+                </label>
+                <label>
+                  Did I follow my rules?
+                  <select id="followRules" name="followRules" required>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                    <option value="Partially">Partially</option>
+                  </select>
+                </label>
+                <label>
+                  What will I improve tomorrow?
+                  <textarea id="improveTomorrow" name="improveTomorrow" rows="2" required></textarea>
+                </label>
+
+                <fieldset class="tag-set">
+                  <legend>Tags</legend>
+                  <label><input type="checkbox" value="discipline" name="reflectionTag" /> discipline</label>
+                  <label><input type="checkbox" value="overtrading" name="reflectionTag" /> overtrading</label>
+                  <label><input type="checkbox" value="FOMO" name="reflectionTag" /> FOMO</label>
+                  <label><input type="checkbox" value="perfect execution" name="reflectionTag" /> perfect execution</label>
+                  <label><input type="checkbox" value="impatience" name="reflectionTag" /> impatience</label>
+                </fieldset>
+
+                <div class="form-actions">
+                  <button class="btn primary" type="submit">Save Reflection</button>
+                </div>
+                <p id="reflectionMessage" class="form-message" aria-live="polite"></p>
+              </form>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <h3>Reflection History</h3>
+                <p>Recent daily reviews and behavior tags.</p>
+              </div>
+              <ul id="reflectionsList" class="reflection-list">
+                <li class="muted">No reflections yet.</li>
+              </ul>
+            </article>
+          </section>
+        </section>
+
+        <section class="view" id="monthly" aria-labelledby="monthlyHeading">
+          <header class="view-head">
+            <h2 id="monthlyHeading">Monthly Review</h2>
+            <p>Summarize consistency, edge quality, and replay notes by month.</p>
+          </header>
+
+          <section class="panel-grid panel-grid-two">
+            <article class="panel">
+              <label>
+                Review Month
+                <input id="reviewMonth" type="month" />
+              </label>
+              <div class="metric-grid compact">
+                <article class="metric-card">
+                  <p class="metric-label">Monthly Net</p>
+                  <p class="metric-value" id="monthlyNet">$0.00</p>
+                </article>
+                <article class="metric-card">
+                  <p class="metric-label">Monthly Win Rate</p>
+                  <p class="metric-value" id="monthlyWinRate">0%</p>
+                </article>
+                <article class="metric-card">
+                  <p class="metric-label">Trades</p>
+                  <p class="metric-value" id="monthlyTrades">0</p>
+                </article>
+                <article class="metric-card">
+                  <p class="metric-label">Best Setup</p>
+                  <p class="metric-value" id="monthlyBestSetup">-</p>
+                </article>
+              </div>
+            </article>
+
+            <article class="panel">
+              <label>
+                Trade Replay Notes
+                <textarea id="replayNotes" rows="8" placeholder="Key trade screenshots, pattern notes, and process insights..."></textarea>
+              </label>
+              <div class="form-actions">
+                <button id="saveReplayBtn" class="btn" type="button">Save Replay Notes</button>
+              </div>
+              <p id="replayMessage" class="form-message" aria-live="polite"></p>
+            </article>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
