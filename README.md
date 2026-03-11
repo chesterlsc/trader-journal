@@ -50,3 +50,4 @@ PHP data will be stored at:
 - `/` anywhere: jump to journal search filter
 # chester-trading-journal
 # chester-trading-journal
+# chester-trading-journal
