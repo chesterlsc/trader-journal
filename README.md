@@ -1,4 +1,4 @@
-# Chester Journal (Trading Analytics)
+# Leon Journal (Trading Analytics)
 
 Trading journal web app with:
 
