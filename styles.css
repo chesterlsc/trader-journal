@@ -521,7 +521,9 @@ body.is-authenticated .auth-panel {
 
 .desktop-nav-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 14px;
   flex: 0 0 auto;
 }
 
@@ -537,6 +539,32 @@ body.is-authenticated .auth-panel {
 
 .nav-btn-top:hover {
   transform: translateY(-1px);
+}
+
+.desktop-brand-block {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  max-width: 380px;
+}
+
+.desktop-brand-copy {
+  display: grid;
+  gap: 2px;
+  text-align: right;
+}
+
+.desktop-brand-title {
+  margin: 0;
+  font: 700 1.05rem/1.1 "Sora", "Manrope", sans-serif;
+  color: var(--text);
+}
+
+.desktop-brand-description {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.8rem;
+  line-height: 1.35;
 }
 
 .nav-logout-desktop {
@@ -1203,12 +1231,17 @@ body.auth-locked .view {
 }
 
 @media (min-width: 1025px) {
-  .desktop-nav {
-    display: flex;
+  .app-layout {
+    grid-template-columns: 1fr;
+    width: min(1480px, 96vw);
   }
 
-  .sidebar .main-nav {
+  .sidebar {
     display: none;
+  }
+
+  .desktop-nav {
+    display: flex;
   }
 }
 
@@ -1664,12 +1697,20 @@ body.auth-locked .view {
 
 @media (max-width: 1180px) and (min-width: 1025px) {
   .desktop-nav-links {
-    grid-template-columns: repeat(5, minmax(100px, 1fr));
+    grid-template-columns: repeat(5, minmax(92px, 1fr));
   }
 
   .nav-btn-top {
     font-size: 0.86rem;
     padding: 9px 6px;
+  }
+
+  .desktop-brand-block {
+    max-width: 300px;
+  }
+
+  .desktop-brand-description {
+    font-size: 0.74rem;
   }
 }
 

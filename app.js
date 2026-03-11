@@ -62,6 +62,7 @@ const ui = {
   navToggleBtn: document.getElementById("navToggleBtn"),
   authPanel: document.querySelector(".auth-panel"),
   brandTitle: document.getElementById("brandTitle"),
+  brandTitles: Array.from(document.querySelectorAll("[data-brand-title]")),
   navButtons: Array.from(document.querySelectorAll(".nav-btn")),
   views: Array.from(document.querySelectorAll(".view")),
   lastSaved: document.getElementById("lastSaved"),
@@ -3342,6 +3343,9 @@ function updateBranding() {
   if (ui.brandTitle) {
     ui.brandTitle.textContent = brandText;
   }
+  ui.brandTitles.forEach((node) => {
+    node.textContent = brandText;
+  });
 
   if (ui.riskInputs.journalName && ui.riskInputs.journalName.value !== prefix) {
     ui.riskInputs.journalName.value = prefix;
