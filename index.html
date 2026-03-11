@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Your Journal | Trading Analytics</title>
-    <link rel="stylesheet" href="styles.css?v=20260311-auth4" />
+    <link rel="stylesheet" href="styles.css?v=20260311-auth5" />
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -166,25 +166,15 @@
         </nav>
 
         <div class="sidebar-foot">
+          <div class="sidebar-foot-actions">
+            <button id="desktopLogoutBtn" class="btn nav-logout-desktop" type="button" hidden>Logout</button>
+          </div>
           <p id="lastSaved">Autosave: waiting for first update</p>
           <p class="shortcut-hint">Shortcuts: <kbd>Cmd/Ctrl + S</kbd> save trade, <kbd>/</kbd> focus search</p>
         </div>
       </aside>
 
       <main class="content">
-        <nav class="desktop-nav" aria-label="Desktop sections">
-          <div class="desktop-nav-links">
-            <button class="nav-btn nav-btn-top is-active" type="button" data-target="dashboard">Dashboard</button>
-            <button class="nav-btn nav-btn-top" type="button" data-target="trade-entry">Trade Entry</button>
-            <button class="nav-btn nav-btn-top" type="button" data-target="journal">Trade Review</button>
-            <button class="nav-btn nav-btn-top" type="button" data-target="reflections">Reflections</button>
-            <button class="nav-btn nav-btn-top" type="button" data-target="monthly">Monthly Review</button>
-          </div>
-          <div class="desktop-nav-actions">
-            <button id="desktopLogoutBtn" class="btn nav-logout-desktop" type="button" hidden>Logout</button>
-          </div>
-        </nav>
-
         <section class="view is-active" id="dashboard" aria-labelledby="dashboardHeading">
           <header class="view-head view-head-dashboard">
             <h2 id="dashboardHeading">Performance Dashboard</h2>
@@ -947,6 +937,6 @@
       </p>
     </footer>
 
-    <script src="app.js?v=20260311-auth4"></script>
+    <script src="app.js?v=20260311-auth5"></script>
   </body>
 </html>
