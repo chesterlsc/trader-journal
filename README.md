@@ -11,7 +11,7 @@ Trading journal web app with:
 
 - Frontend: `index.html`, `styles.css`, `app.js`
 - Backend: `trade_handler.php` (session auth + API)
-- Storage: PostgreSQL (`journal_users`, `journal_data`, `journal_login_events`)
+- Storage: PostgreSQL (`journal_users`, `journal_notes`, `trades`, `login_info`, `trade_screenshots`)
 
 ## Environment
 
@@ -90,7 +90,7 @@ From Railway service shell / psql:
 
 ```sql
 SELECT username, event_type, success, ip_address, created_at
-FROM journal_login_events
+FROM login_info
 ORDER BY created_at DESC
 LIMIT 100;
 ```

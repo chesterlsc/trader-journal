@@ -168,10 +168,9 @@ function ensureSchema(PDO $pdo): void
 
     $pdo->exec(
         <<<SQL
-        CREATE TABLE IF NOT EXISTS journal_data (
+        CREATE TABLE IF NOT EXISTS journal_notes (
             user_id BIGINT PRIMARY KEY REFERENCES journal_users(id) ON DELETE CASCADE,
             settings JSONB NOT NULL DEFAULT '{}'::jsonb,
-            trades JSONB NOT NULL DEFAULT '[]'::jsonb,
             reflections JSONB NOT NULL DEFAULT '[]'::jsonb,
             replay_notes JSONB NOT NULL DEFAULT '{}'::jsonb,
             updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -181,7 +180,31 @@ function ensureSchema(PDO $pdo): void
 
     $pdo->exec(
         <<<SQL
-        CREATE TABLE IF NOT EXISTS journal_login_events (
+        CREATE TABLE IF NOT EXISTS trades (
+            user_id BIGINT PRIMARY KEY REFERENCES journal_users(id) ON DELETE CASCADE,
+            payload JSONB NOT NULL DEFAULT '[]'::jsonb,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        SQL
+    );
+
+    $pdo->exec(
+        <<<SQL
+        CREATE TABLE IF NOT EXISTS trade_screenshots (
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL REFERENCES journal_users(id) ON DELETE CASCADE,
+            trade_id VARCHAR(64) NOT NULL,
+            screenshot_name TEXT NOT NULL DEFAULT '',
+            screenshot_data TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        SQL
+    );
+
+    $pdo->exec(
+        <<<SQL
+        CREATE TABLE IF NOT EXISTS login_info (
             id BIGSERIAL PRIMARY KEY,
             user_id BIGINT NULL REFERENCES journal_users(id) ON DELETE SET NULL,
             username VARCHAR(32) NOT NULL,
@@ -195,10 +218,13 @@ function ensureSchema(PDO $pdo): void
     );
 
     $pdo->exec(
-        'CREATE INDEX IF NOT EXISTS idx_journal_login_events_created_at ON journal_login_events (created_at DESC)'
+        'CREATE INDEX IF NOT EXISTS idx_trade_screenshots_user_trade ON trade_screenshots (user_id, trade_id)'
     );
     $pdo->exec(
-        'CREATE INDEX IF NOT EXISTS idx_journal_login_events_username ON journal_login_events (username)'
+        'CREATE INDEX IF NOT EXISTS idx_login_info_created_at ON login_info (created_at DESC)'
+    );
+    $pdo->exec(
+        'CREATE INDEX IF NOT EXISTS idx_login_info_username ON login_info (username)'
     );
 }
 
@@ -233,33 +259,75 @@ function upsertJournalData(PDO $pdo, int $userId, array $payload): void
     $reflectionsJson = encodeJsonForDb(sanitizeArray($payload['reflections'] ?? []));
     $replayNotesJson = encodeJsonForDb(sanitizeReplayNotes($payload['replayNotes'] ?? []));
 
-    $stmt = $pdo->prepare(
+    $updateNotes = $pdo->prepare(
         <<<SQL
-        INSERT INTO journal_data (user_id, settings, trades, reflections, replay_notes, updated_at)
-        VALUES (
-            :user_id,
-            CAST(:settings AS jsonb),
-            CAST(:trades AS jsonb),
-            CAST(:reflections AS jsonb),
-            CAST(:replay_notes AS jsonb),
-            NOW()
-        )
-        ON CONFLICT (user_id) DO UPDATE SET
-            settings = EXCLUDED.settings,
-            trades = EXCLUDED.trades,
-            reflections = EXCLUDED.reflections,
-            replay_notes = EXCLUDED.replay_notes,
+        UPDATE journal_notes
+        SET
+            settings = CAST(:settings AS jsonb),
+            reflections = CAST(:reflections AS jsonb),
+            replay_notes = CAST(:replay_notes AS jsonb),
             updated_at = NOW()
+        WHERE user_id = :user_id
         SQL
     );
 
-    $stmt->execute([
+    $updateNotes->execute([
         ':user_id' => $userId,
         ':settings' => $settingsJson,
-        ':trades' => $tradesJson,
         ':reflections' => $reflectionsJson,
         ':replay_notes' => $replayNotesJson,
     ]);
+
+    if ($updateNotes->rowCount() === 0) {
+        $insertNotes = $pdo->prepare(
+            <<<SQL
+            INSERT INTO journal_notes (user_id, settings, reflections, replay_notes, updated_at)
+            VALUES (
+                :user_id,
+                CAST(:settings AS jsonb),
+                CAST(:reflections AS jsonb),
+                CAST(:replay_notes AS jsonb),
+                NOW()
+            )
+            SQL
+        );
+
+        $insertNotes->execute([
+            ':user_id' => $userId,
+            ':settings' => $settingsJson,
+            ':reflections' => $reflectionsJson,
+            ':replay_notes' => $replayNotesJson,
+        ]);
+    }
+
+    $updateTrades = $pdo->prepare(
+        <<<SQL
+        UPDATE trades
+        SET
+            payload = CAST(:trades AS jsonb),
+            updated_at = NOW()
+        WHERE user_id = :user_id
+        SQL
+    );
+
+    $updateTrades->execute([
+        ':user_id' => $userId,
+        ':trades' => $tradesJson,
+    ]);
+
+    if ($updateTrades->rowCount() === 0) {
+        $insertTrades = $pdo->prepare(
+            <<<SQL
+            INSERT INTO trades (user_id, payload, updated_at)
+            VALUES (:user_id, CAST(:trades AS jsonb), NOW())
+            SQL
+        );
+
+        $insertTrades->execute([
+            ':user_id' => $userId,
+            ':trades' => $tradesJson,
+        ]);
+    }
 }
 
 function defaultSettings(): array
