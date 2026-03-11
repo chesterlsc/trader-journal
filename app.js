@@ -373,10 +373,18 @@ function canAccessApp() {
 function updateAccessGate() {
   const locked = state.auth.checked && !state.auth.isAuthenticated;
   const disableNavigation = !canAccessApp();
+  const authenticated = state.auth.checked && state.auth.isAuthenticated;
+
   document.body.classList.toggle("auth-locked", locked);
+  document.body.classList.toggle("auth-ready", state.auth.checked);
+  document.body.classList.toggle("is-authenticated", authenticated);
 
   if (ui.authGate) {
     ui.authGate.hidden = !locked;
+  }
+
+  if (ui.authPanel) {
+    ui.authPanel.hidden = authenticated;
   }
 
   ui.navButtons.forEach((btn) => {

@@ -274,6 +274,15 @@ kbd {
   font-size: 0.93rem;
 }
 
+body:not(.auth-ready) .auth-gate {
+  display: none !important;
+}
+
+body.is-authenticated .auth-gate,
+body.is-authenticated .auth-panel {
+  display: none !important;
+}
+
 .desktop-nav {
   display: none;
   align-items: center;
