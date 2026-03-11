@@ -517,7 +517,7 @@ body.is-authenticated .auth-panel {
 
 .desktop-nav-links {
   display: grid;
-  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  grid-template-columns: repeat(6, minmax(108px, 1fr));
   gap: 10px;
   flex: 1 1 auto;
   min-width: 0;
@@ -1810,7 +1810,7 @@ body.auth-locked .view {
 
 @media (max-width: 1180px) and (min-width: 1025px) {
   .desktop-nav-links {
-    grid-template-columns: repeat(5, minmax(92px, 1fr));
+    grid-template-columns: repeat(6, minmax(84px, 1fr));
   }
 
   .nav-btn-top {

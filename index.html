@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Your Journal | Trading Analytics</title>
-    <link rel="stylesheet" href="styles.css?v=20260311-spacingpass" />
+    <link rel="stylesheet" href="styles.css?v=20260311-calendar-tab" />
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -161,6 +161,7 @@
           <button class="nav-btn" type="button" data-target="trade-entry">Trade Entry</button>
           <button class="nav-btn" type="button" data-target="journal">Trade Review</button>
           <button class="nav-btn" type="button" data-target="reflections">Reflections</button>
+          <button class="nav-btn" type="button" data-target="calendar">Calendar P&amp;L</button>
           <button class="nav-btn" type="button" data-target="monthly">Monthly Review</button>
           <button id="mobileLogoutBtn" class="btn nav-logout-mobile" type="button" hidden>Logout</button>
         </nav>
@@ -186,6 +187,7 @@
             <button class="nav-btn nav-btn-top" type="button" data-target="trade-entry">Trade Entry</button>
             <button class="nav-btn nav-btn-top" type="button" data-target="journal">Trade Review</button>
             <button class="nav-btn nav-btn-top" type="button" data-target="reflections">Reflections</button>
+            <button class="nav-btn nav-btn-top" type="button" data-target="calendar">Calendar P&amp;L</button>
             <button class="nav-btn nav-btn-top" type="button" data-target="monthly">Monthly Review</button>
           </div>
           <div class="desktop-nav-actions">
@@ -372,21 +374,6 @@
             </div>
           </section>
 
-          <section class="panel">
-            <div class="panel-head panel-head-inline">
-              <div>
-                <h3>Calendar P&amp;L View</h3>
-                <p>See daily profit, trade count, and the most traded asset for each day.</p>
-              </div>
-              <label class="calendar-month-control">
-                <span>Month</span>
-                <input id="dashboardCalendarMonth" type="month" />
-              </label>
-            </div>
-            <p id="calendarSummary" class="form-message" aria-live="polite"></p>
-            <div id="calendarGrid" class="calendar-grid" aria-label="Trading calendar"></div>
-          </section>
-
           <details class="panel panel-collapsible" id="loginLogsPanel" hidden open>
             <summary class="panel-collapse-summary">
               <div class="panel-head">
@@ -460,6 +447,28 @@
             </div>
           </details>
 
+        </section>
+
+        <section class="view" id="calendar" aria-labelledby="calendarHeading">
+          <header class="view-head">
+            <h2 id="calendarHeading">Calendar P&amp;L</h2>
+            <p>Review daily profit, trade count, and the most traded asset in a dedicated monthly view.</p>
+          </header>
+
+          <section class="panel">
+            <div class="panel-head panel-head-inline">
+              <div>
+                <h3>Monthly Calendar</h3>
+                <p>See daily profit, trade count, and the most traded asset for each day.</p>
+              </div>
+              <label class="calendar-month-control">
+                <span>Month</span>
+                <input id="dashboardCalendarMonth" type="month" />
+              </label>
+            </div>
+            <p id="calendarSummary" class="form-message" aria-live="polite"></p>
+            <div id="calendarGrid" class="calendar-grid" aria-label="Trading calendar"></div>
+          </section>
         </section>
 
         <section class="view" id="trade-entry" aria-labelledby="tradeEntryHeading">
@@ -991,6 +1000,6 @@
       </p>
     </footer>
 
-    <script src="app.js?v=20260311-spacingpass"></script>
+    <script src="app.js?v=20260311-calendar-tab"></script>
   </body>
 </html>
