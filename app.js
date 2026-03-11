@@ -17,6 +17,8 @@ const DEFAULT_SETTINGS = {
   equityGoal: 15000
 };
 
+const SERVER_AUTOSAVE_DEBOUNCE_MS = 900;
+
 const state = {
   trades: [],
   settings: { ...DEFAULT_SETTINGS },
@@ -26,6 +28,10 @@ const state = {
     checked: false,
     isAuthenticated: false,
     username: ""
+  },
+  serverSync: {
+    timerId: null,
+    inFlight: false
   },
   filters: {
     dateFrom: "",
@@ -335,6 +341,13 @@ async function checkAuthSession() {
   }
 
   updateAuthUi();
+
+  if (state.auth.isAuthenticated) {
+    const loaded = await loadFromPhpStorage({ silent: true, source: "session", preferLocalIfServerEmpty: true });
+    if (loaded) {
+      setMessage(ui.authMessage, `Session restored for ${state.auth.username}.`, "success");
+    }
+  }
 }
 
 async function handleLogin() {
@@ -375,6 +388,7 @@ async function handleLogout() {
   state.auth.checked = true;
   state.auth.isAuthenticated = false;
   state.auth.username = "";
+  cancelServerAutosave();
   updateAuthUi();
   setMessage(ui.authMessage, "Logged out.", "success");
 }
@@ -396,7 +410,13 @@ async function submitAuth(action, username, password, successMessage) {
     state.auth.isAuthenticated = true;
     state.auth.username = String(body.username || username);
     updateAuthUi();
-    setMessage(ui.authMessage, successMessage, "success");
+
+    const loaded = await loadFromPhpStorage({ silent: true, source: "auth", preferLocalIfServerEmpty: true });
+    if (loaded) {
+      setMessage(ui.authMessage, `${successMessage} Server journal loaded.`, "success");
+    } else {
+      setMessage(ui.authMessage, `${successMessage} Using local journal until server load succeeds.`, "error");
+    }
   } catch (error) {
     setMessage(ui.authMessage, error.message || `${action} failed`, "error");
   }
@@ -1040,9 +1060,13 @@ function importBackupJson(event) {
   reader.readAsText(file);
 }
 
-async function saveToPhpStorage() {
+async function saveToPhpStorage(options = {}) {
+  const { silent = false } = options;
+
   if (!state.auth.isAuthenticated) {
-    setMessage(ui.journalMessage, "Login first to save on server database.", "error");
+    if (!silent) {
+      setMessage(ui.journalMessage, "Login first to save on server database.", "error");
+    }
     return;
   }
 
@@ -1054,6 +1078,7 @@ async function saveToPhpStorage() {
   };
 
   try {
+    state.serverSync.inFlight = true;
     const response = await fetch("trade_handler.php?action=save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1066,23 +1091,42 @@ async function saveToPhpStorage() {
       throw new Error(body.error || "PHP save failed");
     }
 
-    setMessage(ui.journalMessage, "Saved to PHP JSON storage.", "success");
+    if (!silent) {
+      setMessage(ui.journalMessage, "Saved to PHP JSON storage.", "success");
+    }
+    return true;
   } catch (error) {
-    setMessage(
-      ui.journalMessage,
-      error.message || "PHP save failed. Start with `php -S localhost:8000` and open via http://localhost:8000.",
-      "error"
-    );
+    if (!silent) {
+      setMessage(
+        ui.journalMessage,
+        error.message || "PHP save failed. Start with `php -S localhost:8000` and open via http://localhost:8000.",
+        "error"
+      );
+    }
+    return false;
+  } finally {
+    state.serverSync.inFlight = false;
   }
 }
 
-async function loadFromPhpStorage() {
+async function loadFromPhpStorage(options = {}) {
+  const { silent = false, preferLocalIfServerEmpty = false } = options;
+
   if (!state.auth.isAuthenticated) {
-    setMessage(ui.journalMessage, "Login first to load server database.", "error");
-    return;
+    if (!silent) {
+      setMessage(ui.journalMessage, "Login first to load server database.", "error");
+    }
+    return false;
   }
 
   try {
+    const localSnapshot = {
+      settings: { ...state.settings },
+      trades: [...state.trades],
+      reflections: [...state.reflections],
+      replayNotes: { ...state.replayNotes }
+    };
+
     const response = await fetch("trade_handler.php?action=load", {
       method: "GET",
       credentials: "same-origin"
@@ -1093,21 +1137,49 @@ async function loadFromPhpStorage() {
       throw new Error(body.error || "PHP load failed");
     }
 
-    state.settings = normalizeSettings(body.data.settings);
-    state.trades = normalizeTrades(body.data.trades);
-    state.reflections = normalizeReflections(body.data.reflections);
-    state.replayNotes = normalizeReplayNotes(body.data.replayNotes);
+    const serverSettings = normalizeSettings(body.data.settings);
+    const serverTrades = normalizeTrades(body.data.trades);
+    const serverReflections = normalizeReflections(body.data.reflections);
+    const serverReplayNotes = normalizeReplayNotes(body.data.replayNotes);
 
-    persistState();
+    const shouldKeepLocal =
+      preferLocalIfServerEmpty &&
+      serverTrades.length === 0 &&
+      localSnapshot.trades.length > 0;
+
+    if (shouldKeepLocal) {
+      state.settings = localSnapshot.settings;
+      state.trades = localSnapshot.trades;
+      state.reflections = localSnapshot.reflections;
+      state.replayNotes = localSnapshot.replayNotes;
+      persistState();
+      if (!silent) {
+        setMessage(ui.journalMessage, "Server was empty. Kept local trades and synced to server.", "success");
+      }
+      return true;
+    }
+
+    state.settings = serverSettings;
+    state.trades = serverTrades;
+    state.reflections = serverReflections;
+    state.replayNotes = serverReplayNotes;
+
+    persistState({ skipServerSync: true });
     hydrateRiskForm();
     renderAll();
-    setMessage(ui.journalMessage, "Loaded from PHP JSON storage.", "success");
+    if (!silent) {
+      setMessage(ui.journalMessage, "Loaded from PHP JSON storage.", "success");
+    }
+    return true;
   } catch (error) {
-    setMessage(
-      ui.journalMessage,
-      error.message || "PHP load failed. Start with `php -S localhost:8000` and open via http://localhost:8000.",
-      "error"
-    );
+    if (!silent) {
+      setMessage(
+        ui.journalMessage,
+        error.message || "PHP load failed. Start with `php -S localhost:8000` and open via http://localhost:8000.",
+        "error"
+      );
+    }
+    return false;
   }
 }
 
@@ -1836,7 +1908,8 @@ function loadState() {
   state.replayNotes = normalizeReplayNotes(readStorageJson(STORAGE_KEYS.replay, {}));
 }
 
-function persistState() {
+function persistState(options = {}) {
+  const { skipServerSync = false } = options;
   writeStorageJson(STORAGE_KEYS.settings, state.settings);
   writeStorageJson(STORAGE_KEYS.trades, state.trades);
   writeStorageJson(STORAGE_KEYS.reflections, state.reflections);
@@ -1847,6 +1920,36 @@ function persistState() {
     console.error("Storage write failed:", error);
   }
   renderLastSaved();
+
+  if (!skipServerSync) {
+    queueServerAutosave();
+  }
+}
+
+function queueServerAutosave() {
+  if (!state.auth.isAuthenticated) {
+    return;
+  }
+
+  if (state.serverSync.timerId) {
+    clearTimeout(state.serverSync.timerId);
+  }
+
+  state.serverSync.timerId = window.setTimeout(async () => {
+    state.serverSync.timerId = null;
+    if (state.serverSync.inFlight) {
+      queueServerAutosave();
+      return;
+    }
+    await saveToPhpStorage({ silent: true });
+  }, SERVER_AUTOSAVE_DEBOUNCE_MS);
+}
+
+function cancelServerAutosave() {
+  if (state.serverSync.timerId) {
+    clearTimeout(state.serverSync.timerId);
+    state.serverSync.timerId = null;
+  }
 }
 
 function renderLastSaved() {
