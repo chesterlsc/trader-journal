@@ -458,8 +458,12 @@ h1 {
 }
 
 #resetPasswordView {
-  display: grid;
+  display: none;
   gap: 12px;
+}
+
+#resetPasswordView.is-visible {
+  display: grid;
 }
 
 #resetPasswordView[hidden] {

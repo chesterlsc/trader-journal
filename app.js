@@ -699,7 +699,9 @@ function updateAuthUi() {
     ui.authControls.hidden = isResetMode || isResetPending;
   }
   if (ui.resetPasswordView) {
+    ui.resetPasswordView.classList.toggle("is-visible", isResetMode);
     ui.resetPasswordView.hidden = !isResetMode;
+    ui.resetPasswordView.style.display = isResetMode ? "grid" : "none";
   }
   if (ui.forgotPasswordBtn) {
     ui.forgotPasswordBtn.hidden = isResetMode || isResetPending;
