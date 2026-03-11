@@ -202,6 +202,22 @@ function bindEvents() {
       toggleMobileNav(false);
     }
   });
+
+  document.addEventListener("click", (event) => {
+    if (!isMobileViewport()) {
+      return;
+    }
+
+    if (!ui.sidebar) {
+      return;
+    }
+
+    if (ui.sidebar.contains(event.target)) {
+      return;
+    }
+
+    toggleMobileNav(false);
+  });
 }
 
 function switchView(id) {
@@ -1172,12 +1188,12 @@ function renderEdgeTable(analytics) {
       const expClass = row.expectancy >= 0 ? "pnl-positive" : "pnl-negative";
       return `
         <tr>
-          <td>${escapeHtml(row.setup)}</td>
-          <td>${row.trades}</td>
-          <td>${row.winRate.toFixed(1)}%</td>
-          <td class="${netClass}">${formatCurrency(row.netPnl)}</td>
-          <td>${row.avgR.toFixed(2)}R</td>
-          <td class="${expClass}">${formatCurrency(row.expectancy)}</td>
+          <td data-label="Setup">${escapeHtml(row.setup)}</td>
+          <td data-label="Trades">${row.trades}</td>
+          <td data-label="Win Rate">${row.winRate.toFixed(1)}%</td>
+          <td data-label="Net P&L" class="${netClass}">${formatCurrency(row.netPnl)}</td>
+          <td data-label="Avg R">${row.avgR.toFixed(2)}R</td>
+          <td data-label="Expectancy" class="${expClass}">${formatCurrency(row.expectancy)}</td>
         </tr>
       `;
     })
@@ -1372,17 +1388,17 @@ function renderJournalTable() {
 
       return `
         <tr>
-          <td>${escapeHtml(trade.date)}</td>
-          <td>${escapeHtml(trade.asset)}</td>
-          <td>${escapeHtml(trade.market)}</td>
-          <td>${escapeHtml(trade.direction)}</td>
-          <td>${escapeHtml(trade.setupType)}</td>
-          <td>${escapeHtml(trade.timeframe)}</td>
-          <td><span class="${resultClass}">${escapeHtml(trade.result)}</span></td>
-          <td class="${pnlClass}">${formatCurrency(trade.netPnl)}</td>
-          <td>${Number.isFinite(trade.rMultiple) ? trade.rMultiple.toFixed(2) : "0.00"}R</td>
-          <td>${escapeHtml(trade.psychology)}</td>
-          <td>${escapeHtml(trade.executionQuality)}</td>
+          <td data-label="Date">${escapeHtml(trade.date)}</td>
+          <td data-label="Asset">${escapeHtml(trade.asset)}</td>
+          <td data-label="Market">${escapeHtml(trade.market)}</td>
+          <td data-label="Direction">${escapeHtml(trade.direction)}</td>
+          <td data-label="Setup">${escapeHtml(trade.setupType)}</td>
+          <td data-label="Timeframe">${escapeHtml(trade.timeframe)}</td>
+          <td data-label="Result"><span class="${resultClass}">${escapeHtml(trade.result)}</span></td>
+          <td data-label="Net P&L" class="${pnlClass}">${formatCurrency(trade.netPnl)}</td>
+          <td data-label="R-Multiple">${Number.isFinite(trade.rMultiple) ? trade.rMultiple.toFixed(2) : "0.00"}R</td>
+          <td data-label="Psychology">${escapeHtml(trade.psychology)}</td>
+          <td data-label="Execution">${escapeHtml(trade.executionQuality)}</td>
           <td class="row-actions">
             <button class="mini-btn" data-action="edit" data-id="${trade.id}" type="button">Edit</button>
             <button class="mini-btn danger" data-action="delete" data-id="${trade.id}" type="button">Delete</button>

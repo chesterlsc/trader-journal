@@ -351,6 +351,14 @@ button {
   font-family: "Sora", "Manrope", "Trebuchet MS", sans-serif;
 }
 
+button,
+.btn,
+.mini-btn,
+.nav-btn,
+.nav-toggle {
+  min-height: 42px;
+}
+
 input,
 select,
 textarea {
@@ -692,6 +700,8 @@ td {
 @media (max-width: 1024px) {
   .app-layout {
     grid-template-columns: 1fr;
+    width: min(100%, calc(100vw - 12px));
+    margin: 8px auto 18px;
   }
 
   .desktop-nav {
@@ -701,6 +711,7 @@ td {
   .sidebar {
     min-height: auto;
     position: static;
+    gap: 12px;
   }
 
   .sidebar-header {
@@ -763,6 +774,80 @@ td {
   }
 }
 
+@media (max-width: 900px) {
+  .table-wrap {
+    border: 0;
+    background: transparent;
+    overflow: visible;
+  }
+
+  table {
+    min-width: 0;
+    border-collapse: separate;
+    border-spacing: 0 10px;
+  }
+
+  thead {
+    display: none;
+  }
+
+  tbody,
+  tr {
+    display: block;
+  }
+
+  tbody tr {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: linear-gradient(165deg, rgba(14, 24, 44, 0.94), rgba(10, 16, 30, 0.94));
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    padding: 8px 10px;
+  }
+
+  td {
+    display: grid;
+    grid-template-columns: minmax(96px, 42%) minmax(0, 1fr);
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px dashed rgba(120, 147, 205, 0.24);
+  }
+
+  td::before {
+    content: attr(data-label);
+    color: var(--text-soft);
+    font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  td:last-child {
+    border-bottom: 0;
+  }
+
+  .row-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 8px;
+  }
+
+  .row-actions::before,
+  .empty-row td::before {
+    content: none;
+  }
+
+  .mini-btn + .mini-btn {
+    margin-left: 0;
+  }
+
+  .empty-row td {
+    display: block;
+    border-bottom: 0;
+    text-align: center;
+    padding: 12px 4px;
+  }
+}
+
 @media (max-width: 760px) {
   .metric-grid,
   .metric-grid.compact,
@@ -778,14 +863,36 @@ td {
     grid-column: auto;
   }
 
+  .brand-kicker {
+    font-size: 10px;
+  }
+
+  h1 {
+    font-size: 1.25rem;
+  }
+
+  .brand-copy {
+    display: none;
+  }
+
   .view-head,
   .panel,
   .sidebar {
-    padding: 14px;
+    padding: 12px;
   }
 
   .split-wrap {
     justify-content: flex-start;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  .ambient {
+    display: none;
   }
 }
 
