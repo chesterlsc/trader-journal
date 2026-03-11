@@ -462,6 +462,10 @@ h1 {
   gap: 12px;
 }
 
+#resetPasswordView[hidden] {
+  display: none !important;
+}
+
 .auth-form-actions .btn {
   flex: 1 1 180px;
 }
