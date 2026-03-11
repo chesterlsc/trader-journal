@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Your Journal | Trading Analytics</title>
-    <link rel="stylesheet" href="styles.css?v=20260311-admincalendarfix" />
+    <link rel="stylesheet" href="styles.css?v=20260311-homepolish" />
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -20,55 +20,34 @@
 
       <div class="auth-hero">
         <section class="auth-hero-copy">
-          <div class="auth-hero-badges" aria-hidden="true">
-            <span>Trader Development</span>
-            <span>Execution Review</span>
-            <span>Discipline Tracking</span>
+          <p class="auth-eyebrow">Free trading journal for disciplined traders</p>
+          <h2>Build a trading routine that compounds.</h2>
+          <p class="auth-hero-text">Track execution. Review discipline. Improve your edge.</p>
+          <div class="hero-cta-row">
+            <button id="heroRegisterBtn" class="btn primary hero-cta-btn" type="button">Create Free Account</button>
+            <button id="heroLoginBtn" class="btn hero-cta-btn hero-cta-btn-secondary" type="button">Log In</button>
           </div>
-          <h2>Build the trading routine that compounds with you.</h2>
-          <p class="auth-hero-text">
-            Track your execution, review your discipline, and see your edge develop over time in one focused trading
-            journal.
-          </p>
-          <div class="auth-hero-stage" aria-hidden="true">
-            <article class="hero-stage-card hero-stage-card-main">
-              <p>Weekly Discipline</p>
-              <strong>86%</strong>
-              <span>3 clean sessions, 1 rule break, 12 reviewed trades</span>
+          <p class="hero-cta-note">Free. No subscription.</p>
+          <div class="auth-proof-grid" aria-hidden="true">
+            <article class="auth-proof-card">
+              <strong>Discipline Tracking</strong>
+              <span>Review execution quality, tags, and daily rule-following.</span>
             </article>
-            <article class="hero-stage-card">
-              <p>Best Performing Asset</p>
-              <strong>XAUUSD</strong>
-              <span>4 trades, +2.8R, strongest execution score</span>
+            <article class="auth-proof-card">
+              <strong>Execution Review</strong>
+              <span>Log context, screenshots, setups, and post-trade notes cleanly.</span>
             </article>
-            <article class="hero-stage-card">
-              <p>Current Focus</p>
-              <strong>Protect Drawdown</strong>
-              <span>Daily loss guardrails and reflection checkpoints active</span>
-            </article>
-          </div>
-          <div class="auth-hero-metrics">
-            <article>
+            <article class="auth-proof-card">
               <strong>Calendar P&amp;L</strong>
-              <span>Daily edge and trade concentration.</span>
-            </article>
-            <article>
-              <strong>Discipline Review</strong>
-              <span>Execution scoring and reflection tracking.</span>
-            </article>
-            <article>
-              <strong>Secure Cloud Save</strong>
-              <span>Username or email login backed by PostgreSQL.</span>
+              <span>See how daily output, win rate, and asset focus build over time.</span>
             </article>
           </div>
         </section>
 
-        <section class="auth-panel" aria-label="Account login">
-          <p class="auth-title">Sign In To Your Journal</p>
-          <p class="auth-status" id="authStatus">Checking session...</p>
-          <p class="auth-copy">
-            Sign in with your username or email and password, or create a new account using the same single field.
-          </p>
+        <section class="auth-panel" aria-label="Account access">
+          <p class="auth-title" id="authTitle">Create your free account</p>
+          <p class="auth-status" id="authStatus"></p>
+          <p class="auth-copy" id="authCopy">Start with a username or email and a password. Your journal stays free.</p>
 
           <div id="authControls">
             <label>
@@ -81,7 +60,6 @@
                 autocomplete="username"
               />
             </label>
-            <p class="auth-field-hint">Use your email if you want password recovery for this account.</p>
             <label>
               Password
               <input
@@ -94,10 +72,10 @@
             </label>
 
             <div class="form-actions auth-form-actions">
-              <button id="loginBtn" class="btn primary" type="button">Login</button>
-              <button id="registerBtn" class="btn" type="button">Create Account</button>
-              <button id="forgotPasswordBtn" class="btn" type="button">Forgot Password</button>
+              <button id="registerBtn" class="btn primary" type="button">Create Free Account</button>
+              <button id="loginBtn" class="btn" type="button">Log In</button>
             </div>
+            <button id="forgotPasswordBtn" class="auth-link-btn" type="button">Forgot password?</button>
           </div>
 
           <div id="resetPasswordView" hidden>
@@ -1020,6 +998,6 @@
       </p>
     </footer>
 
-    <script src="app.js?v=20260311-admincalendarfix"></script>
+    <script src="app.js?v=20260311-homepolish"></script>
   </body>
 </html>

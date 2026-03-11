@@ -34,6 +34,7 @@ const state = {
     isAuthenticated: false,
     username: "",
     isAdmin: false,
+    intent: "register",
     sessionCheckVersion: 0,
     resetToken: "",
     resetTokenStatus: "idle"
@@ -63,6 +64,8 @@ const ui = {
   authPanel: document.querySelector(".auth-panel"),
   brandTitle: document.getElementById("brandTitle"),
   brandTitles: Array.from(document.querySelectorAll("[data-brand-title]")),
+  authTitle: document.getElementById("authTitle"),
+  authCopy: document.getElementById("authCopy"),
   navButtons: Array.from(document.querySelectorAll(".nav-btn")),
   views: Array.from(document.querySelectorAll(".view")),
   lastSaved: document.getElementById("lastSaved"),
@@ -74,6 +77,8 @@ const ui = {
   loginBtn: document.getElementById("loginBtn"),
   registerBtn: document.getElementById("registerBtn"),
   forgotPasswordBtn: document.getElementById("forgotPasswordBtn"),
+  heroRegisterBtn: document.getElementById("heroRegisterBtn"),
+  heroLoginBtn: document.getElementById("heroLoginBtn"),
   resetPasswordView: document.getElementById("resetPasswordView"),
   resetPassword: document.getElementById("resetPassword"),
   resetPasswordConfirm: document.getElementById("resetPasswordConfirm"),
@@ -244,7 +249,11 @@ function bindEvents() {
     ui.authPassword.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
-        handleLogin();
+        if (state.auth.intent === "login") {
+          handleLogin();
+        } else {
+          handleRegister();
+        }
       }
     });
   }
@@ -262,6 +271,16 @@ function bindEvents() {
 
   if (ui.forgotPasswordBtn) {
     ui.forgotPasswordBtn.addEventListener("click", handleForgotPassword);
+  }
+  if (ui.heroRegisterBtn) {
+    ui.heroRegisterBtn.addEventListener("click", () => {
+      setAuthIntent("register", { focus: true });
+    });
+  }
+  if (ui.heroLoginBtn) {
+    ui.heroLoginBtn.addEventListener("click", () => {
+      setAuthIntent("login", { focus: true });
+    });
   }
   if (ui.resetPasswordBtn) {
     ui.resetPasswordBtn.addEventListener("click", handlePasswordReset);
@@ -429,6 +448,22 @@ function syncMobileNavState() {
 
 function canAccessApp() {
   return state.auth.checked && state.auth.isAuthenticated;
+}
+
+function setAuthIntent(intent, options = {}) {
+  if (intent !== "login" && intent !== "register") {
+    return;
+  }
+
+  state.auth.intent = intent;
+  updateAuthUi();
+
+  if (options.focus && !state.auth.isAuthenticated) {
+    ui.authPanel?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    window.setTimeout(() => {
+      ui.authIdentifier?.focus();
+    }, 120);
+  }
 }
 
 function getResetTokenFromUrl() {
@@ -614,6 +649,7 @@ async function checkAuthSession() {
 }
 
 async function handleLogin() {
+  setAuthIntent("login");
   const credentials = readAuthForm(false);
   if (!credentials.ok) {
     setMessage(ui.authMessage, credentials.error, "error");
@@ -624,6 +660,7 @@ async function handleLogin() {
 }
 
 async function handleRegister() {
+  setAuthIntent("register");
   const credentials = readAuthForm(true);
   if (!credentials.ok) {
     setMessage(ui.authMessage, credentials.error, "error");
@@ -653,6 +690,7 @@ async function handleLogout() {
   state.auth.isAuthenticated = false;
   state.auth.username = "";
   state.auth.isAdmin = false;
+  state.auth.intent = "register";
   state.loginLogs = [];
   state.adminUsers = [];
   renderLoginLogs();
@@ -713,6 +751,35 @@ function updateAuthUi() {
   const hasResetToken = Boolean(state.auth.resetToken) && !state.auth.isAuthenticated;
   const isResetPending = hasResetToken && state.auth.resetTokenStatus === "pending";
   const isResetMode = hasResetToken && state.auth.resetTokenStatus === "valid";
+  const loginMode = state.auth.intent === "login";
+
+  if (ui.authTitle) {
+    ui.authTitle.textContent = isResetMode
+      ? "Reset your password"
+      : isResetPending
+        ? "Verifying reset link"
+      : loginMode
+        ? "Log in to Your Journal"
+        : "Create your free account";
+  }
+  if (ui.authCopy) {
+    ui.authCopy.textContent = isResetMode
+      ? "Set a new password to regain access to your journal."
+      : isResetPending
+        ? "Checking that your password reset link is still valid."
+      : loginMode
+        ? "Use your username or email and password to continue."
+        : "Start with a username or email and a password. Your journal stays free.";
+  }
+  if (ui.authPassword) {
+    ui.authPassword.autocomplete = loginMode ? "current-password" : "new-password";
+  }
+  ui.registerBtn.classList.toggle("primary", !loginMode);
+  ui.loginBtn.classList.toggle("primary", loginMode);
+  ui.heroRegisterBtn?.classList.toggle("primary", !loginMode);
+  ui.heroLoginBtn?.classList.toggle("primary", loginMode);
+  ui.heroLoginBtn?.classList.toggle("hero-cta-btn-secondary", !loginMode);
+  ui.heroRegisterBtn?.classList.toggle("hero-cta-btn-secondary", loginMode);
 
   if (ui.authControls) {
     ui.authControls.hidden = isResetMode || isResetPending;
@@ -727,11 +794,7 @@ function updateAuthUi() {
   }
 
   if (!state.auth.checked) {
-    ui.authStatus.textContent = isResetPending
-      ? "Verifying reset link..."
-      : isResetMode
-        ? "Reset your password"
-        : "Checking session...";
+    ui.authStatus.textContent = isResetPending ? "Verifying reset link..." : "";
     if (ui.authPanel) {
       ui.authPanel.hidden = false;
     }
@@ -765,12 +828,10 @@ function updateAuthUi() {
       ui.authPassword.value = "";
     }
   } else {
-    ui.authStatus.textContent = isResetPending
-      ? "Verifying reset link..."
-      : isResetMode
-        ? "Reset your password"
-        : "Not logged in";
-    ui.authStatus.classList.add("is-off");
+    ui.authStatus.textContent = isResetPending ? "Verifying reset link..." : isResetMode ? "Reset link verified" : "";
+    if (ui.authStatus.textContent) {
+      ui.authStatus.classList.add(isResetMode ? "is-on" : "is-off");
+    }
     state.auth.isAdmin = false;
     ui.loginBtn.hidden = isResetMode || isResetPending;
     ui.registerBtn.hidden = isResetMode || isResetPending;
@@ -792,6 +853,7 @@ function updateAuthUi() {
 }
 
 async function handleForgotPassword() {
+  setAuthIntent("login");
   const identifier = (ui.authIdentifier?.value || "").trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
     setMessage(ui.authMessage, "Enter the account email address first.", "error");
@@ -847,6 +909,7 @@ async function handlePasswordReset() {
 function clearResetTokenState(clearMessage = false) {
   state.auth.resetToken = "";
   state.auth.resetTokenStatus = "idle";
+  state.auth.intent = "login";
   setResetTokenInUrl("");
   if (ui.resetPassword) {
     ui.resetPassword.value = "";
