@@ -57,6 +57,7 @@ const ui = {
   mainNav: document.getElementById("mainNav"),
   navToggleBtn: document.getElementById("navToggleBtn"),
   authGate: document.getElementById("authGate"),
+  authPanel: document.querySelector(".auth-panel"),
   brandTitle: document.getElementById("brandTitle"),
   navButtons: Array.from(document.querySelectorAll(".nav-btn")),
   views: Array.from(document.querySelectorAll(".view")),
@@ -67,7 +68,8 @@ const ui = {
   authPassword: document.getElementById("authPassword"),
   loginBtn: document.getElementById("loginBtn"),
   registerBtn: document.getElementById("registerBtn"),
-  logoutBtn: document.getElementById("logoutBtn"),
+  desktopLogoutBtn: document.getElementById("desktopLogoutBtn"),
+  mobileLogoutBtn: document.getElementById("mobileLogoutBtn"),
   metricNodes: Array.from(document.querySelectorAll("[data-metric]")),
   riskForm: document.getElementById("riskForm"),
   riskFormMessage: document.getElementById("riskFormMessage"),
@@ -193,8 +195,11 @@ function bindEvents() {
   if (ui.registerBtn) {
     ui.registerBtn.addEventListener("click", handleRegister);
   }
-  if (ui.logoutBtn) {
-    ui.logoutBtn.addEventListener("click", handleLogout);
+  if (ui.desktopLogoutBtn) {
+    ui.desktopLogoutBtn.addEventListener("click", handleLogout);
+  }
+  if (ui.mobileLogoutBtn) {
+    ui.mobileLogoutBtn.addEventListener("click", handleLogout);
   }
 
   if (ui.authPassword) {
@@ -270,8 +275,12 @@ function bindEvents() {
   }, 120));
 
   window.addEventListener("keydown", (event) => {
+    const mobile = isMobileViewport();
     const mod = event.metaKey || event.ctrlKey;
     if (mod && event.key.toLowerCase() === "s") {
+      if (mobile) {
+        return;
+      }
       if (isViewActive("trade-entry")) {
         event.preventDefault();
         ui.tradeForm.requestSubmit();
@@ -279,7 +288,7 @@ function bindEvents() {
     }
 
     if (!mod && event.key === "/") {
-      if (!canAccessApp()) {
+      if (mobile || !canAccessApp()) {
         return;
       }
       event.preventDefault();
@@ -362,7 +371,8 @@ function canAccessApp() {
 }
 
 function updateAccessGate() {
-  const locked = !canAccessApp();
+  const locked = state.auth.checked && !state.auth.isAuthenticated;
+  const disableNavigation = !canAccessApp();
   document.body.classList.toggle("auth-locked", locked);
 
   if (ui.authGate) {
@@ -370,8 +380,8 @@ function updateAccessGate() {
   }
 
   ui.navButtons.forEach((btn) => {
-    btn.disabled = locked;
-    btn.setAttribute("aria-disabled", String(locked));
+    btn.disabled = disableNavigation;
+    btn.setAttribute("aria-disabled", String(disableNavigation));
   });
 
   if (locked) {
@@ -539,7 +549,7 @@ async function submitAuth(action, username, password, successMessage) {
 }
 
 function updateAuthUi() {
-  if (!ui.authStatus || !ui.loginBtn || !ui.registerBtn || !ui.logoutBtn) {
+  if (!ui.authStatus || !ui.loginBtn || !ui.registerBtn || !ui.desktopLogoutBtn || !ui.mobileLogoutBtn) {
     renderAdminUsers();
     updateAccessGate();
     return;
@@ -549,6 +559,11 @@ function updateAuthUi() {
 
   if (!state.auth.checked) {
     ui.authStatus.textContent = "Checking session...";
+    if (ui.authPanel) {
+      ui.authPanel.hidden = false;
+    }
+    ui.desktopLogoutBtn.hidden = true;
+    ui.mobileLogoutBtn.hidden = true;
     renderAdminUsers();
     updateAccessGate();
     return;
@@ -564,7 +579,11 @@ function updateAuthUi() {
     }
     ui.loginBtn.hidden = true;
     ui.registerBtn.hidden = true;
-    ui.logoutBtn.hidden = false;
+    ui.desktopLogoutBtn.hidden = false;
+    ui.mobileLogoutBtn.hidden = false;
+    if (ui.authPanel) {
+      ui.authPanel.hidden = true;
+    }
     if (ui.authUsername) {
       ui.authUsername.disabled = true;
     }
@@ -580,7 +599,11 @@ function updateAuthUi() {
     state.auth.isAdmin = false;
     ui.loginBtn.hidden = false;
     ui.registerBtn.hidden = false;
-    ui.logoutBtn.hidden = true;
+    ui.desktopLogoutBtn.hidden = true;
+    ui.mobileLogoutBtn.hidden = true;
+    if (ui.authPanel) {
+      ui.authPanel.hidden = false;
+    }
     if (ui.authUsername) {
       ui.authUsername.disabled = false;
     }

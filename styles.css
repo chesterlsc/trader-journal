@@ -276,8 +276,9 @@ kbd {
 
 .desktop-nav {
   display: none;
-  grid-template-columns: repeat(5, minmax(130px, 1fr));
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
@@ -286,6 +287,19 @@ kbd {
   position: sticky;
   top: 18px;
   z-index: 5;
+}
+
+.desktop-nav-links {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  gap: 8px;
+  flex: 1 1 auto;
+}
+
+.desktop-nav-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex: 0 0 auto;
 }
 
 .nav-btn-top {
@@ -300,6 +314,14 @@ kbd {
 
 .nav-btn-top:hover {
   transform: translateY(-1px);
+}
+
+.nav-logout-desktop {
+  min-width: 108px;
+}
+
+.nav-logout-mobile {
+  width: 100%;
 }
 
 .view {
@@ -813,7 +835,7 @@ body.auth-locked .view {
 
 @media (min-width: 1025px) {
   .desktop-nav {
-    display: grid;
+    display: flex;
   }
 
   .sidebar .main-nav {
@@ -910,6 +932,10 @@ body.auth-locked .view {
 
   .auth-panel {
     order: 5;
+  }
+
+  .shortcut-hint {
+    display: none;
   }
 
   .bulk-grid {
@@ -1061,6 +1087,10 @@ body.auth-locked .view {
 }
 
 @media (max-width: 1180px) and (min-width: 1025px) {
+  .desktop-nav-links {
+    grid-template-columns: repeat(5, minmax(100px, 1fr));
+  }
+
   .nav-btn-top {
     font-size: 0.86rem;
     padding: 9px 6px;
