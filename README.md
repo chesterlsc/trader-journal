@@ -1,4 +1,4 @@
-# Leon Journal (Trading Analytics)
+# Trader Journal (Trading Analytics)
 
 Trading journal web app with:
 
