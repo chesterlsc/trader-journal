@@ -299,6 +299,37 @@
             </div>
           </section>
 
+          <section class="panel" id="adminUsersPanel" hidden>
+            <div class="panel-head">
+              <h3>Admin Users View</h3>
+              <p>Read-only view of registered users and account activity.</p>
+            </div>
+            <div class="form-actions">
+              <button id="refreshAdminUsersBtn" class="btn" type="button">Refresh Users</button>
+            </div>
+            <p id="adminUsersMessage" class="form-message" aria-live="polite"></p>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>User ID</th>
+                    <th>Username</th>
+                    <th>Created</th>
+                    <th>Last Event</th>
+                    <th>Last Event Time</th>
+                    <th>Trades</th>
+                    <th>Reflections</th>
+                  </tr>
+                </thead>
+                <tbody id="adminUsersBody">
+                  <tr class="empty-row">
+                    <td colspan="7">Admin login required.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
         </section>
 
         <section class="view" id="trade-entry" aria-labelledby="tradeEntryHeading">

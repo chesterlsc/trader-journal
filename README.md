@@ -31,6 +31,9 @@ or these variables:
 Optional:
 
 - `APP_DEBUG=true` to include detailed backend errors in API responses.
+- `ADMIN_USERNAMES=chesterlsc,another_admin` for admin-only users view API access.
+- `ADMIN_USERNAME=chesterlsc` (single-admin alternative).
+  If neither is set, the first registered user becomes admin by fallback.
 
 ## Database Schema
 
@@ -83,6 +86,7 @@ php scripts/migrate_legacy_json.php
 - `trade_handler.php?action=save`
 - `trade_handler.php?action=load`
 - `trade_handler.php?action=login_logs` (for authenticated user's login history)
+- `trade_handler.php?action=users_admin` (admin-only users table data)
 
 ## View Login Info
 
@@ -91,6 +95,17 @@ From Railway service shell / psql:
 ```sql
 SELECT username, event_type, success, ip_address, created_at
 FROM login_info
+ORDER BY created_at DESC
+LIMIT 100;
+```
+
+## View Users (Admin)
+
+From Railway service shell / psql:
+
+```sql
+SELECT id, username, created_at
+FROM journal_users
 ORDER BY created_at DESC
 LIMIT 100;
 ```

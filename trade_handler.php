@@ -31,10 +31,12 @@ try {
 try {
     if ($action === 'session') {
         $username = currentUsername();
+        $isAdmin = $username !== null ? isAdminUsername($pdo, $username) : false;
         respond(200, [
             'ok' => true,
             'authenticated' => $username !== null,
             'username' => $username,
+            'isAdmin' => $isAdmin,
         ]);
     }
 
@@ -79,7 +81,7 @@ try {
         $_SESSION['user_id'] = $userId;
         logLoginEvent($pdo, $userId, $username, 'register', true);
 
-        respond(200, ['ok' => true, 'username' => $username]);
+        respond(200, ['ok' => true, 'username' => $username, 'isAdmin' => isAdminUsername($pdo, $username)]);
     }
 
     if ($action === 'login') {
@@ -98,7 +100,7 @@ try {
         ensureJournalDataRow($pdo, $user['id'], $defaults);
         logLoginEvent($pdo, $user['id'], $user['username'], 'login', true);
 
-        respond(200, ['ok' => true, 'username' => $user['username']]);
+        respond(200, ['ok' => true, 'username' => $user['username'], 'isAdmin' => isAdminUsername($pdo, $user['username'])]);
     }
 
     if ($action === 'logout') {
@@ -142,6 +144,15 @@ try {
         $auth = requireAuth($pdo);
         $logs = listLoginEventsForUser($pdo, $auth['id'], $auth['username']);
         respond(200, ['ok' => true, 'logs' => $logs]);
+    }
+
+    if ($action === 'users_admin') {
+        $auth = requireAuth($pdo);
+        if (!isAdminUsername($pdo, $auth['username'])) {
+            respond(403, ['ok' => false, 'error' => 'Admin access required.']);
+        }
+        $users = listAdminUsers($pdo);
+        respond(200, ['ok' => true, 'users' => $users]);
     }
 
     respond(400, ['ok' => false, 'error' => 'Unknown action.']);
@@ -429,6 +440,82 @@ function findUserByUsername(PDO $pdo, string $username): ?array
         'username' => (string) $row['username'],
         'passwordHash' => (string) $row['password_hash'],
     ];
+}
+
+function isAdminUsername(PDO $pdo, string $username): bool
+{
+    $candidate = strtolower(trim($username));
+    if ($candidate === '') {
+        return false;
+    }
+
+    $adminEnv = trim((string) getenv('ADMIN_USERNAMES'));
+    if ($adminEnv === '') {
+        $singleAdmin = trim((string) getenv('ADMIN_USERNAME'));
+        if ($singleAdmin !== '') {
+            $adminEnv = $singleAdmin;
+        }
+    }
+
+    if ($adminEnv !== '') {
+        $admins = array_values(array_filter(array_map(
+            static fn ($value): string => strtolower(trim((string) $value)),
+            explode(',', $adminEnv)
+        )));
+
+        return in_array($candidate, $admins, true);
+    }
+
+    // Fallback: first registered user is admin if no env var is configured.
+    $stmt = $pdo->query('SELECT username FROM journal_users ORDER BY id ASC LIMIT 1');
+    $first = $stmt->fetchColumn();
+    if (!is_string($first) || $first === '') {
+        return false;
+    }
+
+    return strtolower($first) === $candidate;
+}
+
+function listAdminUsers(PDO $pdo): array
+{
+    $stmt = $pdo->query(
+        <<<SQL
+        SELECT
+            u.id,
+            u.username,
+            u.created_at::text AS created_at,
+            CASE
+                WHEN t.payload IS NOT NULL AND jsonb_typeof(t.payload) = 'array'
+                    THEN jsonb_array_length(t.payload)
+                ELSE 0
+            END AS trades_count,
+            CASE
+                WHEN n.reflections IS NOT NULL AND jsonb_typeof(n.reflections) = 'array'
+                    THEN jsonb_array_length(n.reflections)
+                ELSE 0
+            END AS reflections_count,
+            COALESCE(latest.event_type, '') AS last_event,
+            COALESCE(latest.success, FALSE) AS last_success,
+            COALESCE(latest.created_at::text, '') AS last_login_at
+        FROM journal_users u
+        LEFT JOIN journal_notes n
+            ON n.user_id = u.id
+        LEFT JOIN trades t
+            ON t.user_id = u.id
+        LEFT JOIN LATERAL (
+            SELECT li.event_type, li.success, li.created_at
+            FROM login_info li
+            WHERE li.user_id = u.id OR li.username = u.username
+            ORDER BY li.created_at DESC
+            LIMIT 1
+        ) latest ON TRUE
+        ORDER BY u.created_at DESC
+        LIMIT 500
+        SQL
+    );
+
+    $rows = $stmt->fetchAll();
+    return is_array($rows) ? $rows : [];
 }
 
 function logLoginEvent(PDO $pdo, ?int $userId, string $username, string $eventType, bool $success): void

@@ -27,10 +27,12 @@ const state = {
   replayNotes: {},
   bulkPreview: [],
   loginLogs: [],
+  adminUsers: [],
   auth: {
     checked: false,
     isAuthenticated: false,
     username: "",
+    isAdmin: false,
     sessionCheckVersion: 0
   },
   serverSync: {
@@ -102,6 +104,10 @@ const ui = {
   refreshLoginLogsBtn: document.getElementById("refreshLoginLogsBtn"),
   loginLogsMessage: document.getElementById("loginLogsMessage"),
   loginLogsBody: document.getElementById("loginLogsBody"),
+  adminUsersPanel: document.getElementById("adminUsersPanel"),
+  refreshAdminUsersBtn: document.getElementById("refreshAdminUsersBtn"),
+  adminUsersMessage: document.getElementById("adminUsersMessage"),
+  adminUsersBody: document.getElementById("adminUsersBody"),
   tradeFields: {
     tradeId: document.getElementById("tradeId"),
     tradeDate: document.getElementById("tradeDate"),
@@ -174,6 +180,7 @@ function init() {
   bindEvents();
   syncMobileNavState();
   renderLoginLogs();
+  renderAdminUsers();
   renderAll();
   renderLastSaved();
   checkAuthSession();
@@ -227,6 +234,11 @@ function bindEvents() {
   if (ui.refreshLoginLogsBtn) {
     ui.refreshLoginLogsBtn.addEventListener("click", () => {
       loadLoginLogs({ silent: false });
+    });
+  }
+  if (ui.refreshAdminUsersBtn) {
+    ui.refreshAdminUsersBtn.addEventListener("click", () => {
+      loadAdminUsers({ silent: false });
     });
   }
 
@@ -401,10 +413,12 @@ async function checkAuthSession() {
       state.auth.checked = true;
       state.auth.isAuthenticated = true;
       state.auth.username = String(body.username || "");
+      state.auth.isAdmin = Boolean(body.isAdmin);
     } else {
       state.auth.checked = true;
       state.auth.isAuthenticated = false;
       state.auth.username = "";
+      state.auth.isAdmin = false;
     }
   } catch (error) {
     if (checkVersion !== state.auth.sessionCheckVersion) {
@@ -413,6 +427,7 @@ async function checkAuthSession() {
     state.auth.checked = true;
     state.auth.isAuthenticated = false;
     state.auth.username = "";
+    state.auth.isAdmin = false;
     setMessage(ui.authMessage, "Auth service unavailable. Ensure PHP server and PostgreSQL are running.", "error");
   }
 
@@ -428,10 +443,13 @@ async function checkAuthSession() {
       setMessage(ui.authMessage, `Session restored for ${state.auth.username}.`, "success");
     }
     await loadLoginLogs({ silent: true });
+    await loadAdminUsers({ silent: true });
     switchView("dashboard");
   } else {
     state.loginLogs = [];
+    state.adminUsers = [];
     renderLoginLogs();
+    renderAdminUsers();
     updateAccessGate();
   }
 }
@@ -475,8 +493,11 @@ async function handleLogout() {
   state.auth.checked = true;
   state.auth.isAuthenticated = false;
   state.auth.username = "";
+  state.auth.isAdmin = false;
   state.loginLogs = [];
+  state.adminUsers = [];
   renderLoginLogs();
+  renderAdminUsers();
   cancelServerAutosave();
   updateAuthUi();
   setMessage(ui.authMessage, "Logged out.", "success");
@@ -499,6 +520,7 @@ async function submitAuth(action, username, password, successMessage) {
     state.auth.checked = true;
     state.auth.isAuthenticated = true;
     state.auth.username = String(body.username || username);
+    state.auth.isAdmin = Boolean(body.isAdmin);
     updateAuthUi();
 
     const loaded = await loadFromPhpStorage({ silent: true, source: "auth", preferLocalIfServerEmpty: true });
@@ -509,6 +531,7 @@ async function submitAuth(action, username, password, successMessage) {
     }
 
     await loadLoginLogs({ silent: true });
+    await loadAdminUsers({ silent: true });
     switchView("dashboard");
   } catch (error) {
     setMessage(ui.authMessage, error.message || `${action} failed`, "error");
@@ -517,6 +540,7 @@ async function submitAuth(action, username, password, successMessage) {
 
 function updateAuthUi() {
   if (!ui.authStatus || !ui.loginBtn || !ui.registerBtn || !ui.logoutBtn) {
+    renderAdminUsers();
     updateAccessGate();
     return;
   }
@@ -525,12 +549,15 @@ function updateAuthUi() {
 
   if (!state.auth.checked) {
     ui.authStatus.textContent = "Checking session...";
+    renderAdminUsers();
     updateAccessGate();
     return;
   }
 
   if (state.auth.isAuthenticated) {
-    ui.authStatus.textContent = `Logged in as ${state.auth.username}`;
+    ui.authStatus.textContent = state.auth.isAdmin
+      ? `Logged in as ${state.auth.username} (Admin)`
+      : `Logged in as ${state.auth.username}`;
     ui.authStatus.classList.add("is-on");
     if (ui.authUsername) {
       ui.authUsername.value = state.auth.username;
@@ -550,6 +577,7 @@ function updateAuthUi() {
   } else {
     ui.authStatus.textContent = "Not logged in";
     ui.authStatus.classList.add("is-off");
+    state.auth.isAdmin = false;
     ui.loginBtn.hidden = false;
     ui.registerBtn.hidden = false;
     ui.logoutBtn.hidden = true;
@@ -561,6 +589,7 @@ function updateAuthUi() {
     }
   }
 
+  renderAdminUsers();
   updateAccessGate();
 }
 
@@ -1867,6 +1896,117 @@ function normalizeLoginLogs(input) {
       createdAt: String(item.created_at || item.createdAt || "")
     }))
     .slice(0, 200);
+}
+
+async function loadAdminUsers(options = {}) {
+  const { silent = false } = options;
+
+  if (!state.auth.isAuthenticated) {
+    state.adminUsers = [];
+    renderAdminUsers();
+    if (!silent && ui.adminUsersMessage) {
+      setMessage(ui.adminUsersMessage, "Login first to view users.", "error");
+    }
+    return false;
+  }
+
+  if (!state.auth.isAdmin) {
+    state.adminUsers = [];
+    renderAdminUsers();
+    if (!silent && ui.adminUsersMessage) {
+      setMessage(ui.adminUsersMessage, "Admin account required.", "error");
+    }
+    return false;
+  }
+
+  try {
+    const response = await fetch("trade_handler.php?action=users_admin", {
+      method: "GET",
+      credentials: "same-origin"
+    });
+
+    const body = await response.json();
+    if (!response.ok || !body.ok || !Array.isArray(body.users)) {
+      throw new Error(body.error || "Failed to load admin users");
+    }
+
+    state.adminUsers = normalizeAdminUsers(body.users);
+    renderAdminUsers();
+    if (!silent && ui.adminUsersMessage) {
+      setMessage(ui.adminUsersMessage, `Loaded ${state.adminUsers.length} user account(s).`, "success");
+    }
+    return true;
+  } catch (error) {
+    if (!silent && ui.adminUsersMessage) {
+      setMessage(ui.adminUsersMessage, error.message || "Failed to load admin users.", "error");
+    }
+    return false;
+  }
+}
+
+function renderAdminUsers() {
+  if (!ui.adminUsersPanel || !ui.adminUsersBody) {
+    return;
+  }
+
+  if (!state.auth.isAuthenticated || !state.auth.isAdmin) {
+    ui.adminUsersPanel.hidden = true;
+    ui.adminUsersBody.innerHTML = `
+      <tr class="empty-row">
+        <td colspan="7">Admin login required.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  ui.adminUsersPanel.hidden = false;
+
+  if (!state.adminUsers.length) {
+    ui.adminUsersBody.innerHTML = `
+      <tr class="empty-row">
+        <td colspan="7">No users found.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  ui.adminUsersBody.innerHTML = state.adminUsers
+    .map((user) => {
+      const statusClass = user.lastSuccess ? "pnl-positive" : "pnl-negative";
+      const statusText = user.lastEvent ? `${user.lastEvent}${user.lastSuccess ? " (OK)" : " (Fail)"}` : "-";
+      return `
+        <tr>
+          <td data-label="User ID">${escapeHtml(String(user.id))}</td>
+          <td data-label="Username">${escapeHtml(user.username)}</td>
+          <td data-label="Created">${escapeHtml(user.createdAt || "-")}</td>
+          <td data-label="Last Event" class="${user.lastEvent ? statusClass : ""}">${escapeHtml(statusText)}</td>
+          <td data-label="Last Event Time">${escapeHtml(user.lastLoginAt || "-")}</td>
+          <td data-label="Trades">${escapeHtml(String(user.tradesCount))}</td>
+          <td data-label="Reflections">${escapeHtml(String(user.reflectionsCount))}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function normalizeAdminUsers(input) {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .filter((item) => item && typeof item === "object")
+    .map((item) => ({
+      id: Number(item.id || 0),
+      username: String(item.username || ""),
+      createdAt: String(item.created_at || item.createdAt || ""),
+      lastEvent: String(item.last_event || item.lastEvent || "").toUpperCase(),
+      lastSuccess: Boolean(item.last_success ?? item.lastSuccess ?? false),
+      lastLoginAt: String(item.last_login_at || item.lastLoginAt || ""),
+      tradesCount: Number(item.trades_count || item.tradesCount || 0),
+      reflectionsCount: Number(item.reflections_count || item.reflectionsCount || 0)
+    }))
+    .slice(0, 500);
 }
 
 function renderAll() {
