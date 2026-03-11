@@ -26,10 +26,12 @@ const state = {
   reflections: [],
   replayNotes: {},
   bulkPreview: [],
+  loginLogs: [],
   auth: {
     checked: false,
     isAuthenticated: false,
-    username: ""
+    username: "",
+    sessionCheckVersion: 0
   },
   serverSync: {
     timerId: null,
@@ -97,6 +99,9 @@ const ui = {
   bulkMessage: document.getElementById("bulkMessage"),
   bulkPreviewWrap: document.getElementById("bulkPreviewWrap"),
   bulkPreviewBody: document.getElementById("bulkPreviewBody"),
+  refreshLoginLogsBtn: document.getElementById("refreshLoginLogsBtn"),
+  loginLogsMessage: document.getElementById("loginLogsMessage"),
+  loginLogsBody: document.getElementById("loginLogsBody"),
   tradeFields: {
     tradeId: document.getElementById("tradeId"),
     tradeDate: document.getElementById("tradeDate"),
@@ -168,6 +173,7 @@ function init() {
   updateAccessGate();
   bindEvents();
   syncMobileNavState();
+  renderLoginLogs();
   renderAll();
   renderLastSaved();
   checkAuthSession();
@@ -217,6 +223,11 @@ function bindEvents() {
   }
   if (ui.bulkClearBtn) {
     ui.bulkClearBtn.addEventListener("click", clearBulkImport);
+  }
+  if (ui.refreshLoginLogsBtn) {
+    ui.refreshLoginLogsBtn.addEventListener("click", () => {
+      loadLoginLogs({ silent: false });
+    });
   }
 
   Object.values(ui.filters).forEach((input) => {
@@ -372,12 +383,19 @@ function readAuthForm() {
 }
 
 async function checkAuthSession() {
+  const checkVersion = state.auth.sessionCheckVersion + 1;
+  state.auth.sessionCheckVersion = checkVersion;
+
   try {
     const response = await fetch("trade_handler.php?action=session", {
       method: "GET",
       credentials: "same-origin"
     });
     const body = await response.json();
+
+    if (checkVersion !== state.auth.sessionCheckVersion) {
+      return;
+    }
 
     if (response.ok && body.ok && body.authenticated) {
       state.auth.checked = true;
@@ -389,10 +407,17 @@ async function checkAuthSession() {
       state.auth.username = "";
     }
   } catch (error) {
+    if (checkVersion !== state.auth.sessionCheckVersion) {
+      return;
+    }
     state.auth.checked = true;
     state.auth.isAuthenticated = false;
     state.auth.username = "";
     setMessage(ui.authMessage, "Auth service unavailable. Ensure PHP server and PostgreSQL are running.", "error");
+  }
+
+  if (checkVersion !== state.auth.sessionCheckVersion) {
+    return;
   }
 
   updateAuthUi();
@@ -402,8 +427,11 @@ async function checkAuthSession() {
     if (loaded) {
       setMessage(ui.authMessage, `Session restored for ${state.auth.username}.`, "success");
     }
+    await loadLoginLogs({ silent: true });
     switchView("dashboard");
   } else {
+    state.loginLogs = [];
+    renderLoginLogs();
     updateAccessGate();
   }
 }
@@ -429,6 +457,7 @@ async function handleRegister() {
 }
 
 async function handleLogout() {
+  state.auth.sessionCheckVersion += 1;
   try {
     const response = await fetch("trade_handler.php?action=logout", {
       method: "POST",
@@ -446,12 +475,15 @@ async function handleLogout() {
   state.auth.checked = true;
   state.auth.isAuthenticated = false;
   state.auth.username = "";
+  state.loginLogs = [];
+  renderLoginLogs();
   cancelServerAutosave();
   updateAuthUi();
   setMessage(ui.authMessage, "Logged out.", "success");
 }
 
 async function submitAuth(action, username, password, successMessage) {
+  state.auth.sessionCheckVersion += 1;
   try {
     const response = await fetch(`trade_handler.php?action=${action}`, {
       method: "POST",
@@ -476,6 +508,7 @@ async function submitAuth(action, username, password, successMessage) {
       setMessage(ui.authMessage, `${successMessage} Using local journal until server load succeeds.`, "error");
     }
 
+    await loadLoginLogs({ silent: true });
     switchView("dashboard");
   } catch (error) {
     setMessage(ui.authMessage, error.message || `${action} failed`, "error");
@@ -1736,6 +1769,104 @@ async function loadFromPhpStorage(options = {}) {
     }
     return false;
   }
+}
+
+async function loadLoginLogs(options = {}) {
+  const { silent = false } = options;
+
+  if (!state.auth.isAuthenticated) {
+    state.loginLogs = [];
+    renderLoginLogs();
+    if (!silent && ui.loginLogsMessage) {
+      setMessage(ui.loginLogsMessage, "Login first to view login logs.", "error");
+    }
+    return false;
+  }
+
+  try {
+    const response = await fetch("trade_handler.php?action=login_logs", {
+      method: "GET",
+      credentials: "same-origin"
+    });
+
+    const body = await response.json();
+    if (!response.ok || !body.ok || !Array.isArray(body.logs)) {
+      throw new Error(body.error || "Failed to load login logs");
+    }
+
+    state.loginLogs = normalizeLoginLogs(body.logs);
+    renderLoginLogs();
+    if (!silent && ui.loginLogsMessage) {
+      setMessage(ui.loginLogsMessage, `Loaded ${state.loginLogs.length} login event(s).`, "success");
+    }
+    return true;
+  } catch (error) {
+    if (!silent && ui.loginLogsMessage) {
+      setMessage(ui.loginLogsMessage, error.message || "Failed to load login logs.", "error");
+    }
+    return false;
+  }
+}
+
+function renderLoginLogs() {
+  if (!ui.loginLogsBody) {
+    return;
+  }
+
+  if (!state.auth.isAuthenticated) {
+    ui.loginLogsBody.innerHTML = `
+      <tr class="empty-row">
+        <td colspan="5">Login to view database login logs.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  if (!state.loginLogs.length) {
+    ui.loginLogsBody.innerHTML = `
+      <tr class="empty-row">
+        <td colspan="5">No login events yet.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  ui.loginLogsBody.innerHTML = state.loginLogs
+    .map((log) => {
+      const statusClass = log.success ? "pnl-positive" : "pnl-negative";
+      const statusText = log.success ? "Success" : "Failed";
+      const eventLabel = `${log.eventType}`.toUpperCase();
+      return `
+        <tr>
+          <td data-label="Date">${escapeHtml(log.createdAt)}</td>
+          <td data-label="Event">${escapeHtml(eventLabel)}</td>
+          <td data-label="Status" class="${statusClass}">${escapeHtml(statusText)}</td>
+          <td data-label="IP">${escapeHtml(log.ipAddress || "-")}</td>
+          <td data-label="User Agent" class="user-agent-cell" title="${escapeHtml(log.userAgent)}">
+            ${escapeHtml(log.userAgent || "-")}
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function normalizeLoginLogs(input) {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .filter((item) => item && typeof item === "object")
+    .map((item) => ({
+      username: String(item.username || ""),
+      eventType: String(item.event_type || item.eventType || "unknown"),
+      success: Boolean(item.success),
+      ipAddress: String(item.ip_address || item.ipAddress || ""),
+      userAgent: String(item.user_agent || item.userAgent || ""),
+      createdAt: String(item.created_at || item.createdAt || "")
+    }))
+    .slice(0, 200);
 }
 
 function renderAll() {

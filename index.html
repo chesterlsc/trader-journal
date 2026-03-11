@@ -270,6 +270,35 @@
             </div>
           </section>
 
+          <section class="panel">
+            <div class="panel-head">
+              <h3>Login Activity (Database)</h3>
+              <p>Latest login/register/logout events stored in PostgreSQL.</p>
+            </div>
+            <div class="form-actions">
+              <button id="refreshLoginLogsBtn" class="btn" type="button">Refresh Login Logs</button>
+            </div>
+            <p id="loginLogsMessage" class="form-message" aria-live="polite"></p>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Event</th>
+                    <th>Status</th>
+                    <th>IP</th>
+                    <th>User Agent</th>
+                  </tr>
+                </thead>
+                <tbody id="loginLogsBody">
+                  <tr class="empty-row">
+                    <td colspan="5">Login to view database login logs.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
         </section>
 
         <section class="view" id="trade-entry" aria-labelledby="tradeEntryHeading">

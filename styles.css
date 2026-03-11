@@ -598,6 +598,13 @@ td {
   font-size: 0.89rem;
 }
 
+.user-agent-cell {
+  max-width: 360px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .empty-row td {
   color: var(--text-soft);
   text-align: center;
@@ -964,6 +971,12 @@ body.auth-locked .view {
 
   td:last-child {
     border-bottom: 0;
+  }
+
+  .user-agent-cell {
+    max-width: none;
+    white-space: normal;
+    word-break: break-word;
   }
 
   .row-actions {
