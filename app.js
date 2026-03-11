@@ -218,9 +218,11 @@ function init() {
 function collapseAdminPanels() {
   if (ui.loginLogsPanel) {
     ui.loginLogsPanel.open = false;
+    ui.loginLogsPanel.removeAttribute("open");
   }
   if (ui.adminUsersPanel) {
     ui.adminUsersPanel.open = false;
+    ui.adminUsersPanel.removeAttribute("open");
   }
 }
 
@@ -2151,6 +2153,8 @@ function renderLoginLogs() {
 
   if (!state.auth.isAuthenticated || !state.auth.isAdmin) {
     ui.loginLogsPanel.hidden = true;
+    ui.loginLogsPanel.open = false;
+    ui.loginLogsPanel.removeAttribute("open");
     ui.loginLogsBody.innerHTML = `
       <tr class="empty-row">
         <td colspan="6">Admin login required.</td>
@@ -2160,6 +2164,8 @@ function renderLoginLogs() {
   }
 
   ui.loginLogsPanel.hidden = false;
+  ui.loginLogsPanel.open = false;
+  ui.loginLogsPanel.removeAttribute("open");
 
   if (!state.loginLogs.length) {
     ui.loginLogsBody.innerHTML = `
@@ -2263,6 +2269,8 @@ function renderAdminUsers() {
 
   if (!state.auth.isAuthenticated || !state.auth.isAdmin) {
     ui.adminUsersPanel.hidden = true;
+    ui.adminUsersPanel.open = false;
+    ui.adminUsersPanel.removeAttribute("open");
     ui.adminUsersBody.innerHTML = `
       <tr class="empty-row">
         <td colspan="9">Admin login required.</td>
@@ -2272,6 +2280,8 @@ function renderAdminUsers() {
   }
 
   ui.adminUsersPanel.hidden = false;
+  ui.adminUsersPanel.open = false;
+  ui.adminUsersPanel.removeAttribute("open");
 
   if (!state.adminUsers.length) {
     ui.adminUsersBody.innerHTML = `
@@ -2743,7 +2753,9 @@ function renderCalendarView() {
 
   if (!Number.isInteger(year) || !Number.isInteger(monthIndex) || monthIndex < 0 || monthIndex > 11) {
     ui.calendarGrid.innerHTML = "";
-    ui.calendarSummary.textContent = "Choose a valid month.";
+    ui.calendarSummary.innerHTML = `
+      <div class="calendar-summary-empty">Choose a valid month.</div>
+    `;
     return;
   }
 
@@ -2753,8 +2765,22 @@ function renderCalendarView() {
   const startOffset = firstDay.getDay();
   const monthTrades = state.trades.filter((trade) => trade.date.startsWith(monthValue));
   const monthPnl = monthTrades.reduce((sum, trade) => sum + trade.netPnl, 0);
+  const monthWins = monthTrades.filter((trade) => trade.result === "Win").length;
+  const monthWinRate = monthTrades.length ? (monthWins / monthTrades.length) * 100 : 0;
 
-  ui.calendarSummary.textContent = `${monthTrades.length} trade(s) this month | Net ${formatCurrency(monthPnl)}`;
+  const pnlClass = monthPnl > 0 ? "pnl-positive" : monthPnl < 0 ? "pnl-negative" : "";
+  ui.calendarSummary.innerHTML = `
+    <article class="calendar-summary-card">
+      <span class="calendar-summary-label">Total Trades</span>
+      <strong class="calendar-summary-value">${monthTrades.length}</strong>
+      <span class="calendar-summary-subtext">${monthWinRate.toFixed(1)}% win rate</span>
+    </article>
+    <article class="calendar-summary-card ${pnlClass}">
+      <span class="calendar-summary-label">P&amp;L</span>
+      <strong class="calendar-summary-value ${pnlClass}">${formatCurrency(monthPnl)}</strong>
+      <span class="calendar-summary-subtext">${monthValue}</span>
+    </article>
+  `;
 
   const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const cells = [];

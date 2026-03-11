@@ -991,6 +991,10 @@ textarea:focus {
   overflow: hidden;
 }
 
+.panel-collapsible:not([open]) .panel-collapsible-body {
+  display: none;
+}
+
 .panel-collapse-summary {
   list-style: none;
   display: flex;
@@ -1046,6 +1050,45 @@ textarea:focus {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 6px 4px;
+}
+
+.calendar-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.calendar-summary-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid rgba(100, 127, 189, 0.24);
+  border-radius: 16px;
+  background: linear-gradient(165deg, rgba(13, 22, 41, 0.95), rgba(10, 15, 28, 0.95));
+}
+
+.calendar-summary-label {
+  color: var(--text-soft);
+  font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.calendar-summary-value {
+  margin: 0;
+  font: 700 clamp(1.7rem, 3.5vw, 2.6rem)/1 "Sora", "Manrope", sans-serif;
+  color: var(--text);
+}
+
+.calendar-summary-subtext {
+  color: var(--text-soft);
+  font: 500 12px/1.35 "JetBrains Mono", "Consolas", monospace;
+}
+
+.calendar-summary-empty {
+  color: var(--text-soft);
+  font: 500 12px/1.4 "JetBrains Mono", "Consolas", monospace;
 }
 
 .calendar-cell {
@@ -1469,11 +1512,20 @@ body.auth-locked .view {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
+  }
+
+  .brand-block {
+    min-width: 0;
+    flex: 1 1 auto;
   }
 
   .nav-toggle {
     display: inline-flex;
+    align-self: center;
+    justify-content: center;
+    min-width: 92px;
+    padding: 10px 12px;
   }
 
   .main-nav {
@@ -1568,6 +1620,11 @@ body.auth-locked .view {
 
   .calendar-month-control {
     min-width: 0;
+  }
+
+  .calendar-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .leon-score-foot {
@@ -1809,6 +1866,19 @@ body.auth-locked .view {
 
   .calendar-weekday {
     display: none;
+  }
+
+  .calendar-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-summary-card {
+    padding: 12px 13px;
+    border-radius: 14px;
+  }
+
+  .calendar-summary-value {
+    font-size: 1.8rem;
   }
 
   .calendar-cell {
