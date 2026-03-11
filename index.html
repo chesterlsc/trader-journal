@@ -31,6 +31,36 @@
           </button>
         </div>
 
+        <section class="auth-panel" aria-label="Account login">
+          <p class="auth-title">Cloud Save Login</p>
+          <p class="auth-status" id="authStatus">Checking session...</p>
+
+          <div id="authControls">
+            <label>
+              Username
+              <input id="authUsername" type="text" maxlength="32" placeholder="chester" autocomplete="username" />
+            </label>
+            <label>
+              Password
+              <input
+                id="authPassword"
+                type="password"
+                maxlength="72"
+                placeholder="Minimum 8 characters"
+                autocomplete="current-password"
+              />
+            </label>
+
+            <div class="form-actions">
+              <button id="loginBtn" class="btn" type="button">Login</button>
+              <button id="registerBtn" class="btn" type="button">Register</button>
+              <button id="logoutBtn" class="btn" type="button" hidden>Logout</button>
+            </div>
+          </div>
+
+          <p id="authMessage" class="form-message" aria-live="polite"></p>
+        </section>
+
         <nav class="main-nav" id="mainNav" aria-label="Main sections">
           <button class="nav-btn is-active" type="button" data-target="dashboard">Dashboard</button>
           <button class="nav-btn" type="button" data-target="trade-entry">Trade Entry</button>

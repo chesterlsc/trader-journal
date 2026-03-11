@@ -22,6 +22,11 @@ const state = {
   settings: { ...DEFAULT_SETTINGS },
   reflections: [],
   replayNotes: {},
+  auth: {
+    checked: false,
+    isAuthenticated: false,
+    username: ""
+  },
   filters: {
     dateFrom: "",
     dateTo: "",
@@ -42,6 +47,13 @@ const ui = {
   navButtons: Array.from(document.querySelectorAll(".nav-btn")),
   views: Array.from(document.querySelectorAll(".view")),
   lastSaved: document.getElementById("lastSaved"),
+  authStatus: document.getElementById("authStatus"),
+  authMessage: document.getElementById("authMessage"),
+  authUsername: document.getElementById("authUsername"),
+  authPassword: document.getElementById("authPassword"),
+  loginBtn: document.getElementById("loginBtn"),
+  registerBtn: document.getElementById("registerBtn"),
+  logoutBtn: document.getElementById("logoutBtn"),
   metricNodes: Array.from(document.querySelectorAll("[data-metric]")),
   riskForm: document.getElementById("riskForm"),
   riskFormMessage: document.getElementById("riskFormMessage"),
@@ -132,13 +144,34 @@ function init() {
   applyInitialDates();
   hydrateRiskForm();
   hydrateReviewMonth();
+  updateAuthUi();
   bindEvents();
   syncMobileNavState();
   renderAll();
   renderLastSaved();
+  checkAuthSession();
 }
 
 function bindEvents() {
+  if (ui.loginBtn) {
+    ui.loginBtn.addEventListener("click", handleLogin);
+  }
+  if (ui.registerBtn) {
+    ui.registerBtn.addEventListener("click", handleRegister);
+  }
+  if (ui.logoutBtn) {
+    ui.logoutBtn.addEventListener("click", handleLogout);
+  }
+
+  if (ui.authPassword) {
+    ui.authPassword.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        handleLogin();
+      }
+    });
+  }
+
   if (ui.navToggleBtn) {
     ui.navToggleBtn.addEventListener("click", () => {
       toggleMobileNav();
@@ -259,6 +292,158 @@ function syncMobileNavState() {
     ui.sidebar.classList.remove("nav-open");
     ui.navToggleBtn.classList.remove("is-open");
     ui.navToggleBtn.setAttribute("aria-expanded", "false");
+  }
+}
+
+function readAuthForm() {
+  const username = (ui.authUsername?.value || "").trim().toLowerCase();
+  const password = ui.authPassword?.value || "";
+
+  if (!/^[a-zA-Z0-9._-]{3,32}$/.test(username)) {
+    return { ok: false, error: "Username must be 3-32 chars: letters, numbers, dot, underscore, dash." };
+  }
+
+  if (password.length < 8) {
+    return { ok: false, error: "Password must be at least 8 characters." };
+  }
+
+  return { ok: true, username, password };
+}
+
+async function checkAuthSession() {
+  try {
+    const response = await fetch("trade_handler.php?action=session", {
+      method: "GET",
+      credentials: "same-origin"
+    });
+    const body = await response.json();
+
+    if (response.ok && body.ok && body.authenticated) {
+      state.auth.checked = true;
+      state.auth.isAuthenticated = true;
+      state.auth.username = String(body.username || "");
+    } else {
+      state.auth.checked = true;
+      state.auth.isAuthenticated = false;
+      state.auth.username = "";
+    }
+  } catch (error) {
+    state.auth.checked = true;
+    state.auth.isAuthenticated = false;
+    state.auth.username = "";
+    setMessage(ui.authMessage, "Auth service unavailable. Run app with PHP server for login.", "error");
+  }
+
+  updateAuthUi();
+}
+
+async function handleLogin() {
+  const credentials = readAuthForm();
+  if (!credentials.ok) {
+    setMessage(ui.authMessage, credentials.error, "error");
+    return;
+  }
+
+  await submitAuth("login", credentials.username, credentials.password, "Logged in.");
+}
+
+async function handleRegister() {
+  const credentials = readAuthForm();
+  if (!credentials.ok) {
+    setMessage(ui.authMessage, credentials.error, "error");
+    return;
+  }
+
+  await submitAuth("register", credentials.username, credentials.password, "Account created and logged in.");
+}
+
+async function handleLogout() {
+  try {
+    const response = await fetch("trade_handler.php?action=logout", {
+      method: "POST",
+      credentials: "same-origin"
+    });
+    const body = await response.json();
+    if (!response.ok || !body.ok) {
+      throw new Error(body.error || "Logout failed");
+    }
+  } catch (error) {
+    setMessage(ui.authMessage, "Logout failed.", "error");
+    return;
+  }
+
+  state.auth.checked = true;
+  state.auth.isAuthenticated = false;
+  state.auth.username = "";
+  updateAuthUi();
+  setMessage(ui.authMessage, "Logged out.", "success");
+}
+
+async function submitAuth(action, username, password, successMessage) {
+  try {
+    const response = await fetch(`trade_handler.php?action=${action}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ username, password })
+    });
+    const body = await response.json();
+    if (!response.ok || !body.ok) {
+      throw new Error(body.error || `${action} failed`);
+    }
+
+    state.auth.checked = true;
+    state.auth.isAuthenticated = true;
+    state.auth.username = String(body.username || username);
+    updateAuthUi();
+    setMessage(ui.authMessage, successMessage, "success");
+  } catch (error) {
+    setMessage(ui.authMessage, error.message || `${action} failed`, "error");
+  }
+}
+
+function updateAuthUi() {
+  if (!ui.authStatus || !ui.loginBtn || !ui.registerBtn || !ui.logoutBtn) {
+    return;
+  }
+
+  ui.authStatus.classList.remove("is-on", "is-off");
+
+  if (!state.auth.checked) {
+    ui.authStatus.textContent = "Checking session...";
+    return;
+  }
+
+  if (state.auth.isAuthenticated) {
+    ui.authStatus.textContent = `Logged in as ${state.auth.username}`;
+    ui.authStatus.classList.add("is-on");
+    if (ui.authUsername) {
+      ui.authUsername.value = state.auth.username;
+    }
+    ui.loginBtn.hidden = true;
+    ui.registerBtn.hidden = true;
+    ui.logoutBtn.hidden = false;
+    if (ui.authUsername) {
+      ui.authUsername.disabled = true;
+    }
+    if (ui.authPassword) {
+      ui.authPassword.disabled = true;
+    }
+    if (ui.authPassword) {
+      ui.authPassword.value = "";
+    }
+  } else {
+    ui.authStatus.textContent = "Not logged in";
+    ui.authStatus.classList.add("is-off");
+    ui.loginBtn.hidden = false;
+    ui.registerBtn.hidden = false;
+    ui.logoutBtn.hidden = true;
+    if (ui.authUsername) {
+      ui.authUsername.disabled = false;
+    }
+    if (ui.authPassword) {
+      ui.authPassword.disabled = false;
+    }
   }
 }
 
@@ -856,6 +1041,11 @@ function importBackupJson(event) {
 }
 
 async function saveToPhpStorage() {
+  if (!state.auth.isAuthenticated) {
+    setMessage(ui.journalMessage, "Login first to save on server database.", "error");
+    return;
+  }
+
   const payload = {
     settings: state.settings,
     trades: state.trades,
@@ -867,6 +1057,7 @@ async function saveToPhpStorage() {
     const response = await fetch("trade_handler.php?action=save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
       body: JSON.stringify(payload)
     });
 
@@ -879,16 +1070,22 @@ async function saveToPhpStorage() {
   } catch (error) {
     setMessage(
       ui.journalMessage,
-      "PHP save failed. Start with `php -S localhost:8000` and open via http://localhost:8000.",
+      error.message || "PHP save failed. Start with `php -S localhost:8000` and open via http://localhost:8000.",
       "error"
     );
   }
 }
 
 async function loadFromPhpStorage() {
+  if (!state.auth.isAuthenticated) {
+    setMessage(ui.journalMessage, "Login first to load server database.", "error");
+    return;
+  }
+
   try {
     const response = await fetch("trade_handler.php?action=load", {
-      method: "GET"
+      method: "GET",
+      credentials: "same-origin"
     });
 
     const body = await response.json();
@@ -908,7 +1105,7 @@ async function loadFromPhpStorage() {
   } catch (error) {
     setMessage(
       ui.journalMessage,
-      "PHP load failed. Start with `php -S localhost:8000` and open via http://localhost:8000.",
+      error.message || "PHP load failed. Start with `php -S localhost:8000` and open via http://localhost:8000.",
       "error"
     );
   }

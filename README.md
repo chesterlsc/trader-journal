@@ -32,11 +32,18 @@ Then open:
 
 - `http://localhost:8000`
 
-Use **Save to PHP JSON** and **Load from PHP JSON** buttons inside the app.
+Use **Cloud Save Login** in the sidebar:
+
+- Register a username/password (first time).
+- Login to your account.
+- Use **Save to PHP JSON** and **Load from PHP JSON**.
+
+Data is saved per user session.
 
 PHP data will be stored at:
 
-- `data/journal_data.json`
+- `data/users.json`
+- `data/accounts/<username>.json`
 
 ## Deploy on Railway
 
