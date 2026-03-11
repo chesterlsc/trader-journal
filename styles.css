@@ -500,7 +500,6 @@ body.is-authenticated .auth-panel {
 .desktop-nav {
   display: none;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
   padding: 12px 14px;
   border: 1px solid var(--line);
@@ -512,11 +511,16 @@ body.is-authenticated .auth-panel {
   z-index: 5;
 }
 
+.desktop-nav-brand {
+  flex: 0 0 auto;
+}
+
 .desktop-nav-links {
   display: grid;
   grid-template-columns: repeat(5, minmax(120px, 1fr));
   gap: 10px;
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .desktop-nav-actions {
@@ -543,7 +547,7 @@ body.is-authenticated .auth-panel {
 
 .desktop-brand-block {
   display: grid;
-  justify-items: end;
+  justify-items: start;
   gap: 4px;
   max-width: 380px;
 }
@@ -551,7 +555,7 @@ body.is-authenticated .auth-panel {
 .desktop-brand-copy {
   display: grid;
   gap: 2px;
-  text-align: right;
+  text-align: left;
 }
 
 .desktop-brand-title {
