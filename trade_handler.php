@@ -162,9 +162,28 @@ try {
 
 function createPdoFromEnvironment(): PDO
 {
-    $databaseUrl = trim((string) getenv('DATABASE_URL'));
-    if ($databaseUrl !== '') {
-        return createPdoFromDatabaseUrl($databaseUrl);
+    ensurePgsqlDriverLoaded();
+
+    $urlCandidates = [
+        getenv('DATABASE_URL'),
+        getenv('DATABASE_PRIVATE_URL'),
+        getenv('POSTGRES_URL'),
+        getenv('POSTGRESQL_URL'),
+        getenv('DATABASE_PUBLIC_URL'),
+    ];
+
+    $errors = [];
+    foreach ($urlCandidates as $candidate) {
+        $url = sanitizeConnectionString(is_string($candidate) ? $candidate : '');
+        if ($url === '') {
+            continue;
+        }
+
+        try {
+            return createPdoFromDatabaseUrl($url);
+        } catch (Throwable $error) {
+            $errors[] = $error->getMessage();
+        }
     }
 
     $host = trim((string) getenv('PGHOST'));
@@ -175,13 +194,14 @@ function createPdoFromEnvironment(): PDO
     $sslmode = trim((string) getenv('PGSSLMODE'));
 
     if ($host === '' || $database === '' || $user === '') {
-        throw new RuntimeException('Missing PGHOST/PGDATABASE/PGUSER or DATABASE_URL.');
+        if (count($errors) > 0) {
+            throw new RuntimeException('Unable to connect using URL env vars: ' . implode(' | ', array_slice($errors, 0, 3)));
+        }
+        throw new RuntimeException('Missing DB env vars. Set DATABASE_URL (or DATABASE_PRIVATE_URL) on app service.');
     }
 
     $dsn = sprintf('pgsql:host=%s;port=%s;dbname=%s', $host, $port !== '' ? $port : '5432', $database);
-    if ($sslmode !== '') {
-        $dsn .= ';sslmode=' . $sslmode;
-    }
+    $dsn .= ';sslmode=' . resolveSslMode($host, $sslmode);
 
     return new PDO($dsn, $user, $password, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -192,7 +212,8 @@ function createPdoFromEnvironment(): PDO
 
 function createPdoFromDatabaseUrl(string $databaseUrl): PDO
 {
-    $parts = parse_url($databaseUrl);
+    $sanitizedUrl = sanitizeConnectionString($databaseUrl);
+    $parts = parse_url($sanitizedUrl);
     if ($parts === false) {
         throw new RuntimeException('Invalid DATABASE_URL format.');
     }
@@ -215,15 +236,53 @@ function createPdoFromDatabaseUrl(string $databaseUrl): PDO
     }
 
     $dsn = sprintf('pgsql:host=%s;port=%d;dbname=%s', $host, $port, $database);
-    if (isset($query['sslmode']) && is_string($query['sslmode']) && $query['sslmode'] !== '') {
-        $dsn .= ';sslmode=' . $query['sslmode'];
-    }
+    $querySsl = isset($query['sslmode']) && is_string($query['sslmode']) ? trim($query['sslmode']) : '';
+    $envSsl = trim((string) getenv('PGSSLMODE'));
+    $dsn .= ';sslmode=' . resolveSslMode($host, $querySsl !== '' ? $querySsl : $envSsl);
 
     return new PDO($dsn, $user, $password, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
+}
+
+function sanitizeConnectionString(string $value): string
+{
+    $trimmed = trim($value);
+    if ($trimmed === '') {
+        return '';
+    }
+
+    $quoted = preg_replace('/^(["\'])(.*)\1$/', '$2', $trimmed);
+    $result = is_string($quoted) ? trim($quoted) : $trimmed;
+
+    if (str_contains($result, '${') || str_contains($result, '<')) {
+        return '';
+    }
+
+    return $result;
+}
+
+function ensurePgsqlDriverLoaded(): void
+{
+    $drivers = PDO::getAvailableDrivers();
+    if (!in_array('pgsql', $drivers, true)) {
+        throw new RuntimeException('PDO pgsql driver missing. Ensure container includes pdo_pgsql extension.');
+    }
+}
+
+function resolveSslMode(string $host, string $configured): string
+{
+    if ($configured !== '') {
+        return $configured;
+    }
+
+    if (str_ends_with(strtolower($host), '.railway.internal')) {
+        return 'disable';
+    }
+
+    return 'prefer';
 }
 
 function ensureSchema(PDO $pdo): void

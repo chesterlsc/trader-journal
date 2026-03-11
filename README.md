@@ -18,6 +18,7 @@ Trading journal web app with:
 Set either:
 
 - `DATABASE_URL=postgres://USER:PASSWORD@HOST:5432/DBNAME?sslmode=require`
+- `DATABASE_PRIVATE_URL=postgres://USER:PASSWORD@HOST:5432/DBNAME` (Railway internal/private URL)
 
 or these variables:
 
@@ -27,6 +28,12 @@ or these variables:
 - `PGUSER`
 - `PGPASSWORD`
 - `PGSSLMODE` (optional, e.g. `require`)
+
+Notes:
+
+- Put DB env vars on the **app service** (where PHP runs), not only on the Postgres service.
+- For Railway internal hosts (`*.railway.internal`), this backend now defaults to `sslmode=disable`.
+- For non-internal hosts, it defaults to `sslmode=prefer` if not explicitly set.
 
 Optional:
 
