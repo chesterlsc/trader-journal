@@ -61,6 +61,19 @@ Then open:
 3. Deploy this repo (Dockerfile included).
 4. Open the generated Railway domain.
 
+## Migrate Legacy JSON Data (One Time)
+
+If you already have old file-based users/trades in:
+
+- `data/users.json`
+- `data/accounts/*.json`
+
+Import them into PostgreSQL:
+
+```bash
+php scripts/migrate_legacy_json.php
+```
+
 ## API Endpoints (used by app.js)
 
 - `trade_handler.php?action=session`
