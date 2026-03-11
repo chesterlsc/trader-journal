@@ -308,11 +308,6 @@ body.is-authenticated .auth-shell {
   display: block;
 }
 
-.brand-block {
-  display: grid;
-  gap: 10px;
-}
-
 .brand-kicker {
   margin: 0;
   color: var(--cyan);
@@ -331,10 +326,6 @@ h1 {
   margin: 0;
   color: var(--text-soft);
   font-size: 0.92rem;
-}
-
-.brand-block .main-nav {
-  margin-top: 4px;
 }
 
 .nav-toggle {
