@@ -124,6 +124,20 @@ try {
         respond(200, $payload);
     }
 
+    if ($action === 'validate_reset_token') {
+        $token = trim((string) ($_GET['token'] ?? ''));
+        if ($token === '') {
+            respond(422, ['ok' => false, 'error' => 'Reset token is required.']);
+        }
+
+        $request = findActivePasswordResetRequest($pdo, $token);
+        if ($request === null) {
+            respond(422, ['ok' => false, 'error' => 'Reset link is invalid or expired.']);
+        }
+
+        respond(200, ['ok' => true, 'valid' => true]);
+    }
+
     if ($action === 'reset_password') {
         requireMethod('POST');
         $decoded = readJsonBody();
@@ -707,22 +721,8 @@ function ensurePasswordResetRequest(PDO $pdo, string $email): ?string
 
 function resetPasswordWithToken(PDO $pdo, string $token, string $password): void
 {
-    $tokenHash = hash('sha256', $token);
-    $stmt = $pdo->prepare(
-        <<<SQL
-        SELECT id, user_id
-        FROM password_reset_requests
-        WHERE token_hash = :token_hash
-          AND used_at IS NULL
-          AND expires_at IS NOT NULL
-          AND expires_at > NOW()
-        ORDER BY requested_at DESC
-        LIMIT 1
-        SQL
-    );
-    $stmt->execute([':token_hash' => $tokenHash]);
-    $row = $stmt->fetch();
-    if (!is_array($row)) {
+    $row = findActivePasswordResetRequest($pdo, $token);
+    if ($row === null) {
         respond(422, ['ok' => false, 'error' => 'Reset link is invalid or expired.']);
     }
 
@@ -757,6 +757,27 @@ function resetPasswordWithToken(PDO $pdo, string $token, string $password): void
         }
         throw $error;
     }
+}
+
+function findActivePasswordResetRequest(PDO $pdo, string $token): ?array
+{
+    $tokenHash = hash('sha256', $token);
+    $stmt = $pdo->prepare(
+        <<<SQL
+        SELECT id, user_id
+        FROM password_reset_requests
+        WHERE token_hash = :token_hash
+          AND used_at IS NULL
+          AND expires_at IS NOT NULL
+          AND expires_at > NOW()
+        ORDER BY requested_at DESC
+        LIMIT 1
+        SQL
+    );
+    $stmt->execute([':token_hash' => $tokenHash]);
+    $row = $stmt->fetch();
+
+    return is_array($row) ? $row : null;
 }
 
 function buildResetUrl(string $token): string

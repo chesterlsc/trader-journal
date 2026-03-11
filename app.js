@@ -35,7 +35,8 @@ const state = {
     username: "",
     isAdmin: false,
     sessionCheckVersion: 0,
-    resetToken: ""
+    resetToken: "",
+    resetTokenStatus: "idle"
   },
   serverSync: {
     timerId: null,
@@ -188,6 +189,7 @@ init();
 
 function init() {
   state.auth.resetToken = getResetTokenFromUrl();
+  state.auth.resetTokenStatus = state.auth.resetToken ? "pending" : "idle";
   loadState();
   applyInitialDates();
   hydrateRiskForm();
@@ -202,6 +204,9 @@ function init() {
   renderAdminUsers();
   renderAll();
   renderLastSaved();
+  if (state.auth.resetToken) {
+    validateResetToken();
+  }
   checkAuthSession();
 }
 
@@ -433,6 +438,39 @@ function setResetTokenInUrl(token) {
   }
 }
 
+async function validateResetToken() {
+  if (!state.auth.resetToken) {
+    state.auth.resetTokenStatus = "idle";
+    updateAuthUi();
+    return;
+  }
+
+  state.auth.resetTokenStatus = "pending";
+  updateAuthUi();
+
+  try {
+    const response = await fetch(
+      `trade_handler.php?action=validate_reset_token&token=${encodeURIComponent(state.auth.resetToken)}`,
+      {
+        method: "GET",
+        credentials: "same-origin"
+      }
+    );
+    const body = await response.json();
+    if (!response.ok || !body.ok || !body.valid) {
+      throw new Error(body.error || "Reset link is invalid or expired.");
+    }
+    state.auth.resetTokenStatus = "valid";
+    updateAuthUi();
+  } catch (error) {
+    state.auth.resetToken = "";
+    state.auth.resetTokenStatus = "invalid";
+    setResetTokenInUrl("");
+    updateAuthUi();
+    setMessage(ui.authMessage, error.message || "Reset link is invalid or expired.", "error");
+  }
+}
+
 function updateAccessGate() {
   const locked = state.auth.checked && !state.auth.isAuthenticated;
   const disableNavigation = !canAccessApp();
@@ -626,6 +664,7 @@ async function submitAuth(action, password, successMessage, identifier = "") {
     state.auth.username = String(body.username || identifier);
     state.auth.isAdmin = Boolean(body.isAdmin);
     state.auth.resetToken = "";
+    state.auth.resetTokenStatus = "idle";
     setResetTokenInUrl("");
     updateAuthUi();
 
@@ -652,20 +691,26 @@ function updateAuthUi() {
   }
 
   ui.authStatus.classList.remove("is-on", "is-off");
-  const isResetMode = Boolean(state.auth.resetToken) && !state.auth.isAuthenticated;
+  const hasResetToken = Boolean(state.auth.resetToken) && !state.auth.isAuthenticated;
+  const isResetPending = hasResetToken && state.auth.resetTokenStatus === "pending";
+  const isResetMode = hasResetToken && state.auth.resetTokenStatus === "valid";
 
   if (ui.authControls) {
-    ui.authControls.hidden = isResetMode;
+    ui.authControls.hidden = isResetMode || isResetPending;
   }
   if (ui.resetPasswordView) {
     ui.resetPasswordView.hidden = !isResetMode;
   }
   if (ui.forgotPasswordBtn) {
-    ui.forgotPasswordBtn.hidden = isResetMode;
+    ui.forgotPasswordBtn.hidden = isResetMode || isResetPending;
   }
 
   if (!state.auth.checked) {
-    ui.authStatus.textContent = isResetMode ? "Reset your password" : "Checking session...";
+    ui.authStatus.textContent = isResetPending
+      ? "Verifying reset link..."
+      : isResetMode
+        ? "Reset your password"
+        : "Checking session...";
     if (ui.authPanel) {
       ui.authPanel.hidden = false;
     }
@@ -699,11 +744,15 @@ function updateAuthUi() {
       ui.authPassword.value = "";
     }
   } else {
-    ui.authStatus.textContent = isResetMode ? "Reset your password" : "Not logged in";
+    ui.authStatus.textContent = isResetPending
+      ? "Verifying reset link..."
+      : isResetMode
+        ? "Reset your password"
+        : "Not logged in";
     ui.authStatus.classList.add("is-off");
     state.auth.isAdmin = false;
-    ui.loginBtn.hidden = isResetMode;
-    ui.registerBtn.hidden = isResetMode;
+    ui.loginBtn.hidden = isResetMode || isResetPending;
+    ui.registerBtn.hidden = isResetMode || isResetPending;
     ui.desktopLogoutBtn.hidden = true;
     ui.mobileLogoutBtn.hidden = true;
     if (ui.authPanel) {
@@ -776,6 +825,7 @@ async function handlePasswordReset() {
 
 function clearResetTokenState(clearMessage = false) {
   state.auth.resetToken = "";
+  state.auth.resetTokenStatus = "idle";
   setResetTokenInUrl("");
   if (ui.resetPassword) {
     ui.resetPassword.value = "";

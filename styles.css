@@ -1246,13 +1246,15 @@ body.auth-locked .view {
   }
 
   .auth-shell {
-    width: min(100%, calc(100vw - 12px));
+    width: min(100%, calc(100vw - 16px));
     margin: 8px auto 16px;
-    padding: 14px;
+    padding: 16px;
+    border-radius: 24px;
   }
 
   .auth-shell-topbar {
     justify-content: center;
+    margin-bottom: 18px;
   }
 
   .auth-hero-copy h2 {
@@ -1260,15 +1262,16 @@ body.auth-locked .view {
   }
 
   .auth-hero {
-    gap: 18px;
+    gap: 14px;
   }
 
   .auth-hero-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 18px;
   }
 
   .auth-hero-stage {
-    margin-top: 20px;
+    display: none;
   }
 
   .app-layout {
@@ -1375,9 +1378,10 @@ body.auth-locked .view {
   }
 
   .auth-panel {
-    order: 5;
+    order: 2;
     width: 100%;
-    max-width: 560px;
+    max-width: 580px;
+    padding: 18px;
   }
 
   .shortcut-hint {
@@ -1518,55 +1522,42 @@ body.auth-locked .view {
   }
 
   .auth-shell {
-    padding: 12px;
-    border-radius: 22px;
+    width: min(100%, calc(100vw - 20px));
+    padding: 14px;
+    border-radius: 20px;
   }
 
   .auth-hero {
-    gap: 14px;
+    gap: 10px;
   }
 
   .auth-hero-copy {
-    padding: 2px 0 6px;
+    padding: 0;
     text-align: left;
   }
 
   .auth-hero-copy h2 {
-    font-size: clamp(2.2rem, 12vw, 3.6rem);
-    line-height: 0.98;
+    font-size: clamp(2.1rem, 11vw, 3.3rem);
+    line-height: 1;
+    letter-spacing: -0.045em;
   }
 
   .auth-hero-text {
-    font-size: 1rem;
-    line-height: 1.5;
-  }
-
-  .auth-hero-metrics {
-    grid-template-columns: 1fr;
-    gap: 10px;
+    margin-top: 14px;
+    font-size: 0.98rem;
+    line-height: 1.55;
   }
 
   .auth-hero-badges {
-    gap: 8px;
-    margin-bottom: 14px;
+    display: none;
   }
 
-  .auth-hero-badges span {
-    width: 100%;
-    justify-content: center;
-    text-align: center;
+  .auth-hero-metrics {
+    display: none;
   }
 
   .auth-hero-stage {
-    grid-template-columns: 1fr;
-    gap: 10px;
-    margin-top: 18px;
-  }
-
-  .hero-stage-card,
-  .hero-stage-card-main {
-    grid-column: auto;
-    min-height: 0;
+    display: none;
   }
 
   .view-head,
@@ -1611,13 +1602,18 @@ body.auth-locked .view {
   }
 
   .auth-panel {
-    padding: 14px;
+    padding: 16px;
+    border-radius: 18px;
   }
 
   .auth-title,
   .auth-status,
   .auth-copy {
-    text-align: center;
+    text-align: left;
+  }
+
+  .auth-field-hint {
+    margin-top: -2px;
   }
 
   .auth-form-actions {
