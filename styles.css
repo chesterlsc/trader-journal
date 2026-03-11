@@ -96,6 +96,7 @@ body.is-authenticated .auth-shell {
     radial-gradient(circle at bottom right, rgba(57, 211, 255, 0.18), transparent 28%),
     linear-gradient(180deg, rgba(8, 14, 36, 0.98), rgba(8, 12, 28, 0.96));
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
+  overflow: hidden;
 }
 
 .auth-shell-topbar {
@@ -110,12 +111,6 @@ body.is-authenticated .auth-shell {
   margin: 8px 0 0;
 }
 
-.auth-shell-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
 .auth-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(340px, 440px);
@@ -126,6 +121,7 @@ body.is-authenticated .auth-shell {
 
 .auth-hero-copy {
   padding: 18px 20px;
+  animation: fadeUp 480ms ease;
 }
 
 .auth-hero-kicker {
@@ -141,6 +137,12 @@ body.is-authenticated .auth-shell {
   max-width: 760px;
   font: 700 clamp(3rem, 7vw, 5.6rem)/0.96 "Sora", "Manrope", sans-serif;
   letter-spacing: -0.05em;
+  transition: transform 220ms ease, text-shadow 220ms ease;
+}
+
+.auth-hero-copy:hover h2 {
+  transform: translateY(-2px);
+  text-shadow: 0 8px 28px rgba(87, 161, 255, 0.2);
 }
 
 .auth-hero-text {
@@ -165,6 +167,13 @@ body.is-authenticated .auth-shell {
   padding: 14px;
   display: grid;
   gap: 8px;
+  transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
+}
+
+.auth-hero-metrics article:hover {
+  transform: translateY(-3px);
+  border-color: rgba(87, 161, 255, 0.5);
+  background: rgba(11, 19, 39, 0.88);
 }
 
 .auth-hero-metrics strong {
@@ -336,15 +345,6 @@ h1 {
   color: var(--text-soft);
   font-size: 0.9rem;
   line-height: 1.5;
-}
-
-.auth-provider-stack {
-  display: grid;
-  gap: 10px;
-}
-
-.auth-provider-btn {
-  justify-content: center;
 }
 
 .auth-form-actions .btn {
@@ -1118,8 +1118,7 @@ body.auth-locked .view {
     padding: 14px;
   }
 
-  .auth-shell-topbar,
-  .auth-shell-actions {
+  .auth-shell-topbar {
     justify-content: center;
   }
 
@@ -1369,10 +1368,6 @@ body.auth-locked .view {
   .auth-shell-topbar {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .auth-shell-actions {
-    justify-content: stretch;
   }
 
   .auth-hero-metrics {

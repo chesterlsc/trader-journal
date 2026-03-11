@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chester Journal | Trading Analytics</title>
+    <title>Your Journal | Trading Analytics</title>
     <link rel="stylesheet" href="styles.css?v=20260311-auth2" />
   </head>
   <body>
@@ -14,22 +14,16 @@
       <header class="auth-shell-topbar">
         <div class="auth-shell-brand">
           <p class="brand-kicker">Trader Development</p>
-          <h1>Chester Journal</h1>
-        </div>
-        <div class="auth-shell-actions">
-          <button class="btn auth-provider-btn" type="button" data-provider="github">GitHub</button>
-          <button class="btn auth-provider-btn" type="button" data-provider="google">Google</button>
-          <button class="btn auth-provider-btn" type="button" data-provider="apple">Apple</button>
+          <h1>Your Journal</h1>
         </div>
       </header>
 
       <div class="auth-hero">
         <section class="auth-hero-copy">
-          <p class="auth-hero-kicker">Institutional Journal</p>
-          <h2>Build consistency where trading performance compounds.</h2>
+          <h2>Build the trading routine that compounds with you.</h2>
           <p class="auth-hero-text">
-            Review P&amp;L, discipline, drawdown, and execution quality in one focused journal built for serious
-            traders.
+            Track your execution, review your discipline, and see your edge develop over time in one focused trading
+            journal.
           </p>
           <div class="auth-hero-metrics">
             <article>
@@ -51,22 +45,10 @@
           <p class="auth-title">Sign In To Your Journal</p>
           <p class="auth-status" id="authStatus">Checking session...</p>
           <p class="auth-copy">
-            Use your email account to sign in. Social sign-in buttons are UI-ready and need provider credentials before
-            they can be enabled.
+            Sign in with your email and password, or create a new account with the same email-based flow.
           </p>
 
-          <div class="auth-provider-stack">
-            <button class="btn auth-provider-btn" type="button" data-provider="email">Continue with Email</button>
-            <button class="btn auth-provider-btn" type="button" data-provider="google">Continue with Google</button>
-            <button class="btn auth-provider-btn" type="button" data-provider="apple">Continue with Apple</button>
-            <button class="btn auth-provider-btn" type="button" data-provider="github">Continue with GitHub</button>
-          </div>
-
           <div id="authControls">
-            <label>
-              Username or Email
-              <input id="authUsername" type="text" maxlength="190" placeholder="chesterlsc or you@example.com" autocomplete="username" />
-            </label>
             <label>
               Email
               <input id="authEmail" type="email" maxlength="190" placeholder="you@example.com" autocomplete="email" />
@@ -81,10 +63,21 @@
                 autocomplete="current-password"
               />
             </label>
+            <label>
+              Confirm Password
+              <input
+                id="authPasswordConfirm"
+                type="password"
+                maxlength="72"
+                placeholder="Repeat for account creation"
+                autocomplete="new-password"
+              />
+            </label>
 
             <div class="form-actions auth-form-actions">
               <button id="loginBtn" class="btn primary" type="button">Login</button>
               <button id="registerBtn" class="btn" type="button">Create Account</button>
+              <button id="forgotPasswordBtn" class="btn" type="button">Forgot Password</button>
             </div>
           </div>
 
@@ -98,7 +91,7 @@
         <div class="sidebar-header">
           <div class="brand-block">
             <p class="brand-kicker">Trader Development</p>
-            <h1 id="brandTitle">Chester Journal</h1>
+            <h1 id="brandTitle">Your Journal</h1>
             <p class="brand-copy">Execution analytics, risk control, and discipline tracking in one local system.</p>
           </div>
           <button

@@ -8,7 +8,7 @@ $action = isset($_GET['action']) ? (string) $_GET['action'] : 'load';
 
 $defaults = [
     'settings' => [
-        'journalName' => 'Chester',
+        'journalName' => 'Your',
         'startingBalance' => 10000,
         'balanceOverride' => 0,
         'dailyMaxLoss' => 300,
@@ -42,8 +42,8 @@ try {
 
     if ($action === 'register') {
         requireMethod('POST');
-        [$identifier, $password, $email] = readCredentials(true);
-        $username = $identifier;
+        [$password, $email] = readCredentials(true);
+        $username = createUsernameFromEmail($pdo, $email);
 
         $hash = password_hash($password, PASSWORD_DEFAULT);
         if (!is_string($hash) || $hash === '') {
@@ -74,7 +74,7 @@ try {
             }
 
             if (isUniqueViolation($error)) {
-                respond(409, ['ok' => false, 'error' => 'Username already exists.']);
+                respond(409, ['ok' => false, 'error' => 'Account already exists for that email.']);
             }
 
             throw $error;
@@ -89,8 +89,8 @@ try {
 
     if ($action === 'login') {
         requireMethod('POST');
-        [$identifier, $password] = readCredentials(false);
-        $username = $identifier;
+        [$password, $email] = readCredentials(false);
+        $username = $email;
 
         $user = findUserByIdentifier($pdo, $username);
         if ($user === null || !password_verify($password, $user['passwordHash'])) {
@@ -105,6 +105,18 @@ try {
         logLoginEvent($pdo, $user['id'], $user['username'], 'login', true);
 
         respond(200, ['ok' => true, 'username' => $user['username'], 'isAdmin' => isAdminUsername($pdo, $user['username'])]);
+    }
+
+    if ($action === 'forgot_password') {
+        requireMethod('POST');
+        $decoded = readJsonBody();
+        $email = strtolower(trim((string) ($decoded['email'] ?? '')));
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            respond(422, ['ok' => false, 'error' => 'Enter a valid email address.']);
+        }
+
+        ensurePasswordResetRequest($pdo, $email);
+        respond(200, ['ok' => true, 'message' => 'If the email exists, a reset request has been recorded.']);
     }
 
     if ($action === 'logout') {
@@ -304,6 +316,16 @@ function ensureSchema(PDO $pdo): void
             oauth_subject TEXT NULL,
             password_hash TEXT NOT NULL,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        SQL
+    );
+
+    $pdo->exec(
+        <<<SQL
+        CREATE TABLE IF NOT EXISTS password_reset_requests (
+            id BIGSERIAL PRIMARY KEY,
+            email VARCHAR(190) NOT NULL,
+            requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
         SQL
     );
@@ -526,29 +548,18 @@ function requireMethod(string $method): void
 function readCredentials(bool $forRegister = false): array
 {
     $decoded = readJsonBody();
-    $identifierRaw = isset($decoded['username']) ? strtolower(trim((string) $decoded['username'])) : '';
     $emailRaw = isset($decoded['email']) ? strtolower(trim((string) $decoded['email'])) : '';
     $password = isset($decoded['password']) ? (string) $decoded['password'] : '';
 
-    if (!preg_match('/^[a-z0-9._@-]{3,190}$/', $identifierRaw)) {
-        respond(422, ['ok' => false, 'error' => 'Use a valid username or email.']);
+    if ($emailRaw === '' || !filter_var($emailRaw, FILTER_VALIDATE_EMAIL)) {
+        respond(422, ['ok' => false, 'error' => 'Enter a valid email address.']);
     }
 
     if (strlen($password) < 8) {
         respond(422, ['ok' => false, 'error' => 'Password must be at least 8 characters.']);
     }
 
-    if ($forRegister) {
-        if (!preg_match('/^[a-z0-9._-]{3,32}$/', $identifierRaw)) {
-            respond(422, ['ok' => false, 'error' => 'Username must be 3-32 chars: letters, numbers, dot, underscore, dash.']);
-        }
-
-        if ($emailRaw === '' || !filter_var($emailRaw, FILTER_VALIDATE_EMAIL)) {
-            respond(422, ['ok' => false, 'error' => 'Enter a valid email address.']);
-        }
-    }
-
-    return [$identifierRaw, $password, $emailRaw];
+    return [$password, $emailRaw];
 }
 
 function readJsonBody(): array
@@ -584,6 +595,34 @@ function findUserByIdentifier(PDO $pdo, string $identifier): ?array
         'provider' => (string) ($row['auth_provider'] ?? 'email'),
         'passwordHash' => (string) $row['password_hash'],
     ];
+}
+
+function createUsernameFromEmail(PDO $pdo, string $email): string
+{
+    $local = strtolower((string) preg_replace('/[^a-z0-9._-]+/', '', strstr($email, '@', true) ?: 'user'));
+    $base = trim($local, '._-');
+    if ($base === '') {
+        $base = 'user';
+    }
+    $base = substr($base, 0, 24);
+
+    $candidate = $base;
+    $counter = 1;
+    while (findUserByIdentifier($pdo, $candidate) !== null) {
+        $suffix = (string) $counter;
+        $candidate = substr($base, 0, max(1, 32 - strlen($suffix))) . $suffix;
+        $counter += 1;
+    }
+
+    return $candidate;
+}
+
+function ensurePasswordResetRequest(PDO $pdo, string $email): void
+{
+    $stmt = $pdo->prepare(
+        'INSERT INTO password_reset_requests (email, requested_at) VALUES (:email, NOW())'
+    );
+    $stmt->execute([':email' => $email]);
 }
 
 function isAdminUsername(PDO $pdo, string $username): bool

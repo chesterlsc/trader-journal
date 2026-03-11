@@ -9,7 +9,7 @@ const STORAGE_KEYS = {
 };
 
 const DEFAULT_SETTINGS = {
-  journalName: "Chester",
+  journalName: "Your",
   startingBalance: 10000,
   balanceOverride: 0,
   dailyMaxLoss: 300,
@@ -65,12 +65,12 @@ const ui = {
   lastSaved: document.getElementById("lastSaved"),
   authStatus: document.getElementById("authStatus"),
   authMessage: document.getElementById("authMessage"),
-  authUsername: document.getElementById("authUsername"),
   authEmail: document.getElementById("authEmail"),
   authPassword: document.getElementById("authPassword"),
+  authPasswordConfirm: document.getElementById("authPasswordConfirm"),
   loginBtn: document.getElementById("loginBtn"),
   registerBtn: document.getElementById("registerBtn"),
-  authProviderButtons: Array.from(document.querySelectorAll(".auth-provider-btn")),
+  forgotPasswordBtn: document.getElementById("forgotPasswordBtn"),
   desktopLogoutBtn: document.getElementById("desktopLogoutBtn"),
   mobileLogoutBtn: document.getElementById("mobileLogoutBtn"),
   metricNodes: Array.from(document.querySelectorAll("[data-metric]")),
@@ -221,12 +221,9 @@ function bindEvents() {
     });
   }
 
-  ui.authProviderButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const provider = String(button.dataset.provider || "");
-      handleProviderIntent(provider);
-    });
-  });
+  if (ui.forgotPasswordBtn) {
+    ui.forgotPasswordBtn.addEventListener("click", handleForgotPassword);
+  }
 
   if (ui.navToggleBtn) {
     ui.navToggleBtn.addEventListener("click", () => {
@@ -413,13 +410,12 @@ function updateAccessGate() {
 }
 
 function readAuthForm(forRegister = false) {
-  const usernameInput = (ui.authUsername?.value || "").trim().toLowerCase();
   const email = (ui.authEmail?.value || "").trim().toLowerCase();
-  const username = forRegister ? usernameInput : (usernameInput || email);
   const password = ui.authPassword?.value || "";
+  const passwordConfirm = ui.authPasswordConfirm?.value || "";
 
-  if (!/^[a-zA-Z0-9._@-]{3,190}$/.test(username)) {
-    return { ok: false, error: "Use a valid username or email." };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { ok: false, error: "Enter a valid email address." };
   }
 
   if (password.length < 8) {
@@ -427,16 +423,15 @@ function readAuthForm(forRegister = false) {
   }
 
   if (forRegister) {
-    if (!/^[a-zA-Z0-9._-]{3,32}$/.test(username)) {
-      return { ok: false, error: "Username must be 3-32 chars: letters, numbers, dot, underscore, dash." };
+    if (passwordConfirm.length < 8) {
+      return { ok: false, error: "Confirm your password to create an account." };
     }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return { ok: false, error: "Enter a valid email address to create an account." };
+    if (password !== passwordConfirm) {
+      return { ok: false, error: "Password and confirm password do not match." };
     }
   }
 
-  return { ok: true, username, email, password };
+  return { ok: true, email, password };
 }
 
 async function checkAuthSession() {
@@ -506,7 +501,7 @@ async function handleLogin() {
     return;
   }
 
-  await submitAuth("login", credentials.username, credentials.password, "Logged in.", credentials.email);
+  await submitAuth("login", credentials.password, "Logged in.", credentials.email);
 }
 
 async function handleRegister() {
@@ -516,7 +511,7 @@ async function handleRegister() {
     return;
   }
 
-  await submitAuth("register", credentials.username, credentials.password, "Account created and logged in.", credentials.email);
+  await submitAuth("register", credentials.password, "Account created and logged in.", credentials.email);
 }
 
 async function handleLogout() {
@@ -548,14 +543,14 @@ async function handleLogout() {
   setMessage(ui.authMessage, "Logged out.", "success");
 }
 
-async function submitAuth(action, username, password, successMessage, email = "") {
+async function submitAuth(action, password, successMessage, email = "") {
   state.auth.sessionCheckVersion += 1;
   try {
     const response = await fetch(`trade_handler.php?action=${action}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ username, email, password })
+      body: JSON.stringify({ email, password })
     });
     const body = await response.json();
     if (!response.ok || !body.ok) {
@@ -564,7 +559,7 @@ async function submitAuth(action, username, password, successMessage, email = ""
 
     state.auth.checked = true;
     state.auth.isAuthenticated = true;
-    state.auth.username = String(body.username || username);
+    state.auth.username = String(body.username || email);
     state.auth.isAdmin = Boolean(body.isAdmin);
     updateAuthUi();
 
@@ -609,12 +604,13 @@ function updateAuthUi() {
       ? `Logged in as ${state.auth.username} (Admin)`
       : `Logged in as ${state.auth.username}`;
     ui.authStatus.classList.add("is-on");
-    if (ui.authUsername) {
-      ui.authUsername.value = state.auth.username;
-    }
     if (ui.authEmail) {
       ui.authEmail.value = "";
       ui.authEmail.disabled = true;
+    }
+    if (ui.authPasswordConfirm) {
+      ui.authPasswordConfirm.value = "";
+      ui.authPasswordConfirm.disabled = true;
     }
     ui.loginBtn.hidden = true;
     ui.registerBtn.hidden = true;
@@ -622,9 +618,6 @@ function updateAuthUi() {
     ui.mobileLogoutBtn.hidden = false;
     if (ui.authPanel) {
       ui.authPanel.hidden = true;
-    }
-    if (ui.authUsername) {
-      ui.authUsername.disabled = true;
     }
     if (ui.authPassword) {
       ui.authPassword.disabled = true;
@@ -643,11 +636,11 @@ function updateAuthUi() {
     if (ui.authPanel) {
       ui.authPanel.hidden = false;
     }
-    if (ui.authUsername) {
-      ui.authUsername.disabled = false;
-    }
     if (ui.authEmail) {
       ui.authEmail.disabled = false;
+    }
+    if (ui.authPasswordConfirm) {
+      ui.authPasswordConfirm.disabled = false;
     }
     if (ui.authPassword) {
       ui.authPassword.disabled = false;
@@ -658,18 +651,28 @@ function updateAuthUi() {
   updateAccessGate();
 }
 
-function handleProviderIntent(provider) {
-  if (provider === "email") {
-    ui.authUsername?.focus();
-    setMessage(ui.authMessage, "Use username, email, and password to continue with email.", "success");
+async function handleForgotPassword() {
+  const email = (ui.authEmail?.value || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    setMessage(ui.authMessage, "Enter your email address first.", "error");
     return;
   }
 
-  setMessage(
-    ui.authMessage,
-    `${provider.charAt(0).toUpperCase()}${provider.slice(1)} sign-in needs provider credentials and callback setup first.`,
-    "error"
-  );
+  try {
+    const response = await fetch("trade_handler.php?action=forgot_password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ email })
+    });
+    const body = await response.json();
+    if (!response.ok || !body.ok) {
+      throw new Error(body.error || "Password reset request failed.");
+    }
+    setMessage(ui.authMessage, body.message || "Reset request recorded.", "success");
+  } catch (error) {
+    setMessage(ui.authMessage, error.message || "Password reset request failed.", "error");
+  }
 }
 
 function isViewActive(id) {
