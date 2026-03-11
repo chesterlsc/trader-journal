@@ -351,6 +351,10 @@ h1 {
   box-shadow: 0 16px 30px rgba(6, 14, 30, 0.38);
 }
 
+.auth-panel[hidden] {
+  display: none !important;
+}
+
 .auth-title {
   margin: 0;
   color: #eff5ff;
@@ -1343,11 +1347,20 @@ body.auth-locked .view {
   color: var(--text-soft);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
   font: 500 12px/1.45 "JetBrains Mono", "Consolas", monospace;
+  text-align: center;
 }
 
 .footer-main,
 .footer-donation {
   margin: 0;
+}
+
+.footer-main {
+  color: #e8f1ff;
+}
+
+.footer-support-copy {
+  margin: 4px 0 0;
 }
 
 .footer-support {
@@ -1358,6 +1371,8 @@ body.auth-locked .view {
   cursor: pointer;
   color: rgba(169, 187, 225, 0.86);
   list-style: none;
+  display: inline-flex;
+  justify-content: center;
 }
 
 .footer-support summary::-webkit-details-marker {
@@ -1372,6 +1387,7 @@ body.auth-locked .view {
   display: grid;
   gap: 4px;
   margin-top: 8px;
+  justify-items: center;
 }
 
 .site-footer code {

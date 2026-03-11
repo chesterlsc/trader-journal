@@ -819,6 +819,7 @@ function updateAuthUi() {
     ui.authStatus.textContent = isResetPending ? "Verifying reset link..." : "";
     if (ui.authPanel) {
       ui.authPanel.hidden = collapseForCompactMobile;
+      ui.authPanel.style.display = collapseForCompactMobile ? "none" : "grid";
     }
     ui.desktopLogoutBtn.hidden = true;
     ui.mobileLogoutBtn.hidden = true;
@@ -842,6 +843,7 @@ function updateAuthUi() {
     ui.mobileLogoutBtn.hidden = false;
     if (ui.authPanel) {
       ui.authPanel.hidden = true;
+      ui.authPanel.style.display = "none";
     }
     if (ui.authPassword) {
       ui.authPassword.disabled = true;
@@ -861,6 +863,7 @@ function updateAuthUi() {
     ui.mobileLogoutBtn.hidden = true;
     if (ui.authPanel) {
       ui.authPanel.hidden = collapseForCompactMobile;
+      ui.authPanel.style.display = collapseForCompactMobile ? "none" : "grid";
     }
     if (ui.authIdentifier) {
       ui.authIdentifier.disabled = false;
