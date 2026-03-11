@@ -97,7 +97,7 @@
         </nav>
 
         <section class="view is-active" id="dashboard" aria-labelledby="dashboardHeading">
-          <header class="view-head">
+          <header class="view-head view-head-dashboard">
             <h2 id="dashboardHeading">Performance Dashboard</h2>
             <p>Track equity growth, drawdown pressure, and edge quality at a glance.</p>
           </header>
@@ -275,68 +275,93 @@
             </div>
           </section>
 
-          <section class="panel" id="loginLogsPanel" hidden>
-            <div class="panel-head">
-              <h3>Admin Login Activity</h3>
-              <p>Latest login, register, and logout events across all accounts.</p>
+          <section class="panel">
+            <div class="panel-head panel-head-inline">
+              <div>
+                <h3>Calendar P&amp;L View</h3>
+                <p>See daily profit, trade count, and the most traded asset for each day.</p>
+              </div>
+              <label class="calendar-month-control">
+                <span>Month</span>
+                <input id="dashboardCalendarMonth" type="month" />
+              </label>
             </div>
-            <div class="form-actions">
-              <button id="refreshLoginLogsBtn" class="btn" type="button">Refresh Login Logs</button>
-            </div>
-            <p id="loginLogsMessage" class="form-message" aria-live="polite"></p>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Username</th>
-                    <th>Event</th>
-                    <th>Status</th>
-                    <th>IP</th>
-                    <th>Device</th>
-                  </tr>
-                </thead>
-                <tbody id="loginLogsBody">
-                  <tr class="empty-row">
-                    <td colspan="6">Admin login required.</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <p id="calendarSummary" class="form-message" aria-live="polite"></p>
+            <div id="calendarGrid" class="calendar-grid" aria-label="Trading calendar"></div>
           </section>
 
-          <section class="panel" id="adminUsersPanel" hidden>
-            <div class="panel-head">
-              <h3>Admin Users View</h3>
-              <p>Read-only view of registered users and account activity.</p>
+          <details class="panel panel-collapsible" id="loginLogsPanel" hidden open>
+            <summary class="panel-collapse-summary">
+              <div class="panel-head">
+                <h3>Admin Login Activity</h3>
+                <p>Latest login, register, and logout events across all accounts.</p>
+              </div>
+              <span class="panel-collapse-toggle" aria-hidden="true"></span>
+            </summary>
+            <div class="panel-collapsible-body">
+              <div class="form-actions">
+                <button id="refreshLoginLogsBtn" class="btn" type="button">Refresh Login Logs</button>
+              </div>
+              <p id="loginLogsMessage" class="form-message" aria-live="polite"></p>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Username</th>
+                      <th>Event</th>
+                      <th>Status</th>
+                      <th>IP</th>
+                      <th>Device</th>
+                    </tr>
+                  </thead>
+                  <tbody id="loginLogsBody">
+                    <tr class="empty-row">
+                      <td colspan="6">Admin login required.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div class="form-actions">
-              <button id="refreshAdminUsersBtn" class="btn" type="button">Refresh Users</button>
+          </details>
+
+          <details class="panel panel-collapsible" id="adminUsersPanel" hidden open>
+            <summary class="panel-collapse-summary">
+              <div class="panel-head">
+                <h3>Admin Users View</h3>
+                <p>Read-only view of registered users and account activity.</p>
+              </div>
+              <span class="panel-collapse-toggle" aria-hidden="true"></span>
+            </summary>
+            <div class="panel-collapsible-body">
+              <div class="form-actions">
+                <button id="refreshAdminUsersBtn" class="btn" type="button">Refresh Users</button>
+              </div>
+              <p id="adminUsersMessage" class="form-message" aria-live="polite"></p>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>User ID</th>
+                      <th>Username</th>
+                      <th>Password Status</th>
+                      <th>Created</th>
+                      <th>Last Event</th>
+                      <th>Last Event Time</th>
+                      <th>Device</th>
+                      <th>Trades</th>
+                      <th>Reflections</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminUsersBody">
+                    <tr class="empty-row">
+                      <td colspan="9">Admin login required.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <p id="adminUsersMessage" class="form-message" aria-live="polite"></p>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>User ID</th>
-                    <th>Username</th>
-                    <th>Password</th>
-                    <th>Created</th>
-                    <th>Last Event</th>
-                    <th>Last Event Time</th>
-                    <th>Device</th>
-                    <th>Trades</th>
-                    <th>Reflections</th>
-                  </tr>
-                </thead>
-                <tbody id="adminUsersBody">
-                  <tr class="empty-row">
-                    <td colspan="9">Admin login required.</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
+          </details>
 
         </section>
 
@@ -436,26 +461,26 @@
                   </select>
                 </label>
 
-                <label>
+                <label class="field-span-2 setup-inline-group">
                   Setup Type
-                  <select id="setupType" name="setupType" required>
-                    <option>Breakout</option>
-                    <option>Liquidity Grab</option>
-                    <option>Trend Continuation</option>
-                    <option>Reversal</option>
-                    <option>Scalp</option>
-                    <option>Custom</option>
-                  </select>
-                </label>
-                <label id="customSetupWrap" hidden>
-                  Custom Setup Name
-                  <input
-                    id="customSetupType"
-                    name="customSetupType"
-                    type="text"
-                    maxlength="40"
-                    placeholder="Name your setup"
-                  />
+                  <div class="setup-inline-controls">
+                    <select id="setupType" name="setupType" required>
+                      <option>Breakout</option>
+                      <option>Liquidity Grab</option>
+                      <option>Trend Continuation</option>
+                      <option>Reversal</option>
+                      <option>Scalp</option>
+                      <option>Custom</option>
+                    </select>
+                    <input
+                      id="customSetupType"
+                      name="customSetupType"
+                      type="text"
+                      maxlength="40"
+                      placeholder="Name your setup"
+                      hidden
+                    />
+                  </div>
                 </label>
                 <label>
                   Timeframe

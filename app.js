@@ -168,6 +168,9 @@ const ui = {
   monthlyWinRate: document.getElementById("monthlyWinRate"),
   monthlyTrades: document.getElementById("monthlyTrades"),
   monthlyBestSetup: document.getElementById("monthlyBestSetup"),
+  dashboardCalendarMonth: document.getElementById("dashboardCalendarMonth"),
+  calendarSummary: document.getElementById("calendarSummary"),
+  calendarGrid: document.getElementById("calendarGrid"),
   replayNotes: document.getElementById("replayNotes"),
   saveReplayBtn: document.getElementById("saveReplayBtn"),
   replayMessage: document.getElementById("replayMessage")
@@ -271,6 +274,7 @@ function bindEvents() {
 
   ui.reflectionForm.addEventListener("submit", handleReflectionSubmit);
   ui.reviewMonth.addEventListener("change", renderMonthlyReview);
+  ui.dashboardCalendarMonth.addEventListener("change", renderCalendarView);
   ui.saveReplayBtn.addEventListener("click", saveReplayNotes);
 
   window.addEventListener("resize", debounce(() => {
@@ -653,6 +657,10 @@ function applyInitialDates() {
   if (!ui.reviewMonth.value) {
     ui.reviewMonth.value = thisMonth;
   }
+
+  if (!ui.dashboardCalendarMonth.value) {
+    ui.dashboardCalendarMonth.value = thisMonth;
+  }
 }
 
 function hydrateRiskForm() {
@@ -669,6 +677,10 @@ function hydrateReviewMonth() {
   const todayMonth = toDateInputValue(new Date()).slice(0, 7);
   if (!ui.reviewMonth.value) {
     ui.reviewMonth.value = todayMonth;
+  }
+
+  if (!ui.dashboardCalendarMonth.value) {
+    ui.dashboardCalendarMonth.value = todayMonth;
   }
 
   ui.replayNotes.value = state.replayNotes[ui.reviewMonth.value] || "";
@@ -735,8 +747,9 @@ function handleTradeSubmit(event) {
 
 function syncSetupTypeCustomField() {
   const isCustom = ui.tradeFields.setupType.value === "Custom";
-  if (ui.tradeFields.customSetupWrap) {
-    ui.tradeFields.customSetupWrap.hidden = !isCustom;
+  if (ui.tradeFields.customSetupType) {
+    ui.tradeFields.customSetupType.hidden = !isCustom;
+    ui.tradeFields.customSetupType.toggleAttribute("required", isCustom);
   }
 
   if (!isCustom && ui.tradeFields.customSetupType) {
@@ -2054,7 +2067,7 @@ function renderAdminUsers() {
         <tr>
           <td data-label="User ID">${escapeHtml(String(user.id))}</td>
           <td data-label="Username">${escapeHtml(user.username)}</td>
-          <td data-label="Password">${escapeHtml(user.passwordStatus)}</td>
+          <td data-label="Password Status">${escapeHtml(user.passwordStatus)}</td>
           <td data-label="Created">${escapeHtml(user.createdAt || "-")}</td>
           <td data-label="Last Event" class="${user.lastEvent ? statusClass : ""}">${escapeHtml(statusText)}</td>
           <td data-label="Last Event Time">${escapeHtml(user.lastLoginAt || "-")}</td>
@@ -2129,6 +2142,7 @@ function renderAll() {
   renderRiskViolations(state.analytics);
   renderEdgeTable(state.analytics);
   renderCharts(state.analytics);
+  renderCalendarView();
   hydrateSetupFilter();
   renderJournalTable();
   renderReflections();
@@ -2429,6 +2443,92 @@ function renderDashboardMetrics(analytics) {
   ui.disciplineScore.textContent = String(analytics.disciplineScore);
   ui.dailyTradingScore.textContent = String(analytics.dailyTradingScore);
   ui.goalProgress.textContent = `${clamp(Math.round(analytics.goalProgress), 0, 300)}%`;
+}
+
+function renderCalendarView() {
+  if (!ui.calendarGrid || !ui.dashboardCalendarMonth || !ui.calendarSummary) {
+    return;
+  }
+
+  const monthValue = ui.dashboardCalendarMonth.value || toDateInputValue(new Date()).slice(0, 7);
+  const [yearText, monthText] = monthValue.split("-");
+  const year = Number(yearText);
+  const monthIndex = Number(monthText) - 1;
+
+  if (!Number.isInteger(year) || !Number.isInteger(monthIndex) || monthIndex < 0 || monthIndex > 11) {
+    ui.calendarGrid.innerHTML = "";
+    ui.calendarSummary.textContent = "Choose a valid month.";
+    return;
+  }
+
+  const dayStats = buildCalendarDayStats(monthValue);
+  const firstDay = new Date(year, monthIndex, 1);
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const startOffset = firstDay.getDay();
+  const monthTrades = state.trades.filter((trade) => trade.date.startsWith(monthValue));
+  const monthPnl = monthTrades.reduce((sum, trade) => sum + trade.netPnl, 0);
+
+  ui.calendarSummary.textContent = `${monthTrades.length} trade(s) this month | Net ${formatCurrency(monthPnl)}`;
+
+  const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const cells = [];
+  weekdayLabels.forEach((label) => {
+    cells.push(`<div class="calendar-weekday">${label}</div>`);
+  });
+
+  for (let i = 0; i < startOffset; i += 1) {
+    cells.push('<div class="calendar-cell calendar-cell-empty" aria-hidden="true"></div>');
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const isoDate = `${monthValue}-${String(day).padStart(2, "0")}`;
+    const stats = dayStats.get(isoDate) || { pnl: 0, trades: 0, topAsset: "-" };
+    const pnlClass = stats.pnl > 0 ? "pnl-positive" : stats.pnl < 0 ? "pnl-negative" : "";
+    cells.push(`
+      <article class="calendar-cell ${pnlClass}">
+        <div class="calendar-cell-day">${day}</div>
+        <div class="calendar-cell-pnl ${pnlClass}">${stats.trades ? formatCurrency(stats.pnl) : "-"}</div>
+        <div class="calendar-cell-meta">${stats.trades} trade${stats.trades === 1 ? "" : "s"}</div>
+        <div class="calendar-cell-meta">${escapeHtml(stats.topAsset)}</div>
+      </article>
+    `);
+  }
+
+  ui.calendarGrid.innerHTML = cells.join("");
+}
+
+function buildCalendarDayStats(monthValue) {
+  const map = new Map();
+
+  state.trades
+    .filter((trade) => trade.date.startsWith(monthValue))
+    .forEach((trade) => {
+      const current = map.get(trade.date) || { pnl: 0, trades: 0, assets: new Map() };
+      current.pnl = round(current.pnl + trade.netPnl);
+      current.trades += 1;
+      current.assets.set(trade.asset, (current.assets.get(trade.asset) || 0) + 1);
+      map.set(trade.date, current);
+    });
+
+  const result = new Map();
+  map.forEach((value, key) => {
+    let topAsset = "-";
+    let topCount = -1;
+    value.assets.forEach((count, asset) => {
+      if (count > topCount) {
+        topCount = count;
+        topAsset = asset;
+      }
+    });
+
+    result.set(key, {
+      pnl: value.pnl,
+      trades: value.trades,
+      topAsset
+    });
+  });
+
+  return result;
 }
 
 function toneBySign(node, value) {
