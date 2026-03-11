@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Your Journal | Trading Analytics</title>
-    <link rel="stylesheet" href="styles.css?v=20260311-calendar-tab" />
+    <link rel="stylesheet" href="styles.css?v=20260311-leonscore" />
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -252,27 +252,47 @@
             </article>
           </section>
 
-          <section class="panel-grid">
+          <section class="panel-grid panel-grid-analytics">
             <article class="panel panel-chart">
               <div class="panel-head">
                 <h3>Equity Curve</h3>
                 <p>Starting balance + trade sequence</p>
               </div>
-              <canvas id="equityChart" width="900" height="280" aria-label="Equity curve chart"></canvas>
+              <canvas id="equityChart" width="900" height="280" data-height="240" aria-label="Equity curve chart"></canvas>
             </article>
             <article class="panel panel-chart">
               <div class="panel-head">
                 <h3>Drawdown Curve</h3>
                 <p>Peak to trough pressure</p>
               </div>
-              <canvas id="drawdownChart" width="900" height="280" aria-label="Drawdown curve chart"></canvas>
+              <canvas
+                id="drawdownChart"
+                width="900"
+                height="280"
+                data-height="240"
+                aria-label="Drawdown curve chart"
+              ></canvas>
             </article>
             <article class="panel panel-chart">
               <div class="panel-head">
                 <h3>Win vs Loss</h3>
                 <p>Distribution by trade outcomes</p>
               </div>
-              <canvas id="outcomeChart" width="900" height="280" aria-label="Win loss chart"></canvas>
+              <canvas id="outcomeChart" width="900" height="280" data-height="240" aria-label="Win loss chart"></canvas>
+            </article>
+            <article class="panel panel-chart panel-leon-score">
+              <div class="panel-head">
+                <h3>Leon Score</h3>
+                <p>Composite read on win quality, recovery, and consistency.</p>
+              </div>
+              <canvas id="leonScoreChart" width="900" height="320" data-height="300" aria-label="Leon score radar chart"></canvas>
+              <div class="leon-score-foot">
+                <div class="leon-score-value-wrap">
+                  <p class="metric-label">Leon Score</p>
+                  <p id="leonScoreValue" class="leon-score-value">0.0</p>
+                </div>
+                <p id="leonScoreCaption" class="leon-score-caption">Add more trade data to build the score.</p>
+              </div>
             </article>
           </section>
 
@@ -1000,6 +1020,6 @@
       </p>
     </footer>
 
-    <script src="app.js?v=20260311-calendar-tab"></script>
+    <script src="app.js?v=20260311-leonscore"></script>
   </body>
 </html>

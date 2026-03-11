@@ -644,6 +644,11 @@ body.is-authenticated .auth-panel {
   gap: 12px;
 }
 
+.panel-grid-analytics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .panel-grid-two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -698,6 +703,39 @@ body.is-authenticated .auth-panel {
   border-radius: var(--radius-md);
   border: 1px solid rgba(99, 127, 192, 0.3);
   background: radial-gradient(circle at 0% 0%, rgba(87, 161, 255, 0.1), rgba(8, 14, 28, 0.92));
+}
+
+.panel-leon-score {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.leon-score-foot {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: end;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(132, 156, 214, 0.18);
+}
+
+.leon-score-value-wrap {
+  display: grid;
+  gap: 6px;
+}
+
+.leon-score-value {
+  margin: 0;
+  font: 700 2rem/1 "Sora", "Manrope", sans-serif;
+  color: #f3f7ff;
+}
+
+.leon-score-caption {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.88rem;
+  line-height: 1.45;
 }
 
 label {
@@ -1019,6 +1057,20 @@ textarea:focus {
   display: grid;
   align-content: start;
   gap: 6px;
+}
+
+.calendar-cell-positive {
+  border-color: rgba(42, 212, 143, 0.38);
+  background: linear-gradient(165deg, rgba(10, 31, 26, 0.92), rgba(10, 16, 30, 0.95));
+}
+
+.calendar-cell-negative {
+  border-color: rgba(255, 90, 126, 0.38);
+  background: linear-gradient(165deg, rgba(38, 14, 24, 0.94), rgba(10, 16, 30, 0.95));
+}
+
+.calendar-cell-flat {
+  border-color: rgba(100, 127, 189, 0.24);
 }
 
 .calendar-cell-empty {
@@ -1364,6 +1416,10 @@ body.auth-locked .view {
     gap: 10px;
   }
 
+  .panel-grid-analytics {
+    grid-template-columns: 1fr;
+  }
+
   .auth-shell {
     width: min(100%, calc(100vw - 16px));
     margin: 8px auto 16px;
@@ -1512,6 +1568,12 @@ body.auth-locked .view {
 
   .calendar-month-control {
     min-width: 0;
+  }
+
+  .leon-score-foot {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    align-items: start;
   }
 
   .auth-panel {
@@ -1752,6 +1814,11 @@ body.auth-locked .view {
   .calendar-cell {
     min-height: 92px;
     padding: 8px;
+  }
+
+  .calendar-cell-meta {
+    font-size: 10px;
+    line-height: 1.25;
   }
 
   .auth-panel {

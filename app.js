@@ -101,6 +101,9 @@ const ui = {
   equityChart: document.getElementById("equityChart"),
   drawdownChart: document.getElementById("drawdownChart"),
   outcomeChart: document.getElementById("outcomeChart"),
+  leonScoreChart: document.getElementById("leonScoreChart"),
+  leonScoreValue: document.getElementById("leonScoreValue"),
+  leonScoreCaption: document.getElementById("leonScoreCaption"),
 
   tradeForm: document.getElementById("tradeForm"),
   tradeSubmitBtn: document.getElementById("tradeSubmitBtn"),
@@ -2496,6 +2499,16 @@ function calculateAnalytics(trades, settings, reflections) {
 
   const goalRange = Math.max(settings.equityGoal - settings.startingBalance, 1);
   const goalProgress = ((currentBalance - settings.startingBalance) / goalRange) * 100;
+  const leonScore = computeLeonScore({
+    winRate,
+    profitFactor,
+    avgWin,
+    avgLoss,
+    totalPnl,
+    maxDrawdown,
+    dailyPnl,
+    startingBalance: settings.startingBalance
+  });
 
   return {
     totalTrades,
@@ -2526,8 +2539,54 @@ function calculateAnalytics(trades, settings, reflections) {
     setupStats: Array.from(setupStats.values()),
     disciplineScore,
     dailyTradingScore,
-    goalProgress
+    goalProgress,
+    leonScore
   };
+}
+
+function computeLeonScore({ winRate, profitFactor, avgWin, avgLoss, totalPnl, maxDrawdown, dailyPnl, startingBalance }) {
+  const avgWinLossRatio = avgLoss < 0 ? avgWin / Math.abs(avgLoss) : avgWin > 0 ? 2.5 : 0;
+  const recoveryFactor = maxDrawdown > 0 ? totalPnl / maxDrawdown : totalPnl > 0 ? 4 : 0;
+  const drawdownPercent = startingBalance > 0 ? (maxDrawdown / startingBalance) * 100 : 0;
+  const activeDays = dailyPnl.size;
+  const positiveDays = Array.from(dailyPnl.values()).filter((value) => value > 0).length;
+  const flatOrPositiveDays = Array.from(dailyPnl.values()).filter((value) => value >= 0).length;
+  const consistencyRatio = activeDays > 0 ? (positiveDays * 0.8 + flatOrPositiveDays * 0.2) / activeDays : 0;
+
+  const metrics = [
+    { label: "Win %", value: clamp(winRate, 0, 100) },
+    { label: "Profit factor", value: normalizeToScore(profitFactor, 0, 3) },
+    { label: "Avg win/loss", value: normalizeToScore(avgWinLossRatio, 0, 2.5) },
+    { label: "Recovery", value: normalizeToScore(recoveryFactor, 0, 4) },
+    { label: "Max drawdown", value: clamp(100 - normalizeToScore(drawdownPercent, 0, 12), 0, 100) },
+    { label: "Consistency", value: clamp(consistencyRatio * 100, 0, 100) }
+  ];
+
+  const score = metrics.reduce((sum, item) => sum + item.value, 0) / metrics.length || 0;
+  let caption = "Collect more sessions to stabilize the score.";
+  if (score >= 80) {
+    caption = "Strong balance between edge quality and drawdown control.";
+  } else if (score >= 60) {
+    caption = "Stable base. Improve consistency and recovery to level up.";
+  } else if (score >= 40) {
+    caption = "Developing edge. Reduce drawdown pressure and tighten execution.";
+  }
+
+  return {
+    score,
+    caption,
+    metrics
+  };
+}
+
+function normalizeToScore(value, min, max) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  if (max <= min) {
+    return 0;
+  }
+  return clamp(((value - min) / (max - min)) * 100, 0, 100);
 }
 
 function computeDisciplineScore(trades, reflections, violations) {
@@ -2651,6 +2710,12 @@ function renderDashboardMetrics(analytics) {
   ui.disciplineScore.textContent = String(analytics.disciplineScore);
   ui.dailyTradingScore.textContent = String(analytics.dailyTradingScore);
   ui.goalProgress.textContent = `${clamp(Math.round(analytics.goalProgress), 0, 300)}%`;
+  if (ui.leonScoreValue) {
+    ui.leonScoreValue.textContent = analytics.leonScore.score.toFixed(1);
+  }
+  if (ui.leonScoreCaption) {
+    ui.leonScoreCaption.textContent = analytics.leonScore.caption;
+  }
 }
 
 function renderCalendarView() {
@@ -2690,13 +2755,14 @@ function renderCalendarView() {
 
   for (let day = 1; day <= daysInMonth; day += 1) {
     const isoDate = `${monthValue}-${String(day).padStart(2, "0")}`;
-    const stats = dayStats.get(isoDate) || { pnl: 0, trades: 0, topAsset: "-" };
+    const stats = dayStats.get(isoDate) || { pnl: 0, trades: 0, topAsset: "-", winRate: 0 };
     const pnlClass = stats.pnl > 0 ? "pnl-positive" : stats.pnl < 0 ? "pnl-negative" : "";
+    const toneClass = stats.pnl > 0 ? "calendar-cell-positive" : stats.pnl < 0 ? "calendar-cell-negative" : "calendar-cell-flat";
     cells.push(`
-      <article class="calendar-cell ${pnlClass}">
+      <article class="calendar-cell ${toneClass} ${pnlClass}">
         <div class="calendar-cell-day">${day}</div>
         <div class="calendar-cell-pnl ${pnlClass}">${stats.trades ? formatCurrency(stats.pnl) : "-"}</div>
-        <div class="calendar-cell-meta">${stats.trades} trade${stats.trades === 1 ? "" : "s"}</div>
+        <div class="calendar-cell-meta">${stats.trades} trade${stats.trades === 1 ? "" : "s"} | ${stats.winRate.toFixed(0)}% win</div>
         <div class="calendar-cell-meta">${escapeHtml(stats.topAsset)}</div>
       </article>
     `);
@@ -2711,9 +2777,12 @@ function buildCalendarDayStats(monthValue) {
   state.trades
     .filter((trade) => trade.date.startsWith(monthValue))
     .forEach((trade) => {
-      const current = map.get(trade.date) || { pnl: 0, trades: 0, assets: new Map() };
+      const current = map.get(trade.date) || { pnl: 0, trades: 0, wins: 0, assets: new Map() };
       current.pnl = round(current.pnl + trade.netPnl);
       current.trades += 1;
+      if (trade.result === "Win") {
+        current.wins += 1;
+      }
       current.assets.set(trade.asset, (current.assets.get(trade.asset) || 0) + 1);
       map.set(trade.date, current);
     });
@@ -2732,7 +2801,8 @@ function buildCalendarDayStats(monthValue) {
     result.set(key, {
       pnl: value.pnl,
       trades: value.trades,
-      topAsset
+      topAsset,
+      winRate: value.trades > 0 ? (value.wins / value.trades) * 100 : 0
     });
   });
 
@@ -2827,6 +2897,8 @@ function renderCharts(analytics) {
     loss: analytics.losses,
     be: analytics.breakeven
   });
+
+  drawRadarChart(ui.leonScoreChart, analytics.leonScore);
 }
 
 function drawLineChart(canvas, data, options) {
@@ -2928,6 +3000,97 @@ function drawOutcomeChart(canvas, data) {
   });
 }
 
+function drawRadarChart(canvas, scoreData) {
+  const ctxData = getCanvasContext(canvas);
+  if (!ctxData) {
+    return;
+  }
+
+  const { ctx, width, height } = ctxData;
+  clearCanvas(ctx, width, height);
+
+  const metrics = Array.isArray(scoreData?.metrics) ? scoreData.metrics : [];
+  if (!metrics.length) {
+    drawCenteredText(ctx, width, height, "No Leon score data yet");
+    return;
+  }
+
+  const centerX = width / 2;
+  const centerY = height / 2 - 6;
+  const radius = Math.min(width * 0.24, height * 0.3);
+  const steps = 5;
+  const angleStep = (Math.PI * 2) / metrics.length;
+
+  ctx.strokeStyle = "rgba(132, 156, 214, 0.2)";
+  ctx.lineWidth = 1;
+  for (let ring = 1; ring <= steps; ring += 1) {
+    const ringRadius = (radius / steps) * ring;
+    ctx.beginPath();
+    metrics.forEach((_, index) => {
+      const angle = -Math.PI / 2 + index * angleStep;
+      const x = centerX + Math.cos(angle) * ringRadius;
+      const y = centerY + Math.sin(angle) * ringRadius;
+      if (index === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  metrics.forEach((metric, index) => {
+    const angle = -Math.PI / 2 + index * angleStep;
+    const outerX = centerX + Math.cos(angle) * radius;
+    const outerY = centerY + Math.sin(angle) * radius;
+
+    ctx.strokeStyle = "rgba(132, 156, 214, 0.26)";
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(outerX, outerY);
+    ctx.stroke();
+
+    const labelX = centerX + Math.cos(angle) * (radius + 24);
+    const labelY = centerY + Math.sin(angle) * (radius + 22);
+    ctx.fillStyle = "#cbdcff";
+    ctx.font = "500 12px Sora, Manrope, sans-serif";
+    ctx.textAlign = labelX >= centerX + 6 ? "left" : labelX <= centerX - 6 ? "right" : "center";
+    ctx.textBaseline = labelY >= centerY ? "top" : "bottom";
+    ctx.fillText(metric.label, labelX, labelY);
+  });
+
+  ctx.beginPath();
+  metrics.forEach((metric, index) => {
+    const angle = -Math.PI / 2 + index * angleStep;
+    const pointRadius = radius * (clamp(metric.value, 0, 100) / 100);
+    const x = centerX + Math.cos(angle) * pointRadius;
+    const y = centerY + Math.sin(angle) * pointRadius;
+    if (index === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  });
+  ctx.closePath();
+  ctx.fillStyle = "rgba(89, 113, 255, 0.32)";
+  ctx.strokeStyle = "#8b8cff";
+  ctx.lineWidth = 2;
+  ctx.fill();
+  ctx.stroke();
+
+  metrics.forEach((metric, index) => {
+    const angle = -Math.PI / 2 + index * angleStep;
+    const pointRadius = radius * (clamp(metric.value, 0, 100) / 100);
+    const x = centerX + Math.cos(angle) * pointRadius;
+    const y = centerY + Math.sin(angle) * pointRadius;
+    ctx.beginPath();
+    ctx.fillStyle = "#c5ccff";
+    ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
 function getCanvasContext(canvas) {
   if (!canvas) {
     return null;
@@ -2935,7 +3098,7 @@ function getCanvasContext(canvas) {
 
   const ratio = window.devicePixelRatio || 1;
   const width = canvas.clientWidth || 900;
-  const height = 280;
+  const height = Number(canvas.dataset.height || 280);
 
   canvas.width = Math.floor(width * ratio);
   canvas.height = Math.floor(height * ratio);
