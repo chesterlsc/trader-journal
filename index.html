@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Your Journal | Trading Analytics</title>
-    <link rel="stylesheet" href="styles.css?v=20260311-desktopbrand-left" />
+    <link rel="stylesheet" href="styles.css?v=20260311-spacingpass" />
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -178,9 +178,6 @@
               <p class="brand-kicker">Trader Development</p>
               <div class="desktop-brand-copy">
                 <p class="desktop-brand-title" data-brand-title>Your Journal</p>
-                <p class="desktop-brand-description">
-                  Execution analytics, risk control, and discipline tracking in one local system.
-                </p>
               </div>
             </div>
           </div>
@@ -472,159 +469,195 @@
           </header>
 
           <section class="panel">
-            <form id="tradeForm" novalidate>
+            <form id="tradeForm" class="trade-form-shell" novalidate>
               <input type="hidden" id="tradeId" />
               <input type="hidden" id="screenshotData" />
 
-              <div class="form-grid">
-                <label>
-                  Date
-                  <input id="tradeDate" name="tradeDate" type="date" required />
-                </label>
-                <label>
-                  Session
-                  <select id="session" name="session" required>
-                    <option>London</option>
-                    <option>New York</option>
-                    <option>Asia</option>
-                    <option>Custom</option>
-                  </select>
-                </label>
-                <label>
-                  Market
-                  <select id="market" name="market" required>
-                    <option>Forex</option>
-                    <option>Crypto</option>
-                    <option>Stocks</option>
-                    <option>Indices</option>
-                    <option>Metals</option>
-                    <option>Commodities</option>
-                    <option>Futures</option>
-                    <option>ETFs</option>
-                    <option>Options</option>
-                    <option>Other</option>
-                  </select>
-                </label>
-                <label>
-                  Pair / Asset
-                  <input
-                    id="asset"
-                    name="asset"
-                    type="text"
-                    list="assetSuggestions"
-                    placeholder="XAUUSD / BTCUSDT / ETCUSDT"
-                    maxlength="24"
-                    required
-                  />
-                </label>
-
-                <label>
-                  Direction
-                  <select id="direction" name="direction" required>
-                    <option>Buy</option>
-                    <option>Sell</option>
-                  </select>
-                </label>
-                <label>
-                  Entry Price
-                  <input id="entryPrice" name="entryPrice" type="number" min="0" step="0.0001" required />
-                </label>
-                <label>
-                  Stop Loss
-                  <input id="stopLoss" name="stopLoss" type="number" min="0" step="0.0001" required />
-                </label>
-                <label>
-                  Take Profit
-                  <input id="takeProfit" name="takeProfit" type="number" min="0" step="0.0001" required />
-                </label>
-
-                <label>
-                  Exit Price
-                  <input id="exitPrice" name="exitPrice" type="number" min="0" step="0.0001" required />
-                </label>
-                <label>
-                  Risk %
-                  <input id="riskPercent" name="riskPercent" type="number" min="0" step="0.01" required />
-                </label>
-                <label>
-                  Position Size
-                  <input id="positionSize" name="positionSize" type="number" min="0" step="0.0001" required />
-                  <small class="muted">XAUUSD rule: 0.01 lot = $1 per pip (1.0 move).</small>
-                </label>
-                <label>
-                  Trade Result
-                  <select id="tradeResult" name="tradeResult" required>
-                    <option value="Auto">Auto (from price)</option>
-                    <option value="Win">Win</option>
-                    <option value="Loss">Loss</option>
-                    <option value="Break Even">Break Even</option>
-                  </select>
-                </label>
-
-                <label class="field-span-2 setup-inline-group">
-                  Setup Type
-                  <div class="setup-inline-controls">
-                    <select id="setupType" name="setupType" required>
-                      <option>Breakout</option>
-                      <option>Liquidity Grab</option>
-                      <option>Trend Continuation</option>
-                      <option>Reversal</option>
-                      <option>Scalp</option>
-                      <option>Custom</option>
-                    </select>
-                    <input
-                      id="customSetupType"
-                      name="customSetupType"
-                      type="text"
-                      maxlength="40"
-                      placeholder="Name your setup"
-                      hidden
-                    />
+              <div class="trade-form-layout">
+                <section class="trade-section">
+                  <div class="trade-section-head">
+                    <p class="trade-section-kicker">Context</p>
+                    <h3>Instrument & Session</h3>
                   </div>
-                </label>
-                <label>
-                  Timeframe
-                  <select id="timeframe" name="timeframe" required>
-                    <option>M1</option>
-                    <option>M5</option>
-                    <option>M15</option>
-                    <option>H1</option>
-                    <option>H4</option>
-                    <option>D1</option>
-                  </select>
-                </label>
-                <label>
-                  Psychology Rating
-                  <select id="psychology" name="psychology" required>
-                    <option>Focused</option>
-                    <option>Hesitant</option>
-                    <option>Emotional</option>
-                    <option>Revenge Trade</option>
-                    <option>Perfect Execution</option>
-                  </select>
-                </label>
-                <label>
-                  Execution Quality
-                  <select id="executionQuality" name="executionQuality" required>
-                    <option>A+</option>
-                    <option>A</option>
-                    <option>B</option>
-                    <option>C</option>
-                    <option>F</option>
-                  </select>
-                </label>
+                  <div class="trade-grid trade-grid-context">
+                    <label>
+                      Date
+                      <input id="tradeDate" name="tradeDate" type="date" required />
+                    </label>
+                    <label>
+                      Session
+                      <select id="session" name="session" required>
+                        <option>London</option>
+                        <option>New York</option>
+                        <option>Asia</option>
+                        <option>Custom</option>
+                      </select>
+                    </label>
+                    <label>
+                      Market
+                      <select id="market" name="market" required>
+                        <option>Forex</option>
+                        <option>Crypto</option>
+                        <option>Stocks</option>
+                        <option>Indices</option>
+                        <option>Metals</option>
+                        <option>Commodities</option>
+                        <option>Futures</option>
+                        <option>ETFs</option>
+                        <option>Options</option>
+                        <option>Other</option>
+                      </select>
+                    </label>
+                    <label class="field-span-2">
+                      Pair / Asset
+                      <input
+                        id="asset"
+                        name="asset"
+                        type="text"
+                        list="assetSuggestions"
+                        placeholder="XAUUSD / BTCUSDT / ETCUSDT"
+                        maxlength="24"
+                        required
+                      />
+                    </label>
+                    <label>
+                      Direction
+                      <select id="direction" name="direction" required>
+                        <option>Buy</option>
+                        <option>Sell</option>
+                      </select>
+                    </label>
+                  </div>
+                </section>
 
-                <label class="field-span-2">
-                  Screenshot Upload
-                  <input id="screenshot" name="screenshot" type="file" accept="image/*" />
-                  <small id="screenshotLabel" class="muted">No screenshot selected</small>
-                </label>
-                <div class="screenshot-preview" id="screenshotPreview">No preview</div>
+                <section class="trade-section">
+                  <div class="trade-section-head">
+                    <p class="trade-section-kicker">Risk</p>
+                    <h3>Pricing & Position</h3>
+                  </div>
+                  <div class="trade-grid trade-grid-risk">
+                    <label>
+                      Entry Price
+                      <input id="entryPrice" name="entryPrice" type="number" min="0" step="0.0001" required />
+                    </label>
+                    <label>
+                      Stop Loss
+                      <input id="stopLoss" name="stopLoss" type="number" min="0" step="0.0001" required />
+                    </label>
+                    <label>
+                      Take Profit
+                      <input id="takeProfit" name="takeProfit" type="number" min="0" step="0.0001" required />
+                    </label>
+                    <label>
+                      Exit Price
+                      <input id="exitPrice" name="exitPrice" type="number" min="0" step="0.0001" required />
+                    </label>
+                    <label>
+                      Risk %
+                      <input id="riskPercent" name="riskPercent" type="number" min="0" step="0.01" required />
+                    </label>
+                    <label>
+                      Position Size
+                      <input id="positionSize" name="positionSize" type="number" min="0" step="0.0001" required />
+                      <small class="muted">XAUUSD rule: 0.01 lot = $1 per pip (1.0 move).</small>
+                    </label>
+                    <label>
+                      Trade Result
+                      <select id="tradeResult" name="tradeResult" required>
+                        <option value="Auto">Auto (from price)</option>
+                        <option value="Win">Win</option>
+                        <option value="Loss">Loss</option>
+                        <option value="Break Even">Break Even</option>
+                      </select>
+                    </label>
+                  </div>
+                </section>
 
-                <label class="field-span-all">
-                  Trade Notes
-                  <textarea id="tradeNotes" name="tradeNotes" rows="4" maxlength="600" placeholder="Setup rationale, execution notes, mistakes, plan adherence..."></textarea>
-                </label>
+                <section class="trade-section">
+                  <div class="trade-section-head">
+                    <p class="trade-section-kicker">Review</p>
+                    <h3>Setup & Execution</h3>
+                  </div>
+                  <div class="trade-grid trade-grid-review">
+                    <label class="field-span-2 setup-inline-group">
+                      Setup Type
+                      <div class="setup-inline-controls">
+                        <select id="setupType" name="setupType" required>
+                          <option>Breakout</option>
+                          <option>Liquidity Grab</option>
+                          <option>Trend Continuation</option>
+                          <option>Reversal</option>
+                          <option>Scalp</option>
+                          <option>Custom</option>
+                        </select>
+                        <input
+                          id="customSetupType"
+                          name="customSetupType"
+                          type="text"
+                          maxlength="40"
+                          placeholder="Name your setup"
+                          hidden
+                        />
+                      </div>
+                    </label>
+                    <label>
+                      Timeframe
+                      <select id="timeframe" name="timeframe" required>
+                        <option>M1</option>
+                        <option>M5</option>
+                        <option>M15</option>
+                        <option>H1</option>
+                        <option>H4</option>
+                        <option>D1</option>
+                      </select>
+                    </label>
+                    <label>
+                      Psychology Rating
+                      <select id="psychology" name="psychology" required>
+                        <option>Focused</option>
+                        <option>Hesitant</option>
+                        <option>Emotional</option>
+                        <option>Revenge Trade</option>
+                        <option>Perfect Execution</option>
+                      </select>
+                    </label>
+                    <label>
+                      Execution Quality
+                      <select id="executionQuality" name="executionQuality" required>
+                        <option>A+</option>
+                        <option>A</option>
+                        <option>B</option>
+                        <option>C</option>
+                        <option>F</option>
+                      </select>
+                    </label>
+                  </div>
+                </section>
+
+                <section class="trade-section">
+                  <div class="trade-section-head">
+                    <p class="trade-section-kicker">Record</p>
+                    <h3>Evidence & Notes</h3>
+                  </div>
+                  <div class="trade-grid trade-grid-record">
+                    <label class="field-span-2">
+                      Screenshot Upload
+                      <input id="screenshot" name="screenshot" type="file" accept="image/*" />
+                      <small id="screenshotLabel" class="muted">No screenshot selected</small>
+                    </label>
+                    <div class="screenshot-preview" id="screenshotPreview">No preview</div>
+                    <label class="field-span-all">
+                      Trade Notes
+                      <textarea
+                        id="tradeNotes"
+                        name="tradeNotes"
+                        rows="4"
+                        maxlength="600"
+                        placeholder="Setup rationale, execution notes, mistakes, plan adherence..."
+                      ></textarea>
+                    </label>
+                  </div>
+                </section>
               </div>
 
               <div class="form-actions">
@@ -958,6 +991,6 @@
       </p>
     </footer>
 
-    <script src="app.js?v=20260311-desktopbrand-left"></script>
+    <script src="app.js?v=20260311-spacingpass"></script>
   </body>
 </html>

@@ -547,28 +547,21 @@ body.is-authenticated .auth-panel {
 
 .desktop-brand-block {
   display: grid;
-  justify-items: start;
-  gap: 4px;
-  max-width: 380px;
+  justify-items: center;
+  gap: 2px;
+  min-width: 176px;
 }
 
 .desktop-brand-copy {
   display: grid;
-  gap: 2px;
-  text-align: left;
+  gap: 0;
+  text-align: center;
 }
 
 .desktop-brand-title {
   margin: 0;
   font: 700 1.05rem/1.1 "Sora", "Manrope", sans-serif;
   color: var(--text);
-}
-
-.desktop-brand-description {
-  margin: 0;
-  color: var(--text-soft);
-  font-size: 0.8rem;
-  line-height: 1.35;
 }
 
 .nav-logout-desktop {
@@ -782,12 +775,86 @@ textarea:focus {
   gap: 10px;
 }
 
+#trade-entry .panel {
+  padding: 18px;
+}
+
+#trade-entry .panel-head {
+  margin-bottom: 14px;
+}
+
+#trade-entry .view-head {
+  padding: 16px 18px;
+}
+
 #trade-entry .form-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 #trade-entry .panel:first-of-type {
-  max-width: 1240px;
+  max-width: 100%;
+}
+
+.trade-form-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.trade-form-layout {
+  display: grid;
+  gap: 14px;
+}
+
+.trade-section {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(103, 130, 188, 0.18);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(10, 17, 31, 0.72), rgba(10, 16, 28, 0.48));
+}
+
+.trade-section-head {
+  display: grid;
+  gap: 3px;
+}
+
+.trade-section-kicker {
+  margin: 0;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
+}
+
+.trade-section-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.trade-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.trade-grid label {
+  margin-bottom: 0;
+}
+
+.trade-grid-context {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.trade-grid-risk {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.trade-grid-review {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.trade-grid-record {
+  grid-template-columns: minmax(0, 1.2fr) minmax(220px, 0.8fr);
 }
 
 .setup-inline-group {
@@ -1146,13 +1213,14 @@ td {
   align-items: center;
   gap: 6px;
   margin: 0;
-  padding: 8px 10px;
+  padding: 7px 10px;
   border: 1px solid rgba(103, 130, 188, 0.32);
   border-radius: 999px;
   background: rgba(13, 21, 38, 0.86);
   font-size: 0.8rem;
-  flex: 1 1 140px;
-  min-width: 0;
+  flex: 0 0 auto;
+  min-width: fit-content;
+  white-space: nowrap;
 }
 
 .reflection-list {
@@ -1256,6 +1324,12 @@ body.auth-locked .view {
 
   .form-grid,
   .filter-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .trade-grid-context,
+  .trade-grid-risk,
+  .trade-grid-review {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
@@ -1410,6 +1484,24 @@ body.auth-locked .view {
 
   #trade-entry .form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .trade-form-layout {
+    gap: 12px;
+  }
+
+  .trade-section {
+    padding: 12px;
+  }
+
+  .trade-grid-context,
+  .trade-grid-risk,
+  .trade-grid-review {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .trade-grid-record {
+    grid-template-columns: 1fr;
   }
 
   .panel-head-inline,
@@ -1637,6 +1729,22 @@ body.auth-locked .view {
     grid-template-columns: 1fr;
   }
 
+  .trade-grid-context,
+  .trade-grid-risk,
+  .trade-grid-review,
+  .trade-grid-record {
+    grid-template-columns: 1fr;
+  }
+
+  .trade-section {
+    padding: 11px;
+    border-radius: 14px;
+  }
+
+  .trade-section-head {
+    gap: 2px;
+  }
+
   .calendar-weekday {
     display: none;
   }
@@ -1693,9 +1801,10 @@ body.auth-locked .view {
   }
 
   .tag-set label {
-    flex: 1 1 100%;
-    width: 100%;
-    border-radius: 12px;
+    flex: 0 0 auto;
+    width: auto;
+    border-radius: 999px;
+    white-space: nowrap;
   }
 }
 
@@ -1710,11 +1819,7 @@ body.auth-locked .view {
   }
 
   .desktop-brand-block {
-    max-width: 300px;
-  }
-
-  .desktop-brand-description {
-    font-size: 0.74rem;
+    min-width: 154px;
   }
 }
 
