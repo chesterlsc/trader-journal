@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
 };
 
 const DEFAULT_SETTINGS = {
+  journalName: "Chester",
   startingBalance: 10000,
   balanceOverride: 0,
   dailyMaxLoss: 300,
@@ -50,6 +51,7 @@ const ui = {
   sidebar: document.getElementById("sidebar"),
   mainNav: document.getElementById("mainNav"),
   navToggleBtn: document.getElementById("navToggleBtn"),
+  brandTitle: document.getElementById("brandTitle"),
   navButtons: Array.from(document.querySelectorAll(".nav-btn")),
   views: Array.from(document.querySelectorAll(".view")),
   lastSaved: document.getElementById("lastSaved"),
@@ -64,6 +66,7 @@ const ui = {
   riskForm: document.getElementById("riskForm"),
   riskFormMessage: document.getElementById("riskFormMessage"),
   riskInputs: {
+    journalName: document.getElementById("journalName"),
     startingBalance: document.getElementById("startingBalance"),
     balanceOverride: document.getElementById("balanceOverride"),
     dailyMaxLoss: document.getElementById("dailyMaxLoss"),
@@ -150,6 +153,7 @@ function init() {
   applyInitialDates();
   hydrateRiskForm();
   hydrateReviewMonth();
+  updateBranding();
   updateAuthUi();
   bindEvents();
   syncMobileNavState();
@@ -493,6 +497,7 @@ function applyInitialDates() {
 }
 
 function hydrateRiskForm() {
+  ui.riskInputs.journalName.value = state.settings.journalName;
   ui.riskInputs.startingBalance.value = state.settings.startingBalance;
   ui.riskInputs.balanceOverride.value = state.settings.balanceOverride > 0 ? state.settings.balanceOverride : "";
   ui.riskInputs.dailyMaxLoss.value = state.settings.dailyMaxLoss;
@@ -515,6 +520,7 @@ function handleRiskSubmit(event) {
 
   const parsedOverride = parseNumber(ui.riskInputs.balanceOverride.value);
   const nextSettings = {
+    journalName: normalizeJournalName(ui.riskInputs.journalName.value),
     startingBalance: parseNumber(ui.riskInputs.startingBalance.value),
     balanceOverride: Number.isFinite(parsedOverride) && parsedOverride >= 0 ? parsedOverride : 0,
     dailyMaxLoss: parseNumber(ui.riskInputs.dailyMaxLoss.value),
@@ -535,7 +541,7 @@ function handleRiskSubmit(event) {
     return;
   }
 
-  state.settings = nextSettings;
+  state.settings = normalizeSettings(nextSettings);
   persistState();
   renderAll();
   setMessage(ui.riskFormMessage, "Risk settings updated.", "success");
@@ -1184,6 +1190,7 @@ async function loadFromPhpStorage(options = {}) {
 }
 
 function renderAll() {
+  updateBranding();
   state.analytics = calculateAnalytics(state.trades, state.settings, state.reflections);
   renderDashboardMetrics(state.analytics);
   renderRiskViolations(state.analytics);
@@ -1978,6 +1985,7 @@ function renderLastSaved() {
 function normalizeSettings(input) {
   const value = input && typeof input === "object" ? input : {};
   return {
+    journalName: normalizeJournalName(value.journalName),
     startingBalance: ensurePositiveNumber(value.startingBalance, DEFAULT_SETTINGS.startingBalance),
     balanceOverride: ensureNonNegative(value.balanceOverride, DEFAULT_SETTINGS.balanceOverride),
     dailyMaxLoss: ensureNonNegative(value.dailyMaxLoss, DEFAULT_SETTINGS.dailyMaxLoss),
@@ -2072,6 +2080,34 @@ function normalizeReplayNotes(input) {
     result[String(key)] = String(value || "");
   });
   return result;
+}
+
+function normalizeJournalName(value) {
+  const trimmed = String(value || "").trim().replace(/\s+/g, " ");
+  if (!trimmed) {
+    return DEFAULT_SETTINGS.journalName;
+  }
+
+  return trimmed.slice(0, 24);
+}
+
+function updateBranding() {
+  const prefix = normalizeJournalName(state.settings.journalName);
+  const brandText = `${prefix} Journal`;
+
+  if (state.settings.journalName !== prefix) {
+    state.settings.journalName = prefix;
+  }
+
+  if (ui.brandTitle) {
+    ui.brandTitle.textContent = brandText;
+  }
+
+  if (ui.riskInputs.journalName && ui.riskInputs.journalName.value !== prefix) {
+    ui.riskInputs.journalName.value = prefix;
+  }
+
+  document.title = `${brandText} | Trading Analytics`;
 }
 
 function readStorageJson(key, fallback) {

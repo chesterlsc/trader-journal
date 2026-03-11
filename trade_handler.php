@@ -11,6 +11,7 @@ $usersFile = $dataDir . DIRECTORY_SEPARATOR . 'users.json';
 
 $defaults = [
     'settings' => [
+        'journalName' => 'Chester',
         'startingBalance' => 10000,
         'balanceOverride' => 0,
         'dailyMaxLoss' => 300,
@@ -265,6 +266,7 @@ function writeJsonFile(string $file, $payload, string $errorMessage): void
 function sanitizeSettings(array $settings): array
 {
     return [
+        'journalName' => sanitizeJournalName($settings['journalName'] ?? 'Chester'),
         'startingBalance' => positiveNumber($settings['startingBalance'] ?? 10000, 10000),
         'balanceOverride' => nonNegativeNumber($settings['balanceOverride'] ?? 0, 0),
         'dailyMaxLoss' => nonNegativeNumber($settings['dailyMaxLoss'] ?? 300, 300),
@@ -272,6 +274,25 @@ function sanitizeSettings(array $settings): array
         'riskPerTrade' => nonNegativeNumber($settings['riskPerTrade'] ?? 1, 1),
         'equityGoal' => positiveNumber($settings['equityGoal'] ?? 15000, 15000),
     ];
+}
+
+function sanitizeJournalName($value): string
+{
+    $name = trim((string) $value);
+    $collapsed = preg_replace('/\s+/', ' ', $name);
+    if (is_string($collapsed)) {
+        $name = $collapsed;
+    }
+
+    if ($name === '') {
+        return 'Chester';
+    }
+
+    if (function_exists('mb_substr')) {
+        return mb_substr($name, 0, 24);
+    }
+
+    return substr($name, 0, 24);
 }
 
 function sanitizeArray($value): array

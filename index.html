@@ -15,7 +15,7 @@
         <div class="sidebar-header">
           <div class="brand-block">
             <p class="brand-kicker">Trader Development</p>
-            <h1>Chester Journal</h1>
+            <h1 id="brandTitle">Chester Journal</h1>
             <p class="brand-copy">Execution analytics, risk control, and discipline tracking in one local system.</p>
           </div>
           <button
@@ -172,6 +172,10 @@
                 <p>Enforce your max pain thresholds</p>
               </div>
               <form id="riskForm" class="compact-form" novalidate>
+                <label>
+                  Journal Name Prefix
+                  <input id="journalName" name="journalName" type="text" maxlength="24" placeholder="Chester" required />
+                </label>
                 <label>
                   Starting Balance (Custom)
                   <input id="startingBalance" name="startingBalance" type="number" min="1" step="0.01" required />
@@ -673,6 +677,18 @@
         </section>
       </main>
     </div>
+
+    <footer class="site-footer">
+      <p class="footer-main">Created by Chester Catapia. Open for coffee donation.</p>
+      <p class="footer-donation">
+        BTC:
+        <code>bc1q423n8fhh40mcetfuac5fdmx6jlq6lyx695dx8d</code>
+      </p>
+      <p class="footer-donation">
+        USDT (ERC20):
+        <code>0x4E70bdDF0047cd0b375C612836338BeeEFC65495</code>
+      </p>
+    </footer>
 
     <script src="app.js"></script>
   </body>
