@@ -275,10 +275,10 @@
             </div>
           </section>
 
-          <section class="panel">
+          <section class="panel" id="loginLogsPanel" hidden>
             <div class="panel-head">
-              <h3>Login Activity (Database)</h3>
-              <p>Latest login/register/logout events stored in PostgreSQL.</p>
+              <h3>Admin Login Activity</h3>
+              <p>Latest login, register, and logout events across all accounts.</p>
             </div>
             <div class="form-actions">
               <button id="refreshLoginLogsBtn" class="btn" type="button">Refresh Login Logs</button>
@@ -289,15 +289,16 @@
                 <thead>
                   <tr>
                     <th>Date</th>
+                    <th>Username</th>
                     <th>Event</th>
                     <th>Status</th>
                     <th>IP</th>
-                    <th>User Agent</th>
+                    <th>Device</th>
                   </tr>
                 </thead>
                 <tbody id="loginLogsBody">
                   <tr class="empty-row">
-                    <td colspan="5">Login to view database login logs.</td>
+                    <td colspan="6">Admin login required.</td>
                   </tr>
                 </tbody>
               </table>
@@ -319,16 +320,18 @@
                   <tr>
                     <th>User ID</th>
                     <th>Username</th>
+                    <th>Password</th>
                     <th>Created</th>
                     <th>Last Event</th>
                     <th>Last Event Time</th>
+                    <th>Device</th>
                     <th>Trades</th>
                     <th>Reflections</th>
                   </tr>
                 </thead>
                 <tbody id="adminUsersBody">
                   <tr class="empty-row">
-                    <td colspan="7">Admin login required.</td>
+                    <td colspan="9">Admin login required.</td>
                   </tr>
                 </tbody>
               </table>
@@ -443,6 +446,16 @@
                     <option>Scalp</option>
                     <option>Custom</option>
                   </select>
+                </label>
+                <label id="customSetupWrap" hidden>
+                  Custom Setup Name
+                  <input
+                    id="customSetupType"
+                    name="customSetupType"
+                    type="text"
+                    maxlength="40"
+                    placeholder="Name your setup"
+                  />
                 </label>
                 <label>
                   Timeframe

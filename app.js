@@ -19,6 +19,7 @@ const DEFAULT_SETTINGS = {
 };
 
 const SERVER_AUTOSAVE_DEBOUNCE_MS = 900;
+const PRESET_SETUP_TYPES = new Set(["Breakout", "Liquidity Grab", "Trend Continuation", "Reversal", "Scalp", "Custom"]);
 
 const state = {
   trades: [],
@@ -103,6 +104,7 @@ const ui = {
   bulkMessage: document.getElementById("bulkMessage"),
   bulkPreviewWrap: document.getElementById("bulkPreviewWrap"),
   bulkPreviewBody: document.getElementById("bulkPreviewBody"),
+  loginLogsPanel: document.getElementById("loginLogsPanel"),
   refreshLoginLogsBtn: document.getElementById("refreshLoginLogsBtn"),
   loginLogsMessage: document.getElementById("loginLogsMessage"),
   loginLogsBody: document.getElementById("loginLogsBody"),
@@ -125,6 +127,8 @@ const ui = {
     positionSize: document.getElementById("positionSize"),
     tradeResult: document.getElementById("tradeResult"),
     setupType: document.getElementById("setupType"),
+    customSetupWrap: document.getElementById("customSetupWrap"),
+    customSetupType: document.getElementById("customSetupType"),
     timeframe: document.getElementById("timeframe"),
     psychology: document.getElementById("psychology"),
     executionQuality: document.getElementById("executionQuality"),
@@ -179,6 +183,7 @@ function init() {
   updateBranding();
   updateAuthUi();
   updateAccessGate();
+  syncSetupTypeCustomField();
   bindEvents();
   syncMobileNavState();
   renderLoginLogs();
@@ -226,6 +231,7 @@ function bindEvents() {
   ui.riskForm.addEventListener("submit", handleRiskSubmit);
   ui.tradeForm.addEventListener("submit", handleTradeSubmit);
   ui.tradeResetBtn.addEventListener("click", () => resetTradeForm(false));
+  ui.tradeFields.setupType.addEventListener("change", syncSetupTypeCustomField);
   ui.tradeFields.screenshot.addEventListener("change", handleScreenshotUpload);
   if (ui.bulkPreviewBtn) {
     ui.bulkPreviewBtn.addEventListener("click", handleBulkPreview);
@@ -727,6 +733,17 @@ function handleTradeSubmit(event) {
   setMessage(ui.tradeFormMessage, existingId ? "Trade updated." : "Trade saved.", "success");
 }
 
+function syncSetupTypeCustomField() {
+  const isCustom = ui.tradeFields.setupType.value === "Custom";
+  if (ui.tradeFields.customSetupWrap) {
+    ui.tradeFields.customSetupWrap.hidden = !isCustom;
+  }
+
+  if (!isCustom && ui.tradeFields.customSetupType) {
+    ui.tradeFields.customSetupType.value = "";
+  }
+}
+
 function getExistingTrade(id) {
   return state.trades.find((trade) => trade.id === id);
 }
@@ -751,7 +768,9 @@ function readTradeForm() {
     riskPercent: parseNumber(ui.tradeFields.riskPercent.value),
     positionSize: parseNumber(ui.tradeFields.positionSize.value),
     tradeResult: ui.tradeFields.tradeResult.value,
-    setupType: ui.tradeFields.setupType.value,
+    setupType: ui.tradeFields.setupType.value === "Custom"
+      ? ui.tradeFields.customSetupType.value.trim()
+      : ui.tradeFields.setupType.value,
     timeframe: ui.tradeFields.timeframe.value,
     psychology: ui.tradeFields.psychology.value,
     executionQuality: ui.tradeFields.executionQuality.value,
@@ -762,6 +781,10 @@ function readTradeForm() {
 
   if (!value.date || !value.asset) {
     return { ok: false, error: "Date and Asset are required." };
+  }
+
+  if (!value.setupType) {
+    return { ok: false, error: "Enter a custom setup name or choose a preset setup." };
   }
 
   const numericFields = [
@@ -1448,10 +1471,13 @@ function resetTradeForm(keepDate) {
   ui.tradeForm.reset();
   ui.tradeFields.tradeId.value = "";
   ui.tradeFields.tradeResult.value = "Auto";
+  ui.tradeFields.setupType.value = "Breakout";
+  ui.tradeFields.customSetupType.value = "";
   ui.tradeFields.riskPercent.value = String(state.settings.riskPerTrade);
   ui.tradeFields.screenshot.value = "";
   clearScreenshotPreview();
   ui.tradeSubmitBtn.textContent = "Save Trade";
+  syncSetupTypeCustomField();
 
   if (keepDate) {
     ui.tradeFields.tradeDate.value = currentDate || toDateInputValue(new Date());
@@ -1541,7 +1567,13 @@ function loadTradeIntoForm(id) {
   ui.tradeFields.riskPercent.value = trade.riskPercent;
   ui.tradeFields.positionSize.value = trade.positionSize;
   ui.tradeFields.tradeResult.value = trade.tradeResult === "Auto" ? "Auto" : trade.result;
-  ui.tradeFields.setupType.value = trade.setupType;
+  if (PRESET_SETUP_TYPES.has(trade.setupType)) {
+    ui.tradeFields.setupType.value = trade.setupType;
+    ui.tradeFields.customSetupType.value = "";
+  } else {
+    ui.tradeFields.setupType.value = "Custom";
+    ui.tradeFields.customSetupType.value = trade.setupType;
+  }
   ui.tradeFields.timeframe.value = trade.timeframe;
   ui.tradeFields.psychology.value = trade.psychology;
   ui.tradeFields.executionQuality.value = trade.executionQuality;
@@ -1558,6 +1590,7 @@ function loadTradeIntoForm(id) {
 
   ui.tradeFields.screenshotLabel.textContent = trade.screenshotName || "No screenshot selected";
   ui.tradeSubmitBtn.textContent = "Update Trade";
+  syncSetupTypeCustomField();
 
   switchView("trade-entry");
   setMessage(ui.tradeFormMessage, "Editing trade entry.", "success");
@@ -1843,6 +1876,12 @@ async function loadLoginLogs(options = {}) {
     return false;
   }
 
+  if (!state.auth.isAdmin) {
+    state.loginLogs = [];
+    renderLoginLogs();
+    return false;
+  }
+
   try {
     const response = await fetch("trade_handler.php?action=login_logs", {
       method: "GET",
@@ -1869,23 +1908,26 @@ async function loadLoginLogs(options = {}) {
 }
 
 function renderLoginLogs() {
-  if (!ui.loginLogsBody) {
+  if (!ui.loginLogsBody || !ui.loginLogsPanel) {
     return;
   }
 
-  if (!state.auth.isAuthenticated) {
+  if (!state.auth.isAuthenticated || !state.auth.isAdmin) {
+    ui.loginLogsPanel.hidden = true;
     ui.loginLogsBody.innerHTML = `
       <tr class="empty-row">
-        <td colspan="5">Login to view database login logs.</td>
+        <td colspan="6">Admin login required.</td>
       </tr>
     `;
     return;
   }
 
+  ui.loginLogsPanel.hidden = false;
+
   if (!state.loginLogs.length) {
     ui.loginLogsBody.innerHTML = `
       <tr class="empty-row">
-        <td colspan="5">No login events yet.</td>
+        <td colspan="6">No login events yet.</td>
       </tr>
     `;
     return;
@@ -1896,14 +1938,16 @@ function renderLoginLogs() {
       const statusClass = log.success ? "pnl-positive" : "pnl-negative";
       const statusText = log.success ? "Success" : "Failed";
       const eventLabel = `${log.eventType}`.toUpperCase();
+      const deviceLabel = summarizeUserAgent(log.userAgent);
       return `
         <tr>
           <td data-label="Date">${escapeHtml(log.createdAt)}</td>
+          <td data-label="Username">${escapeHtml(log.username || "-")}</td>
           <td data-label="Event">${escapeHtml(eventLabel)}</td>
           <td data-label="Status" class="${statusClass}">${escapeHtml(statusText)}</td>
           <td data-label="IP">${escapeHtml(log.ipAddress || "-")}</td>
-          <td data-label="User Agent" class="user-agent-cell" title="${escapeHtml(log.userAgent)}">
-            ${escapeHtml(log.userAgent || "-")}
+          <td data-label="Device" class="user-agent-cell" title="${escapeHtml(deviceLabel)}">
+            ${escapeHtml(deviceLabel)}
           </td>
         </tr>
       `;
@@ -1984,7 +2028,7 @@ function renderAdminUsers() {
     ui.adminUsersPanel.hidden = true;
     ui.adminUsersBody.innerHTML = `
       <tr class="empty-row">
-        <td colspan="7">Admin login required.</td>
+        <td colspan="9">Admin login required.</td>
       </tr>
     `;
     return;
@@ -1995,7 +2039,7 @@ function renderAdminUsers() {
   if (!state.adminUsers.length) {
     ui.adminUsersBody.innerHTML = `
       <tr class="empty-row">
-        <td colspan="7">No users found.</td>
+        <td colspan="9">No users found.</td>
       </tr>
     `;
     return;
@@ -2005,13 +2049,16 @@ function renderAdminUsers() {
     .map((user) => {
       const statusClass = user.lastSuccess ? "pnl-positive" : "pnl-negative";
       const statusText = user.lastEvent ? `${user.lastEvent}${user.lastSuccess ? " (OK)" : " (Fail)"}` : "-";
+      const deviceLabel = summarizeUserAgent(user.lastUserAgent);
       return `
         <tr>
           <td data-label="User ID">${escapeHtml(String(user.id))}</td>
           <td data-label="Username">${escapeHtml(user.username)}</td>
+          <td data-label="Password">${escapeHtml(user.passwordStatus)}</td>
           <td data-label="Created">${escapeHtml(user.createdAt || "-")}</td>
           <td data-label="Last Event" class="${user.lastEvent ? statusClass : ""}">${escapeHtml(statusText)}</td>
           <td data-label="Last Event Time">${escapeHtml(user.lastLoginAt || "-")}</td>
+          <td data-label="Device">${escapeHtml(deviceLabel)}</td>
           <td data-label="Trades">${escapeHtml(String(user.tradesCount))}</td>
           <td data-label="Reflections">${escapeHtml(String(user.reflectionsCount))}</td>
         </tr>
@@ -2030,14 +2077,49 @@ function normalizeAdminUsers(input) {
     .map((item) => ({
       id: Number(item.id || 0),
       username: String(item.username || ""),
+      passwordStatus: String(item.password_status || item.passwordStatus || "Hashed"),
       createdAt: String(item.created_at || item.createdAt || ""),
       lastEvent: String(item.last_event || item.lastEvent || "").toUpperCase(),
       lastSuccess: Boolean(item.last_success ?? item.lastSuccess ?? false),
       lastLoginAt: String(item.last_login_at || item.lastLoginAt || ""),
+      lastUserAgent: String(item.last_user_agent || item.lastUserAgent || ""),
       tradesCount: Number(item.trades_count || item.tradesCount || 0),
       reflectionsCount: Number(item.reflections_count || item.reflectionsCount || 0)
     }))
     .slice(0, 500);
+}
+
+function summarizeUserAgent(input) {
+  const ua = String(input || "");
+  if (!ua) {
+    return "-";
+  }
+
+  let platform = "Unknown";
+  if (/android/i.test(ua)) {
+    platform = "Android";
+  } else if (/iphone/i.test(ua)) {
+    platform = "iPhone";
+  } else if (/ipad/i.test(ua)) {
+    platform = "iPad";
+  } else if (/windows/i.test(ua)) {
+    platform = "Windows";
+  } else if (/macintosh|mac os x/i.test(ua)) {
+    platform = "macOS";
+  } else if (/linux/i.test(ua)) {
+    platform = "Linux";
+  }
+
+  let cpu = "";
+  if (/arm|aarch64/i.test(ua)) {
+    cpu = "ARM";
+  } else if (/x86_64|win64|x64|amd64|intel/i.test(ua)) {
+    cpu = "x64";
+  } else if (/i686|x86/i.test(ua)) {
+    cpu = "x86";
+  }
+
+  return cpu ? `${platform} / ${cpu}` : platform;
 }
 
 function renderAll() {

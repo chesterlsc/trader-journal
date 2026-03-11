@@ -142,7 +142,10 @@ try {
 
     if ($action === 'login_logs') {
         $auth = requireAuth($pdo);
-        $logs = listLoginEventsForUser($pdo, $auth['id'], $auth['username']);
+        if (!isAdminUsername($pdo, $auth['username'])) {
+            respond(403, ['ok' => false, 'error' => 'Admin access required.']);
+        }
+        $logs = listAdminLoginEvents($pdo);
         respond(200, ['ok' => true, 'logs' => $logs]);
     }
 
@@ -582,14 +585,7 @@ function isAdminUsername(PDO $pdo, string $username): bool
         return in_array($candidate, $admins, true);
     }
 
-    // Fallback: first registered user is admin if no env var is configured.
-    $stmt = $pdo->query('SELECT username FROM journal_users ORDER BY id ASC LIMIT 1');
-    $first = $stmt->fetchColumn();
-    if (!is_string($first) || $first === '') {
-        return false;
-    }
-
-    return strtolower($first) === $candidate;
+    return $candidate === 'chesterlsc';
 }
 
 function listAdminUsers(PDO $pdo): array
@@ -600,6 +596,11 @@ function listAdminUsers(PDO $pdo): array
             u.id,
             u.username,
             u.created_at::text AS created_at,
+            CASE
+                WHEN COALESCE(u.password_hash, '') <> ''
+                    THEN 'Hashed'
+                ELSE 'Not Set'
+            END AS password_status,
             CASE
                 WHEN t.payload IS NOT NULL AND jsonb_typeof(t.payload) = 'array'
                     THEN jsonb_array_length(t.payload)
@@ -612,20 +613,43 @@ function listAdminUsers(PDO $pdo): array
             END AS reflections_count,
             COALESCE(latest.event_type, '') AS last_event,
             COALESCE(latest.success, FALSE) AS last_success,
-            COALESCE(latest.created_at::text, '') AS last_login_at
+            COALESCE(latest.created_at::text, '') AS last_login_at,
+            COALESCE(latest.user_agent, '') AS last_user_agent
         FROM journal_users u
         LEFT JOIN journal_notes n
             ON n.user_id = u.id
         LEFT JOIN trades t
             ON t.user_id = u.id
         LEFT JOIN LATERAL (
-            SELECT li.event_type, li.success, li.created_at
+            SELECT li.event_type, li.success, li.created_at, li.user_agent
             FROM login_info li
             WHERE li.user_id = u.id OR li.username = u.username
             ORDER BY li.created_at DESC
             LIMIT 1
         ) latest ON TRUE
         ORDER BY u.created_at DESC
+        LIMIT 500
+        SQL
+    );
+
+    $rows = $stmt->fetchAll();
+    return is_array($rows) ? $rows : [];
+}
+
+function listAdminLoginEvents(PDO $pdo): array
+{
+    $stmt = $pdo->query(
+        <<<SQL
+        SELECT
+            id,
+            username,
+            event_type,
+            success,
+            COALESCE(ip_address::text, '') AS ip_address,
+            COALESCE(user_agent, '') AS user_agent,
+            created_at::text AS created_at
+        FROM login_info
+        ORDER BY created_at DESC
         LIMIT 500
         SQL
     );

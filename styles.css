@@ -747,6 +747,9 @@ td {
   border-radius: var(--radius-md);
   padding: 10px;
   margin: 8px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .tag-set legend {
@@ -756,11 +759,17 @@ td {
 }
 
 .tag-set label {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 6px;
-  margin: 6px 10px 0 0;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(103, 130, 188, 0.32);
+  border-radius: 999px;
+  background: rgba(13, 21, 38, 0.86);
   font-size: 0.8rem;
+  flex: 1 1 140px;
+  min-width: 0;
 }
 
 .reflection-list {
@@ -864,6 +873,12 @@ body.auth-locked .view {
 }
 
 @media (max-width: 1024px) {
+  .content,
+  .view,
+  .panel-grid {
+    gap: 10px;
+  }
+
   .app-layout {
     grid-template-columns: 1fr;
     width: min(100%, calc(100vw - 12px));
@@ -937,6 +952,19 @@ body.auth-locked .view {
   .panel-grid-two,
   .score-stack {
     grid-template-columns: 1fr;
+  }
+
+  .metric-grid {
+    gap: 8px;
+  }
+
+  .metric-card {
+    min-height: 76px;
+    padding: 10px 11px;
+  }
+
+  .metric-value {
+    font-size: 1.18rem;
   }
 
   .auth-panel {
@@ -1039,7 +1067,6 @@ body.auth-locked .view {
 }
 
 @media (max-width: 760px) {
-  .metric-grid,
   .metric-grid.compact,
   .form-grid,
   .filter-grid,
@@ -1047,6 +1074,10 @@ body.auth-locked .view {
   .bulk-grid,
   .main-nav {
     grid-template-columns: 1fr;
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .field-span-2,
@@ -1072,6 +1103,19 @@ body.auth-locked .view {
     padding: 12px;
   }
 
+  .metric-card {
+    min-height: 72px;
+    padding: 10px;
+  }
+
+  .metric-label {
+    font-size: 10px;
+  }
+
+  .metric-value {
+    font-size: 1.05rem;
+  }
+
   .auth-panel {
     padding: 9px;
   }
@@ -1092,6 +1136,16 @@ body.auth-locked .view {
 
   .site-footer {
     font-size: 11px;
+  }
+
+  .tag-set {
+    gap: 6px;
+  }
+
+  .tag-set label {
+    flex: 1 1 100%;
+    width: 100%;
+    border-radius: 12px;
   }
 }
 
