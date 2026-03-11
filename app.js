@@ -194,6 +194,7 @@ init();
 function init() {
   state.auth.resetToken = getResetTokenFromUrl();
   state.auth.resetTokenStatus = state.auth.resetToken ? "pending" : "idle";
+  collapseAdminPanels();
   loadState();
   applyInitialDates();
   hydrateRiskForm();
@@ -212,6 +213,15 @@ function init() {
     validateResetToken();
   }
   checkAuthSession();
+}
+
+function collapseAdminPanels() {
+  if (ui.loginLogsPanel) {
+    ui.loginLogsPanel.open = false;
+  }
+  if (ui.adminUsersPanel) {
+    ui.adminUsersPanel.open = false;
+  }
 }
 
 function bindEvents() {
@@ -584,6 +594,7 @@ async function checkAuthSession() {
   updateAuthUi();
 
   if (state.auth.isAuthenticated) {
+    collapseAdminPanels();
     const loaded = await loadFromPhpStorage({ silent: true, source: "session", preferLocalIfServerEmpty: true });
     if (loaded) {
       setMessage(ui.authMessage, `Session restored for ${state.auth.username}.`, "success");
@@ -645,6 +656,7 @@ async function handleLogout() {
   renderLoginLogs();
   renderAdminUsers();
   cancelServerAutosave();
+  collapseAdminPanels();
   updateAuthUi();
   setMessage(ui.authMessage, "Logged out.", "success");
 }
@@ -681,6 +693,7 @@ async function submitAuth(action, password, successMessage, identifier = "") {
 
     await loadLoginLogs({ silent: true });
     await loadAdminUsers({ silent: true });
+    collapseAdminPanels();
     switchView("dashboard");
   } catch (error) {
     setMessage(ui.authMessage, error.message || `${action} failed`, "error");
