@@ -10,6 +10,89 @@
     <div class="ambient ambient-one" aria-hidden="true"></div>
     <div class="ambient ambient-two" aria-hidden="true"></div>
 
+    <section class="auth-shell" id="authShell" aria-label="Login">
+      <header class="auth-shell-topbar">
+        <div class="auth-shell-brand">
+          <p class="brand-kicker">Trader Development</p>
+          <h1>Chester Journal</h1>
+        </div>
+        <div class="auth-shell-actions">
+          <button class="btn auth-provider-btn" type="button" data-provider="github">GitHub</button>
+          <button class="btn auth-provider-btn" type="button" data-provider="google">Google</button>
+          <button class="btn auth-provider-btn" type="button" data-provider="apple">Apple</button>
+        </div>
+      </header>
+
+      <div class="auth-hero">
+        <section class="auth-hero-copy">
+          <p class="auth-hero-kicker">Institutional Journal</p>
+          <h2>Build consistency where trading performance compounds.</h2>
+          <p class="auth-hero-text">
+            Review P&amp;L, discipline, drawdown, and execution quality in one focused journal built for serious
+            traders.
+          </p>
+          <div class="auth-hero-metrics">
+            <article>
+              <strong>Calendar P&amp;L</strong>
+              <span>Daily edge and trade concentration.</span>
+            </article>
+            <article>
+              <strong>Discipline Review</strong>
+              <span>Execution scoring and reflection tracking.</span>
+            </article>
+            <article>
+              <strong>Secure Cloud Save</strong>
+              <span>Email-based login backed by PostgreSQL.</span>
+            </article>
+          </div>
+        </section>
+
+        <section class="auth-panel" aria-label="Account login">
+          <p class="auth-title">Sign In To Your Journal</p>
+          <p class="auth-status" id="authStatus">Checking session...</p>
+          <p class="auth-copy">
+            Use your email account to sign in. Social sign-in buttons are UI-ready and need provider credentials before
+            they can be enabled.
+          </p>
+
+          <div class="auth-provider-stack">
+            <button class="btn auth-provider-btn" type="button" data-provider="email">Continue with Email</button>
+            <button class="btn auth-provider-btn" type="button" data-provider="google">Continue with Google</button>
+            <button class="btn auth-provider-btn" type="button" data-provider="apple">Continue with Apple</button>
+            <button class="btn auth-provider-btn" type="button" data-provider="github">Continue with GitHub</button>
+          </div>
+
+          <div id="authControls">
+            <label>
+              Username or Email
+              <input id="authUsername" type="text" maxlength="190" placeholder="chesterlsc or you@example.com" autocomplete="username" />
+            </label>
+            <label>
+              Email
+              <input id="authEmail" type="email" maxlength="190" placeholder="you@example.com" autocomplete="email" />
+            </label>
+            <label>
+              Password
+              <input
+                id="authPassword"
+                type="password"
+                maxlength="72"
+                placeholder="Minimum 8 characters"
+                autocomplete="current-password"
+              />
+            </label>
+
+            <div class="form-actions auth-form-actions">
+              <button id="loginBtn" class="btn primary" type="button">Login</button>
+              <button id="registerBtn" class="btn" type="button">Create Account</button>
+            </div>
+          </div>
+
+          <p id="authMessage" class="form-message" aria-live="polite"></p>
+        </section>
+      </div>
+    </section>
+
     <div class="app-layout">
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -31,35 +114,6 @@
           </button>
         </div>
 
-        <section class="auth-panel" aria-label="Account login">
-          <p class="auth-title">Cloud Save Login</p>
-          <p class="auth-status" id="authStatus">Checking session...</p>
-
-          <div id="authControls">
-            <label>
-              Username
-              <input id="authUsername" type="text" maxlength="32" placeholder="chester" autocomplete="username" />
-            </label>
-            <label>
-              Password
-              <input
-                id="authPassword"
-                type="password"
-                maxlength="72"
-                placeholder="Minimum 8 characters"
-                autocomplete="current-password"
-              />
-            </label>
-
-            <div class="form-actions">
-              <button id="loginBtn" class="btn" type="button">Login</button>
-              <button id="registerBtn" class="btn" type="button">Register</button>
-            </div>
-          </div>
-
-          <p id="authMessage" class="form-message" aria-live="polite"></p>
-        </section>
-
         <nav class="main-nav" id="mainNav" aria-label="Main sections">
           <button class="nav-btn is-active" type="button" data-target="dashboard">Dashboard</button>
           <button class="nav-btn" type="button" data-target="trade-entry">Trade Entry</button>
@@ -76,13 +130,6 @@
       </aside>
 
       <main class="content">
-        <section class="auth-gate" id="authGate" aria-live="polite" hidden>
-          <div class="auth-gate-card">
-            <h2>Login Required</h2>
-            <p>Use the login panel to access your dashboard and save/load your trading database.</p>
-          </div>
-        </section>
-
         <nav class="desktop-nav" aria-label="Desktop sections">
           <div class="desktop-nav-links">
             <button class="nav-btn nav-btn-top is-active" type="button" data-target="dashboard">Dashboard</button>

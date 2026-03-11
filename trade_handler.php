@@ -42,7 +42,8 @@ try {
 
     if ($action === 'register') {
         requireMethod('POST');
-        [$username, $password] = readCredentials();
+        [$identifier, $password, $email] = readCredentials(true);
+        $username = $identifier;
 
         $hash = password_hash($password, PASSWORD_DEFAULT);
         if (!is_string($hash) || $hash === '') {
@@ -52,10 +53,12 @@ try {
         try {
             $pdo->beginTransaction();
             $stmt = $pdo->prepare(
-                'INSERT INTO journal_users (username, password_hash) VALUES (:username, :password_hash) RETURNING id'
+                'INSERT INTO journal_users (username, email, auth_provider, password_hash) VALUES (:username, :email, :auth_provider, :password_hash) RETURNING id'
             );
             $stmt->execute([
                 ':username' => $username,
+                ':email' => $email !== '' ? $email : null,
+                ':auth_provider' => 'email',
                 ':password_hash' => $hash,
             ]);
             $userId = (int) $stmt->fetchColumn();
@@ -86,9 +89,10 @@ try {
 
     if ($action === 'login') {
         requireMethod('POST');
-        [$username, $password] = readCredentials();
+        [$identifier, $password] = readCredentials(false);
+        $username = $identifier;
 
-        $user = findUserByUsername($pdo, $username);
+        $user = findUserByIdentifier($pdo, $username);
         if ($user === null || !password_verify($password, $user['passwordHash'])) {
             logLoginEvent($pdo, $user['id'] ?? null, $username, 'login', false);
             respond(401, ['ok' => false, 'error' => 'Invalid username or password.']);
@@ -295,6 +299,9 @@ function ensureSchema(PDO $pdo): void
         CREATE TABLE IF NOT EXISTS journal_users (
             id BIGSERIAL PRIMARY KEY,
             username VARCHAR(32) NOT NULL UNIQUE,
+            email VARCHAR(190) NULL UNIQUE,
+            auth_provider VARCHAR(24) NOT NULL DEFAULT 'email',
+            oauth_subject TEXT NULL,
             password_hash TEXT NOT NULL,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
@@ -358,6 +365,11 @@ function ensureSchema(PDO $pdo): void
     $pdo->exec('ALTER TABLE journal_notes ADD COLUMN IF NOT EXISTS reflections JSONB NOT NULL DEFAULT \'[]\'::jsonb');
     $pdo->exec('ALTER TABLE journal_notes ADD COLUMN IF NOT EXISTS replay_notes JSONB NOT NULL DEFAULT \'{}\'::jsonb');
     $pdo->exec('ALTER TABLE journal_notes ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()');
+
+    $pdo->exec('ALTER TABLE journal_users ADD COLUMN IF NOT EXISTS email VARCHAR(190)');
+    $pdo->exec('ALTER TABLE journal_users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(24) NOT NULL DEFAULT \'email\'');
+    $pdo->exec('ALTER TABLE journal_users ADD COLUMN IF NOT EXISTS oauth_subject TEXT');
+    $pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_users_email ON journal_users (email)');
 
     $pdo->exec('ALTER TABLE trades ADD COLUMN IF NOT EXISTS user_id BIGINT');
     $pdo->exec('ALTER TABLE trades ADD COLUMN IF NOT EXISTS payload JSONB NOT NULL DEFAULT \'[]\'::jsonb');
@@ -472,7 +484,7 @@ function requireAuth(PDO $pdo): array
         ];
     }
 
-    $user = findUserByUsername($pdo, $username);
+    $user = findUserByIdentifier($pdo, $username);
     if ($user === null) {
         clearAuthSession();
         respond(401, ['ok' => false, 'error' => 'Session expired. Please login again.']);
@@ -511,21 +523,32 @@ function requireMethod(string $method): void
     }
 }
 
-function readCredentials(): array
+function readCredentials(bool $forRegister = false): array
 {
     $decoded = readJsonBody();
-    $usernameRaw = isset($decoded['username']) ? strtolower(trim((string) $decoded['username'])) : '';
+    $identifierRaw = isset($decoded['username']) ? strtolower(trim((string) $decoded['username'])) : '';
+    $emailRaw = isset($decoded['email']) ? strtolower(trim((string) $decoded['email'])) : '';
     $password = isset($decoded['password']) ? (string) $decoded['password'] : '';
 
-    if (!preg_match('/^[a-z0-9._-]{3,32}$/', $usernameRaw)) {
-        respond(422, ['ok' => false, 'error' => 'Username must be 3-32 chars: letters, numbers, dot, underscore, dash.']);
+    if (!preg_match('/^[a-z0-9._@-]{3,190}$/', $identifierRaw)) {
+        respond(422, ['ok' => false, 'error' => 'Use a valid username or email.']);
     }
 
     if (strlen($password) < 8) {
         respond(422, ['ok' => false, 'error' => 'Password must be at least 8 characters.']);
     }
 
-    return [$usernameRaw, $password];
+    if ($forRegister) {
+        if (!preg_match('/^[a-z0-9._-]{3,32}$/', $identifierRaw)) {
+            respond(422, ['ok' => false, 'error' => 'Username must be 3-32 chars: letters, numbers, dot, underscore, dash.']);
+        }
+
+        if ($emailRaw === '' || !filter_var($emailRaw, FILTER_VALIDATE_EMAIL)) {
+            respond(422, ['ok' => false, 'error' => 'Enter a valid email address.']);
+        }
+    }
+
+    return [$identifierRaw, $password, $emailRaw];
 }
 
 function readJsonBody(): array
@@ -543,12 +566,12 @@ function readJsonBody(): array
     return $decoded;
 }
 
-function findUserByUsername(PDO $pdo, string $username): ?array
+function findUserByIdentifier(PDO $pdo, string $identifier): ?array
 {
     $stmt = $pdo->prepare(
-        'SELECT id, username, password_hash FROM journal_users WHERE username = :username LIMIT 1'
+        'SELECT id, username, email, auth_provider, password_hash FROM journal_users WHERE username = :identifier OR email = :identifier LIMIT 1'
     );
-    $stmt->execute([':username' => $username]);
+    $stmt->execute([':identifier' => $identifier]);
     $row = $stmt->fetch();
     if (!is_array($row)) {
         return null;
@@ -557,6 +580,8 @@ function findUserByUsername(PDO $pdo, string $username): ?array
     return [
         'id' => (int) $row['id'],
         'username' => (string) $row['username'],
+        'email' => (string) ($row['email'] ?? ''),
+        'provider' => (string) ($row['auth_provider'] ?? 'email'),
         'passwordHash' => (string) $row['password_hash'],
     ];
 }

@@ -54,10 +54,10 @@ const state = {
 };
 
 const ui = {
+  authShell: document.getElementById("authShell"),
   sidebar: document.getElementById("sidebar"),
   mainNav: document.getElementById("mainNav"),
   navToggleBtn: document.getElementById("navToggleBtn"),
-  authGate: document.getElementById("authGate"),
   authPanel: document.querySelector(".auth-panel"),
   brandTitle: document.getElementById("brandTitle"),
   navButtons: Array.from(document.querySelectorAll(".nav-btn")),
@@ -66,9 +66,11 @@ const ui = {
   authStatus: document.getElementById("authStatus"),
   authMessage: document.getElementById("authMessage"),
   authUsername: document.getElementById("authUsername"),
+  authEmail: document.getElementById("authEmail"),
   authPassword: document.getElementById("authPassword"),
   loginBtn: document.getElementById("loginBtn"),
   registerBtn: document.getElementById("registerBtn"),
+  authProviderButtons: Array.from(document.querySelectorAll(".auth-provider-btn")),
   desktopLogoutBtn: document.getElementById("desktopLogoutBtn"),
   mobileLogoutBtn: document.getElementById("mobileLogoutBtn"),
   metricNodes: Array.from(document.querySelectorAll("[data-metric]")),
@@ -218,6 +220,13 @@ function bindEvents() {
       }
     });
   }
+
+  ui.authProviderButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const provider = String(button.dataset.provider || "");
+      handleProviderIntent(provider);
+    });
+  });
 
   if (ui.navToggleBtn) {
     ui.navToggleBtn.addEventListener("click", () => {
@@ -389,10 +398,6 @@ function updateAccessGate() {
   document.body.classList.toggle("auth-ready", state.auth.checked);
   document.body.classList.toggle("is-authenticated", authenticated);
 
-  if (ui.authGate) {
-    ui.authGate.hidden = !locked;
-  }
-
   if (ui.authPanel) {
     ui.authPanel.hidden = authenticated;
   }
@@ -407,19 +412,31 @@ function updateAccessGate() {
   }
 }
 
-function readAuthForm() {
-  const username = (ui.authUsername?.value || "").trim().toLowerCase();
+function readAuthForm(forRegister = false) {
+  const usernameInput = (ui.authUsername?.value || "").trim().toLowerCase();
+  const email = (ui.authEmail?.value || "").trim().toLowerCase();
+  const username = forRegister ? usernameInput : (usernameInput || email);
   const password = ui.authPassword?.value || "";
 
-  if (!/^[a-zA-Z0-9._-]{3,32}$/.test(username)) {
-    return { ok: false, error: "Username must be 3-32 chars: letters, numbers, dot, underscore, dash." };
+  if (!/^[a-zA-Z0-9._@-]{3,190}$/.test(username)) {
+    return { ok: false, error: "Use a valid username or email." };
   }
 
   if (password.length < 8) {
     return { ok: false, error: "Password must be at least 8 characters." };
   }
 
-  return { ok: true, username, password };
+  if (forRegister) {
+    if (!/^[a-zA-Z0-9._-]{3,32}$/.test(username)) {
+      return { ok: false, error: "Username must be 3-32 chars: letters, numbers, dot, underscore, dash." };
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return { ok: false, error: "Enter a valid email address to create an account." };
+    }
+  }
+
+  return { ok: true, username, email, password };
 }
 
 async function checkAuthSession() {
@@ -483,23 +500,23 @@ async function checkAuthSession() {
 }
 
 async function handleLogin() {
-  const credentials = readAuthForm();
+  const credentials = readAuthForm(false);
   if (!credentials.ok) {
     setMessage(ui.authMessage, credentials.error, "error");
     return;
   }
 
-  await submitAuth("login", credentials.username, credentials.password, "Logged in.");
+  await submitAuth("login", credentials.username, credentials.password, "Logged in.", credentials.email);
 }
 
 async function handleRegister() {
-  const credentials = readAuthForm();
+  const credentials = readAuthForm(true);
   if (!credentials.ok) {
     setMessage(ui.authMessage, credentials.error, "error");
     return;
   }
 
-  await submitAuth("register", credentials.username, credentials.password, "Account created and logged in.");
+  await submitAuth("register", credentials.username, credentials.password, "Account created and logged in.", credentials.email);
 }
 
 async function handleLogout() {
@@ -531,14 +548,14 @@ async function handleLogout() {
   setMessage(ui.authMessage, "Logged out.", "success");
 }
 
-async function submitAuth(action, username, password, successMessage) {
+async function submitAuth(action, username, password, successMessage, email = "") {
   state.auth.sessionCheckVersion += 1;
   try {
     const response = await fetch(`trade_handler.php?action=${action}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, email, password })
     });
     const body = await response.json();
     if (!response.ok || !body.ok) {
@@ -595,6 +612,10 @@ function updateAuthUi() {
     if (ui.authUsername) {
       ui.authUsername.value = state.auth.username;
     }
+    if (ui.authEmail) {
+      ui.authEmail.value = "";
+      ui.authEmail.disabled = true;
+    }
     ui.loginBtn.hidden = true;
     ui.registerBtn.hidden = true;
     ui.desktopLogoutBtn.hidden = false;
@@ -625,6 +646,9 @@ function updateAuthUi() {
     if (ui.authUsername) {
       ui.authUsername.disabled = false;
     }
+    if (ui.authEmail) {
+      ui.authEmail.disabled = false;
+    }
     if (ui.authPassword) {
       ui.authPassword.disabled = false;
     }
@@ -632,6 +656,20 @@ function updateAuthUi() {
 
   renderAdminUsers();
   updateAccessGate();
+}
+
+function handleProviderIntent(provider) {
+  if (provider === "email") {
+    ui.authUsername?.focus();
+    setMessage(ui.authMessage, "Use username, email, and password to continue with email.", "success");
+    return;
+  }
+
+  setMessage(
+    ui.authMessage,
+    `${provider.charAt(0).toUpperCase()}${provider.slice(1)} sign-in needs provider credentials and callback setup first.`,
+    "error"
+  );
 }
 
 function isViewActive(id) {
