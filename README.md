@@ -11,7 +11,7 @@ Trading journal web app with:
 
 - Frontend: `index.html`, `styles.css`, `app.js`
 - Backend: `trade_handler.php` (session auth + API)
-- Storage: PostgreSQL (`journal_users`, `journal_data`)
+- Storage: PostgreSQL (`journal_users`, `journal_data`, `journal_login_events`)
 
 ## Environment
 
@@ -82,6 +82,18 @@ php scripts/migrate_legacy_json.php
 - `trade_handler.php?action=logout`
 - `trade_handler.php?action=save`
 - `trade_handler.php?action=load`
+- `trade_handler.php?action=login_logs` (for authenticated user's login history)
+
+## View Login Info
+
+From Railway service shell / psql:
+
+```sql
+SELECT username, event_type, success, ip_address, created_at
+FROM journal_login_events
+ORDER BY created_at DESC
+LIMIT 100;
+```
 
 ## Data Controls
 

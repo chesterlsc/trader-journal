@@ -77,6 +77,7 @@ try {
 
         $_SESSION['username'] = $username;
         $_SESSION['user_id'] = $userId;
+        logLoginEvent($pdo, $userId, $username, 'register', true);
 
         respond(200, ['ok' => true, 'username' => $username]);
     }
@@ -87,6 +88,7 @@ try {
 
         $user = findUserByUsername($pdo, $username);
         if ($user === null || !password_verify($password, $user['passwordHash'])) {
+            logLoginEvent($pdo, $user['id'] ?? null, $username, 'login', false);
             respond(401, ['ok' => false, 'error' => 'Invalid username or password.']);
         }
 
@@ -94,12 +96,21 @@ try {
         $_SESSION['user_id'] = $user['id'];
 
         ensureJournalDataRow($pdo, $user['id'], $defaults);
+        logLoginEvent($pdo, $user['id'], $user['username'], 'login', true);
 
         respond(200, ['ok' => true, 'username' => $user['username']]);
     }
 
     if ($action === 'logout') {
         requireMethod('POST');
+        $username = currentUsername();
+        if ($username !== null) {
+            $sessionUserId = $_SESSION['user_id'] ?? null;
+            $userId = (is_int($sessionUserId) || (is_string($sessionUserId) && ctype_digit($sessionUserId)))
+                ? (int) $sessionUserId
+                : null;
+            logLoginEvent($pdo, $userId, $username, 'logout', true);
+        }
         clearAuthSession();
         respond(200, ['ok' => true]);
     }
@@ -125,6 +136,12 @@ try {
         $auth = requireAuth($pdo);
         $data = loadJournalData($pdo, $auth['id'], $defaults);
         respond(200, ['ok' => true, 'data' => $data]);
+    }
+
+    if ($action === 'login_logs') {
+        $auth = requireAuth($pdo);
+        $logs = listLoginEventsForUser($pdo, $auth['id'], $auth['username']);
+        respond(200, ['ok' => true, 'logs' => $logs]);
     }
 
     respond(400, ['ok' => false, 'error' => 'Unknown action.']);
@@ -222,6 +239,28 @@ function ensureSchema(PDO $pdo): void
             updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
         SQL
+    );
+
+    $pdo->exec(
+        <<<SQL
+        CREATE TABLE IF NOT EXISTS journal_login_events (
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT NULL REFERENCES journal_users(id) ON DELETE SET NULL,
+            username VARCHAR(32) NOT NULL,
+            event_type VARCHAR(24) NOT NULL,
+            success BOOLEAN NOT NULL DEFAULT TRUE,
+            ip_address INET NULL,
+            user_agent TEXT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        SQL
+    );
+
+    $pdo->exec(
+        'CREATE INDEX IF NOT EXISTS idx_journal_login_events_created_at ON journal_login_events (created_at DESC)'
+    );
+    $pdo->exec(
+        'CREATE INDEX IF NOT EXISTS idx_journal_login_events_username ON journal_login_events (username)'
     );
 }
 
@@ -333,6 +372,54 @@ function findUserByUsername(PDO $pdo, string $username): ?array
         'username' => (string) $row['username'],
         'passwordHash' => (string) $row['password_hash'],
     ];
+}
+
+function logLoginEvent(PDO $pdo, ?int $userId, string $username, string $eventType, bool $success): void
+{
+    $stmt = $pdo->prepare(
+        <<<SQL
+        INSERT INTO journal_login_events (user_id, username, event_type, success, ip_address, user_agent)
+        VALUES (:user_id, :username, :event_type, :success, CAST(:ip_address AS inet), :user_agent)
+        SQL
+    );
+
+    $ip = clientIpAddress();
+    $stmt->execute([
+        ':user_id' => $userId,
+        ':username' => substr(strtolower(trim($username)), 0, 32),
+        ':event_type' => substr($eventType, 0, 24),
+        ':success' => $success,
+        ':ip_address' => $ip,
+        ':user_agent' => userAgentString(),
+    ]);
+}
+
+function listLoginEventsForUser(PDO $pdo, int $userId, string $username): array
+{
+    $stmt = $pdo->prepare(
+        <<<SQL
+        SELECT
+            id,
+            username,
+            event_type,
+            success,
+            COALESCE(ip_address::text, '') AS ip_address,
+            COALESCE(user_agent, '') AS user_agent,
+            created_at::text AS created_at
+        FROM journal_login_events
+        WHERE user_id = :user_id OR username = :username
+        ORDER BY created_at DESC
+        LIMIT 200
+        SQL
+    );
+
+    $stmt->execute([
+        ':user_id' => $userId,
+        ':username' => $username,
+    ]);
+
+    $rows = $stmt->fetchAll();
+    return is_array($rows) ? $rows : [];
 }
 
 function ensureJournalDataRow(PDO $pdo, int $userId, array $defaults): void
@@ -512,6 +599,31 @@ function debugMessage(string $baseMessage, Throwable $error): string
     }
 
     return $baseMessage;
+}
+
+function clientIpAddress(): ?string
+{
+    $forwarded = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '';
+    if (is_string($forwarded) && $forwarded !== '') {
+        $parts = explode(',', $forwarded);
+        $candidate = trim((string) ($parts[0] ?? ''));
+        if ($candidate !== '' && filter_var($candidate, FILTER_VALIDATE_IP)) {
+            return $candidate;
+        }
+    }
+
+    $remote = $_SERVER['REMOTE_ADDR'] ?? '';
+    if (is_string($remote) && $remote !== '' && filter_var($remote, FILTER_VALIDATE_IP)) {
+        return $remote;
+    }
+
+    return null;
+}
+
+function userAgentString(): string
+{
+    $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+    return substr(is_string($ua) ? $ua : '', 0, 500);
 }
 
 function respond(int $statusCode, array $payload): void

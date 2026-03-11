@@ -178,6 +178,28 @@ function ensureSchema(PDO $pdo): void
         )
         SQL
     );
+
+    $pdo->exec(
+        <<<SQL
+        CREATE TABLE IF NOT EXISTS journal_login_events (
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT NULL REFERENCES journal_users(id) ON DELETE SET NULL,
+            username VARCHAR(32) NOT NULL,
+            event_type VARCHAR(24) NOT NULL,
+            success BOOLEAN NOT NULL DEFAULT TRUE,
+            ip_address INET NULL,
+            user_agent TEXT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        SQL
+    );
+
+    $pdo->exec(
+        'CREATE INDEX IF NOT EXISTS idx_journal_login_events_created_at ON journal_login_events (created_at DESC)'
+    );
+    $pdo->exec(
+        'CREATE INDEX IF NOT EXISTS idx_journal_login_events_username ON journal_login_events (username)'
+    );
 }
 
 function upsertUser(PDO $pdo, string $username, string $passwordHash): int
