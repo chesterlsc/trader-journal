@@ -20,6 +20,9 @@ const DEFAULT_SETTINGS = {
 
 const SERVER_AUTOSAVE_DEBOUNCE_MS = 900;
 const PRESET_SETUP_TYPES = new Set(["Breakout", "Liquidity Grab", "Trend Continuation", "Reversal", "Scalp", "Custom"]);
+const PRODUCT_BRAND_TEXT = "Trader Journal";
+const PRODUCT_BRAND_MARKUP =
+  '<span class="brand-word-accent">Trader</span><span class="brand-word-primary">Journal</span>';
 
 const state = {
   trades: [],
@@ -777,7 +780,7 @@ function updateAuthUi() {
       : isResetPending
         ? "Verifying reset link"
       : loginMode
-        ? "Log in to Your Journal"
+        ? "Log in to Trader Journal"
         : "Create your free account";
   }
   if (ui.authCopy) {
@@ -3625,24 +3628,23 @@ function normalizeJournalName(value) {
 
 function updateBranding() {
   const prefix = normalizeJournalName(state.settings.journalName);
-  const brandText = `${prefix} Journal`;
 
   if (state.settings.journalName !== prefix) {
     state.settings.journalName = prefix;
   }
 
   if (ui.brandTitle) {
-    ui.brandTitle.textContent = brandText;
+    ui.brandTitle.innerHTML = PRODUCT_BRAND_MARKUP;
   }
   ui.brandTitles.forEach((node) => {
-    node.textContent = brandText;
+    node.innerHTML = PRODUCT_BRAND_MARKUP;
   });
 
   if (ui.riskInputs.journalName && ui.riskInputs.journalName.value !== prefix) {
     ui.riskInputs.journalName.value = prefix;
   }
 
-  document.title = `${brandText} | Trading Analytics`;
+  document.title = `${PRODUCT_BRAND_TEXT} | Trading Analytics`;
 }
 
 function readStorageJson(key, fallback) {
