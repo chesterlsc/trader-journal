@@ -1,28 +1,50 @@
-# Chester Journal (Offline Trading Analytics)
+# Chester Journal (Trading Analytics)
 
-A professional-style offline trading journal focused on:
+Trading journal web app with:
 
-- Performance analytics and expectancy
-- Drawdown and risk-rule tracking
-- Custom starting balance and optional account balance override
-- Discipline and psychology monitoring
-- Daily reflections and monthly review
-- Local storage + optional PHP JSON persistence
+- Performance, drawdown, and discipline analytics
+- Login/register with per-user cloud save
+- Local autosave + server database sync
+- Bulk import (Vantage, Binance, Google Sheets CSV/TSV)
 
-## Files
+## Stack
 
-- `index.html`
-- `styles.css`
-- `app.js`
-- `trade_handler.php`
+- Frontend: `index.html`, `styles.css`, `app.js`
+- Backend: `trade_handler.php` (session auth + API)
+- Storage: PostgreSQL (`journal_users`, `journal_data`)
 
-## Run Locally (LocalStorage only)
+## Environment
 
-Open `index.html` directly in your browser.
+Set either:
 
-## Run with PHP JSON Save/Load
+- `DATABASE_URL=postgres://USER:PASSWORD@HOST:5432/DBNAME?sslmode=require`
 
-From this folder:
+or these variables:
+
+- `PGHOST`
+- `PGPORT` (optional, default `5432`)
+- `PGDATABASE`
+- `PGUSER`
+- `PGPASSWORD`
+- `PGSSLMODE` (optional, e.g. `require`)
+
+Optional:
+
+- `APP_DEBUG=true` to include detailed backend errors in API responses.
+
+## Database Schema
+
+Schema file:
+
+- `db/schema.sql`
+
+Apply manually (optional, handler also auto-creates tables on first request):
+
+```bash
+psql "$DATABASE_URL" -f db/schema.sql
+```
+
+## Run Locally
 
 ```bash
 php -S localhost:8000
@@ -32,40 +54,25 @@ Then open:
 
 - `http://localhost:8000`
 
-Use **Cloud Save Login** in the sidebar:
+## Railway Deploy
 
-- Register a username/password (first time).
-- Login to your account.
-- Use **Save to PHP JSON** and **Load from PHP JSON**.
+1. Add a PostgreSQL service in Railway.
+2. Ensure app service has `DATABASE_URL` available.
+3. Deploy this repo (Dockerfile included).
+4. Open the generated Railway domain.
 
-Data is saved per user session.
+## API Endpoints (used by app.js)
 
-PHP data will be stored at:
-
-- `data/users.json`
-- `data/accounts/<username>.json`
-
-## Deploy on Railway
-
-This repo includes a `Dockerfile`, so Railway can build it without Railpack detection.
-
-1. Connect repo to Railway.
-2. Redeploy latest commit.
-3. Generate public domain in Railway Networking.
-4. Add a volume mounted at `/app/data` for persistent journal storage.
+- `trade_handler.php?action=session`
+- `trade_handler.php?action=register`
+- `trade_handler.php?action=login`
+- `trade_handler.php?action=logout`
+- `trade_handler.php?action=save`
+- `trade_handler.php?action=load`
 
 ## Data Controls
 
-- Export CSV (trades)
-- Backup JSON (all app data)
-- Import JSON (restore full state)
-
-## Keyboard Shortcuts
-
-- `Cmd/Ctrl + S` while on Trade Entry: save trade
-- `/` anywhere: jump to journal search filter
-# chester-trading-journal
-# chester-trading-journal
-# chester-trading-journal
-# chester-trading-journal
-# chester-trading-journal
+- Export CSV
+- Backup JSON
+- Import JSON
+- Save to Server DB / Load from Server DB

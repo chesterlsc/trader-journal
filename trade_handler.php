@@ -5,9 +5,6 @@ session_start();
 header('Content-Type: application/json; charset=utf-8');
 
 $action = isset($_GET['action']) ? (string) $_GET['action'] : 'load';
-$dataDir = __DIR__ . DIRECTORY_SEPARATOR . 'data';
-$accountsDir = $dataDir . DIRECTORY_SEPARATOR . 'accounts';
-$usersFile = $dataDir . DIRECTORY_SEPARATOR . 'users.json';
 
 $defaults = [
     'settings' => [
@@ -24,137 +21,209 @@ $defaults = [
     'replayNotes' => new stdClass(),
 ];
 
-ensureDirectory($dataDir);
-ensureDirectory($accountsDir);
-ensureUsersFile($usersFile);
+try {
+    $pdo = createPdoFromEnvironment();
+    ensureSchema($pdo);
+} catch (Throwable $error) {
+    respond(500, ['ok' => false, 'error' => debugMessage('Database connection failed. Check DATABASE_URL.', $error)]);
+}
 
-if ($action === 'session') {
-    $username = currentUsername();
-    respond(200, [
-        'ok' => true,
-        'authenticated' => $username !== null,
-        'username' => $username,
+try {
+    if ($action === 'session') {
+        $username = currentUsername();
+        respond(200, [
+            'ok' => true,
+            'authenticated' => $username !== null,
+            'username' => $username,
+        ]);
+    }
+
+    if ($action === 'register') {
+        requireMethod('POST');
+        [$username, $password] = readCredentials();
+
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+        if (!is_string($hash) || $hash === '') {
+            respond(500, ['ok' => false, 'error' => 'Failed to secure password.']);
+        }
+
+        try {
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare(
+                'INSERT INTO journal_users (username, password_hash) VALUES (:username, :password_hash) RETURNING id'
+            );
+            $stmt->execute([
+                ':username' => $username,
+                ':password_hash' => $hash,
+            ]);
+            $userId = (int) $stmt->fetchColumn();
+            if ($userId <= 0) {
+                throw new RuntimeException('Failed to create account id.');
+            }
+
+            upsertJournalData($pdo, $userId, $defaults);
+            $pdo->commit();
+        } catch (Throwable $error) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+
+            if (isUniqueViolation($error)) {
+                respond(409, ['ok' => false, 'error' => 'Username already exists.']);
+            }
+
+            throw $error;
+        }
+
+        $_SESSION['username'] = $username;
+        $_SESSION['user_id'] = $userId;
+
+        respond(200, ['ok' => true, 'username' => $username]);
+    }
+
+    if ($action === 'login') {
+        requireMethod('POST');
+        [$username, $password] = readCredentials();
+
+        $user = findUserByUsername($pdo, $username);
+        if ($user === null || !password_verify($password, $user['passwordHash'])) {
+            respond(401, ['ok' => false, 'error' => 'Invalid username or password.']);
+        }
+
+        $_SESSION['username'] = $user['username'];
+        $_SESSION['user_id'] = $user['id'];
+
+        ensureJournalDataRow($pdo, $user['id'], $defaults);
+
+        respond(200, ['ok' => true, 'username' => $user['username']]);
+    }
+
+    if ($action === 'logout') {
+        requireMethod('POST');
+        clearAuthSession();
+        respond(200, ['ok' => true]);
+    }
+
+    if ($action === 'save') {
+        requireMethod('POST');
+        $auth = requireAuth($pdo);
+
+        $decoded = readJsonBody();
+        $payload = [
+            'settings' => sanitizeSettings($decoded['settings'] ?? []),
+            'trades' => sanitizeArray($decoded['trades'] ?? []),
+            'reflections' => sanitizeArray($decoded['reflections'] ?? []),
+            'replayNotes' => sanitizeReplayNotes($decoded['replayNotes'] ?? []),
+        ];
+
+        upsertJournalData($pdo, $auth['id'], $payload);
+
+        respond(200, ['ok' => true, 'message' => 'Journal data saved.', 'updatedAt' => date(DATE_ATOM)]);
+    }
+
+    if ($action === 'load') {
+        $auth = requireAuth($pdo);
+        $data = loadJournalData($pdo, $auth['id'], $defaults);
+        respond(200, ['ok' => true, 'data' => $data]);
+    }
+
+    respond(400, ['ok' => false, 'error' => 'Unknown action.']);
+} catch (Throwable $error) {
+    respond(500, ['ok' => false, 'error' => debugMessage('Server operation failed.', $error)]);
+}
+
+function createPdoFromEnvironment(): PDO
+{
+    $databaseUrl = trim((string) getenv('DATABASE_URL'));
+    if ($databaseUrl !== '') {
+        return createPdoFromDatabaseUrl($databaseUrl);
+    }
+
+    $host = trim((string) getenv('PGHOST'));
+    $port = trim((string) getenv('PGPORT'));
+    $database = trim((string) getenv('PGDATABASE'));
+    $user = trim((string) getenv('PGUSER'));
+    $password = (string) getenv('PGPASSWORD');
+    $sslmode = trim((string) getenv('PGSSLMODE'));
+
+    if ($host === '' || $database === '' || $user === '') {
+        throw new RuntimeException('Missing PGHOST/PGDATABASE/PGUSER or DATABASE_URL.');
+    }
+
+    $dsn = sprintf('pgsql:host=%s;port=%s;dbname=%s', $host, $port !== '' ? $port : '5432', $database);
+    if ($sslmode !== '') {
+        $dsn .= ';sslmode=' . $sslmode;
+    }
+
+    return new PDO($dsn, $user, $password, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
     ]);
 }
 
-if ($action === 'register') {
-    requireMethod('POST');
-    [$username, $password] = readCredentials();
-
-    $users = readUsers($usersFile);
-    if (isset($users[$username])) {
-        respond(409, ['ok' => false, 'error' => 'Username already exists.']);
+function createPdoFromDatabaseUrl(string $databaseUrl): PDO
+{
+    $parts = parse_url($databaseUrl);
+    if ($parts === false) {
+        throw new RuntimeException('Invalid DATABASE_URL format.');
     }
 
-    $hash = password_hash($password, PASSWORD_DEFAULT);
-    if ($hash === false) {
-        respond(500, ['ok' => false, 'error' => 'Failed to secure password.']);
+    $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+    if (!in_array($scheme, ['postgres', 'postgresql', 'pgsql'], true)) {
+        throw new RuntimeException('DATABASE_URL must use postgres:// scheme.');
     }
 
-    $users[$username] = [
-        'passwordHash' => $hash,
-        'createdAt' => date(DATE_ATOM),
-    ];
+    $host = (string) ($parts['host'] ?? '');
+    $port = (int) ($parts['port'] ?? 5432);
+    $database = ltrim((string) ($parts['path'] ?? ''), '/');
+    $user = urldecode((string) ($parts['user'] ?? ''));
+    $password = urldecode((string) ($parts['pass'] ?? ''));
+    $query = [];
+    parse_str((string) ($parts['query'] ?? ''), $query);
 
-    writeJsonFile($usersFile, $users, 'Failed to save user account.');
-
-    $dataFile = userDataFile($accountsDir, $username);
-    if (!file_exists($dataFile)) {
-        writeJsonFile($dataFile, $defaults, 'Failed to initialize user journal.');
+    if ($host === '' || $database === '' || $user === '') {
+        throw new RuntimeException('DATABASE_URL missing host/database/user.');
     }
 
-    $_SESSION['username'] = $username;
+    $dsn = sprintf('pgsql:host=%s;port=%d;dbname=%s', $host, $port, $database);
+    if (isset($query['sslmode']) && is_string($query['sslmode']) && $query['sslmode'] !== '') {
+        $dsn .= ';sslmode=' . $query['sslmode'];
+    }
 
-    respond(200, ['ok' => true, 'username' => $username]);
+    return new PDO($dsn, $user, $password, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
+    ]);
 }
 
-if ($action === 'login') {
-    requireMethod('POST');
-    [$username, $password] = readCredentials();
+function ensureSchema(PDO $pdo): void
+{
+    $pdo->exec(
+        <<<SQL
+        CREATE TABLE IF NOT EXISTS journal_users (
+            id BIGSERIAL PRIMARY KEY,
+            username VARCHAR(32) NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        SQL
+    );
 
-    $users = readUsers($usersFile);
-    $account = $users[$username] ?? null;
-
-    if (!is_array($account) || !isset($account['passwordHash']) || !is_string($account['passwordHash'])) {
-        respond(401, ['ok' => false, 'error' => 'Invalid username or password.']);
-    }
-
-    if (!password_verify($password, $account['passwordHash'])) {
-        respond(401, ['ok' => false, 'error' => 'Invalid username or password.']);
-    }
-
-    $_SESSION['username'] = $username;
-
-    $dataFile = userDataFile($accountsDir, $username);
-    if (!file_exists($dataFile)) {
-        writeJsonFile($dataFile, $defaults, 'Failed to initialize user journal.');
-    }
-
-    respond(200, ['ok' => true, 'username' => $username]);
+    $pdo->exec(
+        <<<SQL
+        CREATE TABLE IF NOT EXISTS journal_data (
+            user_id BIGINT PRIMARY KEY REFERENCES journal_users(id) ON DELETE CASCADE,
+            settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+            trades JSONB NOT NULL DEFAULT '[]'::jsonb,
+            reflections JSONB NOT NULL DEFAULT '[]'::jsonb,
+            replay_notes JSONB NOT NULL DEFAULT '{}'::jsonb,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        SQL
+    );
 }
-
-if ($action === 'logout') {
-    requireMethod('POST');
-
-    $_SESSION = [];
-    if (ini_get('session.use_cookies')) {
-        $params = session_get_cookie_params();
-        setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], (bool) $params['secure'], (bool) $params['httponly']);
-    }
-    session_destroy();
-
-    respond(200, ['ok' => true]);
-}
-
-if ($action === 'save') {
-    requireMethod('POST');
-    $username = requireAuth();
-
-    $decoded = readJsonBody();
-
-    $payload = [
-        'updatedAt' => date(DATE_ATOM),
-        'settings' => sanitizeSettings($decoded['settings'] ?? []),
-        'trades' => sanitizeArray($decoded['trades'] ?? []),
-        'reflections' => sanitizeArray($decoded['reflections'] ?? []),
-        'replayNotes' => sanitizeObject($decoded['replayNotes'] ?? []),
-    ];
-
-    $dataFile = userDataFile($accountsDir, $username);
-    writeJsonFile($dataFile, $payload, 'Failed to write journal data.');
-
-    respond(200, ['ok' => true, 'message' => 'Journal data saved.', 'updatedAt' => $payload['updatedAt']]);
-}
-
-if ($action === 'load') {
-    $username = requireAuth();
-    $dataFile = userDataFile($accountsDir, $username);
-
-    if (!file_exists($dataFile)) {
-        respond(200, ['ok' => true, 'data' => $defaults]);
-    }
-
-    $content = file_get_contents($dataFile);
-    if ($content === false) {
-        respond(500, ['ok' => false, 'error' => 'Failed to read journal data file.']);
-    }
-
-    $decoded = json_decode($content, true);
-    if (!is_array($decoded)) {
-        respond(500, ['ok' => false, 'error' => 'Stored JSON is invalid.']);
-    }
-
-    $data = [
-        'settings' => sanitizeSettings($decoded['settings'] ?? []),
-        'trades' => sanitizeArray($decoded['trades'] ?? []),
-        'reflections' => sanitizeArray($decoded['reflections'] ?? []),
-        'replayNotes' => sanitizeObject($decoded['replayNotes'] ?? []),
-    ];
-
-    respond(200, ['ok' => true, 'data' => $data]);
-}
-
-respond(400, ['ok' => false, 'error' => 'Unknown action.']);
 
 function currentUsername(): ?string
 {
@@ -162,14 +231,51 @@ function currentUsername(): ?string
     return is_string($value) && $value !== '' ? $value : null;
 }
 
-function requireAuth(): string
+function requireAuth(PDO $pdo): array
 {
     $username = currentUsername();
     if ($username === null) {
         respond(401, ['ok' => false, 'error' => 'Not authenticated. Please login first.']);
     }
 
-    return $username;
+    $sessionUserId = $_SESSION['user_id'] ?? null;
+    if (is_int($sessionUserId) || (is_string($sessionUserId) && ctype_digit($sessionUserId))) {
+        return [
+            'id' => (int) $sessionUserId,
+            'username' => $username,
+        ];
+    }
+
+    $user = findUserByUsername($pdo, $username);
+    if ($user === null) {
+        clearAuthSession();
+        respond(401, ['ok' => false, 'error' => 'Session expired. Please login again.']);
+    }
+
+    $_SESSION['user_id'] = $user['id'];
+
+    return [
+        'id' => $user['id'],
+        'username' => $user['username'],
+    ];
+}
+
+function clearAuthSession(): void
+{
+    $_SESSION = [];
+    if (ini_get('session.use_cookies')) {
+        $params = session_get_cookie_params();
+        setcookie(
+            session_name(),
+            '',
+            time() - 42000,
+            $params['path'],
+            $params['domain'],
+            (bool) $params['secure'],
+            (bool) $params['httponly']
+        );
+    }
+    session_destroy();
 }
 
 function requireMethod(string $method): void
@@ -211,56 +317,106 @@ function readJsonBody(): array
     return $decoded;
 }
 
-function ensureDirectory(string $path): void
+function findUserByUsername(PDO $pdo, string $username): ?array
 {
-    if (!is_dir($path) && !mkdir($path, 0775, true) && !is_dir($path)) {
-        respond(500, ['ok' => false, 'error' => 'Failed to create storage directory.']);
+    $stmt = $pdo->prepare(
+        'SELECT id, username, password_hash FROM journal_users WHERE username = :username LIMIT 1'
+    );
+    $stmt->execute([':username' => $username]);
+    $row = $stmt->fetch();
+    if (!is_array($row)) {
+        return null;
     }
+
+    return [
+        'id' => (int) $row['id'],
+        'username' => (string) $row['username'],
+        'passwordHash' => (string) $row['password_hash'],
+    ];
 }
 
-function ensureUsersFile(string $usersFile): void
+function ensureJournalDataRow(PDO $pdo, int $userId, array $defaults): void
 {
-    if (!file_exists($usersFile)) {
-        writeJsonFile($usersFile, new stdClass(), 'Failed to initialize users store.');
+    $stmt = $pdo->prepare('SELECT user_id FROM journal_data WHERE user_id = :user_id LIMIT 1');
+    $stmt->execute([':user_id' => $userId]);
+    $existing = $stmt->fetchColumn();
+    if ($existing !== false) {
+        return;
     }
+
+    upsertJournalData($pdo, $userId, $defaults);
 }
 
-function readUsers(string $usersFile): array
+function loadJournalData(PDO $pdo, int $userId, array $defaults): array
 {
-    $raw = file_get_contents($usersFile);
-    if ($raw === false) {
-        respond(500, ['ok' => false, 'error' => 'Failed to read users store.']);
+    $stmt = $pdo->prepare(
+        'SELECT settings::text AS settings, trades::text AS trades, reflections::text AS reflections, replay_notes::text AS replay_notes FROM journal_data WHERE user_id = :user_id LIMIT 1'
+    );
+    $stmt->execute([':user_id' => $userId]);
+    $row = $stmt->fetch();
+
+    if (!is_array($row)) {
+        upsertJournalData($pdo, $userId, $defaults);
+        return $defaults;
     }
 
-    $decoded = json_decode($raw, true);
-    if (!is_array($decoded)) {
-        return [];
-    }
+    $settings = json_decode((string) ($row['settings'] ?? ''), true);
+    $trades = json_decode((string) ($row['trades'] ?? ''), true);
+    $reflections = json_decode((string) ($row['reflections'] ?? ''), true);
+    $replayNotes = json_decode((string) ($row['replay_notes'] ?? ''), true);
 
-    return $decoded;
+    return [
+        'settings' => sanitizeSettings(is_array($settings) ? $settings : []),
+        'trades' => sanitizeArray($trades),
+        'reflections' => sanitizeArray($reflections),
+        'replayNotes' => sanitizeReplayNotes($replayNotes),
+    ];
 }
 
-function userDataFile(string $accountsDir, string $username): string
+function upsertJournalData(PDO $pdo, int $userId, array $payload): void
 {
-    $safe = preg_replace('/[^a-z0-9._-]/', '_', strtolower($username));
-    if (!is_string($safe) || $safe === '') {
-        $safe = 'unknown';
-    }
+    $settingsJson = encodeJsonForDb(sanitizeSettings($payload['settings'] ?? []));
+    $tradesJson = encodeJsonForDb(sanitizeArray($payload['trades'] ?? []));
+    $reflectionsJson = encodeJsonForDb(sanitizeArray($payload['reflections'] ?? []));
+    $replayNotesJson = encodeJsonForDb(sanitizeReplayNotes($payload['replayNotes'] ?? []));
 
-    return $accountsDir . DIRECTORY_SEPARATOR . $safe . '.json';
+    $stmt = $pdo->prepare(
+        <<<SQL
+        INSERT INTO journal_data (user_id, settings, trades, reflections, replay_notes, updated_at)
+        VALUES (
+            :user_id,
+            CAST(:settings AS jsonb),
+            CAST(:trades AS jsonb),
+            CAST(:reflections AS jsonb),
+            CAST(:replay_notes AS jsonb),
+            NOW()
+        )
+        ON CONFLICT (user_id) DO UPDATE SET
+            settings = EXCLUDED.settings,
+            trades = EXCLUDED.trades,
+            reflections = EXCLUDED.reflections,
+            replay_notes = EXCLUDED.replay_notes,
+            updated_at = NOW()
+        SQL
+    );
+
+    $stmt->execute([
+        ':user_id' => $userId,
+        ':settings' => $settingsJson,
+        ':trades' => $tradesJson,
+        ':reflections' => $reflectionsJson,
+        ':replay_notes' => $replayNotesJson,
+    ]);
 }
 
-function writeJsonFile(string $file, $payload, string $errorMessage): void
+function encodeJsonForDb($value): string
 {
-    $json = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-    if ($json === false) {
+    $json = json_encode($value, JSON_UNESCAPED_SLASHES);
+    if (!is_string($json)) {
         respond(500, ['ok' => false, 'error' => 'Failed to encode JSON payload.']);
     }
 
-    $written = file_put_contents($file, $json . PHP_EOL, LOCK_EX);
-    if ($written === false) {
-        respond(500, ['ok' => false, 'error' => $errorMessage]);
-    }
+    return $json;
 }
 
 function sanitizeSettings(array $settings): array
@@ -300,17 +456,22 @@ function sanitizeArray($value): array
     return is_array($value) ? $value : [];
 }
 
-function sanitizeObject($value)
+function sanitizeReplayNotes($value): array
 {
-    if (is_array($value)) {
-        return $value;
-    }
-
     if (is_object($value)) {
-        return $value;
+        $value = get_object_vars($value);
     }
 
-    return new stdClass();
+    if (!is_array($value)) {
+        return [];
+    }
+
+    $result = [];
+    foreach ($value as $key => $item) {
+        $result[(string) $key] = is_scalar($item) || $item === null ? (string) ($item ?? '') : '';
+    }
+
+    return $result;
 }
 
 function positiveNumber($value, float $fallback): float
@@ -331,6 +492,26 @@ function nonNegativeNumber($value, float $fallback): float
 
     $num = (float) $value;
     return $num >= 0 ? $num : $fallback;
+}
+
+function isUniqueViolation(Throwable $error): bool
+{
+    if (!$error instanceof PDOException) {
+        return false;
+    }
+
+    $sqlState = (string) ($error->errorInfo[0] ?? '');
+    return $sqlState === '23505';
+}
+
+function debugMessage(string $baseMessage, Throwable $error): string
+{
+    $debug = strtolower(trim((string) getenv('APP_DEBUG')));
+    if ($debug === '1' || $debug === 'true' || $debug === 'yes') {
+        return $baseMessage . ' ' . $error->getMessage();
+    }
+
+    return $baseMessage;
 }
 
 function respond(int $statusCode, array $payload): void

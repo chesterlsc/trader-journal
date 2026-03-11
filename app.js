@@ -392,7 +392,7 @@ async function checkAuthSession() {
     state.auth.checked = true;
     state.auth.isAuthenticated = false;
     state.auth.username = "";
-    setMessage(ui.authMessage, "Auth service unavailable. Run app with PHP server for login.", "error");
+    setMessage(ui.authMessage, "Auth service unavailable. Ensure PHP server and PostgreSQL are running.", "error");
   }
 
   updateAuthUi();
@@ -1643,18 +1643,18 @@ async function saveToPhpStorage(options = {}) {
 
     const body = await response.json();
     if (!response.ok || !body.ok) {
-      throw new Error(body.error || "PHP save failed");
+      throw new Error(body.error || "Server save failed");
     }
 
     if (!silent) {
-      setMessage(ui.journalMessage, "Saved to PHP JSON storage.", "success");
+      setMessage(ui.journalMessage, "Saved to server database.", "success");
     }
     return true;
   } catch (error) {
     if (!silent) {
       setMessage(
         ui.journalMessage,
-        error.message || "PHP save failed. Start with `php -S localhost:8000` and open via http://localhost:8000.",
+        error.message || "Server save failed. Confirm DATABASE_URL and open app via PHP server.",
         "error"
       );
     }
@@ -1689,7 +1689,7 @@ async function loadFromPhpStorage(options = {}) {
 
     const body = await response.json();
     if (!response.ok || !body.ok || !body.data) {
-      throw new Error(body.error || "PHP load failed");
+      throw new Error(body.error || "Server load failed");
     }
 
     const serverSettings = normalizeSettings(body.data.settings);
@@ -1723,14 +1723,14 @@ async function loadFromPhpStorage(options = {}) {
     hydrateRiskForm();
     renderAll();
     if (!silent) {
-      setMessage(ui.journalMessage, "Loaded from PHP JSON storage.", "success");
+      setMessage(ui.journalMessage, "Loaded from server database.", "success");
     }
     return true;
   } catch (error) {
     if (!silent) {
       setMessage(
         ui.journalMessage,
-        error.message || "PHP load failed. Start with `php -S localhost:8000` and open via http://localhost:8000.",
+        error.message || "Server load failed. Confirm DATABASE_URL and open app via PHP server.",
         "error"
       );
     }
