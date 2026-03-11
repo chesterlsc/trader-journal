@@ -25,7 +25,7 @@ try {
     $pdo = createPdoFromEnvironment();
     ensureSchema($pdo);
 } catch (Throwable $error) {
-    respond(500, ['ok' => false, 'error' => debugMessage('Database connection failed. Check DATABASE_URL.', $error)]);
+    respond(500, ['ok' => false, 'error' => debugMessage('Database initialization failed. Check DATABASE_URL and table schema.', $error)]);
 }
 
 try {
@@ -349,22 +349,7 @@ function ensureSchema(PDO $pdo): void
         SQL
     );
 
-    $pdo->exec(
-        'CREATE INDEX IF NOT EXISTS idx_login_info_created_at ON login_info (created_at DESC)'
-    );
-    $pdo->exec(
-        'CREATE INDEX IF NOT EXISTS idx_login_info_username ON login_info (username)'
-    );
-    $pdo->exec(
-        'CREATE INDEX IF NOT EXISTS idx_trade_screenshots_user_trade ON trade_screenshots (user_id, trade_id)'
-    );
-    $pdo->exec(
-        'CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_notes_user_id ON journal_notes (user_id)'
-    );
-    $pdo->exec(
-        'CREATE UNIQUE INDEX IF NOT EXISTS idx_trades_user_id ON trades (user_id)'
-    );
-
+    // Keep schema migration safe for legacy tables with older column names/order.
     $pdo->exec('ALTER TABLE journal_notes ADD COLUMN IF NOT EXISTS user_id BIGINT');
     $pdo->exec('ALTER TABLE journal_notes ADD COLUMN IF NOT EXISTS settings JSONB NOT NULL DEFAULT \'{}\'::jsonb');
     $pdo->exec('ALTER TABLE journal_notes ADD COLUMN IF NOT EXISTS reflections JSONB NOT NULL DEFAULT \'[]\'::jsonb');
@@ -389,6 +374,78 @@ function ensureSchema(PDO $pdo): void
     $pdo->exec('ALTER TABLE trade_screenshots ADD COLUMN IF NOT EXISTS screenshot_data TEXT NOT NULL DEFAULT \'\'');
     $pdo->exec('ALTER TABLE trade_screenshots ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()');
     $pdo->exec('ALTER TABLE trade_screenshots ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()');
+
+    createIndexIfColumnsExist(
+        $pdo,
+        'login_info',
+        ['created_at'],
+        'CREATE INDEX IF NOT EXISTS idx_login_info_created_at ON login_info (created_at DESC)'
+    );
+    createIndexIfColumnsExist(
+        $pdo,
+        'login_info',
+        ['username'],
+        'CREATE INDEX IF NOT EXISTS idx_login_info_username ON login_info (username)'
+    );
+    createIndexIfColumnsExist(
+        $pdo,
+        'trade_screenshots',
+        ['user_id', 'trade_id'],
+        'CREATE INDEX IF NOT EXISTS idx_trade_screenshots_user_trade ON trade_screenshots (user_id, trade_id)'
+    );
+    createIndexIfColumnsExist(
+        $pdo,
+        'journal_notes',
+        ['user_id'],
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_notes_user_id ON journal_notes (user_id)'
+    );
+    createIndexIfColumnsExist(
+        $pdo,
+        'trades',
+        ['user_id'],
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_trades_user_id ON trades (user_id)'
+    );
+}
+
+function createIndexIfColumnsExist(PDO $pdo, string $tableName, array $columns, string $sql): void
+{
+    foreach ($columns as $column) {
+        if (!tableColumnExists($pdo, $tableName, (string) $column)) {
+            return;
+        }
+    }
+
+    try {
+        $pdo->exec($sql);
+    } catch (PDOException $error) {
+        $sqlState = (string) ($error->errorInfo[0] ?? '');
+        // Ignore undefined column/table errors for legacy schemas.
+        if ($sqlState === '42703' || $sqlState === '42P01') {
+            return;
+        }
+        throw $error;
+    }
+}
+
+function tableColumnExists(PDO $pdo, string $tableName, string $columnName): bool
+{
+    $stmt = $pdo->prepare(
+        <<<SQL
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = :table_name
+          AND column_name = :column_name
+        LIMIT 1
+        SQL
+    );
+
+    $stmt->execute([
+        ':table_name' => $tableName,
+        ':column_name' => $columnName,
+    ]);
+
+    return $stmt->fetchColumn() !== false;
 }
 
 function currentUsername(): ?string
