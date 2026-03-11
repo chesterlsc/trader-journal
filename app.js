@@ -360,7 +360,11 @@ function handleTradeSubmit(event) {
     netPnl: metrics.netPnl,
     riskAmount: metrics.riskAmount,
     rMultiple: metrics.rMultiple,
-    rrRatio: metrics.rrRatio
+    rrRatio: metrics.rrRatio,
+    pips: metrics.pips,
+    pipSize: metrics.pipSize,
+    pipValuePerLot: metrics.pipValuePerLot,
+    dollarPerPip: metrics.dollarPerPip
   };
 
   if (existingId) {
@@ -440,9 +444,29 @@ function readTradeForm() {
 
 function calculateTradeMetrics(trade) {
   const directionFactor = trade.direction === "Buy" ? 1 : -1;
-  const netPnl = round((trade.exitPrice - trade.entryPrice) * trade.positionSize * directionFactor);
+  const pipSpec = getPipSpec(trade);
+  const directedMoveToExit = (trade.exitPrice - trade.entryPrice) * directionFactor;
+  const rawPips = pipSpec.pipSize > 0 ? directedMoveToExit / pipSpec.pipSize : 0;
+  const pips = round(rawPips);
 
-  const riskFromStructure = Math.abs(trade.entryPrice - trade.stopLoss) * trade.positionSize;
+  const pipDistanceToStop = pipSpec.pipSize > 0
+    ? Math.abs((trade.entryPrice - trade.stopLoss) / pipSpec.pipSize)
+    : 0;
+
+  let netPnl = 0;
+  let riskFromStructure = 0;
+  let dollarPerPip = 0;
+
+  if (pipSpec.mode === "pip-lot") {
+    dollarPerPip = round(pipSpec.pipValuePerLot * trade.positionSize);
+    netPnl = round(pips * dollarPerPip);
+    riskFromStructure = round(pipDistanceToStop * dollarPerPip);
+  } else {
+    netPnl = round(directedMoveToExit * trade.positionSize);
+    riskFromStructure = round(Math.abs(trade.entryPrice - trade.stopLoss) * trade.positionSize);
+    dollarPerPip = round(pipSpec.pipSize * trade.positionSize);
+  }
+
   const fallbackRisk = state.settings.startingBalance * (trade.riskPercent / 100);
   const riskAmount = round(riskFromStructure > 0 ? riskFromStructure : fallbackRisk);
   const rMultiple = riskAmount > 0 ? round(netPnl / riskAmount) : 0;
@@ -458,7 +482,71 @@ function calculateTradeMetrics(trade) {
     autoResult = "Loss";
   }
 
-  return { netPnl, riskAmount, rMultiple, rrRatio, autoResult };
+  return {
+    netPnl,
+    riskAmount,
+    rMultiple,
+    rrRatio,
+    autoResult,
+    pips,
+    pipSize: pipSpec.pipSize,
+    pipValuePerLot: pipSpec.pipValuePerLot,
+    dollarPerPip
+  };
+}
+
+function getPipSpec(trade) {
+  const asset = String(trade.asset || "").toUpperCase();
+  const market = String(trade.market || "").toLowerCase();
+
+  // User-requested XAUUSD model: 0.01 lot => $1 per pip (1.0 price move).
+  if (asset.startsWith("XAU")) {
+    return { mode: "pip-lot", pipSize: 1, pipValuePerLot: 100 };
+  }
+
+  if (asset.startsWith("XAG")) {
+    return { mode: "pip-lot", pipSize: 0.01, pipValuePerLot: 50 };
+  }
+
+  const isForexPair = /^[A-Z]{6}$/.test(asset);
+  if (isForexPair || market === "forex") {
+    const isJpyPair = asset.endsWith("JPY");
+    return { mode: "pip-lot", pipSize: isJpyPair ? 0.01 : 0.0001, pipValuePerLot: 10 };
+  }
+
+  return {
+    mode: "unit",
+    pipSize: inferPipSizeFromPrice(trade.entryPrice, market),
+    pipValuePerLot: 0
+  };
+}
+
+function inferPipSizeFromPrice(entryPrice, market) {
+  if (!Number.isFinite(entryPrice) || entryPrice <= 0) {
+    return 0.01;
+  }
+
+  if (market === "crypto") {
+    if (entryPrice >= 10000) return 10;
+    if (entryPrice >= 1000) return 1;
+    if (entryPrice >= 100) return 0.1;
+    if (entryPrice >= 1) return 0.01;
+    if (entryPrice >= 0.1) return 0.001;
+    return 0.0001;
+  }
+
+  if (market === "stocks" || market === "etfs" || market === "indices") {
+    if (entryPrice >= 1000) return 1;
+    if (entryPrice >= 100) return 0.1;
+    return 0.01;
+  }
+
+  if (market === "metals" || market === "commodities" || market === "futures") {
+    if (entryPrice >= 100) return 0.1;
+    return 0.01;
+  }
+
+  return 0.01;
 }
 
 function handleScreenshotUpload(event) {
@@ -694,6 +782,10 @@ function exportTradesCsv() {
     "psychology",
     "executionQuality",
     "result",
+    "pips",
+    "pipSize",
+    "pipValuePerLot",
+    "dollarPerPip",
     "netPnl",
     "rMultiple",
     "rrRatio",
@@ -1374,7 +1466,7 @@ function renderJournalTable() {
   const filtered = getFilteredTrades();
 
   if (!filtered.length) {
-    ui.tradesBody.innerHTML = '<tr class="empty-row"><td colspan="12">No trades match current filters.</td></tr>';
+    ui.tradesBody.innerHTML = '<tr class="empty-row"><td colspan="13">No trades match current filters.</td></tr>';
     return;
   }
 
@@ -1385,6 +1477,7 @@ function renderJournalTable() {
       const resultClass =
         trade.result === "Win" ? "pill pill-win" : trade.result === "Loss" ? "pill pill-loss" : "pill pill-be";
       const pnlClass = trade.netPnl >= 0 ? "pnl-positive" : "pnl-negative";
+      const pipClass = trade.pips > 0 ? "pnl-positive" : trade.pips < 0 ? "pnl-negative" : "";
 
       return `
         <tr>
@@ -1395,6 +1488,7 @@ function renderJournalTable() {
           <td data-label="Setup">${escapeHtml(trade.setupType)}</td>
           <td data-label="Timeframe">${escapeHtml(trade.timeframe)}</td>
           <td data-label="Result"><span class="${resultClass}">${escapeHtml(trade.result)}</span></td>
+          <td data-label="Pips" class="${pipClass}">${Number.isFinite(trade.pips) ? trade.pips.toFixed(2) : "0.00"}</td>
           <td data-label="Net P&L" class="${pnlClass}">${formatCurrency(trade.netPnl)}</td>
           <td data-label="R-Multiple">${Number.isFinite(trade.rMultiple) ? trade.rMultiple.toFixed(2) : "0.00"}R</td>
           <td data-label="Psychology">${escapeHtml(trade.psychology)}</td>
@@ -1600,35 +1694,53 @@ function normalizeTrades(input) {
 
   return input
     .filter((item) => item && typeof item === "object" && item.id && item.date)
-    .map((item) => ({
-      id: String(item.id),
-      createdAt: String(item.createdAt || ""),
-      updatedAt: String(item.updatedAt || ""),
-      date: String(item.date),
-      session: String(item.session || "Custom"),
-      market: String(item.market || "Forex"),
-      asset: String(item.asset || "UNKNOWN"),
-      direction: String(item.direction || "Buy"),
-      entryPrice: ensurePositiveNumber(item.entryPrice, 0),
-      stopLoss: ensurePositiveNumber(item.stopLoss, 0),
-      takeProfit: ensurePositiveNumber(item.takeProfit, 0),
-      exitPrice: ensurePositiveNumber(item.exitPrice, 0),
-      riskPercent: ensureNonNegative(item.riskPercent, 0),
-      positionSize: ensurePositiveNumber(item.positionSize, 0),
-      tradeResult: String(item.tradeResult || "Auto"),
-      setupType: String(item.setupType || "Custom"),
-      timeframe: String(item.timeframe || "M15"),
-      psychology: String(item.psychology || "Focused"),
-      executionQuality: String(item.executionQuality || "B"),
-      screenshotName: String(item.screenshotName || ""),
-      screenshotData: String(item.screenshotData || ""),
-      notes: String(item.notes || ""),
-      result: String(item.result || "Break Even"),
-      netPnl: ensureNumber(item.netPnl, 0),
-      riskAmount: ensureNonNegative(item.riskAmount, 0),
-      rMultiple: ensureNumber(item.rMultiple, 0),
-      rrRatio: ensureNonNegative(item.rrRatio, 0)
-    }));
+    .map((item) => {
+      const baseTrade = {
+        id: String(item.id),
+        createdAt: String(item.createdAt || ""),
+        updatedAt: String(item.updatedAt || ""),
+        date: String(item.date),
+        session: String(item.session || "Custom"),
+        market: String(item.market || "Forex"),
+        asset: String(item.asset || "UNKNOWN"),
+        direction: String(item.direction || "Buy"),
+        entryPrice: ensurePositiveNumber(item.entryPrice, 0),
+        stopLoss: ensurePositiveNumber(item.stopLoss, 0),
+        takeProfit: ensurePositiveNumber(item.takeProfit, 0),
+        exitPrice: ensurePositiveNumber(item.exitPrice, 0),
+        riskPercent: ensureNonNegative(item.riskPercent, 0),
+        positionSize: ensurePositiveNumber(item.positionSize, 0),
+        tradeResult: String(item.tradeResult || "Auto"),
+        setupType: String(item.setupType || "Custom"),
+        timeframe: String(item.timeframe || "M15"),
+        psychology: String(item.psychology || "Focused"),
+        executionQuality: String(item.executionQuality || "B"),
+        screenshotName: String(item.screenshotName || ""),
+        screenshotData: String(item.screenshotData || ""),
+        notes: String(item.notes || "")
+      };
+
+      const metrics = calculateTradeMetrics(baseTrade);
+      const manualResult = String(item.result || "").trim();
+      const safeManualResult =
+        manualResult === "Win" || manualResult === "Loss" || manualResult === "Break Even"
+          ? manualResult
+          : metrics.autoResult;
+      const resolvedResult = baseTrade.tradeResult === "Auto" ? metrics.autoResult : safeManualResult;
+
+      return {
+        ...baseTrade,
+        result: resolvedResult,
+        netPnl: metrics.netPnl,
+        riskAmount: metrics.riskAmount,
+        rMultiple: metrics.rMultiple,
+        rrRatio: metrics.rrRatio,
+        pips: metrics.pips,
+        pipSize: metrics.pipSize,
+        pipValuePerLot: metrics.pipValuePerLot,
+        dollarPerPip: metrics.dollarPerPip
+      };
+    });
 }
 
 function normalizeReflections(input) {
