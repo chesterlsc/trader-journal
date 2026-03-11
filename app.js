@@ -25,6 +25,7 @@ const state = {
   settings: { ...DEFAULT_SETTINGS },
   reflections: [],
   replayNotes: {},
+  bulkPreview: [],
   auth: {
     checked: false,
     isAuthenticated: false,
@@ -51,6 +52,7 @@ const ui = {
   sidebar: document.getElementById("sidebar"),
   mainNav: document.getElementById("mainNav"),
   navToggleBtn: document.getElementById("navToggleBtn"),
+  authGate: document.getElementById("authGate"),
   brandTitle: document.getElementById("brandTitle"),
   navButtons: Array.from(document.querySelectorAll(".nav-btn")),
   views: Array.from(document.querySelectorAll(".view")),
@@ -87,6 +89,14 @@ const ui = {
   tradeSubmitBtn: document.getElementById("tradeSubmitBtn"),
   tradeResetBtn: document.getElementById("tradeResetBtn"),
   tradeFormMessage: document.getElementById("tradeFormMessage"),
+  bulkSource: document.getElementById("bulkSource"),
+  bulkInput: document.getElementById("bulkInput"),
+  bulkPreviewBtn: document.getElementById("bulkPreviewBtn"),
+  bulkImportBtn: document.getElementById("bulkImportBtn"),
+  bulkClearBtn: document.getElementById("bulkClearBtn"),
+  bulkMessage: document.getElementById("bulkMessage"),
+  bulkPreviewWrap: document.getElementById("bulkPreviewWrap"),
+  bulkPreviewBody: document.getElementById("bulkPreviewBody"),
   tradeFields: {
     tradeId: document.getElementById("tradeId"),
     tradeDate: document.getElementById("tradeDate"),
@@ -155,6 +165,7 @@ function init() {
   hydrateReviewMonth();
   updateBranding();
   updateAuthUi();
+  updateAccessGate();
   bindEvents();
   syncMobileNavState();
   renderAll();
@@ -198,6 +209,15 @@ function bindEvents() {
   ui.tradeForm.addEventListener("submit", handleTradeSubmit);
   ui.tradeResetBtn.addEventListener("click", () => resetTradeForm(false));
   ui.tradeFields.screenshot.addEventListener("change", handleScreenshotUpload);
+  if (ui.bulkPreviewBtn) {
+    ui.bulkPreviewBtn.addEventListener("click", handleBulkPreview);
+  }
+  if (ui.bulkImportBtn) {
+    ui.bulkImportBtn.addEventListener("click", handleBulkImport);
+  }
+  if (ui.bulkClearBtn) {
+    ui.bulkClearBtn.addEventListener("click", clearBulkImport);
+  }
 
   Object.values(ui.filters).forEach((input) => {
     input.addEventListener("input", handleFilterChange);
@@ -236,6 +256,9 @@ function bindEvents() {
     }
 
     if (!mod && event.key === "/") {
+      if (!canAccessApp()) {
+        return;
+      }
       event.preventDefault();
       switchView("journal");
       ui.filters.search.focus();
@@ -264,6 +287,12 @@ function bindEvents() {
 }
 
 function switchView(id) {
+  if (!canAccessApp()) {
+    setMessage(ui.authMessage, "Login first to open the dashboard.", "error");
+    updateAccessGate();
+    return;
+  }
+
   ui.navButtons.forEach((btn) => {
     btn.classList.toggle("is-active", btn.dataset.target === id);
   });
@@ -302,6 +331,28 @@ function syncMobileNavState() {
     ui.sidebar.classList.remove("nav-open");
     ui.navToggleBtn.classList.remove("is-open");
     ui.navToggleBtn.setAttribute("aria-expanded", "false");
+  }
+}
+
+function canAccessApp() {
+  return state.auth.checked && state.auth.isAuthenticated;
+}
+
+function updateAccessGate() {
+  const locked = !canAccessApp();
+  document.body.classList.toggle("auth-locked", locked);
+
+  if (ui.authGate) {
+    ui.authGate.hidden = !locked;
+  }
+
+  ui.navButtons.forEach((btn) => {
+    btn.disabled = locked;
+    btn.setAttribute("aria-disabled", String(locked));
+  });
+
+  if (locked) {
+    toggleMobileNav(false);
   }
 }
 
@@ -351,6 +402,9 @@ async function checkAuthSession() {
     if (loaded) {
       setMessage(ui.authMessage, `Session restored for ${state.auth.username}.`, "success");
     }
+    switchView("dashboard");
+  } else {
+    updateAccessGate();
   }
 }
 
@@ -421,6 +475,8 @@ async function submitAuth(action, username, password, successMessage) {
     } else {
       setMessage(ui.authMessage, `${successMessage} Using local journal until server load succeeds.`, "error");
     }
+
+    switchView("dashboard");
   } catch (error) {
     setMessage(ui.authMessage, error.message || `${action} failed`, "error");
   }
@@ -428,6 +484,7 @@ async function submitAuth(action, username, password, successMessage) {
 
 function updateAuthUi() {
   if (!ui.authStatus || !ui.loginBtn || !ui.registerBtn || !ui.logoutBtn) {
+    updateAccessGate();
     return;
   }
 
@@ -435,6 +492,7 @@ function updateAuthUi() {
 
   if (!state.auth.checked) {
     ui.authStatus.textContent = "Checking session...";
+    updateAccessGate();
     return;
   }
 
@@ -469,6 +527,8 @@ function updateAuthUi() {
       ui.authPassword.disabled = false;
     }
   }
+
+  updateAccessGate();
 }
 
 function isViewActive(id) {
@@ -557,26 +617,10 @@ function handleTradeSubmit(event) {
   }
 
   const existingId = ui.tradeFields.tradeId.value.trim();
-  const now = new Date().toISOString();
-  const metrics = calculateTradeMetrics(payload.value);
-
-  const resolvedResult = payload.value.tradeResult === "Auto" ? metrics.autoResult : payload.value.tradeResult;
-
-  const trade = {
-    id: existingId || createId(),
-    createdAt: existingId ? getExistingTrade(existingId)?.createdAt || now : now,
-    updatedAt: now,
-    ...payload.value,
-    result: resolvedResult,
-    netPnl: metrics.netPnl,
-    riskAmount: metrics.riskAmount,
-    rMultiple: metrics.rMultiple,
-    rrRatio: metrics.rrRatio,
-    pips: metrics.pips,
-    pipSize: metrics.pipSize,
-    pipValuePerLot: metrics.pipValuePerLot,
-    dollarPerPip: metrics.dollarPerPip
-  };
+  const trade = buildTradeRecord(payload.value, {
+    id: existingId,
+    createdAt: existingId ? getExistingTrade(existingId)?.createdAt : ""
+  });
 
   if (existingId) {
     state.trades = state.trades.map((item) => (item.id === existingId ? trade : item));
@@ -651,6 +695,511 @@ function readTradeForm() {
   }
 
   return { ok: true, value };
+}
+
+function buildTradeRecord(tradeInput, options = {}) {
+  const now = new Date().toISOString();
+  const existingId = String(options.id || "").trim();
+  const metrics = calculateTradeMetrics(tradeInput);
+  const resolvedResult = tradeInput.tradeResult === "Auto" ? metrics.autoResult : tradeInput.tradeResult;
+
+  return {
+    id: existingId || createId(),
+    createdAt: existingId ? String(options.createdAt || now) : now,
+    updatedAt: now,
+    ...tradeInput,
+    result: resolvedResult,
+    netPnl: metrics.netPnl,
+    riskAmount: metrics.riskAmount,
+    rMultiple: metrics.rMultiple,
+    rrRatio: metrics.rrRatio,
+    pips: metrics.pips,
+    pipSize: metrics.pipSize,
+    pipValuePerLot: metrics.pipValuePerLot,
+    dollarPerPip: metrics.dollarPerPip
+  };
+}
+
+function handleBulkPreview() {
+  if (!canAccessApp()) {
+    setMessage(ui.bulkMessage, "Login first before importing trades.", "error");
+    return;
+  }
+
+  const parsed = parseBulkTrades(ui.bulkInput.value, ui.bulkSource.value);
+  state.bulkPreview = parsed.trades;
+  renderBulkPreview(parsed.trades);
+
+  if (!parsed.trades.length) {
+    const errorText = parsed.errors[0] || "No valid rows found. Check your headers and values.";
+    setMessage(ui.bulkMessage, errorText, "error");
+    return;
+  }
+
+  let message = `Preview ready: ${parsed.trades.length} valid row(s).`;
+  if (parsed.errors.length > 0) {
+    message += ` Skipped ${parsed.errors.length} invalid row(s).`;
+  }
+  setMessage(ui.bulkMessage, message, "success");
+}
+
+function handleBulkImport() {
+  if (!canAccessApp()) {
+    setMessage(ui.bulkMessage, "Login first before importing trades.", "error");
+    return;
+  }
+
+  const parsed = parseBulkTrades(ui.bulkInput.value, ui.bulkSource.value);
+  if (!parsed.trades.length) {
+    const errorText = parsed.errors[0] || "No valid rows found to import.";
+    setMessage(ui.bulkMessage, errorText, "error");
+    renderBulkPreview([]);
+    return;
+  }
+
+  let imported = 0;
+  let duplicates = 0;
+
+  parsed.trades.forEach((tradeInput) => {
+    if (isLikelyDuplicateTrade(tradeInput)) {
+      duplicates += 1;
+      return;
+    }
+
+    state.trades.push(buildTradeRecord(tradeInput));
+    imported += 1;
+  });
+
+  if (imported === 0) {
+    setMessage(ui.bulkMessage, "All parsed rows matched existing trades. Nothing imported.", "error");
+    return;
+  }
+
+  persistState();
+  renderAll();
+  clearBulkImport(true);
+
+  let message = `Imported ${imported} trade(s).`;
+  if (duplicates > 0) {
+    message += ` Skipped ${duplicates} duplicate row(s).`;
+  }
+  if (parsed.errors.length > 0) {
+    message += ` Skipped ${parsed.errors.length} invalid row(s).`;
+  }
+  setMessage(ui.bulkMessage, message, "success");
+  setMessage(ui.tradeFormMessage, message, "success");
+}
+
+function clearBulkImport(keepMessage = false) {
+  if (ui.bulkInput) {
+    ui.bulkInput.value = "";
+  }
+  state.bulkPreview = [];
+  renderBulkPreview([]);
+  if (!keepMessage) {
+    setMessage(ui.bulkMessage, "", "");
+  }
+}
+
+function renderBulkPreview(trades) {
+  if (!ui.bulkPreviewWrap || !ui.bulkPreviewBody) {
+    return;
+  }
+
+  if (!trades.length) {
+    ui.bulkPreviewWrap.hidden = true;
+    ui.bulkPreviewBody.innerHTML = `
+      <tr class="empty-row">
+        <td colspan="9">No preview rows.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  ui.bulkPreviewWrap.hidden = false;
+  ui.bulkPreviewBody.innerHTML = trades
+    .slice(0, 30)
+    .map((trade) => `
+      <tr>
+        <td data-label="Date">${escapeHtml(trade.date)}</td>
+        <td data-label="Asset">${escapeHtml(trade.asset)}</td>
+        <td data-label="Market">${escapeHtml(trade.market)}</td>
+        <td data-label="Direction">${escapeHtml(trade.direction)}</td>
+        <td data-label="Entry">${escapeHtml(String(trade.entryPrice))}</td>
+        <td data-label="Stop">${escapeHtml(String(trade.stopLoss))}</td>
+        <td data-label="Take">${escapeHtml(String(trade.takeProfit))}</td>
+        <td data-label="Exit">${escapeHtml(String(trade.exitPrice))}</td>
+        <td data-label="Size">${escapeHtml(String(trade.positionSize))}</td>
+      </tr>
+    `)
+    .join("");
+}
+
+function parseBulkTrades(rawInput, source) {
+  const text = String(rawInput || "").trim();
+  if (!text) {
+    return { trades: [], errors: ["Paste CSV/TSV content first."] };
+  }
+
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (lines.length < 2) {
+    return { trades: [], errors: ["Include a header row and at least one data row."] };
+  }
+
+  const delimiter = detectBulkDelimiter(lines[0]);
+  const headers = parseDelimitedLine(lines[0], delimiter).map(normalizeBulkHeader).filter(Boolean);
+  if (!headers.length) {
+    return { trades: [], errors: ["Unable to parse header columns."] };
+  }
+
+  const trades = [];
+  const errors = [];
+
+  for (let i = 1; i < lines.length; i += 1) {
+    const cells = parseDelimitedLine(lines[i], delimiter);
+    if (!cells.some((cell) => String(cell).trim().length > 0)) {
+      continue;
+    }
+
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = String(cells[index] || "").trim();
+    });
+
+    const mapped = mapBulkRowToTrade(row, source, i + 1);
+    if (!mapped.ok) {
+      errors.push(mapped.error);
+      continue;
+    }
+
+    trades.push(mapped.trade);
+  }
+
+  return { trades, errors };
+}
+
+function mapBulkRowToTrade(row, source, rowNumber) {
+  const dateText = parseImportDate(getBulkValue(row, [
+    "date",
+    "trade_date",
+    "open_time",
+    "close_time",
+    "time",
+    "timestamp"
+  ]));
+
+  if (!dateText) {
+    return { ok: false, error: `Row ${rowNumber}: invalid date.` };
+  }
+
+  const asset = getBulkValue(row, ["asset", "symbol", "pair", "instrument", "ticker"])
+    .replace(/\s+/g, "")
+    .toUpperCase();
+  if (!asset) {
+    return { ok: false, error: `Row ${rowNumber}: missing asset/symbol.` };
+  }
+
+  const direction = normalizeImportedDirection(getBulkValue(row, ["direction", "side", "position", "type"]));
+  if (!direction) {
+    return { ok: false, error: `Row ${rowNumber}: direction must be Buy/Sell or Long/Short.` };
+  }
+
+  const entryPrice = parseImportNumber(getBulkValue(row, ["entry", "entry_price", "open", "open_price", "price"]));
+  if (!Number.isFinite(entryPrice) || entryPrice <= 0) {
+    return { ok: false, error: `Row ${rowNumber}: invalid entry price.` };
+  }
+
+  let stopLoss = parseImportNumber(getBulkValue(row, ["stop", "stop_loss", "sl", "stoploss"]));
+  let takeProfit = parseImportNumber(getBulkValue(row, ["take", "take_profit", "tp", "target"]));
+  let exitPrice = parseImportNumber(getBulkValue(row, ["exit", "exit_price", "close", "close_price"]));
+
+  const isBuy = direction === "Buy";
+  if (!Number.isFinite(stopLoss) || stopLoss <= 0) {
+    stopLoss = entryPrice * (isBuy ? 0.99 : 1.01);
+  }
+  if (!Number.isFinite(takeProfit) || takeProfit <= 0) {
+    takeProfit = entryPrice * (isBuy ? 1.01 : 0.99);
+  }
+  if (!Number.isFinite(exitPrice) || exitPrice <= 0) {
+    exitPrice = takeProfit;
+  }
+
+  if (isBuy && stopLoss >= entryPrice) {
+    stopLoss = entryPrice * 0.99;
+  }
+  if (!isBuy && stopLoss <= entryPrice) {
+    stopLoss = entryPrice * 1.01;
+  }
+  if (isBuy && takeProfit <= entryPrice) {
+    takeProfit = entryPrice * 1.01;
+  }
+  if (!isBuy && takeProfit >= entryPrice) {
+    takeProfit = entryPrice * 0.99;
+  }
+
+  const riskPercentRaw = parseImportNumber(getBulkValue(row, ["risk_percent", "risk", "risk_pct", "risk_"]));
+  const riskPercent = Number.isFinite(riskPercentRaw) && riskPercentRaw > 0 ? riskPercentRaw : state.settings.riskPerTrade;
+
+  const positionSizeRaw = parseImportNumber(getBulkValue(row, ["position_size", "size", "qty", "quantity", "volume", "lot", "lot_size", "amount"]));
+  const positionSize = Number.isFinite(positionSizeRaw) && positionSizeRaw > 0 ? positionSizeRaw : 1;
+
+  const market = inferImportedMarket(
+    asset,
+    source,
+    getBulkValue(row, ["market", "market_type", "class"])
+  );
+
+  const tradeResult = normalizeImportedResult(getBulkValue(row, ["result", "outcome"]));
+  const session = getBulkValue(row, ["session"]).trim() || "Custom";
+  const setupType = getBulkValue(row, ["setup", "setup_type"]).trim() || "Custom";
+  const timeframe = getBulkValue(row, ["timeframe", "tf"]).trim().toUpperCase() || "M15";
+  const psychology = getBulkValue(row, ["psychology", "emotion"]).trim() || "Focused";
+  const executionQuality = getBulkValue(row, ["execution", "execution_quality", "grade"]).trim() || "B";
+  const notes = getBulkValue(row, ["notes", "note", "comment", "remarks"]).trim();
+
+  return {
+    ok: true,
+    trade: {
+      date: dateText,
+      session,
+      market,
+      asset,
+      direction,
+      entryPrice,
+      stopLoss,
+      takeProfit,
+      exitPrice,
+      riskPercent,
+      positionSize,
+      tradeResult,
+      setupType,
+      timeframe,
+      psychology,
+      executionQuality,
+      screenshotName: "",
+      screenshotData: "",
+      notes: notes ? notes : `Imported from ${source.toUpperCase()}`
+    }
+  };
+}
+
+function detectBulkDelimiter(headerLine) {
+  const commaCount = (headerLine.match(/,/g) || []).length;
+  const tabCount = (headerLine.match(/\t/g) || []).length;
+  return tabCount > commaCount ? "\t" : ",";
+}
+
+function parseDelimitedLine(line, delimiter) {
+  const row = [];
+  let value = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    const next = line[i + 1];
+
+    if (char === "\"") {
+      if (inQuotes && next === "\"") {
+        value += "\"";
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === delimiter && !inQuotes) {
+      row.push(value.trim());
+      value = "";
+      continue;
+    }
+
+    value += char;
+  }
+
+  row.push(value.trim());
+  return row;
+}
+
+function normalizeBulkHeader(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function getBulkValue(row, keys) {
+  for (const key of keys) {
+    const normalized = normalizeBulkHeader(key);
+    const value = row[normalized];
+    if (value !== undefined && String(value).trim() !== "") {
+      return String(value).trim();
+    }
+  }
+
+  return "";
+}
+
+function parseImportDate(rawValue) {
+  const value = String(rawValue || "").trim();
+  if (!value) {
+    return "";
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
+    return value.slice(0, 10);
+  }
+
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 30000 && numeric < 80000) {
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+    excelEpoch.setUTCDate(excelEpoch.getUTCDate() + Math.floor(numeric));
+    return toDateInputValue(excelEpoch);
+  }
+
+  const date = new Date(value);
+  if (!Number.isNaN(date.getTime())) {
+    return toDateInputValue(date);
+  }
+
+  const normalized = value.replace(/\./g, "-").replace(/\//g, "-");
+  const parts = normalized.split("-");
+  if (parts.length === 3) {
+    const [a, b, c] = parts.map((item) => Number(item));
+    if (Number.isFinite(a) && Number.isFinite(b) && Number.isFinite(c)) {
+      if (String(parts[0]).length === 4) {
+        const isoCandidate = `${String(a).padStart(4, "0")}-${String(b).padStart(2, "0")}-${String(c).padStart(2, "0")}`;
+        const parsed = new Date(`${isoCandidate}T00:00:00`);
+        if (!Number.isNaN(parsed.getTime())) {
+          return isoCandidate;
+        }
+      }
+      const isoCandidate = `${String(c).padStart(4, "0")}-${String(a).padStart(2, "0")}-${String(b).padStart(2, "0")}`;
+      const parsed = new Date(`${isoCandidate}T00:00:00`);
+      if (!Number.isNaN(parsed.getTime())) {
+        return isoCandidate;
+      }
+    }
+  }
+
+  return "";
+}
+
+function parseImportNumber(rawValue) {
+  const value = String(rawValue || "").trim();
+  if (!value) {
+    return NaN;
+  }
+
+  const cleaned = value
+    .replace(/[$,%\s]/g, "")
+    .replace(/,/g, "")
+    .replace(/[^\d.-]/g, "");
+
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : NaN;
+}
+
+function normalizeImportedDirection(rawValue) {
+  const value = String(rawValue || "").trim().toLowerCase();
+  if (!value) {
+    return "";
+  }
+
+  if (value.includes("buy") || value.includes("long")) {
+    return "Buy";
+  }
+
+  if (value.includes("sell") || value.includes("short")) {
+    return "Sell";
+  }
+
+  return "";
+}
+
+function normalizeImportedResult(rawValue) {
+  const value = String(rawValue || "").trim().toLowerCase();
+  if (!value) {
+    return "Auto";
+  }
+
+  if (value.includes("win") || value.includes("profit")) {
+    return "Win";
+  }
+
+  if (value.includes("loss") || value.includes("lose")) {
+    return "Loss";
+  }
+
+  if (value.includes("break")) {
+    return "Break Even";
+  }
+
+  return "Auto";
+}
+
+function inferImportedMarket(asset, source, marketRaw) {
+  const explicit = normalizeMarketLabel(marketRaw);
+  if (explicit) {
+    return explicit;
+  }
+
+  if (source === "vantage") {
+    return "Forex";
+  }
+  if (source === "binance") {
+    return "Crypto";
+  }
+
+  if (asset.startsWith("XAU") || asset.startsWith("XAG")) {
+    return "Metals";
+  }
+  if (/^[A-Z]{6}$/.test(asset)) {
+    return "Forex";
+  }
+  if (asset.endsWith("USDT") || asset.endsWith("USDC") || asset.endsWith("BTC") || asset.endsWith("ETH")) {
+    return "Crypto";
+  }
+  if (/^[A-Z]{1,5}$/.test(asset)) {
+    return "Stocks";
+  }
+
+  return "Other";
+}
+
+function normalizeMarketLabel(rawValue) {
+  const value = String(rawValue || "").trim().toLowerCase();
+  if (!value) {
+    return "";
+  }
+
+  if (value === "forex" || value === "fx") return "Forex";
+  if (value === "crypto" || value === "cryptocurrency") return "Crypto";
+  if (value === "stocks" || value === "stock") return "Stocks";
+  if (value === "indices" || value === "index") return "Indices";
+  if (value === "metals" || value === "metal") return "Metals";
+  if (value === "commodities" || value === "commodity") return "Commodities";
+  if (value === "futures" || value === "future") return "Futures";
+  if (value === "etf" || value === "etfs") return "ETFs";
+  if (value === "options" || value === "option") return "Options";
+
+  return "Other";
+}
+
+function isLikelyDuplicateTrade(tradeInput) {
+  return state.trades.some((trade) =>
+    trade.date === tradeInput.date &&
+    trade.asset === tradeInput.asset &&
+    trade.direction === tradeInput.direction &&
+    Math.abs(Number(trade.entryPrice) - Number(tradeInput.entryPrice)) < 1e-9 &&
+    Math.abs(Number(trade.exitPrice) - Number(tradeInput.exitPrice)) < 1e-9 &&
+    Math.abs(Number(trade.positionSize) - Number(tradeInput.positionSize)) < 1e-9
+  );
 }
 
 function calculateTradeMetrics(trade) {

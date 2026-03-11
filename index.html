@@ -76,6 +76,13 @@
       </aside>
 
       <main class="content">
+        <section class="auth-gate" id="authGate" aria-live="polite" hidden>
+          <div class="auth-gate-card">
+            <h2>Login Required</h2>
+            <p>Use the login panel to access your dashboard and save/load your trading database.</p>
+          </div>
+        </section>
+
         <nav class="desktop-nav" aria-label="Desktop sections">
           <button class="nav-btn nav-btn-top is-active" type="button" data-target="dashboard">Dashboard</button>
           <button class="nav-btn nav-btn-top" type="button" data-target="trade-entry">Trade Entry</button>
@@ -262,6 +269,7 @@
               </table>
             </div>
           </section>
+
         </section>
 
         <section class="view" id="trade-entry" aria-labelledby="tradeEntryHeading">
@@ -445,6 +453,63 @@
               <option value="TSLA"></option>
               <option value="NVDA"></option>
             </datalist>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h3>Bulk Trade Entry</h3>
+              <p>Paste CSV/TSV data from Vantage, Binance, or Google Sheets.</p>
+            </div>
+
+            <div class="bulk-grid">
+              <label>
+                Source
+                <select id="bulkSource">
+                  <option value="generic">Generic CSV/TSV</option>
+                  <option value="vantage">Vantage Export</option>
+                  <option value="binance">Binance Export</option>
+                  <option value="google">Google Sheets Copy</option>
+                </select>
+              </label>
+              <label class="field-span-all">
+                Paste Data
+                <textarea
+                  id="bulkInput"
+                  rows="8"
+                  placeholder="Paste header + rows. Supported columns: date, market, asset/symbol, direction/side, entry, stop, take, exit, risk%, size/qty, setup, timeframe, psychology, execution, notes"
+                ></textarea>
+              </label>
+            </div>
+
+            <div class="form-actions">
+              <button id="bulkPreviewBtn" class="btn" type="button">Preview</button>
+              <button id="bulkImportBtn" class="btn primary" type="button">Import Trades</button>
+              <button id="bulkClearBtn" class="btn" type="button">Clear</button>
+            </div>
+            <p id="bulkMessage" class="form-message" aria-live="polite"></p>
+
+            <div id="bulkPreviewWrap" class="table-wrap" hidden>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Asset</th>
+                    <th>Market</th>
+                    <th>Direction</th>
+                    <th>Entry</th>
+                    <th>Stop</th>
+                    <th>Take</th>
+                    <th>Exit</th>
+                    <th>Size</th>
+                  </tr>
+                </thead>
+                <tbody id="bulkPreviewBody">
+                  <tr class="empty-row">
+                    <td colspan="9">No preview rows.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </section>
         </section>
 

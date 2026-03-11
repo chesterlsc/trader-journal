@@ -239,11 +239,44 @@ kbd {
 
 .content {
   display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.auth-gate {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(155deg, rgba(18, 31, 60, 0.9), rgba(9, 16, 30, 0.9));
+  box-shadow: var(--shadow);
+  min-height: min(46vh, 360px);
+  place-items: center;
+  padding: 18px;
+}
+
+.auth-gate-card {
+  width: min(560px, 100%);
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: rgba(10, 17, 32, 0.86);
+  padding: 20px;
+}
+
+.auth-gate-card h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.auth-gate-card p {
+  margin: 10px 0 0;
+  color: var(--text-soft);
+  font-size: 0.93rem;
 }
 
 .desktop-nav {
   display: none;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(130px, 1fr));
   gap: 8px;
   padding: 10px;
   border: 1px solid var(--line);
@@ -256,8 +289,13 @@ kbd {
 }
 
 .nav-btn-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   padding: 10px 8px;
+  min-height: 46px;
+  white-space: nowrap;
 }
 
 .nav-btn-top:hover {
@@ -418,6 +456,18 @@ textarea:focus {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.bulk-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+#bulkInput {
+  min-height: 170px;
+  font-family: "JetBrains Mono", "Consolas", monospace;
+  font-size: 12px;
 }
 
 .compact-form .form-actions {
@@ -707,6 +757,21 @@ td {
   color: var(--text-soft);
 }
 
+body.auth-locked .desktop-nav,
+body.auth-locked .view {
+  display: none !important;
+}
+
+.nav-btn:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+}
+
+.nav-btn:disabled:hover {
+  transform: none;
+  border-color: var(--line);
+}
+
 .site-footer {
   width: min(1420px, 96vw);
   margin: 0 auto 24px;
@@ -840,6 +905,10 @@ td {
     order: 5;
   }
 
+  .bulk-grid {
+    grid-template-columns: 1fr;
+  }
+
   .site-footer {
     width: min(100%, calc(100vw - 12px));
     margin: 0 auto 16px;
@@ -927,6 +996,7 @@ td {
   .form-grid,
   .filter-grid,
   .compact-form,
+  .bulk-grid,
   .main-nav {
     grid-template-columns: 1fr;
   }
@@ -974,6 +1044,13 @@ td {
 
   .site-footer {
     font-size: 11px;
+  }
+}
+
+@media (max-width: 1180px) and (min-width: 1025px) {
+  .nav-btn-top {
+    font-size: 0.86rem;
+    padding: 9px 6px;
   }
 }
 
