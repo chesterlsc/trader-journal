@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Trader Journal | Trading Analytics</title>
-    <link rel="stylesheet" href="styles.css?v=20260312-traderjournalbrand" />
+    <link rel="stylesheet" href="styles.css?v=20260313-sitefixes" />
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -291,10 +291,6 @@
               </div>
               <form id="riskForm" class="compact-form" novalidate>
                 <label>
-                  Journal Name Prefix
-                  <input id="journalName" name="journalName" type="text" maxlength="24" placeholder="Chester" required />
-                </label>
-                <label>
                   Starting Balance (Custom)
                   <input id="startingBalance" name="startingBalance" type="number" min="1" step="0.01" required />
                 </label>
@@ -536,7 +532,7 @@
                         required
                       />
                     </label>
-                    <label>
+                    <label class="field-span-2">
                       Direction
                       <select id="direction" name="direction" required>
                         <option>Buy</option>
@@ -577,7 +573,7 @@
                       <input id="positionSize" name="positionSize" type="number" min="0" step="0.0001" required />
                       <small class="muted">XAUUSD rule: 0.01 lot = $1 per pip (1.0 move).</small>
                     </label>
-                    <label>
+                    <label class="field-span-2">
                       Trade Result
                       <select id="tradeResult" name="tradeResult" required>
                         <option value="Auto">Auto (from price)</option>
@@ -637,7 +633,7 @@
                         <option>Perfect Execution</option>
                       </select>
                     </label>
-                    <label>
+                    <label class="field-span-2">
                       Execution Quality
                       <select id="executionQuality" name="executionQuality" required>
                         <option>A+</option>
@@ -661,7 +657,7 @@
                       <input id="screenshot" name="screenshot" type="file" accept="image/*" />
                       <small id="screenshotLabel" class="muted">No screenshot selected</small>
                     </label>
-                    <div class="screenshot-preview" id="screenshotPreview">No preview</div>
+                    <div class="screenshot-preview field-span-all" id="screenshotPreview">No preview</div>
                     <label class="field-span-all">
                       Trade Notes
                       <textarea
@@ -1013,6 +1009,6 @@
       </details>
     </footer>
 
-    <script src="app.js?v=20260312-traderjournalbrand"></script>
+    <script src="app.js?v=20260313-sitefixes"></script>
   </body>
 </html>

@@ -211,6 +211,7 @@ function init() {
   hydrateReviewMonth();
   updateBranding();
   updateAuthUi();
+  document.body.classList.add("auth-ready");
   updateAccessGate();
   syncSetupTypeCustomField();
   bindEvents();
@@ -544,7 +545,7 @@ function updateAccessGate() {
   const authenticated = state.auth.checked && state.auth.isAuthenticated;
 
   document.body.classList.toggle("auth-locked", locked);
-  document.body.classList.toggle("auth-ready", state.auth.checked);
+  document.body.classList.add("auth-ready");
   document.body.classList.toggle("is-authenticated", authenticated);
 
   ui.navButtons.forEach((btn) => {
@@ -739,11 +740,21 @@ async function submitAuth(action, password, successMessage, identifier = "") {
     setResetTokenInUrl("");
     updateAuthUi();
 
-    const loaded = await loadFromPhpStorage({ silent: true, source: "auth", preferLocalIfServerEmpty: true });
-    if (loaded) {
-      setMessage(ui.authMessage, `${successMessage} Server journal loaded.`, "success");
+    if (action === "register") {
+      resetJournalState();
+      const saved = await saveToPhpStorage({ silent: true });
+      if (saved) {
+        setMessage(ui.authMessage, `${successMessage} Fresh journal ready.`, "success");
+      } else {
+        setMessage(ui.authMessage, `${successMessage} Fresh journal created locally.`, "success");
+      }
     } else {
-      setMessage(ui.authMessage, `${successMessage} Using local journal until server load succeeds.`, "error");
+      const loaded = await loadFromPhpStorage({ silent: true, source: "auth", preferLocalIfServerEmpty: true });
+      if (loaded) {
+        setMessage(ui.authMessage, `${successMessage} Server journal loaded.`, "success");
+      } else {
+        setMessage(ui.authMessage, `${successMessage} Using local journal until server load succeeds.`, "error");
+      }
     }
 
     await loadLoginLogs({ silent: true });
@@ -753,6 +764,21 @@ async function submitAuth(action, password, successMessage, identifier = "") {
   } catch (error) {
     setMessage(ui.authMessage, error.message || `${action} failed`, "error");
   }
+}
+
+function resetJournalState() {
+  state.settings = normalizeSettings(DEFAULT_SETTINGS);
+  state.trades = [];
+  state.reflections = [];
+  state.replayNotes = {};
+  state.bulkPreview = [];
+  persistState({ skipServerSync: true });
+  hydrateRiskForm();
+  hydrateReviewMonth();
+  resetTradeForm(false);
+  clearFilters();
+  renderAll();
+  renderLastSaved();
 }
 
 function updateAuthUi() {
@@ -982,7 +1008,6 @@ function applyInitialDates() {
 }
 
 function hydrateRiskForm() {
-  ui.riskInputs.journalName.value = state.settings.journalName;
   ui.riskInputs.startingBalance.value = state.settings.startingBalance;
   ui.riskInputs.balanceOverride.value = state.settings.balanceOverride > 0 ? state.settings.balanceOverride : "";
   ui.riskInputs.dailyMaxLoss.value = state.settings.dailyMaxLoss;
@@ -1009,7 +1034,7 @@ function handleRiskSubmit(event) {
 
   const parsedOverride = parseNumber(ui.riskInputs.balanceOverride.value);
   const nextSettings = {
-    journalName: normalizeJournalName(ui.riskInputs.journalName.value),
+    journalName: state.settings.journalName,
     startingBalance: parseNumber(ui.riskInputs.startingBalance.value),
     balanceOverride: Number.isFinite(parsedOverride) && parsedOverride >= 0 ? parsedOverride : 0,
     dailyMaxLoss: parseNumber(ui.riskInputs.dailyMaxLoss.value),
@@ -2479,6 +2504,9 @@ function calculateAnalytics(trades, settings, reflections) {
   const ordered = [...trades].sort(sortTradesAsc);
   const equity = [settings.startingBalance];
   const drawdowns = [0];
+  const initialTimelineDate = ordered[0]?.date || toDateInputValue(new Date());
+  const equityDates = [initialTimelineDate];
+  const drawdownDates = [initialTimelineDate];
 
   let peak = settings.startingBalance;
   let grossProfit = 0;
@@ -2536,6 +2564,7 @@ function calculateAnalytics(trades, settings, reflections) {
 
     const nextEquity = round(equity[equity.length - 1] + trade.netPnl);
     equity.push(nextEquity);
+    equityDates.push(trade.date);
 
     if (nextEquity > peak) {
       peak = nextEquity;
@@ -2543,6 +2572,7 @@ function calculateAnalytics(trades, settings, reflections) {
 
     const dd = round(peak - nextEquity);
     drawdowns.push(dd);
+    drawdownDates.push(trade.date);
     if (dd > 0) {
       drawdownSum += dd;
       drawdownCount += 1;
@@ -2650,7 +2680,9 @@ function calculateAnalytics(trades, settings, reflections) {
     weeklyViolations,
     riskPerTradeViolations,
     equity,
+    equityDates,
     drawdowns,
+    drawdownDates,
     setupStats: Array.from(setupStats.values()),
     disciplineScore,
     dailyTradingScore,
@@ -3014,12 +3046,14 @@ function renderCharts(analytics) {
   drawLineChart(ui.equityChart, analytics.equity, {
     lineColor: "#39d3ff",
     fillColor: "rgba(57, 211, 255, 0.15)",
+    labels: analytics.equityDates,
     emptyLabel: "No equity data yet"
   });
 
   drawLineChart(ui.drawdownChart, analytics.drawdowns, {
     lineColor: "#ff5a7e",
     fillColor: "rgba(255, 90, 126, 0.16)",
+    labels: analytics.drawdownDates,
     emptyLabel: "No drawdown data yet"
   });
 
@@ -3041,8 +3075,11 @@ function drawLineChart(canvas, data, options) {
   const { ctx, width, height } = ctxData;
   clearCanvas(ctx, width, height);
 
-  const pad = 24;
-  drawGrid(ctx, width, height, pad);
+  const padX = 28;
+  const padTop = 30;
+  const padBottom = 34;
+  const chartHeight = height - padTop - padBottom;
+  drawGrid(ctx, width, height, padX, padTop, padBottom);
 
   if (!Array.isArray(data) || data.length < 2) {
     drawCenteredText(ctx, width, height, options.emptyLabel || "No data");
@@ -3058,8 +3095,8 @@ function drawLineChart(canvas, data, options) {
   }
 
   const points = data.map((value, index) => {
-    const x = pad + (index / (data.length - 1)) * (width - pad * 2);
-    const y = height - pad - ((value - min) / (max - min)) * (height - pad * 2);
+    const x = padX + (index / (data.length - 1)) * (width - padX * 2);
+    const y = height - padBottom - ((value - min) / (max - min)) * chartHeight;
     return { x, y };
   });
 
@@ -3073,8 +3110,8 @@ function drawLineChart(canvas, data, options) {
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  ctx.lineTo(points[points.length - 1].x, height - pad);
-  ctx.lineTo(points[0].x, height - pad);
+  ctx.lineTo(points[points.length - 1].x, height - padBottom);
+  ctx.lineTo(points[0].x, height - padBottom);
   ctx.closePath();
   ctx.fillStyle = options.fillColor;
   ctx.fill();
@@ -3082,7 +3119,52 @@ function drawLineChart(canvas, data, options) {
   const last = data[data.length - 1];
   ctx.fillStyle = "#d3e6ff";
   ctx.font = "600 12px JetBrains Mono, Consolas, monospace";
-  ctx.fillText(`Last: ${formatCurrency(last)}`, pad, pad - 8);
+  ctx.fillText(`Last: ${formatCurrency(last)}`, padX, padTop - 10);
+
+  ctx.fillStyle = options.lineColor;
+  points.forEach((point, index) => {
+    const radius = index === 0 || index === points.length - 1 ? 4.5 : 2.5;
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(8, 12, 24, 0.92)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+
+  drawLineChartDateLabels(ctx, points, options.labels, height, padBottom);
+}
+
+function drawLineChartDateLabels(ctx, points, labels, height, padBottom) {
+  if (!Array.isArray(labels) || labels.length !== points.length || !points.length) {
+    return;
+  }
+
+  const indices = Array.from(new Set([0, Math.floor((points.length - 1) / 2), points.length - 1]));
+  ctx.fillStyle = "rgba(182, 198, 228, 0.76)";
+  ctx.font = "500 10px JetBrains Mono, Consolas, monospace";
+  ctx.textBaseline = "top";
+
+  indices.forEach((index, labelIndex) => {
+    const label = formatChartDateLabel(labels[index]);
+    if (!label) {
+      return;
+    }
+
+    let x = points[index].x;
+    if (labelIndex === 0) {
+      x = points[index].x;
+      ctx.textAlign = "left";
+    } else if (labelIndex === indices.length - 1) {
+      x = points[index].x;
+      ctx.textAlign = "right";
+    } else {
+      ctx.textAlign = "center";
+    }
+    ctx.fillText(label, x, height - padBottom + 12);
+  });
+
+  ctx.textAlign = "left";
 }
 
 function drawOutcomeChart(canvas, data) {
@@ -3247,22 +3329,23 @@ function clearCanvas(ctx, width, height) {
   ctx.clearRect(0, 0, width, height);
 }
 
-function drawGrid(ctx, width, height, pad) {
+function drawGrid(ctx, width, height, padX, padTop = padX, padBottom = padTop) {
   ctx.strokeStyle = "rgba(130, 157, 210, 0.2)";
   ctx.lineWidth = 1;
+  const chartHeight = height - padTop - padBottom;
 
   for (let i = 0; i <= 4; i += 1) {
-    const y = pad + (i / 4) * (height - pad * 2);
+    const y = padTop + (i / 4) * chartHeight;
     ctx.beginPath();
-    ctx.moveTo(pad, y);
-    ctx.lineTo(width - pad, y);
+    ctx.moveTo(padX, y);
+    ctx.lineTo(width - padX, y);
     ctx.stroke();
   }
 
   ctx.strokeStyle = "rgba(130, 157, 210, 0.35)";
   ctx.beginPath();
-  ctx.moveTo(pad, height - pad);
-  ctx.lineTo(width - pad, height - pad);
+  ctx.moveTo(padX, height - padBottom);
+  ctx.lineTo(width - padX, height - padBottom);
   ctx.stroke();
 }
 
@@ -3722,6 +3805,23 @@ function formatCurrency(value) {
     currency: "USD",
     maximumFractionDigits: 2
   }).format(value || 0);
+}
+
+function formatChartDateLabel(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "";
+  }
+
+  const parsed = new Date(`${text}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return text;
+  }
+
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric"
+  });
 }
 
 function escapeCsvValue(value) {

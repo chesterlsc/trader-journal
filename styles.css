@@ -838,12 +838,16 @@ input:-webkit-autofill:focus {
 
 .trade-form-layout {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
   gap: 14px;
 }
 
 .trade-section {
   display: grid;
   gap: 12px;
+  align-content: start;
+  height: 100%;
   padding: 14px;
   border: 1px solid rgba(103, 130, 188, 0.18);
   border-radius: 16px;
@@ -878,19 +882,19 @@ input:-webkit-autofill:focus {
 }
 
 .trade-grid-context {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .trade-grid-risk {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .trade-grid-review {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .trade-grid-record {
-  grid-template-columns: minmax(0, 1.2fr) minmax(220px, 0.8fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .setup-inline-group {
@@ -1288,10 +1292,11 @@ td {
 .tag-set {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  padding: 10px;
+  padding: 12px;
   margin: 8px 0;
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 8px;
 }
 
@@ -1302,11 +1307,12 @@ td {
 }
 
 .tag-set label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   margin: 0;
-  padding: 7px 10px;
+  min-height: 36px;
+  padding: 6px 10px;
   border: 1px solid rgba(103, 130, 188, 0.32);
   border-radius: 999px;
   background: rgba(13, 21, 38, 0.86);
@@ -1314,6 +1320,11 @@ td {
   flex: 0 0 auto;
   min-width: fit-content;
   white-space: nowrap;
+  line-height: 1.2;
+}
+
+.tag-set input {
+  margin: 0;
 }
 
 .reflection-list {
@@ -1455,7 +1466,7 @@ body.auth-locked .view {
   .trade-grid-context,
   .trade-grid-risk,
   .trade-grid-review {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .auth-hero {
@@ -1597,7 +1608,7 @@ body.auth-locked .view {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    margin-top: 8px;
+    margin-top: 14px;
   }
 
   .panel-grid-two,
@@ -1812,28 +1823,35 @@ body.auth-locked .view {
   }
 
   .auth-shell-topbar {
-    align-items: flex-start;
+    align-items: center;
+    justify-content: center;
   }
 
   .auth-shell {
     width: min(100%, calc(100vw - 20px));
+    min-height: calc(100svh - 20px);
     padding: 14px;
     border-radius: 20px;
+    display: grid;
+    align-content: center;
+    animation: none;
   }
 
   .auth-hero {
     gap: 14px;
+    justify-items: center;
   }
 
   .auth-hero-copy {
     padding: 0;
-    text-align: left;
+    text-align: center;
   }
 
   .auth-hero-copy h2 {
     font-size: clamp(1.9rem, 9.8vw, 3rem);
     line-height: 1;
     letter-spacing: -0.045em;
+    transition: none;
   }
 
   .auth-hero-text {
@@ -1862,6 +1880,26 @@ body.auth-locked .view {
   .auth-shell.mobile-auth-expanded .hero-cta-row,
   .auth-shell.mobile-auth-expanded .hero-cta-note {
     display: none;
+  }
+
+  body:not(.auth-ready):not(.is-authenticated) .auth-panel,
+  body:not(.auth-ready):not(.is-authenticated) #resetPasswordView {
+    display: none !important;
+  }
+
+  .auth-panel {
+    animation: none;
+    justify-self: center;
+  }
+
+  .auth-hero-copy,
+  .auth-shell-brand .brand-mark,
+  .brand-word-accent {
+    animation: none;
+  }
+
+  .auth-panel label {
+    text-align: left;
   }
 
   .view-head,
@@ -1947,7 +1985,7 @@ body.auth-locked .view {
   .auth-title,
   .auth-status,
   .auth-copy {
-    text-align: left;
+    text-align: center;
   }
 
   .auth-form-actions {
@@ -1961,6 +1999,7 @@ body.auth-locked .view {
 
   .auth-link-btn {
     margin-top: -2px;
+    font-size: 0.82rem;
   }
 
   .split-wrap {
@@ -1983,6 +2022,7 @@ body.auth-locked .view {
 
   .tag-set {
     gap: 6px;
+    padding: 10px;
   }
 
   .tag-set label {
@@ -1990,6 +2030,10 @@ body.auth-locked .view {
     width: auto;
     border-radius: 999px;
     white-space: nowrap;
+  }
+
+  .nav-logout-mobile {
+    margin-bottom: 10px;
   }
 }
 
