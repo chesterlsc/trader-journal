@@ -3280,7 +3280,7 @@ function drawStrategyPerformanceChart(canvas, entries, options) {
   }
 
   const metric = options.metric === "count" ? "count" : "pnl";
-  const padLeft = width < 460 ? 88 : 126;
+  const padLeft = width < 460 ? 112 : 142;
   const padRight = 18;
   const padTop = 16;
   const padBottom = 26;
@@ -3319,7 +3319,7 @@ function drawStrategyPerformanceChart(canvas, entries, options) {
       const labelX = padLeft - 12;
       ctx.fillStyle = labelColor;
       ctx.textAlign = "right";
-      ctx.fillText(formatPerformanceCanvasLabel(entry.label, width), labelX, centerY);
+      drawPerformanceCanvasLabel(ctx, entry.label, labelX, centerY, width);
 
       fillRoundedRect(ctx, zeroX, centerY - barHeight / 2, length, barHeight, 8, "rgba(87, 161, 255, 0.86)");
       ctx.fillStyle = "#eaf2ff";
@@ -3357,7 +3357,7 @@ function drawStrategyPerformanceChart(canvas, entries, options) {
 
     ctx.fillStyle = labelColor;
     ctx.textAlign = "right";
-    ctx.fillText(formatPerformanceCanvasLabel(entry.label, width), labelX, centerY);
+    drawPerformanceCanvasLabel(ctx, entry.label, labelX, centerY, width);
 
     fillRoundedRect(ctx, barX, centerY - barHeight / 2, Math.max(length, 2), barHeight, 8, barColor);
   });
@@ -3393,9 +3393,56 @@ function drawStrategyAxisLabels(ctx, options) {
   ctx.textAlign = "left";
 }
 
+function drawPerformanceCanvasLabel(ctx, label, x, y, width) {
+  const lines = formatPerformanceCanvasLabel(label, width);
+  const offset = lines.length > 1 ? 6 : 0;
+  lines.forEach((line, index) => {
+    const lineY = y + (index === 0 ? -offset : offset);
+    ctx.fillText(line, x, lineY);
+  });
+}
+
 function formatPerformanceCanvasLabel(label, width) {
-  const limit = width < 460 ? 12 : 18;
-  const text = String(label || "");
+  const text = String(label || "").trim();
+  if (!text) {
+    return [""];
+  }
+
+  const singleLineLimit = width < 460 ? 10 : 15;
+  const words = text.split(/\s+/).filter(Boolean);
+
+  if (words.length === 1) {
+    return [truncatePerformanceLabel(text, singleLineLimit)];
+  }
+
+  const lines = [];
+  let current = "";
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length <= singleLineLimit || !current) {
+      current = candidate;
+      continue;
+    }
+
+    lines.push(current);
+    current = word;
+    if (lines.length === 1) {
+      continue;
+    }
+    break;
+  }
+
+  if (current) {
+    lines.push(current);
+  }
+
+  return lines.slice(0, 2).map((line, index, collection) => {
+    const limit = index === collection.length - 1 ? singleLineLimit : singleLineLimit + 2;
+    return truncatePerformanceLabel(line, limit);
+  });
+}
+
+function truncatePerformanceLabel(text, limit) {
   return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
 }
 

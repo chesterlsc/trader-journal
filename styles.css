@@ -1628,18 +1628,21 @@ body.auth-locked .view {
     overflow: hidden;
     pointer-events: none;
     margin-top: 0;
+    padding-bottom: 0;
     transition:
       max-height 220ms ease,
       opacity 220ms ease,
-      margin-top 220ms ease;
+      margin-top 220ms ease,
+      padding-bottom 220ms ease;
   }
 
   .sidebar.nav-open .main-nav {
-    max-height: 340px;
+    max-height: 460px;
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
     margin-top: 8px;
+    padding-bottom: 10px;
   }
 
   .sidebar-foot {
@@ -2085,6 +2088,7 @@ body.auth-locked .view {
   }
 
   .nav-logout-mobile {
+    margin-top: 6px;
     margin-bottom: 10px;
   }
 }
