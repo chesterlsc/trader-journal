@@ -57,6 +57,10 @@ const state = {
     psychology: "all",
     search: ""
   },
+  dashboard: {
+    performanceDimension: "setup",
+    performanceMetric: "pnl"
+  },
   analytics: null
 };
 
@@ -109,7 +113,9 @@ const ui = {
   edgeRows: document.getElementById("edgeRows"),
   equityChart: document.getElementById("equityChart"),
   drawdownChart: document.getElementById("drawdownChart"),
-  outcomeChart: document.getElementById("outcomeChart"),
+  strategyPerformanceChart: document.getElementById("strategyPerformanceChart"),
+  strategyDimensionButtons: Array.from(document.querySelectorAll("[data-performance-dimension]")),
+  strategyMetricButtons: Array.from(document.querySelectorAll("[data-performance-metric]")),
   leonScoreChart: document.getElementById("leonScoreChart"),
   leonScoreValue: document.getElementById("leonScoreValue"),
   leonScoreCaption: document.getElementById("leonScoreCaption"),
@@ -347,6 +353,20 @@ function bindEvents() {
 
   ui.savePhpBtn.addEventListener("click", saveToPhpStorage);
   ui.loadPhpBtn.addEventListener("click", loadFromPhpStorage);
+
+  ui.strategyDimensionButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      state.dashboard.performanceDimension = button.dataset.performanceDimension || "setup";
+      renderCharts(state.analytics);
+    });
+  });
+
+  ui.strategyMetricButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      state.dashboard.performanceMetric = button.dataset.performanceMetric || "pnl";
+      renderCharts(state.analytics);
+    });
+  });
 
   ui.reflectionForm.addEventListener("submit", handleReflectionSubmit);
   ui.reviewMonth.addEventListener("change", renderMonthlyReview);
@@ -2530,6 +2550,9 @@ function calculateAnalytics(trades, settings, reflections) {
   const dailyPnl = new Map();
   const weeklyPnl = new Map();
   const setupStats = new Map();
+  const setupPerformance = new Map();
+  const assetPerformance = new Map();
+  const dayPerformance = new Map();
 
   for (const trade of ordered) {
     totalPnl += trade.netPnl;
@@ -2585,6 +2608,10 @@ function calculateAnalytics(trades, settings, reflections) {
     weeklyPnl.set(weekKey, round((weeklyPnl.get(weekKey) || 0) + trade.netPnl));
 
     const setupKey = trade.setupType || "Unknown";
+    accumulatePerformanceEntry(setupPerformance, setupKey, trade);
+    accumulatePerformanceEntry(assetPerformance, trade.asset || "Unknown", trade);
+    accumulatePerformanceEntry(dayPerformance, getTradeDayLabel(trade.date), trade);
+
     const setupBucket = setupStats.get(setupKey) || {
       setup: setupKey,
       trades: 0,
@@ -2684,6 +2711,11 @@ function calculateAnalytics(trades, settings, reflections) {
     drawdowns,
     drawdownDates,
     setupStats: Array.from(setupStats.values()),
+    strategyPerformance: {
+      setup: Array.from(setupPerformance.values()),
+      asset: Array.from(assetPerformance.values()),
+      day: sortDayPerformance(Array.from(dayPerformance.values()))
+    },
     disciplineScore,
     dailyTradingScore,
     goalProgress,
@@ -2815,6 +2847,37 @@ function getExtremeDay(dailyMap, mode) {
   }
 
   return selected;
+}
+
+function accumulatePerformanceEntry(map, label, trade) {
+  const key = String(label || "Unknown");
+  const current = map.get(key) || {
+    label: key,
+    pnl: 0,
+    count: 0
+  };
+
+  current.pnl = round(current.pnl + trade.netPnl);
+  current.count += 1;
+  map.set(key, current);
+}
+
+function getTradeDayLabel(dateValue) {
+  const parsed = new Date(`${String(dateValue || "").trim()}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return "Unknown";
+  }
+
+  return parsed.toLocaleDateString("en-US", { weekday: "short" });
+}
+
+function sortDayPerformance(entries) {
+  const order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  return [...entries].sort((a, b) => {
+    const indexA = order.indexOf(a.label);
+    const indexB = order.indexOf(b.label);
+    return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
+  });
 }
 
 function renderDashboardMetrics(analytics) {
@@ -3043,6 +3106,10 @@ function renderEdgeTable(analytics) {
 }
 
 function renderCharts(analytics) {
+  if (!analytics) {
+    return;
+  }
+
   drawLineChart(ui.equityChart, analytics.equity, {
     lineColor: "#39d3ff",
     fillColor: "rgba(57, 211, 255, 0.15)",
@@ -3057,12 +3124,7 @@ function renderCharts(analytics) {
     emptyLabel: "No drawdown data yet"
   });
 
-  drawOutcomeChart(ui.outcomeChart, {
-    win: analytics.wins,
-    loss: analytics.losses,
-    be: analytics.breakeven
-  });
-
+  renderStrategyPerformanceChart(analytics);
   drawRadarChart(ui.leonScoreChart, analytics.leonScore);
 }
 
@@ -3167,7 +3229,43 @@ function drawLineChartDateLabels(ctx, points, labels, height, padBottom) {
   ctx.textAlign = "left";
 }
 
-function drawOutcomeChart(canvas, data) {
+function renderStrategyPerformanceChart(analytics) {
+  const dimension = state.dashboard.performanceDimension;
+  const metric = state.dashboard.performanceMetric;
+  const entries = Array.isArray(analytics?.strategyPerformance?.[dimension])
+    ? analytics.strategyPerformance[dimension]
+    : [];
+
+  ui.strategyDimensionButtons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.performanceDimension === dimension);
+  });
+  ui.strategyMetricButtons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.performanceMetric === metric);
+  });
+
+  const sortedEntries = getStrategyPerformanceRows(entries, { dimension, metric });
+  drawStrategyPerformanceChart(ui.strategyPerformanceChart, sortedEntries, {
+    metric,
+    emptyLabel: `No ${dimension} performance data yet`
+  });
+}
+
+function getStrategyPerformanceRows(entries, options = {}) {
+  const { dimension = "setup", metric = "pnl" } = options;
+  const rows = [...entries];
+
+  if (dimension === "day") {
+    return rows;
+  }
+
+  if (metric === "count") {
+    return rows.sort((a, b) => b.count - a.count || b.pnl - a.pnl).slice(0, 8);
+  }
+
+  return rows.sort((a, b) => b.pnl - a.pnl || b.count - a.count).slice(0, 8);
+}
+
+function drawStrategyPerformanceChart(canvas, entries, options) {
   const ctxData = getCanvasContext(canvas);
   if (!ctxData) {
     return;
@@ -3176,41 +3274,148 @@ function drawOutcomeChart(canvas, data) {
   const { ctx, width, height } = ctxData;
   clearCanvas(ctx, width, height);
 
-  const entries = [
-    { label: "Win", value: data.win, color: "#2ad48f" },
-    { label: "Loss", value: data.loss, color: "#ff5a7e" },
-    { label: "Break Even", value: data.be, color: "#ffbe4f" }
-  ];
-
-  const total = entries.reduce((sum, item) => sum + item.value, 0);
-  const pad = 28;
-
-  drawGrid(ctx, width, height, pad);
-
-  if (!total) {
-    drawCenteredText(ctx, width, height, "No outcome data yet");
+  if (!Array.isArray(entries) || !entries.length) {
+    drawCenteredText(ctx, width, height, options.emptyLabel || "No strategy data");
     return;
   }
 
-  const maxValue = Math.max(...entries.map((item) => item.value), 1);
-  const barWidth = (width - pad * 2) / entries.length - 20;
+  const metric = options.metric === "count" ? "count" : "pnl";
+  const padLeft = width < 460 ? 88 : 126;
+  const padRight = 18;
+  const padTop = 16;
+  const padBottom = 26;
+  const chartHeight = height - padTop - padBottom;
+  const rowGap = chartHeight / entries.length;
+  const barHeight = Math.min(24, rowGap * 0.56);
+  const labelColor = "#dbe8ff";
+  ctx.strokeStyle = "rgba(132, 156, 214, 0.1)";
+  ctx.lineWidth = 1;
+
+  entries.forEach((_, index) => {
+    const y = padTop + rowGap * index + rowGap / 2;
+    ctx.beginPath();
+    ctx.moveTo(padLeft, y);
+    ctx.lineTo(width - padRight, y);
+    ctx.stroke();
+  });
+
+  ctx.font = width < 460 ? '500 11px "JetBrains Mono", "Consolas", monospace' : '500 12px "JetBrains Mono", "Consolas", monospace';
+  ctx.textBaseline = "middle";
+
+  if (metric === "count") {
+    const maxValue = Math.max(...entries.map((entry) => entry.count), 1);
+    const zeroX = padLeft;
+    const usableWidth = width - padLeft - padRight;
+
+    ctx.strokeStyle = "rgba(87, 161, 255, 0.24)";
+    ctx.beginPath();
+    ctx.moveTo(zeroX, padTop - 2);
+    ctx.lineTo(zeroX, height - padBottom + 2);
+    ctx.stroke();
+
+    entries.forEach((entry, index) => {
+      const centerY = padTop + rowGap * index + rowGap / 2;
+      const length = (entry.count / maxValue) * usableWidth;
+      const labelX = padLeft - 12;
+      ctx.fillStyle = labelColor;
+      ctx.textAlign = "right";
+      ctx.fillText(formatPerformanceCanvasLabel(entry.label, width), labelX, centerY);
+
+      fillRoundedRect(ctx, zeroX, centerY - barHeight / 2, length, barHeight, 8, "rgba(87, 161, 255, 0.86)");
+      ctx.fillStyle = "#eaf2ff";
+      ctx.textAlign = "left";
+      ctx.fillText(String(entry.count), Math.min(zeroX + length + 8, width - padRight - 14), centerY);
+    });
+
+    drawStrategyAxisLabels(ctx, {
+      left: zeroX,
+      right: width - padRight,
+      bottom: height - padBottom + 12,
+      values: [0, Math.round(maxValue / 2), maxValue],
+      formatter: (value) => String(value)
+    });
+    return;
+  }
+
+  const maxAbs = Math.max(...entries.map((entry) => Math.abs(entry.pnl)), 1);
+  const zeroX = padLeft + (width - padLeft - padRight) / 2;
+  const barWidth = (width - padLeft - padRight) / 2 - 8;
+
+  ctx.strokeStyle = "rgba(132, 156, 214, 0.24)";
+  ctx.beginPath();
+  ctx.moveTo(zeroX, padTop - 2);
+  ctx.lineTo(zeroX, height - padBottom + 2);
+  ctx.stroke();
 
   entries.forEach((entry, index) => {
-    const x = pad + index * ((width - pad * 2) / entries.length) + 10;
-    const barHeight = (entry.value / maxValue) * (height - pad * 2 - 30);
-    const y = height - pad - barHeight;
+    const centerY = padTop + rowGap * index + rowGap / 2;
+    const labelX = padLeft - 12;
+    const amount = entry.pnl;
+    const length = (Math.abs(amount) / maxAbs) * barWidth;
+    const barX = amount >= 0 ? zeroX : zeroX - length;
+    const barColor = amount >= 0 ? "rgba(42, 212, 143, 0.88)" : "rgba(255, 90, 126, 0.9)";
 
-    ctx.fillStyle = entry.color;
-    ctx.fillRect(x, y, barWidth, barHeight);
+    ctx.fillStyle = labelColor;
+    ctx.textAlign = "right";
+    ctx.fillText(formatPerformanceCanvasLabel(entry.label, width), labelX, centerY);
 
-    ctx.fillStyle = "#d2e4ff";
-    ctx.font = "600 12px JetBrains Mono, Consolas, monospace";
-    ctx.fillText(String(entry.value), x + barWidth / 2 - 6, y - 6);
-
-    ctx.fillStyle = "#9db0d8";
-    ctx.font = "500 11px JetBrains Mono, Consolas, monospace";
-    ctx.fillText(entry.label, x + 3, height - pad + 16);
+    fillRoundedRect(ctx, barX, centerY - barHeight / 2, Math.max(length, 2), barHeight, 8, barColor);
   });
+
+  drawStrategyAxisLabels(ctx, {
+    left: padLeft,
+    right: width - padRight,
+    bottom: height - padBottom + 12,
+    values: [-maxAbs, 0, maxAbs],
+    formatter: formatCompactCurrency
+  });
+}
+
+function drawStrategyAxisLabels(ctx, options) {
+  const { left, right, bottom, values, formatter } = options;
+  const steps = Math.max(values.length - 1, 1);
+  ctx.fillStyle = "rgba(168, 188, 226, 0.72)";
+  ctx.font = '500 10px "JetBrains Mono", "Consolas", monospace';
+  ctx.textBaseline = "top";
+
+  values.forEach((value, index) => {
+    const x = left + ((right - left) * index) / steps;
+    if (index === 0) {
+      ctx.textAlign = "left";
+    } else if (index === values.length - 1) {
+      ctx.textAlign = "right";
+    } else {
+      ctx.textAlign = "center";
+    }
+    ctx.fillText(formatter(value), x, bottom);
+  });
+
+  ctx.textAlign = "left";
+}
+
+function formatPerformanceCanvasLabel(label, width) {
+  const limit = width < 460 ? 12 : 18;
+  const text = String(label || "");
+  return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
+}
+
+function fillRoundedRect(ctx, x, y, width, height, radius, fillStyle) {
+  const safeWidth = Math.max(width, 2);
+  const safeHeight = Math.max(height, 2);
+  const safeRadius = Math.min(radius, safeHeight / 2, safeWidth / 2);
+  ctx.beginPath();
+  if (typeof ctx.roundRect === "function") {
+    ctx.roundRect(x, y, safeWidth, safeHeight, safeRadius);
+  } else {
+    ctx.moveTo(x + safeRadius, y);
+    ctx.arcTo(x + safeWidth, y, x + safeWidth, y + safeHeight, safeRadius);
+    ctx.arcTo(x + safeWidth, y + safeHeight, x, y + safeHeight, safeRadius);
+    ctx.arcTo(x, y + safeHeight, x, y, safeRadius);
+    ctx.arcTo(x, y, x + safeWidth, y, safeRadius);
+    ctx.closePath();
+  }
+  ctx.fillStyle = fillStyle;
+  ctx.fill();
 }
 
 function drawRadarChart(canvas, scoreData) {
@@ -3804,6 +4009,15 @@ function formatCurrency(value) {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 2
+  }).format(value || 0);
+}
+
+function formatCompactCurrency(value) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    notation: "compact",
+    maximumFractionDigits: 1
   }).format(value || 0);
 }
 

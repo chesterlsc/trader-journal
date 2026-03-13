@@ -684,6 +684,49 @@ body.is-authenticated .auth-panel {
   background: radial-gradient(circle at 0% 0%, rgba(87, 161, 255, 0.1), rgba(8, 14, 28, 0.92));
 }
 
+.panel-strategy-performance {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.strategy-performance-toolbar {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+}
+
+.strategy-toggle-group {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid rgba(99, 127, 192, 0.24);
+  border-radius: 999px;
+  background: rgba(7, 13, 27, 0.78);
+}
+
+.strategy-toggle-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-soft);
+  font: 600 0.78rem/1 "JetBrains Mono", "Consolas", monospace;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.strategy-toggle-btn:hover {
+  color: #e7f0ff;
+  transform: translateY(-1px);
+}
+
+.strategy-toggle-btn.is-active {
+  background: linear-gradient(120deg, rgba(57, 211, 255, 0.24), rgba(87, 161, 255, 0.3));
+  color: #eff6ff;
+}
+
 .panel-leon-score {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
@@ -1321,10 +1364,14 @@ td {
   min-width: fit-content;
   white-space: nowrap;
   line-height: 1.2;
+  max-width: 100%;
 }
 
 .tag-set input {
   margin: 0;
+  inline-size: 14px;
+  block-size: 14px;
+  accent-color: var(--blue);
 }
 
 .reflection-list {
@@ -1498,6 +1545,11 @@ body.auth-locked .view {
 
   .panel-grid-analytics {
     grid-template-columns: 1fr;
+  }
+
+  .strategy-performance-toolbar {
+    width: 100%;
+    justify-items: start;
   }
 
   .auth-shell {
@@ -1828,8 +1880,11 @@ body.auth-locked .view {
 
   .auth-shell {
     width: min(100%, calc(100vw - 20px));
+    min-height: calc(100svh - 20px);
     padding: 14px;
     border-radius: 20px;
+    display: grid;
+    align-content: center;
   }
 
   .auth-hero {
@@ -1999,15 +2054,34 @@ body.auth-locked .view {
   }
 
   .tag-set {
-    gap: 6px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
     padding: 10px;
   }
 
   .tag-set label {
-    flex: 0 0 auto;
-    width: auto;
-    border-radius: 999px;
-    white-space: nowrap;
+    min-width: 0;
+    width: 100%;
+    border-radius: 14px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    align-items: flex-start;
+    padding: 8px 9px;
+    font-size: 0.76rem;
+  }
+
+  .tag-set input {
+    margin-top: 2px;
+  }
+
+  .strategy-toggle-group {
+    width: 100%;
+  }
+
+  .strategy-toggle-btn {
+    width: 100%;
+    padding-inline: 10px;
   }
 
   .nav-logout-mobile {

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Trader Journal | Trading Analytics</title>
-    <link rel="stylesheet" href="styles.css?v=20260313-sitefixes" />
+    <link rel="stylesheet" href="styles.css?v=20260313-strategypanel" />
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -260,12 +260,33 @@
                 aria-label="Drawdown curve chart"
               ></canvas>
             </article>
-            <article class="panel panel-chart">
-              <div class="panel-head">
-                <h3>Win vs Loss</h3>
-                <p>Distribution by trade outcomes</p>
+            <article class="panel panel-chart panel-strategy-performance">
+              <div class="panel-head panel-head-inline">
+                <div>
+                  <h3>Strategy Performance</h3>
+                  <p>Compare setups, symbols, and trading days by P&amp;L or trade count.</p>
+                </div>
+                <div class="strategy-performance-toolbar">
+                  <div class="strategy-toggle-group" aria-label="Strategy breakdown type">
+                    <button class="strategy-toggle-btn is-active" type="button" data-performance-dimension="setup">
+                      Strategy
+                    </button>
+                    <button class="strategy-toggle-btn" type="button" data-performance-dimension="asset">Symbol</button>
+                    <button class="strategy-toggle-btn" type="button" data-performance-dimension="day">Day</button>
+                  </div>
+                  <div class="strategy-toggle-group" aria-label="Strategy performance metric">
+                    <button class="strategy-toggle-btn is-active" type="button" data-performance-metric="pnl">P&amp;L</button>
+                    <button class="strategy-toggle-btn" type="button" data-performance-metric="count">Count</button>
+                  </div>
+                </div>
               </div>
-              <canvas id="outcomeChart" width="900" height="280" data-height="240" aria-label="Win loss chart"></canvas>
+              <canvas
+                id="strategyPerformanceChart"
+                width="900"
+                height="320"
+                data-height="280"
+                aria-label="Strategy performance chart"
+              ></canvas>
             </article>
             <article class="panel panel-chart panel-leon-score">
               <div class="panel-head">
@@ -283,74 +304,28 @@
             </article>
           </section>
 
-          <section class="panel-grid panel-grid-two">
-            <article class="panel">
-              <div class="panel-head">
-                <h3>Risk Controls</h3>
-                <p>Enforce your max pain thresholds</p>
+          <section class="panel">
+            <div class="panel-head">
+              <h3>Discipline Monitor</h3>
+              <p>Rule breaks and psychology pressure points</p>
+            </div>
+            <div class="score-stack">
+              <div class="score-item">
+                <p>Discipline Score</p>
+                <strong id="disciplineScore">100</strong>
               </div>
-              <form id="riskForm" class="compact-form" novalidate>
-                <label>
-                  Starting Balance (Custom)
-                  <input id="startingBalance" name="startingBalance" type="number" min="1" step="0.01" required />
-                </label>
-                <label>
-                  Account Balance Override ($)
-                  <input
-                    id="balanceOverride"
-                    name="balanceOverride"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="Optional manual balance"
-                  />
-                </label>
-                <label>
-                  Daily Max Loss ($)
-                  <input id="dailyMaxLoss" name="dailyMaxLoss" type="number" min="0" step="0.01" required />
-                </label>
-                <label>
-                  Weekly Max Loss ($)
-                  <input id="weeklyMaxLoss" name="weeklyMaxLoss" type="number" min="0" step="0.01" required />
-                </label>
-                <label>
-                  Risk Per Trade (%)
-                  <input id="riskPerTrade" name="riskPerTrade" type="number" min="0" step="0.01" required />
-                </label>
-                <label>
-                  Equity Goal ($)
-                  <input id="equityGoal" name="equityGoal" type="number" min="0" step="0.01" required />
-                </label>
-                <div class="form-actions">
-                  <button class="btn primary" type="submit">Save Risk Settings</button>
-                </div>
-              </form>
-              <p id="riskFormMessage" class="form-message" aria-live="polite"></p>
-            </article>
-
-            <article class="panel">
-              <div class="panel-head">
-                <h3>Discipline Monitor</h3>
-                <p>Rule breaks and psychology pressure points</p>
+              <div class="score-item">
+                <p>Daily Trading Score</p>
+                <strong id="dailyTradingScore">0</strong>
               </div>
-              <div class="score-stack">
-                <div class="score-item">
-                  <p>Discipline Score</p>
-                  <strong id="disciplineScore">100</strong>
-                </div>
-                <div class="score-item">
-                  <p>Daily Trading Score</p>
-                  <strong id="dailyTradingScore">0</strong>
-                </div>
-                <div class="score-item">
-                  <p>Equity Goal Progress</p>
-                  <strong id="goalProgress">0%</strong>
-                </div>
+              <div class="score-item">
+                <p>Equity Goal Progress</p>
+                <strong id="goalProgress">0%</strong>
               </div>
-              <ul id="riskViolations" class="warning-list">
-                <li class="muted">No violations detected.</li>
-              </ul>
-            </article>
+            </div>
+            <ul id="riskViolations" class="warning-list">
+              <li class="muted">No violations detected.</li>
+            </ul>
           </section>
 
           <section class="panel">
@@ -375,6 +350,50 @@
                 </tbody>
               </table>
             </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h3>Risk Controls</h3>
+              <p>Enforce your max pain thresholds</p>
+            </div>
+            <form id="riskForm" class="compact-form" novalidate>
+              <label>
+                Starting Balance (Custom)
+                <input id="startingBalance" name="startingBalance" type="number" min="1" step="0.01" required />
+              </label>
+              <label>
+                Account Balance Override ($)
+                <input
+                  id="balanceOverride"
+                  name="balanceOverride"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Optional manual balance"
+                />
+              </label>
+              <label>
+                Daily Max Loss ($)
+                <input id="dailyMaxLoss" name="dailyMaxLoss" type="number" min="0" step="0.01" required />
+              </label>
+              <label>
+                Weekly Max Loss ($)
+                <input id="weeklyMaxLoss" name="weeklyMaxLoss" type="number" min="0" step="0.01" required />
+              </label>
+              <label>
+                Risk Per Trade (%)
+                <input id="riskPerTrade" name="riskPerTrade" type="number" min="0" step="0.01" required />
+              </label>
+              <label>
+                Equity Goal ($)
+                <input id="equityGoal" name="equityGoal" type="number" min="0" step="0.01" required />
+              </label>
+              <div class="form-actions">
+                <button class="btn primary" type="submit">Save Risk Settings</button>
+              </div>
+            </form>
+            <p id="riskFormMessage" class="form-message" aria-live="polite"></p>
           </section>
 
           <details class="panel panel-collapsible" id="loginLogsPanel" hidden>
@@ -1009,6 +1028,6 @@
       </details>
     </footer>
 
-    <script src="app.js?v=20260313-sitefixes"></script>
+    <script src="app.js?v=20260313-strategypanel"></script>
   </body>
 </html>
