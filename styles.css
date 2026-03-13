@@ -1823,35 +1823,28 @@ body.auth-locked .view {
   }
 
   .auth-shell-topbar {
-    align-items: center;
-    justify-content: center;
+    align-items: flex-start;
   }
 
   .auth-shell {
     width: min(100%, calc(100vw - 20px));
-    min-height: calc(100svh - 20px);
     padding: 14px;
     border-radius: 20px;
-    display: grid;
-    align-content: center;
-    animation: none;
   }
 
   .auth-hero {
     gap: 14px;
-    justify-items: center;
   }
 
   .auth-hero-copy {
     padding: 0;
-    text-align: center;
+    text-align: left;
   }
 
   .auth-hero-copy h2 {
     font-size: clamp(1.9rem, 9.8vw, 3rem);
     line-height: 1;
     letter-spacing: -0.045em;
-    transition: none;
   }
 
   .auth-hero-text {
@@ -1885,21 +1878,6 @@ body.auth-locked .view {
   body:not(.auth-ready):not(.is-authenticated) .auth-panel,
   body:not(.auth-ready):not(.is-authenticated) #resetPasswordView {
     display: none !important;
-  }
-
-  .auth-panel {
-    animation: none;
-    justify-self: center;
-  }
-
-  .auth-hero-copy,
-  .auth-shell-brand .brand-mark,
-  .brand-word-accent {
-    animation: none;
-  }
-
-  .auth-panel label {
-    text-align: left;
   }
 
   .view-head,
@@ -1985,7 +1963,7 @@ body.auth-locked .view {
   .auth-title,
   .auth-status,
   .auth-copy {
-    text-align: center;
+    text-align: left;
   }
 
   .auth-form-actions {
