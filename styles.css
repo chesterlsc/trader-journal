@@ -1041,7 +1041,7 @@ input:-webkit-autofill:focus {
   align-items: center;
   gap: 14px;
   flex-wrap: wrap;
-  margin-top: 12px;
+  margin: 0;
 }
 
 .journal-action-btn {
