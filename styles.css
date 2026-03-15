@@ -169,6 +169,7 @@ body.is-authenticated .auth-shell {
 }
 
 .hero-cta-note {
+  display: none;
   margin: 12px 0 0;
   color: var(--text-soft);
   font-size: 0.92rem;
@@ -1976,6 +1977,7 @@ body.is-authenticated .trust-row {
   }
 
   .hero-cta-note {
+    display: block;
     font-size: 0.88rem;
   }
 
@@ -2116,8 +2118,7 @@ body.is-authenticated .trust-row {
   }
 
   .trust-row {
-    grid-template-columns: 1fr;
-    gap: 8px;
+    display: none;
   }
 
   .tag-set {
