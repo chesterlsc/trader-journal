@@ -491,6 +491,7 @@ function setAuthIntent(intent, options = {}) {
 
   state.auth.intent = intent;
   state.auth.mobileAuthVisible = true;
+  setMessage(ui.authMessage, "", "");
   updateAuthUi();
 
   if (options.focus && !state.auth.isAuthenticated) {
@@ -734,7 +735,7 @@ async function handleLogout() {
   cancelServerAutosave();
   collapseAdminPanels();
   updateAuthUi();
-  setMessage(ui.authMessage, "Logged out.", "success");
+  setMessage(ui.authMessage, "", "");
 }
 
 async function submitAuth(action, password, successMessage, identifier = "") {
@@ -782,7 +783,12 @@ async function submitAuth(action, password, successMessage, identifier = "") {
     collapseAdminPanels();
     switchView("dashboard");
   } catch (error) {
-    setMessage(ui.authMessage, error.message || `${action} failed`, "error");
+    const errorMessage = error.message || `${action} failed`;
+    if (action === "login" && /invalid|incorrect|password|username|email|credential/i.test(errorMessage)) {
+      setMessage(ui.authMessage, "password or username / email is incorrect", "error");
+    } else {
+      setMessage(ui.authMessage, errorMessage, "error");
+    }
   }
 }
 
@@ -836,17 +842,17 @@ function updateAuthUi() {
         ? "Checking that your password reset link is still valid."
       : loginMode
         ? "Use your username or email to continue."
-        : "Start free with a username or email.";
+        : "Create your account to start journaling.";
   }
   if (ui.authPassword) {
     ui.authPassword.autocomplete = loginMode ? "current-password" : "new-password";
   }
   ui.registerBtn.classList.toggle("primary", !loginMode);
   ui.loginBtn.classList.toggle("primary", loginMode);
-  ui.heroRegisterBtn?.classList.toggle("primary", !loginMode);
-  ui.heroLoginBtn?.classList.toggle("primary", loginMode);
-  ui.heroLoginBtn?.classList.toggle("hero-cta-btn-secondary", !loginMode);
-  ui.heroRegisterBtn?.classList.toggle("hero-cta-btn-secondary", loginMode);
+  ui.heroRegisterBtn?.classList.add("primary");
+  ui.heroRegisterBtn?.classList.remove("hero-cta-btn-secondary");
+  ui.heroLoginBtn?.classList.remove("primary");
+  ui.heroLoginBtn?.classList.add("hero-cta-btn-secondary");
 
   if (ui.authControls) {
     ui.authControls.hidden = isResetMode || isResetPending;
@@ -857,7 +863,7 @@ function updateAuthUi() {
     ui.resetPasswordView.style.display = isResetMode ? "grid" : "none";
   }
   if (ui.forgotPasswordBtn) {
-    ui.forgotPasswordBtn.hidden = isResetMode || isResetPending;
+    ui.forgotPasswordBtn.hidden = isResetMode || isResetPending || !loginMode;
   }
   if (ui.authShell) {
     ui.authShell.classList.toggle("mobile-auth-expanded", !collapseForCompactMobile);
