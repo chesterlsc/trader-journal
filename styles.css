@@ -1946,6 +1946,7 @@ body.is-authenticated .trust-row {
 
   .auth-shell-topbar {
     align-items: flex-start;
+    justify-content: center;
   }
 
   .auth-shell {
@@ -1963,7 +1964,7 @@ body.is-authenticated .trust-row {
 
   .auth-hero-copy {
     padding: 0;
-    text-align: left;
+    text-align: center;
   }
 
   .auth-hero-copy h2 {
@@ -1974,6 +1975,8 @@ body.is-authenticated .trust-row {
 
   .auth-hero-text {
     margin-top: 14px;
+    margin-left: auto;
+    margin-right: auto;
     font-size: 0.98rem;
     line-height: 1.55;
   }
@@ -1995,6 +1998,18 @@ body.is-authenticated .trust-row {
 
   .hero-mobile-bullets {
     display: grid;
+    justify-items: center;
+  }
+
+  .hero-mobile-bullets li {
+    width: fit-content;
+    text-align: left;
+  }
+
+  .auth-shell-brand {
+    width: 100%;
+    justify-items: center;
+    text-align: center;
   }
 
   .auth-proof-grid {
