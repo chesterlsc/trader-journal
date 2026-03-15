@@ -107,6 +107,11 @@ body.is-authenticated .auth-shell {
   margin-bottom: 18px;
 }
 
+.auth-shell-brand {
+  display: grid;
+  gap: 4px;
+}
+
 .auth-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.12fr) minmax(320px, 392px);
@@ -133,14 +138,6 @@ body.is-authenticated .auth-shell {
 .auth-hero-copy:hover h2 {
   transform: translateY(-2px);
   text-shadow: 0 8px 24px rgba(87, 161, 255, 0.14);
-}
-
-.auth-eyebrow {
-  margin: 0 0 14px;
-  color: #d8e8ff;
-  font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .auth-hero-text {
@@ -171,6 +168,7 @@ body.is-authenticated .auth-shell {
 .hero-cta-note {
   display: none;
   margin: 12px 0 0;
+  padding-bottom: 12px;
   color: var(--text-soft);
   font-size: 0.92rem;
 }
@@ -290,6 +288,15 @@ body.is-authenticated .auth-shell {
 
 .auth-shell-brand .brand-mark {
   font-size: clamp(1.7rem, 2.6vw, 2.25rem);
+  gap: 0.04rem;
+}
+
+.brand-support {
+  margin: 0;
+  color: #d8e8ff;
+  font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 h1 {
@@ -1500,7 +1507,7 @@ body.is-authenticated .trust-row {
 }
 
 .footer-support {
-  margin-top: 6px;
+  margin-top: 0;
 }
 
 .footer-support summary {
@@ -1524,6 +1531,10 @@ body.is-authenticated .trust-row {
   gap: 4px;
   margin-top: 8px;
   justify-items: center;
+}
+
+.site-footer .footer-main {
+  margin-top: 8px;
 }
 
 .site-footer code {
@@ -1979,6 +1990,7 @@ body.is-authenticated .trust-row {
   .hero-cta-note {
     display: block;
     font-size: 0.88rem;
+    padding-bottom: 16px;
   }
 
   .hero-mobile-bullets {
