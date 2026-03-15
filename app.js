@@ -180,6 +180,7 @@ const ui = {
     search: document.getElementById("filterSearch")
   },
   clearFiltersBtn: document.getElementById("clearFiltersBtn"),
+  journalNewTradeBtn: document.getElementById("journalNewTradeBtn"),
   exportCsvBtn: document.getElementById("exportCsvBtn"),
   backupJsonBtn: document.getElementById("backupJsonBtn"),
   importJsonBtn: document.getElementById("importJsonBtn"),
@@ -346,6 +347,7 @@ function bindEvents() {
   ui.clearFiltersBtn.addEventListener("click", clearFilters);
   ui.tradesBody.addEventListener("click", handleTradeTableClick);
 
+  ui.journalNewTradeBtn.addEventListener("click", openFreshTradeEntry);
   ui.exportCsvBtn.addEventListener("click", exportTradesCsv);
   ui.backupJsonBtn.addEventListener("click", exportBackupJson);
   ui.importJsonBtn.addEventListener("click", () => ui.jsonImportInput.click());
@@ -1890,6 +1892,13 @@ function clearFilters() {
   ui.filters.psychology.value = "all";
   ui.filters.search.value = "";
   handleFilterChange();
+}
+
+function openFreshTradeEntry() {
+  resetTradeForm(false);
+  switchView("trade-entry");
+  ui.tradeFields.asset.focus();
+  setMessage(ui.tradeFormMessage, "Ready for a new trade entry.", "success");
 }
 
 function handleTradeTableClick(event) {
