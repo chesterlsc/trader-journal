@@ -1954,7 +1954,7 @@ body.is-authenticated .trust-row {
     padding: 14px;
     border-radius: 20px;
     display: grid;
-    align-content: center;
+    align-content: start;
   }
 
   .auth-hero {
