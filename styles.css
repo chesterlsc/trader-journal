@@ -1947,7 +1947,7 @@ body.is-authenticated .trust-row {
   .auth-shell-topbar {
     align-items: flex-start;
     justify-content: flex-start;
-    padding-bottom: clamp(28px, 10vh, 72px);
+    padding-bottom: clamp(28px, 3vh, 72px);
   }
 
   .auth-shell {
