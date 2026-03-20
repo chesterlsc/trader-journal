@@ -1257,6 +1257,13 @@ function listRecentTrades(PDO $pdo, int $userId): array
     usort(
         $trades,
         static function (array $a, array $b): int {
+            $leftDate = (string) ($a['date'] ?? '');
+            $rightDate = (string) ($b['date'] ?? '');
+            $dateSort = $rightDate <=> $leftDate;
+            if ($dateSort !== 0) {
+                return $dateSort;
+            }
+
             $left = (string) ($a['createdAt'] ?? $a['updatedAt'] ?? '');
             $right = (string) ($b['createdAt'] ?? $b['updatedAt'] ?? '');
             return $right <=> $left;
@@ -1268,12 +1275,14 @@ function listRecentTrades(PDO $pdo, int $userId): array
             return [
                 'id' => (string) ($trade['id'] ?? ''),
                 'symbol' => (string) ($trade['asset'] ?? ''),
+                'date' => (string) ($trade['date'] ?? ''),
                 'direction' => (string) ($trade['direction'] ?? ''),
                 'entry_price' => is_numeric($trade['entryPrice'] ?? null) ? (float) $trade['entryPrice'] : 0.0,
                 'stop_loss' => is_numeric($trade['stopLoss'] ?? null) ? (float) $trade['stopLoss'] : 0.0,
                 'take_profit' => is_numeric($trade['takeProfit'] ?? null) ? (float) $trade['takeProfit'] : 0.0,
                 'exit_price' => is_numeric($trade['exitPrice'] ?? null) ? (float) $trade['exitPrice'] : 0.0,
                 'profit_loss' => is_numeric($trade['netPnl'] ?? null) ? (float) $trade['netPnl'] : 0.0,
+                'pips' => is_numeric($trade['pips'] ?? null) ? (float) $trade['pips'] : 0.0,
                 'status' => normalizeTradeStatus($trade['status'] ?? 'closed'),
                 'created_at' => (string) ($trade['createdAt'] ?? ''),
                 'closed_at' => (string) ($trade['closedAt'] ?? ''),

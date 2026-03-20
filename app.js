@@ -19,7 +19,7 @@ const DEFAULT_SETTINGS = {
 };
 
 const SERVER_AUTOSAVE_DEBOUNCE_MS = 900;
-const LIVE_PRICE_REFRESH_MS = 4000;
+const LIVE_PRICE_REFRESH_MS = 2000;
 const PRESET_SETUP_TYPES = new Set(["Breakout", "Liquidity Grab", "Trend Continuation", "Reversal", "Scalp", "Custom"]);
 const PRODUCT_BRAND_TEXT = "Trader Journal";
 const PRODUCT_BRAND_MARKUP =
@@ -4003,6 +4003,9 @@ function renderClosedTradeFeedCard(trade, cardOrder = 0) {
   const rowToneClass = getClosedTradeToneClass(trade, resolution);
   const tpCellClass = resolution?.type === "tp" ? "recent-trade-price-cell recent-trade-price-cell-positive" : "recent-trade-price-cell";
   const slCellClass = resolution?.type === "sl" ? "recent-trade-price-cell recent-trade-price-cell-negative" : "recent-trade-price-cell";
+  const closedPips = ensureNumber(trade.pips, NaN);
+  const closedPipsTone = getLiveToneClass(closedPips);
+  const closedPipsText = formatSignedPips(closedPips);
   const exitCellClass = rowToneClass === "recent-trade-row-public-positive"
     ? "recent-trade-price-cell recent-trade-price-cell-positive"
     : rowToneClass === "recent-trade-row-public-negative"
@@ -4022,7 +4025,10 @@ function renderClosedTradeFeedCard(trade, cardOrder = 0) {
           <span class="${tpCellClass}"><em>TP</em><strong>${formatProgressTradePrice(trade.takeProfit)}</strong></span>
           <span class="${exitCellClass}"><em>Exit</em><strong>${formatProgressTradePrice(trade.exitPrice)}</strong></span>
         </div>
-        <div class="recent-trade-time">${escapeHtml(formatCompactTradeDate(trade))}</div>
+        <div class="recent-trade-foot">
+          <div class="recent-trade-time">${escapeHtml(formatCompactTradeDate(trade))}</div>
+          <div class="recent-trade-pips ${closedPipsTone}">${escapeHtml(closedPipsText)}</div>
+        </div>
       </div>
     </button>
   `;
@@ -4544,6 +4550,14 @@ function formatTradeTimeline(trade) {
 }
 
 function formatCompactTradeDate(trade) {
+  const tradeDate = parseTradeEntryDate(trade.date);
+  if (tradeDate) {
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric"
+    }).format(tradeDate);
+  }
+
   const date = parseIsoDate(trade.createdAt || trade.closedAt || trade.updatedAt);
   if (!date) {
     return trade.date || "—";
@@ -4592,7 +4606,51 @@ function getClosedTradeResolution(trade) {
     };
   }
 
-  return null;
+  return {
+    type: "ts",
+    label: "TS",
+    className: "recent-trade-status recent-trade-status-trail"
+  };
+}
+
+function parseTradeEntryDate(value) {
+  const raw = String(value || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return null;
+  }
+
+  const [yearText, monthText, dayText] = raw.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const date = new Date(year, month - 1, day, 12, 0, 0, 0);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatSignedPips(value) {
+  if (!Number.isFinite(value)) {
+    return "—";
+  }
+
+  const sign = value > 0 ? "+" : value < 0 ? "-" : "±";
+  return `${sign}${Math.abs(value).toFixed(2)} pips`;
+}
+
+function getRecentTradeRowSortValue(trade) {
+  const tradeDate = String(trade?.date || "").trim();
+  if (tradeDate) {
+    return `${tradeDate}T${String(trade?.createdAt || trade?.updatedAt || "").slice(11, 19) || "00:00:00"}`;
+  }
+
+  return String(trade?.createdAt || trade?.updatedAt || "");
+}
+
+function sortRecentTradeRowsDesc(a, b) {
+  return getRecentTradeRowSortValue(b).localeCompare(getRecentTradeRowSortValue(a));
+}
+
+function sortRecentTradeRowsAsc(a, b) {
+  return getRecentTradeRowSortValue(a).localeCompare(getRecentTradeRowSortValue(b));
 }
 
 function getClosedTradeToneClass(trade, resolution = getClosedTradeResolution(trade)) {
@@ -4803,6 +4861,7 @@ function normalizeRecentTrades(input) {
       const trade = {
         id: String(item.id || ""),
         asset: String(item.symbol || item.asset || "UNKNOWN"),
+        date: String(item.date || ""),
         direction: String(item.direction || "Buy"),
         entryPrice: ensurePositiveNumber(item.entry_price ?? item.entryPrice, 0),
         stopLoss: ensurePositiveNumber(item.stop_loss ?? item.stopLoss, 0),
@@ -4810,13 +4869,14 @@ function normalizeRecentTrades(input) {
         exitPrice: ensurePositiveNumber(item.exit_price ?? item.exitPrice, 0),
         status: item.status === "open" ? "open" : "closed",
         netPnl: ensureNumber(item.profit_loss ?? item.profitLoss, 0),
+        pips: ensureNumber(item.pips, 0),
         createdAt: String(item.created_at || item.createdAt || ""),
         closedAt: String(item.closed_at || item.closedAt || ""),
         updatedAt: String(item.closed_at || item.closedAt || item.created_at || item.createdAt || "")
       };
       return trade;
     })
-    .sort(sortTradesDesc);
+    .sort(sortRecentTradeRowsDesc);
 }
 
 function normalizeMarketSymbol(symbol) {

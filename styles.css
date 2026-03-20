@@ -403,6 +403,12 @@ body.is-preview .auth-shell {
   background: rgba(255, 90, 126, 0.12);
 }
 
+.recent-trade-status-trail {
+  color: var(--amber);
+  background: rgba(255, 190, 79, 0.12);
+  border: 1px solid rgba(255, 190, 79, 0.2);
+}
+
 .recent-trade-status-open,
 .recent-trade-status-flat {
   color: #d8e8ff;
