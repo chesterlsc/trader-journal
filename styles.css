@@ -269,6 +269,11 @@ body.is-preview .auth-shell {
   letter-spacing: 0.02em;
 }
 
+.recent-trades-verified-card {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
 .recent-trades-toggle {
   appearance: none;
   border: 1px solid rgba(103, 130, 188, 0.16);

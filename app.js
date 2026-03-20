@@ -3987,27 +3987,30 @@ function renderTradeFeedSection({ key, title, trades, emptyLabel, renderer, sect
     <section class="recent-trades-card" aria-label="${escapeHtml(title)}" style="--trade-section-order:${Number(sectionOrder)};">
       <div class="recent-trades-header">
         <p class="recent-trades-label">${escapeHtml(title)}</p>
-        <div class="recent-trades-header-actions">
-          <div class="recent-trades-verified" aria-label="Verified Vantage trades">
-            <span class="recent-trades-verified-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" focusable="false">
-                <path d="M12 1.8 14.74 4l3.49-.27 1.34 3.24 3.05 1.72-.81 3.4.81 3.4-3.05 1.72-1.34 3.24-3.49-.27L12 22.2l-2.74-2.2-3.49.27-1.34-3.24-3.05-1.72.81-3.4-.81-3.4 3.05-1.72L5.77 3.73 9.26 4 12 1.8Z" />
-                <path d="m7.8 12.3 2.64 2.64L16.8 8.58" />
-              </svg>
-            </span>
-            <span class="recent-trades-verified-copy">
-              <strong>Verified</strong>
-              <span>Vantage Trades Verified</span>
-            </span>
-          </div>
-          ${canExpand ? `<button class="recent-trades-toggle" type="button" data-trade-feed-toggle="${escapeHtml(key)}">${expanded ? "Hide Trades" : "Show Trades"}</button>` : ""}
-        </div>
+        ${canExpand ? `<button class="recent-trades-toggle" type="button" data-trade-feed-toggle="${escapeHtml(key)}">${expanded ? "Hide Trades" : "Show Trades"}</button>` : ""}
       </div>
       <div class="recent-trades-list">
         ${firstTrade ? renderer(firstTrade, 0) : `<p class="recent-trade-empty">${escapeHtml(emptyLabel)}</p>`}
       </div>
       ${expanded && remainingTrades.length ? `<div class="recent-trades-list recent-trades-list-expanded">${remainingTrades.map((trade, index) => renderer(trade, index + 1)).join("")}</div>` : ""}
     </section>
+  `;
+}
+
+function renderTradeVerifiedPill() {
+  return `
+    <div class="recent-trades-verified recent-trades-verified-card" aria-label="Verified Vantage trades">
+      <span class="recent-trades-verified-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M12 1.8 14.74 4l3.49-.27 1.34 3.24 3.05 1.72-.81 3.4.81 3.4-3.05 1.72-1.34 3.24-3.49-.27L12 22.2l-2.74-2.2-3.49.27-1.34-3.24-3.05-1.72.81-3.4-.81-3.4 3.05-1.72L5.77 3.73 9.26 4 12 1.8Z" />
+          <path d="m7.8 12.3 2.64 2.64L16.8 8.58" />
+        </svg>
+      </span>
+      <span class="recent-trades-verified-copy">
+        <strong>Verified</strong>
+        <span>Vantage Trades</span>
+      </span>
+    </div>
   `;
 }
 
@@ -4032,6 +4035,7 @@ function renderClosedTradeFeedCard(trade, cardOrder = 0) {
           <strong class="recent-trade-symbol">${escapeHtml(trade.asset)}</strong>
           <span class="${directionClass}">${escapeHtml(trade.direction)}</span>
           ${resolution ? `<span class="${escapeHtml(resolution.className)}">${escapeHtml(resolution.label)}</span>` : ""}
+          ${renderTradeVerifiedPill()}
         </div>
         <div class="recent-trade-prices recent-trade-prices-public">
           <span class="recent-trade-price-cell"><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
@@ -4073,6 +4077,7 @@ function renderOpenTradeFeedCard(trade, cardOrder = 0) {
           <strong class="recent-trade-symbol">${escapeHtml(trade.asset)}</strong>
           <span class="${directionClass}">${escapeHtml(trade.direction)}</span>
           <span class="recent-trade-status recent-trade-status-open">OPEN</span>
+          ${renderTradeVerifiedPill()}
         </div>
         <div class="recent-trade-prices recent-trade-prices-public">
           <span class="recent-trade-price-cell"><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
