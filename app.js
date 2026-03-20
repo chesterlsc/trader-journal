@@ -3926,14 +3926,16 @@ function renderHeroRecentTrades() {
       title: "Leon In Progress Trades",
       trades: openTrades,
       emptyLabel: "No in progress trades yet.",
-      renderer: renderOpenTradeFeedCard
+      renderer: renderOpenTradeFeedCard,
+      sectionOrder: 0
     }),
     renderTradeFeedSection({
       key: "closed",
       title: "Leon Closed Trades",
       trades: closedTrades,
       emptyLabel: "No closed trades yet.",
-      renderer: renderClosedTradeFeedCard
+      renderer: renderClosedTradeFeedCard,
+      sectionOrder: 1
     })
   ].join("");
 }
@@ -3975,27 +3977,27 @@ function getRecentTradesSource() {
   return canAccessApp() && Array.isArray(state.recentTrades) ? [...state.recentTrades].sort(sortTradesDesc) : [];
 }
 
-function renderTradeFeedSection({ key, title, trades, emptyLabel, renderer }) {
+function renderTradeFeedSection({ key, title, trades, emptyLabel, renderer, sectionOrder = 0 }) {
   const expanded = key === "closed" ? state.landingFeed.closedExpanded : state.landingFeed.openExpanded;
   const firstTrade = trades[0];
   const remainingTrades = trades.slice(1, 10);
   const canExpand = remainingTrades.length > 0;
 
   return `
-    <section class="recent-trades-card" aria-label="${escapeHtml(title)}">
+    <section class="recent-trades-card" aria-label="${escapeHtml(title)}" style="--trade-section-order:${Number(sectionOrder)};">
       <div class="recent-trades-header">
         <p class="recent-trades-label">${escapeHtml(title)}</p>
         ${canExpand ? `<button class="recent-trades-toggle" type="button" data-trade-feed-toggle="${escapeHtml(key)}">${expanded ? "Hide Trades" : "Show Trades"}</button>` : ""}
       </div>
       <div class="recent-trades-list">
-        ${firstTrade ? renderer(firstTrade) : `<p class="recent-trade-empty">${escapeHtml(emptyLabel)}</p>`}
+        ${firstTrade ? renderer(firstTrade, 0) : `<p class="recent-trade-empty">${escapeHtml(emptyLabel)}</p>`}
       </div>
-      ${expanded && remainingTrades.length ? `<div class="recent-trades-list recent-trades-list-expanded">${remainingTrades.map(renderer).join("")}</div>` : ""}
+      ${expanded && remainingTrades.length ? `<div class="recent-trades-list recent-trades-list-expanded">${remainingTrades.map((trade, index) => renderer(trade, index + 1)).join("")}</div>` : ""}
     </section>
   `;
 }
 
-function renderClosedTradeFeedCard(trade) {
+function renderClosedTradeFeedCard(trade, cardOrder = 0) {
   const directionClass = trade.direction === "Sell" ? "recent-trade-direction recent-trade-direction-sell" : "recent-trade-direction recent-trade-direction-buy";
   const resolution = getClosedTradeResolution(trade);
   const rowToneClass = getClosedTradeToneClass(trade, resolution);
@@ -4007,7 +4009,7 @@ function renderClosedTradeFeedCard(trade) {
       ? "recent-trade-price-cell recent-trade-price-cell-negative"
       : "recent-trade-price-cell";
   return `
-    <button class="recent-trade-row recent-trade-row-public ${rowToneClass}" type="button" data-trade-id="${escapeHtml(trade.id)}">
+    <button class="recent-trade-row recent-trade-row-public ${rowToneClass}" type="button" data-trade-id="${escapeHtml(trade.id)}" style="--trade-row-order:${Number(cardOrder)};">
       <div class="recent-trade-main">
         <div class="recent-trade-top">
           <strong class="recent-trade-symbol">${escapeHtml(trade.asset)}</strong>
@@ -4026,7 +4028,7 @@ function renderClosedTradeFeedCard(trade) {
   `;
 }
 
-function renderOpenTradeFeedCard(trade) {
+function renderOpenTradeFeedCard(trade, cardOrder = 0) {
   const directionClass = trade.direction === "Sell" ? "recent-trade-direction recent-trade-direction-sell" : "recent-trade-direction recent-trade-direction-buy";
   const liveSnapshot = getOpenTradeLiveSnapshot(trade);
   const currentPrice = liveSnapshot?.currentPrice ?? null;
@@ -4045,7 +4047,7 @@ function renderOpenTradeFeedCard(trade) {
       : "recent-trade-price-cell";
 
   return `
-    <button class="recent-trade-row recent-trade-row-public ${rowToneClass}" type="button" data-trade-id="${escapeHtml(trade.id)}">
+    <button class="recent-trade-row recent-trade-row-public ${rowToneClass}" type="button" data-trade-id="${escapeHtml(trade.id)}" style="--trade-row-order:${Number(cardOrder)};">
       <div class="recent-trade-main">
         <div class="recent-trade-top">
           <strong class="recent-trade-symbol">${escapeHtml(trade.asset)}</strong>

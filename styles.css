@@ -189,6 +189,10 @@ body.is-preview .auth-shell {
   border: 1px solid rgba(132, 156, 214, 0.16);
   border-radius: 20px;
   background: linear-gradient(180deg, rgba(10, 17, 31, 0.72), rgba(9, 14, 28, 0.54));
+  opacity: 0;
+  transform: translateY(12px);
+  animation: recentTradesSectionIn 520ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(140ms + (var(--trade-section-order, 0) * 110ms));
 }
 
 .recent-trades-header {
@@ -243,6 +247,11 @@ body.is-preview .auth-shell {
   text-align: left;
   cursor: pointer;
   transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
+  opacity: 0;
+  transform: translateY(10px) scale(0.988);
+  animation: recentTradeCardIn 440ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(220ms + (var(--trade-section-order, 0) * 110ms) + (var(--trade-row-order, 0) * 70ms));
+  will-change: transform, opacity;
 }
 
 .recent-trade-row-public-positive {
@@ -2941,5 +2950,36 @@ body.is-authenticated .trust-row {
   50% {
     text-shadow: 0 0 24px rgba(87, 161, 255, 0.28);
     color: #72b6ff;
+  }
+}
+
+@keyframes recentTradesSectionIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes recentTradeCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.988);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recent-trades-card,
+  .recent-trade-row {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 }
