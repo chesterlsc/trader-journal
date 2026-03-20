@@ -200,12 +200,73 @@ body.is-preview .auth-shell {
   flex-wrap: wrap;
 }
 
+.recent-trades-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
 .recent-trades-label {
   margin: 0;
   color: #d8e8ff;
   font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.recent-trades-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(57, 211, 255, 0.24);
+  background: rgba(14, 28, 48, 0.78);
+}
+
+.recent-trades-verified-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
+.recent-trades-verified-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.recent-trades-verified-icon svg path:first-child {
+  fill: var(--cyan);
+}
+
+.recent-trades-verified-icon svg path:last-child {
+  stroke: #f5fbff;
+  stroke-width: 2.15;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.recent-trades-verified-copy {
+  display: grid;
+  gap: 1px;
+}
+
+.recent-trades-verified-copy strong {
+  color: #f0f7ff;
+  font: 700 0.62rem/1 "JetBrains Mono", "Consolas", monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.recent-trades-verified-copy span {
+  color: var(--text-soft);
+  font: 500 0.62rem/1.15 "JetBrains Mono", "Consolas", monospace;
+  letter-spacing: 0.02em;
 }
 
 .recent-trades-toggle {
@@ -2570,6 +2631,12 @@ body.is-authenticated .trust-row {
 
   .recent-trades-header {
     align-items: flex-start;
+  }
+
+  .recent-trades-header-actions {
+    width: 100%;
+    justify-content: space-between;
+    margin-left: 0;
   }
 
   .recent-trade-row {
