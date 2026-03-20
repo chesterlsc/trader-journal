@@ -590,6 +590,10 @@
                       Take Profit
                       <input id="takeProfit" name="takeProfit" type="number" min="0" step="0.0001" required />
                     </label>
+                    <label class="trade-status-toggle field-span-2">
+                      <input id="tradeInProgress" name="tradeInProgress" type="checkbox" />
+                      <span>Mark as in progress</span>
+                    </label>
                     <label>
                       Exit Price
                       <input id="exitPrice" name="exitPrice" type="number" min="0" step="0.0001" />
@@ -611,10 +615,6 @@
                         <option value="Loss">Loss</option>
                         <option value="Break Even">Break Even</option>
                       </select>
-                    </label>
-                    <label class="trade-status-toggle field-span-2">
-                      <input id="tradeInProgress" name="tradeInProgress" type="checkbox" />
-                      <span>Mark as in progress</span>
                     </label>
                   </div>
                 </section>

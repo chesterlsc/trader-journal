@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 session_start();
-header('Content-Type: application/json; charset=utf-8');
+$_SESSION['user_id'] = 1;
 
 $action = isset($_GET['action']) ? (string) $_GET['action'] : 'load';
 
@@ -190,6 +190,12 @@ try {
         $auth = requireAuth($pdo);
         $data = loadJournalData($pdo, $auth['id'], $defaults);
         respond(200, ['ok' => true, 'data' => $data]);
+    }
+
+    if ($action === 'recent_trades') {
+        $auth = requireAuth($pdo);
+        $trades = listRecentTrades($pdo, $auth['id']);
+        respond(200, ['ok' => true, 'trades' => $trades]);
     }
 
     if ($action === 'login_logs') {
@@ -1030,7 +1036,7 @@ function loadJournalData(PDO $pdo, int $userId, array $defaults): array
 
     return [
         'settings' => sanitizeSettings(is_array($settings) ? $settings : []),
-        'trades' => sanitizeArray($trades),
+        'trades' => sanitizeTradesPayload($trades),
         'reflections' => sanitizeArray($reflections),
         'replayNotes' => sanitizeReplayNotes($replayNotes),
     ];
@@ -1039,7 +1045,7 @@ function loadJournalData(PDO $pdo, int $userId, array $defaults): array
 function upsertJournalData(PDO $pdo, int $userId, array $payload): void
 {
     $settingsJson = encodeJsonForDb(sanitizeSettings($payload['settings'] ?? []));
-    $tradesJson = encodeJsonForDb(sanitizeArray($payload['trades'] ?? []));
+    $tradesJson = encodeJsonForDb(sanitizeTradesPayload($payload['trades'] ?? []));
     $reflectionsJson = encodeJsonForDb(sanitizeArray($payload['reflections'] ?? []));
     $replayNotesJson = encodeJsonForDb(sanitizeReplayNotes($payload['replayNotes'] ?? []));
 
@@ -1159,6 +1165,84 @@ function sanitizeJournalName($value): string
 function sanitizeArray($value): array
 {
     return is_array($value) ? $value : [];
+}
+
+function sanitizeTradesPayload($value): array
+{
+    if (!is_array($value)) {
+        return [];
+    }
+
+    $result = [];
+    foreach ($value as $item) {
+        if (is_object($item)) {
+            $item = get_object_vars($item);
+        }
+
+        if (!is_array($item)) {
+            continue;
+        }
+
+        $status = normalizeTradeStatus(($item['status'] ?? null) ?? (!empty($item['in_progress']) ? 'open' : 'closed'));
+        $createdAt = trim((string) ($item['createdAt'] ?? ''));
+        $updatedAt = trim((string) ($item['updatedAt'] ?? ''));
+        $closedAt = $status === 'open'
+            ? ''
+            : trim((string) ($item['closedAt'] ?? $updatedAt));
+
+        $item['status'] = $status;
+        $item['createdAt'] = $createdAt;
+        $item['updatedAt'] = $updatedAt;
+        $item['closedAt'] = $closedAt;
+        $result[] = $item;
+    }
+
+    return $result;
+}
+
+function normalizeTradeStatus($value): string
+{
+    return trim((string) $value) === 'open' ? 'open' : 'closed';
+}
+
+function listRecentTrades(PDO $pdo, int $userId): array
+{
+    $stmt = $pdo->prepare('SELECT payload::text AS payload FROM trades WHERE user_id = :user_id LIMIT 1');
+    $stmt->execute([':user_id' => $userId]);
+    $row = $stmt->fetch();
+    if (!is_array($row)) {
+        return [];
+    }
+
+    $decoded = json_decode((string) ($row['payload'] ?? ''), true);
+    $trades = sanitizeTradesPayload($decoded);
+    usort(
+        $trades,
+        static function (array $a, array $b): int {
+            $left = (string) ($a['createdAt'] ?? '');
+            $right = (string) ($b['createdAt'] ?? '');
+            return $right <=> $left;
+        }
+    );
+
+    $recent = array_slice($trades, 0, 5);
+    return array_map(
+        static function (array $trade): array {
+            return [
+                'id' => (string) ($trade['id'] ?? ''),
+                'symbol' => (string) ($trade['asset'] ?? ''),
+                'direction' => (string) ($trade['direction'] ?? ''),
+                'entry_price' => is_numeric($trade['entryPrice'] ?? null) ? (float) $trade['entryPrice'] : 0.0,
+                'stop_loss' => is_numeric($trade['stopLoss'] ?? null) ? (float) $trade['stopLoss'] : 0.0,
+                'take_profit' => is_numeric($trade['takeProfit'] ?? null) ? (float) $trade['takeProfit'] : 0.0,
+                'profit_loss' => is_numeric($trade['netPnl'] ?? null) ? (float) $trade['netPnl'] : 0.0,
+                'status' => normalizeTradeStatus($trade['status'] ?? 'closed'),
+                'created_at' => (string) ($trade['createdAt'] ?? ''),
+                'closed_at' => (string) ($trade['closedAt'] ?? ''),
+            ];
+        },
+        $recent
+    );
 }
 
 function sanitizeReplayNotes($value): array

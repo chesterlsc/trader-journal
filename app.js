@@ -30,6 +30,7 @@ const state = {
   reflections: [],
   replayNotes: {},
   bulkPreview: [],
+  recentTrades: [],
   loginLogs: [],
   adminUsers: [],
   auth: {
@@ -678,6 +679,7 @@ async function checkAuthSession() {
   if (state.auth.isAuthenticated) {
     collapseAdminPanels();
     const loaded = await loadFromPhpStorage({ silent: true, source: "session", preferLocalIfServerEmpty: true });
+    await loadRecentTrades({ silent: true });
     if (loaded) {
       setMessage(ui.authMessage, `Session restored for ${state.auth.username}.`, "success");
     }
@@ -685,6 +687,8 @@ async function checkAuthSession() {
     await loadAdminUsers({ silent: true });
     switchView("dashboard");
   } else {
+    state.recentTrades = [];
+    renderHeroRecentTrades();
     state.loginLogs = [];
     state.adminUsers = [];
     renderLoginLogs();
@@ -737,8 +741,10 @@ async function handleLogout() {
   state.auth.isAdmin = false;
   state.auth.intent = "register";
   state.auth.mobileAuthVisible = !isCompactAuthViewport();
+  state.recentTrades = [];
   state.loginLogs = [];
   state.adminUsers = [];
+  renderHeroRecentTrades();
   renderLoginLogs();
   renderAdminUsers();
   cancelServerAutosave();
@@ -787,6 +793,7 @@ async function submitAuth(action, password, successMessage, identifier = "") {
       }
     }
 
+    await loadRecentTrades({ silent: true });
     await loadLoginLogs({ silent: true });
     await loadAdminUsers({ silent: true });
     collapseAdminPanels();
@@ -804,6 +811,7 @@ async function submitAuth(action, password, successMessage, identifier = "") {
 function resetJournalState() {
   state.settings = normalizeSettings(DEFAULT_SETTINGS);
   state.trades = [];
+  state.recentTrades = [];
   state.reflections = [];
   state.replayNotes = {};
   state.bulkPreview = [];
@@ -1106,9 +1114,12 @@ function handleTradeSubmit(event) {
   }
 
   const existingId = ui.tradeFields.tradeId.value.trim();
+  const existingTrade = existingId ? getExistingTrade(existingId) : null;
   const trade = buildTradeRecord(payload.value, {
     id: existingId,
-    createdAt: existingId ? getExistingTrade(existingId)?.createdAt : ""
+    createdAt: existingTrade?.createdAt || "",
+    closedAt: existingTrade?.closedAt || "",
+    existingTrade
   });
 
   if (existingId) {
@@ -1232,9 +1243,13 @@ function readTradeForm() {
 function buildTradeRecord(tradeInput, options = {}) {
   const now = new Date().toISOString();
   const existingId = String(options.id || "").trim();
+  const existingTrade = options.existingTrade && typeof options.existingTrade === "object" ? options.existingTrade : null;
   const status = tradeInput.status === "open" ? "open" : "closed";
   const metricsInput = status === "open" ? { ...tradeInput, exitPrice: tradeInput.entryPrice } : tradeInput;
   const metrics = calculateTradeMetrics(metricsInput);
+  const closedAt = status === "open"
+    ? ""
+    : String(options.closedAt || existingTrade?.closedAt || now);
   const resolvedResult =
     status === "open"
       ? "Open"
@@ -1249,6 +1264,7 @@ function buildTradeRecord(tradeInput, options = {}) {
     ...tradeInput,
     exitPrice: status === "open" ? 0 : tradeInput.exitPrice,
     status,
+    closedAt,
     result: resolvedResult,
     netPnl: status === "open" ? 0 : metrics.netPnl,
     riskAmount: metrics.riskAmount,
@@ -2089,6 +2105,8 @@ function exportTradesCsv() {
   }
 
   const headers = [
+    "createdAt",
+    "closedAt",
     "date",
     "session",
     "market",
@@ -2213,6 +2231,7 @@ async function saveToPhpStorage(options = {}) {
     if (!silent) {
       setMessage(ui.journalMessage, "Saved to server database.", "success");
     }
+    await loadRecentTrades({ silent: true });
     return true;
   } catch (error) {
     if (!silent) {
@@ -2286,6 +2305,7 @@ async function loadFromPhpStorage(options = {}) {
     persistState({ skipServerSync: true });
     hydrateRiskForm();
     renderAll();
+    await loadRecentTrades({ silent: true });
     if (!silent) {
       setMessage(ui.journalMessage, "Loaded from server database.", "success");
     }
@@ -3723,7 +3743,7 @@ function renderHeroRecentTrades() {
     return;
   }
 
-  const trades = [...state.trades].sort(sortTradesDesc).slice(0, 5);
+  const trades = canAccessApp() ? getRecentTradesSource() : [];
   if (!trades.length) {
     ui.recentTradesList.innerHTML = '<p class="recent-trade-empty">No trades yet.</p>';
     return;
@@ -3774,6 +3794,14 @@ function handleRecentTradesClick(event) {
   }
 
   setAuthIntent("login", { focus: true });
+}
+
+function getRecentTradesSource() {
+  if (Array.isArray(state.trades) && state.trades.length > 0) {
+    return [...state.trades].sort(sortTradesDesc).slice(0, 5);
+  }
+
+  return Array.isArray(state.recentTrades) ? state.recentTrades.slice(0, 5) : [];
 }
 
 function hydrateSetupFilter() {
@@ -4003,6 +4031,7 @@ function normalizeTrades(input) {
       const baseTrade = {
         id: String(item.id),
         createdAt: String(item.createdAt || ""),
+        closedAt: String(item.closedAt || item.updatedAt || ""),
         updatedAt: String(item.updatedAt || ""),
         date: String(item.date),
         session: String(item.session || "Custom"),
@@ -4200,7 +4229,7 @@ function formatHeroPrice(value) {
 
 function formatTradeTimeline(trade) {
   const entry = parseIsoDate(trade.createdAt);
-  const exit = trade.status === "open" ? null : parseIsoDate(trade.updatedAt);
+  const exit = trade.status === "open" ? null : parseIsoDate(trade.closedAt || trade.updatedAt);
 
   if (!entry) {
     return trade.date || "—";
@@ -4248,6 +4277,65 @@ function formatRecentTradeStatus(trade) {
 function parseIsoDate(value) {
   const date = new Date(String(value || ""));
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+async function loadRecentTrades(options = {}) {
+  const { silent = false } = options;
+
+  if (!state.auth.isAuthenticated) {
+    state.recentTrades = [];
+    renderHeroRecentTrades();
+    return false;
+  }
+
+  try {
+    const response = await fetch("trade_handler.php?action=recent_trades", {
+      method: "GET",
+      credentials: "same-origin"
+    });
+    const body = await response.json();
+    if (!response.ok || !body.ok || !Array.isArray(body.trades)) {
+      throw new Error(body.error || "Recent trades load failed");
+    }
+
+    state.recentTrades = normalizeRecentTrades(body.trades);
+    renderHeroRecentTrades();
+    return true;
+  } catch (error) {
+    state.recentTrades = [];
+    renderHeroRecentTrades();
+    if (!silent) {
+      setMessage(ui.authMessage, error.message || "Recent trades load failed.", "error");
+    }
+    return false;
+  }
+}
+
+function normalizeRecentTrades(input) {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .filter((item) => item && typeof item === "object")
+    .map((item) => {
+      const trade = {
+        id: String(item.id || ""),
+        asset: String(item.symbol || item.asset || "UNKNOWN"),
+        direction: String(item.direction || "Buy"),
+        entryPrice: ensurePositiveNumber(item.entry_price ?? item.entryPrice, 0),
+        stopLoss: ensurePositiveNumber(item.stop_loss ?? item.stopLoss, 0),
+        takeProfit: ensurePositiveNumber(item.take_profit ?? item.takeProfit, 0),
+        status: item.status === "open" ? "open" : "closed",
+        netPnl: ensureNumber(item.profit_loss ?? item.profitLoss, 0),
+        createdAt: String(item.created_at || item.createdAt || ""),
+        closedAt: String(item.closed_at || item.closedAt || ""),
+        updatedAt: String(item.closed_at || item.closedAt || item.created_at || item.createdAt || "")
+      };
+      return trade;
+    })
+    .sort(sortTradesDesc)
+    .slice(0, 5);
 }
 
 function formatCurrency(value) {
