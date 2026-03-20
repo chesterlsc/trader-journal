@@ -38,6 +38,7 @@ const state = {
     isAuthenticated: false,
     username: "",
     isAdmin: false,
+    previewMode: false,
     intent: "register",
     mobileAuthVisible: false,
     sessionCheckVersion: 0,
@@ -134,6 +135,7 @@ const ui = {
   bulkMessage: document.getElementById("bulkMessage"),
   bulkPreviewWrap: document.getElementById("bulkPreviewWrap"),
   bulkPreviewBody: document.getElementById("bulkPreviewBody"),
+  tradeAdvancedDetails: document.getElementById("tradeAdvancedDetails"),
   loginLogsPanel: document.getElementById("loginLogsPanel"),
   refreshLoginLogsBtn: document.getElementById("refreshLoginLogsBtn"),
   loginLogsMessage: document.getElementById("loginLogsMessage"),
@@ -185,6 +187,10 @@ const ui = {
   clearFiltersBtn: document.getElementById("clearFiltersBtn"),
   journalNewTradeBtn: document.getElementById("journalNewTradeBtn"),
   exportCsvBtn: document.getElementById("exportCsvBtn"),
+  progressTradeSummary: document.getElementById("progressTradeSummary"),
+  progressTradeSymbol: document.getElementById("progressTradeSymbol"),
+  progressTradeEntry: document.getElementById("progressTradeEntry"),
+  progressTradeRisk: document.getElementById("progressTradeRisk"),
   backupJsonBtn: document.getElementById("backupJsonBtn"),
   importJsonBtn: document.getElementById("importJsonBtn"),
   jsonImportInput: document.getElementById("jsonImportInput"),
@@ -211,9 +217,14 @@ const ui = {
 init();
 
 function init() {
+  state.auth.previewMode = isLocalPreviewMode();
   state.auth.resetToken = getResetTokenFromUrl();
   state.auth.resetTokenStatus = state.auth.resetToken ? "pending" : "idle";
   state.auth.mobileAuthVisible = !isCompactAuthViewport() || Boolean(state.auth.resetToken);
+  if (state.auth.previewMode) {
+    state.auth.checked = true;
+    state.auth.mobileAuthVisible = false;
+  }
   collapseAdminPanels();
   loadState();
   applyInitialDates();
@@ -231,6 +242,11 @@ function init() {
   renderAdminUsers();
   renderAll();
   renderLastSaved();
+  if (state.auth.previewMode) {
+    state.recentTrades = normalizeRecentTrades(state.trades);
+    renderHeroRecentTrades();
+    return;
+  }
   if (state.auth.resetToken) {
     validateResetToken();
   }
@@ -490,8 +506,13 @@ function syncMobileNavState() {
   }
 }
 
+function isLocalPreviewMode() {
+  const { protocol, hostname } = window.location;
+  return protocol === "file:" || hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0" || hostname === "::1";
+}
+
 function canAccessApp() {
-  return state.auth.checked && state.auth.isAuthenticated;
+  return state.auth.previewMode || (state.auth.checked && state.auth.isAuthenticated);
 }
 
 function setAuthIntent(intent, options = {}) {
@@ -571,13 +592,15 @@ async function validateResetToken() {
 }
 
 function updateAccessGate() {
-  const locked = state.auth.checked && !state.auth.isAuthenticated;
+  const previewMode = state.auth.previewMode;
+  const locked = !previewMode && state.auth.checked && !state.auth.isAuthenticated;
   const disableNavigation = !canAccessApp();
   const authenticated = state.auth.checked && state.auth.isAuthenticated;
 
   document.body.classList.toggle("auth-locked", locked);
   document.body.classList.add("auth-ready");
   document.body.classList.toggle("is-authenticated", authenticated);
+  document.body.classList.toggle("is-preview", previewMode);
 
   ui.navButtons.forEach((btn) => {
     btn.disabled = disableNavigation;
@@ -900,6 +923,27 @@ function updateAuthUi() {
     return;
   }
 
+  if (state.auth.previewMode) {
+    ui.authStatus.textContent = "";
+    ui.loginBtn.hidden = true;
+    ui.registerBtn.hidden = true;
+    ui.desktopLogoutBtn.hidden = true;
+    ui.mobileLogoutBtn.hidden = true;
+    if (ui.authIdentifier) {
+      ui.authIdentifier.disabled = false;
+    }
+    if (ui.authPassword) {
+      ui.authPassword.disabled = false;
+    }
+    if (ui.authPanel) {
+      ui.authPanel.hidden = true;
+      ui.authPanel.style.display = "none";
+    }
+    renderAdminUsers();
+    updateAccessGate();
+    return;
+  }
+
   if (state.auth.isAuthenticated) {
     ui.authStatus.textContent = state.auth.isAdmin
       ? `Logged in as ${state.auth.username} (Admin)`
@@ -1165,6 +1209,14 @@ function syncTradeProgressState() {
       ui.tradeFields.tradeResult.value = "Auto";
     }
   }
+}
+
+function setTradeAdvancedDetailsOpen(isOpen) {
+  if (!ui.tradeAdvancedDetails) {
+    return;
+  }
+
+  ui.tradeAdvancedDetails.open = Boolean(isOpen);
 }
 
 function getExistingTrade(id) {
@@ -1920,6 +1972,7 @@ function resetTradeForm(keepDate) {
   ui.tradeFields.screenshot.value = "";
   clearScreenshotPreview();
   ui.tradeSubmitBtn.textContent = "Save Trade";
+  setTradeAdvancedDetailsOpen(false);
   syncSetupTypeCustomField();
   syncTradeProgressState();
 
@@ -2042,6 +2095,7 @@ function loadTradeIntoForm(id) {
 
   ui.tradeFields.screenshotLabel.textContent = trade.screenshotName || "No screenshot selected";
   ui.tradeSubmitBtn.textContent = "Update Trade";
+  setTradeAdvancedDetailsOpen(true);
   syncSetupTypeCustomField();
   syncTradeProgressState();
 
@@ -2592,6 +2646,7 @@ function renderAll() {
   updateBranding();
   state.analytics = calculateAnalytics(state.trades, state.settings, state.reflections);
   renderHeroRecentTrades();
+  renderProgressTradeSummary();
   renderDashboardMetrics(state.analytics);
   renderRiskViolations(state.analytics);
   renderEdgeTable(state.analytics);
@@ -2601,6 +2656,31 @@ function renderAll() {
   renderJournalTable();
   renderReflections();
   renderMonthlyReview();
+}
+
+function renderProgressTradeSummary() {
+  if (!ui.progressTradeSummary || !ui.progressTradeSymbol || !ui.progressTradeEntry || !ui.progressTradeRisk) {
+    return;
+  }
+
+  if (!canAccessApp()) {
+    ui.progressTradeSummary.hidden = true;
+    return;
+  }
+
+  const openTrade = [...state.trades]
+    .filter((trade) => trade.status === "open")
+    .sort(sortTradesDesc)[0];
+
+  if (!openTrade) {
+    ui.progressTradeSummary.hidden = true;
+    return;
+  }
+
+  ui.progressTradeSymbol.textContent = openTrade.asset || "—";
+  ui.progressTradeEntry.textContent = formatHeroPrice(openTrade.entryPrice);
+  ui.progressTradeRisk.textContent = `±${ensureNonNegative(openTrade.riskPercent, 0).toFixed(2)}%`;
+  ui.progressTradeSummary.hidden = false;
 }
 
 function calculateAnalytics(trades, settings, reflections) {
