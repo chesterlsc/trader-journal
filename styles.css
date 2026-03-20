@@ -89,7 +89,7 @@ body.is-preview .auth-shell {
   z-index: 1;
   width: min(1360px, 95vw);
   margin: 18px auto;
-  padding: 24px;
+  padding: 20px 22px;
   border: 1px solid var(--line);
   border-radius: 30px;
   background:
@@ -98,6 +98,8 @@ body.is-preview .auth-shell {
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
   overflow: hidden;
   animation: fadeUp 420ms ease;
+  display: grid;
+  align-content: start;
 }
 
 .auth-shell-topbar {
@@ -105,7 +107,7 @@ body.is-preview .auth-shell {
   align-items: center;
   justify-content: flex-start;
   gap: 14px;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
 .auth-shell-brand {
@@ -115,14 +117,14 @@ body.is-preview .auth-shell {
 
 .auth-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(320px, 392px);
-  gap: 42px;
-  align-items: center;
-  min-height: 62vh;
+  grid-template-columns: minmax(0, 1.08fr) minmax(300px, 360px);
+  gap: 26px;
+  align-items: start;
+  min-height: calc(100svh - 122px);
 }
 
 .auth-hero-copy {
-  padding: 6px 8px 6px 0;
+  padding: 2px 6px 0 0;
   animation: fadeUp 480ms ease;
   width: 100%;
   max-width: 760px;
@@ -131,7 +133,7 @@ body.is-preview .auth-shell {
 .auth-hero-copy h2 {
   margin: 0;
   max-width: 640px;
-  font: 700 clamp(3rem, 6vw, 5rem)/0.97 "Sora", "Manrope", sans-serif;
+  font: 700 clamp(2.6rem, 4.9vw, 4.25rem)/0.95 "Sora", "Manrope", sans-serif;
   letter-spacing: -0.05em;
   transition: transform 220ms ease, text-shadow 220ms ease;
 }
@@ -143,17 +145,17 @@ body.is-preview .auth-shell {
 
 .auth-hero-text {
   max-width: 520px;
-  margin: 16px 0 0;
+  margin: 12px 0 0;
   color: var(--text-soft);
-  font-size: 1.12rem;
-  line-height: 1.6;
+  font-size: 1.02rem;
+  line-height: 1.5;
 }
 
 .hero-cta-row {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 24px;
+  margin-top: 18px;
 }
 
 .hero-cta-btn {
@@ -168,31 +170,30 @@ body.is-preview .auth-shell {
 
 .hero-cta-note {
   display: none;
-  margin: 12px 0 0;
-  padding-bottom: 12px;
+  margin: 10px 0 0;
+  padding-bottom: 8px;
   color: var(--text-soft);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
 }
 
 .recent-trades-board {
   width: 100%;
   display: grid;
-  gap: 14px;
-  margin-top: 28px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+  align-items: stretch;
+  animation: fadeUp 320ms ease;
 }
 
 .recent-trades-card {
   width: 100%;
   display: grid;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 12px;
   border: 1px solid rgba(132, 156, 214, 0.16);
   border-radius: 20px;
   background: linear-gradient(180deg, rgba(10, 17, 31, 0.72), rgba(9, 14, 28, 0.54));
-  opacity: 0;
-  transform: translateY(12px);
-  animation: recentTradesSectionIn 520ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  animation-delay: calc(140ms + (var(--trade-section-order, 0) * 110ms));
 }
 
 .recent-trades-header {
@@ -226,7 +227,7 @@ body.is-preview .auth-shell {
 
 .recent-trades-list {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .recent-trades-list-expanded {
@@ -237,8 +238,8 @@ body.is-preview .auth-shell {
   width: 100%;
   appearance: none;
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  gap: 8px;
+  padding: 12px;
   border: 1px solid rgba(103, 130, 188, 0.18);
   border-radius: 16px;
   background: rgba(11, 18, 33, 0.72);
@@ -247,11 +248,6 @@ body.is-preview .auth-shell {
   text-align: left;
   cursor: pointer;
   transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
-  opacity: 0;
-  transform: translateY(10px) scale(0.988);
-  animation: recentTradeCardIn 440ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  animation-delay: calc(220ms + (var(--trade-section-order, 0) * 110ms) + (var(--trade-row-order, 0) * 70ms));
-  will-change: transform, opacity;
 }
 
 .recent-trade-row-public-positive {
@@ -277,7 +273,7 @@ body.is-preview .auth-shell {
 .recent-trade-main {
   min-width: 0;
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .recent-trade-top {
@@ -333,7 +329,7 @@ body.is-preview .auth-shell {
 .recent-trade-price-cell {
   display: grid;
   gap: 2px;
-  padding: 9px 10px;
+  padding: 8px 9px;
   border-radius: 12px;
   background: rgba(15, 24, 43, 0.9);
   border: 1px solid rgba(103, 130, 188, 0.14);
@@ -429,7 +425,7 @@ body.is-preview .auth-shell {
 
 .auth-panel {
   justify-self: start;
-  width: min(100%, 392px);
+  width: min(100%, 360px);
   animation: fadeUp 620ms ease;
 }
 
@@ -592,9 +588,9 @@ h1 {
   border: 1px solid rgba(132, 156, 214, 0.16);
   border-radius: 22px;
   background: linear-gradient(180deg, rgba(11, 18, 36, 0.9), rgba(10, 16, 31, 0.93));
-  padding: 22px;
+  padding: 18px;
   display: grid;
-  gap: 12px;
+  gap: 10px;
   box-shadow: 0 10px 24px rgba(6, 14, 30, 0.24);
 }
 
@@ -2170,7 +2166,7 @@ body.is-authenticated .trust-row {
   .auth-shell {
     width: min(100%, calc(100vw - 16px));
     margin: 8px auto 16px;
-    padding: 18px;
+    padding: 16px;
     border-radius: 24px;
   }
 
@@ -2180,12 +2176,12 @@ body.is-authenticated .trust-row {
   }
 
   .auth-hero-copy h2 {
-    font-size: clamp(2.5rem, 9vw, 4.4rem);
+    font-size: clamp(2.25rem, 8vw, 3.7rem);
   }
 
   .auth-hero {
     grid-template-columns: 1fr;
-    gap: 18px;
+    gap: 14px;
     min-height: auto;
   }
 
@@ -2357,8 +2353,8 @@ body.is-authenticated .trust-row {
   .auth-panel {
     order: 2;
     width: 100%;
-    max-width: 560px;
-    padding: 18px;
+    max-width: 520px;
+    padding: 16px;
   }
 
   .shortcut-hint {
@@ -2507,20 +2503,20 @@ body.is-authenticated .trust-row {
   .auth-shell-topbar {
     align-items: flex-start;
     justify-content: flex-start;
-    padding-bottom: clamp(28px, 3vh, 72px);
+    padding-bottom: 12px;
   }
 
   .auth-shell {
     width: min(100%, calc(100vw - 20px));
     min-height: calc(100svh - 20px);
-    padding: 14px;
+    padding: 12px;
     border-radius: 20px;
     display: grid;
     align-content: start;
   }
 
   .auth-hero {
-    gap: 14px;
+    gap: 10px;
   }
 
   .auth-hero-copy {
@@ -2529,30 +2525,36 @@ body.is-authenticated .trust-row {
   }
 
   .auth-hero-copy h2 {
-    font-size: clamp(1.9rem, 9.8vw, 3rem);
-    line-height: 1;
+    font-size: clamp(1.72rem, 7.2vw, 2.34rem);
+    line-height: 0.98;
     letter-spacing: -0.045em;
   }
 
   .auth-hero-text {
-    margin-top: 14px;
-    font-size: 0.98rem;
-    line-height: 1.55;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    line-height: 1.42;
   }
 
   .hero-cta-row {
-    display: grid;
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
   }
 
   .hero-cta-btn {
-    width: 100%;
+    width: auto;
+    min-width: 134px;
+    min-height: 42px;
+    padding: 10px 14px;
+    font-size: 0.86rem;
   }
 
   .hero-cta-note {
     display: block;
-    font-size: 0.88rem;
-    padding-bottom: 16px;
+    font-size: 0.8rem;
+    padding-bottom: 10px;
   }
 
   .hero-mobile-bullets {
@@ -2567,15 +2569,35 @@ body.is-authenticated .trust-row {
 
   .recent-trades-card {
     margin-top: 0;
-    padding: 14px;
+    min-width: min(84vw, 340px);
+    padding: 12px;
+    scroll-snap-align: start;
   }
 
   .recent-trades-header {
     align-items: flex-start;
   }
 
+  .recent-trades-board {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(84vw, 1fr);
+    grid-template-columns: none;
+    gap: 10px;
+    margin-top: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2px 2px 6px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .recent-trades-board::-webkit-scrollbar {
+    display: none;
+  }
+
   .recent-trade-row {
-    gap: 9px;
+    gap: 8px;
   }
 
   .recent-trade-status {
@@ -2681,7 +2703,8 @@ body.is-authenticated .trust-row {
   }
 
   .auth-shell.mobile-auth-expanded .hero-cta-row,
-  .auth-shell.mobile-auth-expanded .hero-cta-note {
+  .auth-shell.mobile-auth-expanded .hero-cta-note,
+  .auth-shell.mobile-auth-expanded .recent-trades-board {
     display: none;
   }
 
@@ -2953,33 +2976,8 @@ body.is-authenticated .trust-row {
   }
 }
 
-@keyframes recentTradesSectionIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes recentTradeCardIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.988);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .recent-trades-card,
-  .recent-trade-row {
+  .recent-trades-board {
     animation: none;
-    opacity: 1;
-    transform: none;
   }
 }
