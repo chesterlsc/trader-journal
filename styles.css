@@ -173,65 +173,149 @@ body.is-authenticated .auth-shell {
   font-size: 0.92rem;
 }
 
-.hero-mobile-bullets {
-  display: none;
-  margin: 16px 0 0;
-  padding: 0;
-  list-style: none;
-  gap: 8px;
-}
-
-.hero-mobile-bullets li {
-  position: relative;
-  padding-left: 16px;
-  color: #d9e8ff;
-  font: 500 0.86rem/1.45 "JetBrains Mono", "Consolas", monospace;
-}
-
-.hero-mobile-bullets li::before {
-  content: "";
-  position: absolute;
-  top: 0.5rem;
-  left: 0;
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--cyan);
-  box-shadow: 0 0 12px rgba(57, 211, 255, 0.35);
-}
-
-.auth-proof-grid {
+.recent-trades-card {
+  width: 100%;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+  max-width: 560px;
   margin-top: 28px;
+  padding: 16px;
+  border: 1px solid rgba(132, 156, 214, 0.16);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(10, 17, 31, 0.72), rgba(9, 14, 28, 0.54));
 }
 
-.auth-proof-card {
+.recent-trades-label {
+  margin: 0;
+  color: #d8e8ff;
+  font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.recent-trades-list {
+  display: grid;
+  gap: 12px;
+}
+
+.recent-trade-row {
+  width: 100%;
+  appearance: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px 16px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(103, 130, 188, 0.18);
+  border-radius: 16px;
+  background: rgba(11, 18, 33, 0.72);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
+}
+
+.recent-trade-row:hover {
+  transform: translateY(-1px);
+  border-color: rgba(87, 161, 255, 0.34);
+  background: rgba(12, 20, 38, 0.8);
+}
+
+.recent-trade-main {
+  min-width: 0;
   display: grid;
   gap: 8px;
-  padding: 16px;
-  border: 1px solid rgba(132, 156, 214, 0.2);
-  border-radius: 18px;
-  background: rgba(9, 14, 28, 0.58);
-  transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
 }
 
-.auth-proof-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(87, 161, 255, 0.34);
-  background: rgba(12, 18, 35, 0.74);
+.recent-trade-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.auth-proof-card strong {
+.recent-trade-symbol {
+  font: 700 1rem/1 "Sora", "Manrope", sans-serif;
+  letter-spacing: -0.03em;
+}
+
+.recent-trade-direction {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font: 600 10px/1 "JetBrains Mono", "Consolas", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.recent-trade-direction-buy {
+  color: var(--green);
+  background: rgba(42, 212, 143, 0.12);
+  border: 1px solid rgba(42, 212, 143, 0.2);
+}
+
+.recent-trade-direction-sell {
+  color: var(--red);
+  background: rgba(255, 90, 126, 0.12);
+  border: 1px solid rgba(255, 90, 126, 0.2);
+}
+
+.recent-trade-prices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: #dbe8ff;
+  font: 600 0.85rem/1.4 "JetBrains Mono", "Consolas", monospace;
+}
+
+.recent-trade-prices span {
+  white-space: nowrap;
+}
+
+.recent-trade-time {
+  color: var(--text-soft);
+  font: 500 11px/1.35 "JetBrains Mono", "Consolas", monospace;
+}
+
+.recent-trade-status {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font: 700 11px/1 "JetBrains Mono", "Consolas", monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.recent-trade-status-positive {
+  color: var(--green);
+  background: rgba(42, 212, 143, 0.12);
+}
+
+.recent-trade-status-negative {
+  color: var(--red);
+  background: rgba(255, 90, 126, 0.12);
+}
+
+.recent-trade-status-open,
+.recent-trade-status-flat {
+  color: #d8e8ff;
+  background: rgba(103, 130, 188, 0.14);
+}
+
+.recent-trade-empty {
   margin: 0;
-  font-size: 0.98rem;
-}
-
-.auth-proof-card span {
-  color: #c4d4f5;
-  font-size: 0.88rem;
-  line-height: 1.45;
+  padding: 16px 14px;
+  border: 1px solid rgba(103, 130, 188, 0.18);
+  border-radius: 16px;
+  background: rgba(11, 18, 33, 0.48);
+  color: var(--text-soft);
+  font: 500 12px/1.4 "JetBrains Mono", "Consolas", monospace;
 }
 
 .auth-panel {
@@ -964,6 +1048,26 @@ input:-webkit-autofill:focus {
   margin-bottom: 0;
 }
 
+.trade-status-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid rgba(103, 130, 188, 0.18);
+  border-radius: 14px;
+  background: rgba(12, 18, 33, 0.5);
+  font: 600 0.84rem/1.3 "JetBrains Mono", "Consolas", monospace;
+  color: #dbe8ff;
+}
+
+.trade-status-toggle input {
+  margin: 0;
+  inline-size: 15px;
+  block-size: 15px;
+  accent-color: var(--blue);
+}
+
 .trade-grid-context {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -1681,8 +1785,8 @@ body.is-authenticated .trust-row {
     padding: 0;
   }
 
-  .auth-proof-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .recent-trades-card {
+    max-width: none;
   }
 
   .trust-row {
@@ -2044,8 +2148,18 @@ body.is-authenticated .trust-row {
     text-align: left;
   }
 
-  .auth-proof-grid {
-    display: none;
+  .recent-trades-card {
+    margin-top: 18px;
+    padding: 14px;
+  }
+
+  .recent-trade-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .recent-trade-status {
+    justify-self: start;
   }
 
   .journal-action-bar {

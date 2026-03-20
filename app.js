@@ -79,6 +79,7 @@ const ui = {
   lastSaved: document.getElementById("lastSaved"),
   authStatus: document.getElementById("authStatus"),
   authMessage: document.getElementById("authMessage"),
+  recentTradesList: document.getElementById("recentTradesList"),
   authControls: document.getElementById("authControls"),
   authIdentifier: document.getElementById("authIdentifier"),
   authPassword: document.getElementById("authPassword"),
@@ -154,6 +155,7 @@ const ui = {
     riskPercent: document.getElementById("riskPercent"),
     positionSize: document.getElementById("positionSize"),
     tradeResult: document.getElementById("tradeResult"),
+    tradeInProgress: document.getElementById("tradeInProgress"),
     setupType: document.getElementById("setupType"),
     customSetupWrap: document.getElementById("customSetupWrap"),
     customSetupType: document.getElementById("customSetupType"),
@@ -221,6 +223,7 @@ function init() {
   document.body.classList.add("auth-ready");
   updateAccessGate();
   syncSetupTypeCustomField();
+  syncTradeProgressState();
   bindEvents();
   syncMobileNavState();
   renderLoginLogs();
@@ -318,7 +321,11 @@ function bindEvents() {
   ui.tradeForm.addEventListener("submit", handleTradeSubmit);
   ui.tradeResetBtn.addEventListener("click", () => resetTradeForm(false));
   ui.tradeFields.setupType.addEventListener("change", syncSetupTypeCustomField);
+  ui.tradeFields.tradeInProgress.addEventListener("change", syncTradeProgressState);
   ui.tradeFields.screenshot.addEventListener("change", handleScreenshotUpload);
+  if (ui.recentTradesList) {
+    ui.recentTradesList.addEventListener("click", handleRecentTradesClick);
+  }
   if (ui.bulkPreviewBtn) {
     ui.bulkPreviewBtn.addEventListener("click", handleBulkPreview);
   }
@@ -1128,6 +1135,27 @@ function syncSetupTypeCustomField() {
   }
 }
 
+function syncTradeProgressState() {
+  const isOpen = Boolean(ui.tradeFields.tradeInProgress?.checked);
+
+  if (ui.tradeFields.exitPrice) {
+    ui.tradeFields.exitPrice.required = !isOpen;
+    if (isOpen) {
+      ui.tradeFields.exitPrice.value = "";
+      ui.tradeFields.exitPrice.placeholder = "Set after trade closes";
+    } else {
+      ui.tradeFields.exitPrice.placeholder = "";
+    }
+  }
+
+  if (ui.tradeFields.tradeResult) {
+    ui.tradeFields.tradeResult.disabled = isOpen;
+    if (isOpen) {
+      ui.tradeFields.tradeResult.value = "Auto";
+    }
+  }
+}
+
 function getExistingTrade(id) {
   return state.trades.find((trade) => trade.id === id);
 }
@@ -1152,6 +1180,7 @@ function readTradeForm() {
     riskPercent: parseNumber(ui.tradeFields.riskPercent.value),
     positionSize: parseNumber(ui.tradeFields.positionSize.value),
     tradeResult: ui.tradeFields.tradeResult.value,
+    status: ui.tradeFields.tradeInProgress.checked ? "open" : "closed",
     setupType: ui.tradeFields.setupType.value === "Custom"
       ? ui.tradeFields.customSetupType.value.trim()
       : ui.tradeFields.setupType.value,
@@ -1175,7 +1204,6 @@ function readTradeForm() {
     ["Entry Price", value.entryPrice],
     ["Stop Loss", value.stopLoss],
     ["Take Profit", value.takeProfit],
-    ["Exit Price", value.exitPrice],
     ["Risk %", value.riskPercent],
     ["Position Size", value.positionSize]
   ];
@@ -1184,6 +1212,10 @@ function readTradeForm() {
     if (!Number.isFinite(amount) || amount <= 0) {
       return { ok: false, error: `${label} must be greater than zero.` };
     }
+  }
+
+  if (value.status === "closed" && (!Number.isFinite(value.exitPrice) || value.exitPrice <= 0)) {
+    return { ok: false, error: "Exit Price must be greater than zero for closed trades." };
   }
 
   if (value.direction === "Buy" && value.stopLoss >= value.entryPrice) {
@@ -1200,20 +1232,29 @@ function readTradeForm() {
 function buildTradeRecord(tradeInput, options = {}) {
   const now = new Date().toISOString();
   const existingId = String(options.id || "").trim();
-  const metrics = calculateTradeMetrics(tradeInput);
-  const resolvedResult = tradeInput.tradeResult === "Auto" ? metrics.autoResult : tradeInput.tradeResult;
+  const status = tradeInput.status === "open" ? "open" : "closed";
+  const metricsInput = status === "open" ? { ...tradeInput, exitPrice: tradeInput.entryPrice } : tradeInput;
+  const metrics = calculateTradeMetrics(metricsInput);
+  const resolvedResult =
+    status === "open"
+      ? "Open"
+      : tradeInput.tradeResult === "Auto"
+        ? metrics.autoResult
+        : tradeInput.tradeResult;
 
   return {
     id: existingId || createId(),
     createdAt: existingId ? String(options.createdAt || now) : now,
     updatedAt: now,
     ...tradeInput,
+    exitPrice: status === "open" ? 0 : tradeInput.exitPrice,
+    status,
     result: resolvedResult,
-    netPnl: metrics.netPnl,
+    netPnl: status === "open" ? 0 : metrics.netPnl,
     riskAmount: metrics.riskAmount,
-    rMultiple: metrics.rMultiple,
+    rMultiple: status === "open" ? 0 : metrics.rMultiple,
     rrRatio: metrics.rrRatio,
-    pips: metrics.pips,
+    pips: status === "open" ? 0 : metrics.pips,
     pipSize: metrics.pipSize,
     pipValuePerLot: metrics.pipValuePerLot,
     dollarPerPip: metrics.dollarPerPip
@@ -1476,6 +1517,7 @@ function mapBulkRowToTrade(row, source, rowNumber) {
       riskPercent,
       positionSize,
       tradeResult,
+      status: "closed",
       setupType,
       timeframe,
       psychology,
@@ -1855,6 +1897,7 @@ function resetTradeForm(keepDate) {
   ui.tradeForm.reset();
   ui.tradeFields.tradeId.value = "";
   ui.tradeFields.tradeResult.value = "Auto";
+  ui.tradeFields.tradeInProgress.checked = false;
   ui.tradeFields.setupType.value = "Breakout";
   ui.tradeFields.customSetupType.value = "";
   ui.tradeFields.riskPercent.value = String(state.settings.riskPerTrade);
@@ -1862,6 +1905,7 @@ function resetTradeForm(keepDate) {
   clearScreenshotPreview();
   ui.tradeSubmitBtn.textContent = "Save Trade";
   syncSetupTypeCustomField();
+  syncTradeProgressState();
 
   if (keepDate) {
     ui.tradeFields.tradeDate.value = currentDate || toDateInputValue(new Date());
@@ -1954,10 +1998,11 @@ function loadTradeIntoForm(id) {
   ui.tradeFields.entryPrice.value = trade.entryPrice;
   ui.tradeFields.stopLoss.value = trade.stopLoss;
   ui.tradeFields.takeProfit.value = trade.takeProfit;
-  ui.tradeFields.exitPrice.value = trade.exitPrice;
+  ui.tradeFields.exitPrice.value = trade.status === "open" ? "" : trade.exitPrice;
   ui.tradeFields.riskPercent.value = trade.riskPercent;
   ui.tradeFields.positionSize.value = trade.positionSize;
-  ui.tradeFields.tradeResult.value = trade.tradeResult === "Auto" ? "Auto" : trade.result;
+  ui.tradeFields.tradeResult.value = trade.status === "open" ? "Auto" : trade.tradeResult === "Auto" ? "Auto" : trade.result;
+  ui.tradeFields.tradeInProgress.checked = trade.status === "open";
   if (PRESET_SETUP_TYPES.has(trade.setupType)) {
     ui.tradeFields.setupType.value = trade.setupType;
     ui.tradeFields.customSetupType.value = "";
@@ -1982,6 +2027,7 @@ function loadTradeIntoForm(id) {
   ui.tradeFields.screenshotLabel.textContent = trade.screenshotName || "No screenshot selected";
   ui.tradeSubmitBtn.textContent = "Update Trade";
   syncSetupTypeCustomField();
+  syncTradeProgressState();
 
   switchView("trade-entry");
   setMessage(ui.tradeFormMessage, "Editing trade entry.", "success");
@@ -2058,6 +2104,7 @@ function exportTradesCsv() {
     "timeframe",
     "psychology",
     "executionQuality",
+    "status",
     "result",
     "pips",
     "pipSize",
@@ -2524,6 +2571,7 @@ function summarizeUserAgent(input) {
 function renderAll() {
   updateBranding();
   state.analytics = calculateAnalytics(state.trades, state.settings, state.reflections);
+  renderHeroRecentTrades();
   renderDashboardMetrics(state.analytics);
   renderRiskViolations(state.analytics);
   renderEdgeTable(state.analytics);
@@ -2536,7 +2584,7 @@ function renderAll() {
 }
 
 function calculateAnalytics(trades, settings, reflections) {
-  const ordered = [...trades].sort(sortTradesAsc);
+  const ordered = getClosedTrades(trades).sort(sortTradesAsc);
   const equity = [settings.startingBalance];
   const drawdowns = [0];
   const initialTimelineDate = ordered[0]?.date || toDateInputValue(new Date());
@@ -2965,7 +3013,7 @@ function renderCalendarView() {
   const firstDay = new Date(year, monthIndex, 1);
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const startOffset = firstDay.getDay();
-  const monthTrades = state.trades.filter((trade) => trade.date.startsWith(monthValue));
+  const monthTrades = getClosedTrades().filter((trade) => trade.date.startsWith(monthValue));
   const monthPnl = monthTrades.reduce((sum, trade) => sum + trade.netPnl, 0);
   const monthWins = monthTrades.filter((trade) => trade.result === "Win").length;
   const monthWinRate = monthTrades.length ? (monthWins / monthTrades.length) * 100 : 0;
@@ -3015,7 +3063,7 @@ function renderCalendarView() {
 function buildCalendarDayStats(monthValue) {
   const map = new Map();
 
-  state.trades
+  getClosedTrades()
     .filter((trade) => trade.date.startsWith(monthValue))
     .forEach((trade) => {
       const current = map.get(trade.date) || { pnl: 0, trades: 0, wins: 0, assets: new Map() };
@@ -3635,10 +3683,16 @@ function renderJournalTable() {
 
   ui.tradesBody.innerHTML = sorted
     .map((trade) => {
-      const resultClass =
-        trade.result === "Win" ? "pill pill-win" : trade.result === "Loss" ? "pill pill-loss" : "pill pill-be";
-      const pnlClass = trade.netPnl >= 0 ? "pnl-positive" : "pnl-negative";
-      const pipClass = trade.pips > 0 ? "pnl-positive" : trade.pips < 0 ? "pnl-negative" : "";
+      const isOpen = trade.status === "open";
+      const resultClass = isOpen
+        ? "pill"
+        : trade.result === "Win"
+          ? "pill pill-win"
+          : trade.result === "Loss"
+            ? "pill pill-loss"
+            : "pill pill-be";
+      const pnlClass = isOpen ? "" : trade.netPnl >= 0 ? "pnl-positive" : "pnl-negative";
+      const pipClass = isOpen ? "" : trade.pips > 0 ? "pnl-positive" : trade.pips < 0 ? "pnl-negative" : "";
 
       return `
         <tr>
@@ -3649,9 +3703,9 @@ function renderJournalTable() {
           <td data-label="Setup">${escapeHtml(trade.setupType)}</td>
           <td data-label="Timeframe">${escapeHtml(trade.timeframe)}</td>
           <td data-label="Result"><span class="${resultClass}">${escapeHtml(trade.result)}</span></td>
-          <td data-label="Pips" class="${pipClass}">${Number.isFinite(trade.pips) ? trade.pips.toFixed(2) : "0.00"}</td>
-          <td data-label="Net P&L" class="${pnlClass}">${formatCurrency(trade.netPnl)}</td>
-          <td data-label="R-Multiple">${Number.isFinite(trade.rMultiple) ? trade.rMultiple.toFixed(2) : "0.00"}R</td>
+          <td data-label="Pips" class="${pipClass}">${isOpen ? "—" : Number.isFinite(trade.pips) ? trade.pips.toFixed(2) : "0.00"}</td>
+          <td data-label="Net P&L" class="${pnlClass}">${isOpen ? "OPEN" : formatCurrency(trade.netPnl)}</td>
+          <td data-label="R-Multiple">${isOpen ? "—" : Number.isFinite(trade.rMultiple) ? trade.rMultiple.toFixed(2) : "0.00"}R</td>
           <td data-label="Psychology">${escapeHtml(trade.psychology)}</td>
           <td data-label="Execution">${escapeHtml(trade.executionQuality)}</td>
           <td class="row-actions">
@@ -3662,6 +3716,64 @@ function renderJournalTable() {
       `;
     })
     .join("");
+}
+
+function renderHeroRecentTrades() {
+  if (!ui.recentTradesList) {
+    return;
+  }
+
+  const trades = [...state.trades].sort(sortTradesDesc).slice(0, 5);
+  if (!trades.length) {
+    ui.recentTradesList.innerHTML = '<p class="recent-trade-empty">No trades yet.</p>';
+    return;
+  }
+
+  ui.recentTradesList.innerHTML = trades
+    .map((trade) => {
+      const isOpen = trade.status === "open";
+      const directionClass = trade.direction === "Sell" ? "recent-trade-direction recent-trade-direction-sell" : "recent-trade-direction recent-trade-direction-buy";
+      const statusClass = isOpen
+        ? "recent-trade-status recent-trade-status-open"
+        : trade.netPnl > 0
+          ? "recent-trade-status recent-trade-status-positive"
+          : trade.netPnl < 0
+            ? "recent-trade-status recent-trade-status-negative"
+            : "recent-trade-status recent-trade-status-flat";
+
+      return `
+        <button class="recent-trade-row" type="button" data-trade-id="${escapeHtml(trade.id)}">
+          <div class="recent-trade-main">
+            <div class="recent-trade-top">
+              <strong class="recent-trade-symbol">${escapeHtml(trade.asset)}</strong>
+              <span class="${directionClass}">${escapeHtml(trade.direction)}</span>
+            </div>
+            <div class="recent-trade-prices">
+              <span>${formatHeroPrice(trade.entryPrice)}</span>
+              <span>${formatHeroPrice(trade.stopLoss)}</span>
+              <span>${formatHeroPrice(trade.takeProfit)}</span>
+            </div>
+            <div class="recent-trade-time">${escapeHtml(formatTradeTimeline(trade))}</div>
+          </div>
+          <span class="${statusClass}">${escapeHtml(formatRecentTradeStatus(trade))}</span>
+        </button>
+      `;
+    })
+    .join("");
+}
+
+function handleRecentTradesClick(event) {
+  const row = event.target.closest("[data-trade-id]");
+  if (!row) {
+    return;
+  }
+
+  if (canAccessApp()) {
+    switchView("journal");
+    return;
+  }
+
+  setAuthIntent("login", { focus: true });
 }
 
 function hydrateSetupFilter() {
@@ -3763,7 +3875,7 @@ function renderMonthlyReview() {
     return;
   }
 
-  const monthTrades = state.trades.filter((trade) => trade.date.startsWith(month));
+  const monthTrades = getClosedTrades().filter((trade) => trade.date.startsWith(month));
   const total = monthTrades.length;
   const net = monthTrades.reduce((sum, trade) => sum + trade.netPnl, 0);
   const wins = monthTrades.filter((trade) => trade.result === "Win").length;
@@ -3904,6 +4016,7 @@ function normalizeTrades(input) {
         riskPercent: ensureNonNegative(item.riskPercent, 0),
         positionSize: ensurePositiveNumber(item.positionSize, 0),
         tradeResult: String(item.tradeResult || "Auto"),
+        status: item.status === "open" ? "open" : "closed",
         setupType: String(item.setupType || "Custom"),
         timeframe: String(item.timeframe || "M15"),
         psychology: String(item.psychology || "Focused"),
@@ -3919,16 +4032,20 @@ function normalizeTrades(input) {
         manualResult === "Win" || manualResult === "Loss" || manualResult === "Break Even"
           ? manualResult
           : metrics.autoResult;
-      const resolvedResult = baseTrade.tradeResult === "Auto" ? metrics.autoResult : safeManualResult;
+      const resolvedResult = baseTrade.status === "open"
+        ? "Open"
+        : baseTrade.tradeResult === "Auto"
+          ? metrics.autoResult
+          : safeManualResult;
 
       return {
         ...baseTrade,
         result: resolvedResult,
-        netPnl: metrics.netPnl,
+        netPnl: baseTrade.status === "open" ? 0 : metrics.netPnl,
         riskAmount: metrics.riskAmount,
-        rMultiple: metrics.rMultiple,
+        rMultiple: baseTrade.status === "open" ? 0 : metrics.rMultiple,
         rrRatio: metrics.rrRatio,
-        pips: metrics.pips,
+        pips: baseTrade.status === "open" ? 0 : metrics.pips,
         pipSize: metrics.pipSize,
         pipValuePerLot: metrics.pipValuePerLot,
         dollarPerPip: metrics.dollarPerPip
@@ -4064,6 +4181,73 @@ function sortTradesAsc(a, b) {
 
 function sortTradesDesc(a, b) {
   return sortTradesAsc(b, a);
+}
+
+function getClosedTrades(trades = state.trades) {
+  return trades.filter((trade) => trade.status !== "open");
+}
+
+function formatHeroPrice(value) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return "—";
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 4
+  }).format(value);
+}
+
+function formatTradeTimeline(trade) {
+  const entry = parseIsoDate(trade.createdAt);
+  const exit = trade.status === "open" ? null : parseIsoDate(trade.updatedAt);
+
+  if (!entry) {
+    return trade.date || "—";
+  }
+
+  const entryDate = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric"
+  }).format(entry);
+  const entryTime = new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(entry);
+
+  if (!exit) {
+    return `${entryDate} ${entryTime} → --`;
+  }
+
+  const sameDay = entry.toDateString() === exit.toDateString();
+  const exitLabel = sameDay
+    ? new Intl.DateTimeFormat("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      }).format(exit)
+    : new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      }).format(exit);
+
+  return `${entryDate} ${entryTime} → ${exitLabel}`;
+}
+
+function formatRecentTradeStatus(trade) {
+  if (trade.status === "open") {
+    return "OPEN";
+  }
+  return formatCurrency(trade.netPnl);
+}
+
+function parseIsoDate(value) {
+  const date = new Date(String(value || ""));
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function formatCurrency(value) {
