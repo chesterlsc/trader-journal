@@ -1230,7 +1230,8 @@ input:-webkit-autofill:focus {
 
 .progress-trade-summary {
   display: grid;
-  gap: 4px;
+  gap: 10px;
+  flex: 1 1 420px;
   min-width: min(100%, 320px);
   padding: 12px 14px;
   border: 1px solid rgba(103, 130, 188, 0.18);
@@ -1254,11 +1255,6 @@ input:-webkit-autofill:focus {
   flex-wrap: wrap;
 }
 
-.progress-trade-main strong {
-  font: 700 1rem/1.1 "Sora", "Manrope", sans-serif;
-  color: var(--text-main);
-}
-
 .progress-trade-badge {
   display: inline-flex;
   align-items: center;
@@ -1272,18 +1268,185 @@ input:-webkit-autofill:focus {
   letter-spacing: 0.08em;
 }
 
-.progress-trade-meta {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  color: var(--text-soft);
-  font: 500 0.8rem/1.4 "JetBrains Mono", "Consolas", monospace;
+.progress-trade-viewport {
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
 }
 
-.progress-trade-meta strong {
+.progress-trade-track {
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-width: 100%;
+  margin-inline: 0;
+}
+
+.progress-trade-card {
+  flex: 0 0 100%;
+  display: grid;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid rgba(103, 130, 188, 0.22);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(10, 17, 31, 0.95), rgba(8, 14, 25, 0.9));
+}
+
+.progress-trade-card-top {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  text-align: center;
+}
+
+.progress-trade-card-top-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.progress-trade-card-symbol {
+  font: 700 1rem/1 "Sora", "Manrope", sans-serif;
+  letter-spacing: -0.04em;
+  color: var(--text-main);
+}
+
+.progress-trade-live-inline {
+  color: #dbe8ff;
+  font: 800 0.98rem/1 "Sora", "Manrope", sans-serif;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.progress-trade-live-inline.pnl-positive {
+  color: var(--green);
+}
+
+.progress-trade-live-inline.pnl-negative {
+  color: var(--red);
+}
+
+.progress-trade-card-prices {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  text-align: center;
+}
+
+.progress-trade-price-chip {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-height: 34px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: rgba(15, 24, 43, 0.92);
+  border: 1px solid rgba(103, 130, 188, 0.16);
+  color: #c3d4f7;
+  text-align: center;
+  font-size: 0.72rem;
+  line-height: 1.15;
+}
+
+.progress-trade-price-chip em,
+.progress-trade-stat em {
+  font-style: normal;
+  color: var(--text-soft);
+  font: 500 0.62rem/1.1 "JetBrains Mono", "Consolas", monospace;
+  letter-spacing: 0.04em;
+}
+
+.progress-trade-price-chip strong {
   color: #dbe8ff;
   font-weight: 700;
+  font-size: 0.86rem;
+}
+
+.progress-trade-price-chip .pnl-positive {
+  color: var(--green);
+}
+
+.progress-trade-price-chip .pnl-negative {
+  color: var(--red);
+}
+
+.progress-trade-price-chip-stop {
+  background: rgba(34, 16, 22, 0.84);
+  border-color: rgba(255, 90, 126, 0.18);
+  color: #ffcad5;
+}
+
+.progress-trade-price-chip-live {
+  background: linear-gradient(180deg, rgba(23, 41, 75, 0.96), rgba(16, 29, 54, 0.94));
+  border-color: rgba(87, 161, 255, 0.26);
+}
+
+.progress-trade-price-chip-live strong {
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.progress-trade-price-chip-live .pnl-positive {
+  color: var(--green);
+}
+
+.progress-trade-price-chip-live .pnl-negative {
+  color: var(--red);
+}
+
+.progress-trade-card-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  text-align: center;
+}
+
+.progress-trade-card-meta-hidden {
+  margin-top: 2px;
+}
+
+.progress-trade-card:not(.is-details-open) .progress-trade-card-meta-hidden {
+  display: none;
+}
+
+.progress-trade-stat {
+  display: grid;
+  gap: 2px;
+  padding: 5px 6px;
+  border-radius: 10px;
+  background: rgba(12, 20, 36, 0.72);
+  color: var(--text-soft);
+  font: 500 0.67rem/1.16 "JetBrains Mono", "Consolas", monospace;
+}
+
+.progress-trade-stat strong {
+  color: #dbe8ff;
+  font-weight: 800;
+  font-size: 0.88rem;
+}
+
+.progress-trade-card-meta .pnl-positive {
+  color: var(--green);
+}
+
+.progress-trade-card-meta .pnl-negative {
+  color: var(--red);
+}
+
+.progress-trade-price-chip-toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  border-style: dashed;
+  background: rgba(12, 20, 36, 0.52);
+  font: inherit;
+  align-items: center;
 }
 
 .journal-action-btn {
@@ -2331,8 +2494,65 @@ body.is-authenticated .trust-row {
     margin-left: 0;
   }
 
-  .progress-trade-meta {
-    gap: 8px 12px;
+  .progress-trade-card {
+    flex-basis: 100%;
+    padding: 8px 9px;
+    gap: 6px;
+  }
+
+  .progress-trade-card-top {
+    gap: 6px;
+    text-align: center;
+  }
+
+  .progress-trade-card-top-main {
+    justify-content: center;
+  }
+
+  .progress-trade-card-prices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .progress-trade-card-meta {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .progress-trade-card-symbol {
+    font-size: 0.92rem;
+  }
+
+  .progress-trade-live-inline {
+    font-size: 0.9rem;
+  }
+
+  .progress-trade-price-chip {
+    min-height: 32px;
+    padding: 6px 7px;
+    font-size: 0.68rem;
+  }
+
+  .progress-trade-price-chip strong {
+    font-size: 0.8rem;
+  }
+
+  .progress-trade-price-chip em,
+  .progress-trade-stat em {
+    font-size: 0.58rem;
+  }
+
+  .progress-trade-price-chip-live strong {
+    font-size: 0.84rem;
+  }
+
+  .progress-trade-stat {
+    padding: 5px 4px;
+    font-size: 0.6rem;
+  }
+
+  .progress-trade-stat strong {
+    font-size: 0.76rem;
   }
 
   .auth-shell.mobile-auth-expanded .hero-cta-row,

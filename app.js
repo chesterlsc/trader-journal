@@ -19,6 +19,7 @@ const DEFAULT_SETTINGS = {
 };
 
 const SERVER_AUTOSAVE_DEBOUNCE_MS = 900;
+const LIVE_PRICE_REFRESH_MS = 4000;
 const PRESET_SETUP_TYPES = new Set(["Breakout", "Liquidity Grab", "Trend Continuation", "Reversal", "Scalp", "Custom"]);
 const PRODUCT_BRAND_TEXT = "Trader Journal";
 const PRODUCT_BRAND_MARKUP =
@@ -31,6 +32,7 @@ const state = {
   replayNotes: {},
   bulkPreview: [],
   recentTrades: [],
+  publicRecentTrades: [],
   loginLogs: [],
   adminUsers: [],
   auth: {
@@ -46,6 +48,11 @@ const state = {
     resetTokenStatus: "idle"
   },
   serverSync: {
+    timerId: null,
+    inFlight: false
+  },
+  marketData: {
+    currentPrices: {},
     timerId: null,
     inFlight: false
   },
@@ -188,9 +195,8 @@ const ui = {
   journalNewTradeBtn: document.getElementById("journalNewTradeBtn"),
   exportCsvBtn: document.getElementById("exportCsvBtn"),
   progressTradeSummary: document.getElementById("progressTradeSummary"),
-  progressTradeSymbol: document.getElementById("progressTradeSymbol"),
-  progressTradeEntry: document.getElementById("progressTradeEntry"),
-  progressTradeRisk: document.getElementById("progressTradeRisk"),
+  progressTradeLabel: document.getElementById("progressTradeLabel"),
+  progressTradeTrack: document.getElementById("progressTradeTrack"),
   backupJsonBtn: document.getElementById("backupJsonBtn"),
   importJsonBtn: document.getElementById("importJsonBtn"),
   jsonImportInput: document.getElementById("jsonImportInput"),
@@ -242,11 +248,14 @@ function init() {
   renderAdminUsers();
   renderAll();
   renderLastSaved();
+  startLivePriceLoop();
   if (state.auth.previewMode) {
     state.recentTrades = normalizeRecentTrades(state.trades);
     renderHeroRecentTrades();
+    refreshLivePrices({ immediate: true });
     return;
   }
+  loadPublicRecentTrades({ silent: true });
   if (state.auth.resetToken) {
     validateResetToken();
   }
@@ -342,6 +351,9 @@ function bindEvents() {
   ui.tradeFields.screenshot.addEventListener("change", handleScreenshotUpload);
   if (ui.recentTradesList) {
     ui.recentTradesList.addEventListener("click", handleRecentTradesClick);
+  }
+  if (ui.progressTradeTrack) {
+    ui.progressTradeTrack.addEventListener("click", handleProgressTradeDetailsToggle);
   }
   if (ui.bulkPreviewBtn) {
     ui.bulkPreviewBtn.addEventListener("click", handleBulkPreview);
@@ -451,6 +463,12 @@ function bindEvents() {
     }
 
     toggleMobileNav(false);
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      refreshLivePrices({ immediate: true });
+    }
   });
 }
 
@@ -708,6 +726,7 @@ async function checkAuthSession() {
     }
     await loadLoginLogs({ silent: true });
     await loadAdminUsers({ silent: true });
+    refreshLivePrices({ immediate: true });
     switchView("dashboard");
   } else {
     state.recentTrades = [];
@@ -717,6 +736,7 @@ async function checkAuthSession() {
     renderLoginLogs();
     renderAdminUsers();
     updateAccessGate();
+    await loadPublicRecentTrades({ silent: true });
   }
 }
 
@@ -774,6 +794,8 @@ async function handleLogout() {
   collapseAdminPanels();
   updateAuthUi();
   setMessage(ui.authMessage, "", "");
+  await loadPublicRecentTrades({ silent: true });
+  refreshLivePrices({ immediate: true });
 }
 
 async function submitAuth(action, password, successMessage, identifier = "") {
@@ -819,6 +841,7 @@ async function submitAuth(action, password, successMessage, identifier = "") {
     await loadRecentTrades({ silent: true });
     await loadLoginLogs({ silent: true });
     await loadAdminUsers({ silent: true });
+    refreshLivePrices({ immediate: true });
     collapseAdminPanels();
     switchView("dashboard");
   } catch (error) {
@@ -835,6 +858,7 @@ function resetJournalState() {
   state.settings = normalizeSettings(DEFAULT_SETTINGS);
   state.trades = [];
   state.recentTrades = [];
+  state.publicRecentTrades = [];
   state.reflections = [];
   state.replayNotes = {};
   state.bulkPreview = [];
@@ -2659,7 +2683,7 @@ function renderAll() {
 }
 
 function renderProgressTradeSummary() {
-  if (!ui.progressTradeSummary || !ui.progressTradeSymbol || !ui.progressTradeEntry || !ui.progressTradeRisk) {
+  if (!ui.progressTradeSummary || !ui.progressTradeTrack || !ui.progressTradeLabel) {
     return;
   }
 
@@ -2668,19 +2692,74 @@ function renderProgressTradeSummary() {
     return;
   }
 
-  const openTrade = [...state.trades]
+  const openTrades = [...state.trades]
     .filter((trade) => trade.status === "open")
-    .sort(sortTradesDesc)[0];
+    .sort(sortTradesDesc)
+    .slice(0, 5);
 
-  if (!openTrade) {
+  if (!openTrades.length) {
     ui.progressTradeSummary.hidden = true;
     return;
   }
 
-  ui.progressTradeSymbol.textContent = openTrade.asset || "—";
-  ui.progressTradeEntry.textContent = formatHeroPrice(openTrade.entryPrice);
-  ui.progressTradeRisk.textContent = `±${ensureNonNegative(openTrade.riskPercent, 0).toFixed(2)}%`;
+  ui.progressTradeLabel.textContent = openTrades.length === 1 ? "In Progress Trade" : "In Progress Trades";
+  ui.progressTradeTrack.innerHTML = openTrades
+    .map((trade) => {
+      const liveSnapshot = getOpenTradeLiveSnapshot(trade);
+      const currentPrice = liveSnapshot?.currentPrice ?? null;
+      const livePercent = liveSnapshot?.livePercent ?? null;
+      const pnlToneClass = liveSnapshot?.toneClass ?? "";
+      const priceMove = liveSnapshot?.priceMove ?? null;
+      const dollarMove = liveSnapshot?.dollarPnl ?? null;
+      const directionClass = String(trade.direction || "").toLowerCase() === "sell" ? "recent-trade-direction-sell" : "recent-trade-direction-buy";
+
+      return `
+        <article class="progress-trade-card">
+          <div class="progress-trade-card-top">
+            <div class="progress-trade-card-top-main">
+              <strong class="progress-trade-card-symbol">${escapeHtml(trade.asset || "—")}</strong>
+              <span class="recent-trade-direction ${directionClass}">${escapeHtml(trade.direction || "Buy")}</span>
+              <span class="progress-trade-badge">OPEN</span>
+            </div>
+            <span class="progress-trade-live-inline ${pnlToneClass}">${escapeHtml(formatLivePercentLabel(livePercent, "OPEN"))}</span>
+          </div>
+          <div class="progress-trade-card-prices">
+            <span class="progress-trade-price-chip"><em>Move</em><strong class="${pnlToneClass}">${formatPriceMove(priceMove)}</strong></span>
+            <span class="progress-trade-price-chip"><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
+            <span class="progress-trade-price-chip progress-trade-price-chip-live"><em>Current Price</em><strong class="${pnlToneClass}">${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : "—"}</strong></span>
+            <button class="progress-trade-price-chip progress-trade-price-chip-toggle" type="button" data-progress-details-toggle aria-expanded="false">
+              <strong>Show</strong>
+            </button>
+          </div>
+          <div class="progress-trade-card-meta progress-trade-card-meta-hidden">
+              <span class="progress-trade-stat"><em>SL</em><strong>${formatProgressTradePrice(trade.stopLoss)}</strong></span>
+              <span class="progress-trade-stat"><em>TP</em><strong>${formatProgressTradePrice(trade.takeProfit)}</strong></span>
+              <span class="progress-trade-stat"><em>$ Move</em><strong class="${pnlToneClass}">${formatSignedCurrency(dollarMove)}</strong></span>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
   ui.progressTradeSummary.hidden = false;
+}
+
+function handleProgressTradeDetailsToggle(event) {
+  const toggle = event.target.closest("[data-progress-details-toggle]");
+  if (!toggle) {
+    return;
+  }
+
+  const card = toggle.closest(".progress-trade-card");
+  if (!card) {
+    return;
+  }
+
+  const isOpen = card.classList.toggle("is-details-open");
+  toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  const label = toggle.querySelector("strong");
+  if (label) {
+    label.textContent = isOpen ? "Hide" : "Show";
+  }
 }
 
 function calculateAnalytics(trades, settings, reflections) {
@@ -3784,6 +3863,7 @@ function renderJournalTable() {
   ui.tradesBody.innerHTML = sorted
     .map((trade) => {
       const isOpen = trade.status === "open";
+      const livePercent = getOpenTradePnlPercent(trade);
       const resultClass = isOpen
         ? "pill"
         : trade.result === "Win"
@@ -3791,7 +3871,11 @@ function renderJournalTable() {
           : trade.result === "Loss"
             ? "pill pill-loss"
             : "pill pill-be";
-      const pnlClass = isOpen ? "" : trade.netPnl >= 0 ? "pnl-positive" : "pnl-negative";
+      const pnlClass = isOpen
+        ? getLiveToneClass(livePercent)
+        : trade.netPnl >= 0
+          ? "pnl-positive"
+          : "pnl-negative";
       const pipClass = isOpen ? "" : trade.pips > 0 ? "pnl-positive" : trade.pips < 0 ? "pnl-negative" : "";
 
       return `
@@ -3804,7 +3888,7 @@ function renderJournalTable() {
           <td data-label="Timeframe">${escapeHtml(trade.timeframe)}</td>
           <td data-label="Result"><span class="${resultClass}">${escapeHtml(trade.result)}</span></td>
           <td data-label="Pips" class="${pipClass}">${isOpen ? "—" : Number.isFinite(trade.pips) ? trade.pips.toFixed(2) : "0.00"}</td>
-          <td data-label="Net P&L" class="${pnlClass}">${isOpen ? "OPEN" : formatCurrency(trade.netPnl)}</td>
+          <td data-label="Net P&L" class="${pnlClass}">${isOpen ? escapeHtml(formatLivePercentLabel(livePercent, "OPEN")) : formatCurrency(trade.netPnl)}</td>
           <td data-label="R-Multiple">${isOpen ? "—" : Number.isFinite(trade.rMultiple) ? trade.rMultiple.toFixed(2) : "0.00"}R</td>
           <td data-label="Psychology">${escapeHtml(trade.psychology)}</td>
           <td data-label="Execution">${escapeHtml(trade.executionQuality)}</td>
@@ -3823,7 +3907,7 @@ function renderHeroRecentTrades() {
     return;
   }
 
-  const trades = canAccessApp() ? getRecentTradesSource() : [];
+  const trades = getRecentTradesSource();
   if (!trades.length) {
     ui.recentTradesList.innerHTML = '<p class="recent-trade-empty">No trades yet.</p>';
     return;
@@ -3831,15 +3915,8 @@ function renderHeroRecentTrades() {
 
   ui.recentTradesList.innerHTML = trades
     .map((trade) => {
-      const isOpen = trade.status === "open";
       const directionClass = trade.direction === "Sell" ? "recent-trade-direction recent-trade-direction-sell" : "recent-trade-direction recent-trade-direction-buy";
-      const statusClass = isOpen
-        ? "recent-trade-status recent-trade-status-open"
-        : trade.netPnl > 0
-          ? "recent-trade-status recent-trade-status-positive"
-          : trade.netPnl < 0
-            ? "recent-trade-status recent-trade-status-negative"
-            : "recent-trade-status recent-trade-status-flat";
+      const statusClass = getRecentTradeStatusClass(trade);
 
       return `
         <button class="recent-trade-row" type="button" data-trade-id="${escapeHtml(trade.id)}">
@@ -3877,11 +3954,15 @@ function handleRecentTradesClick(event) {
 }
 
 function getRecentTradesSource() {
-  if (Array.isArray(state.trades) && state.trades.length > 0) {
+  if (canAccessApp() && Array.isArray(state.trades) && state.trades.length > 0) {
     return [...state.trades].sort(sortTradesDesc).slice(0, 5);
   }
 
-  return Array.isArray(state.recentTrades) ? state.recentTrades.slice(0, 5) : [];
+  if (!canAccessApp() && Array.isArray(state.publicRecentTrades) && state.publicRecentTrades.length > 0) {
+    return state.publicRecentTrades.slice(0, 5);
+  }
+
+  return canAccessApp() && Array.isArray(state.recentTrades) ? state.recentTrades.slice(0, 5) : [];
 }
 
 function hydrateSetupFilter() {
@@ -4307,6 +4388,17 @@ function formatHeroPrice(value) {
   }).format(value);
 }
 
+function formatProgressTradePrice(value) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return "—";
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+}
+
 function formatTradeTimeline(trade) {
   const entry = parseIsoDate(trade.createdAt);
   const exit = trade.status === "open" ? null : parseIsoDate(trade.closedAt || trade.updatedAt);
@@ -4349,9 +4441,120 @@ function formatTradeTimeline(trade) {
 
 function formatRecentTradeStatus(trade) {
   if (trade.status === "open") {
-    return "OPEN";
+    return formatLivePercentLabel(getOpenTradePnlPercent(trade), "OPEN");
   }
   return formatCurrency(trade.netPnl);
+}
+
+function getRecentTradeStatusClass(trade) {
+  if (trade.status !== "open") {
+    return trade.netPnl > 0
+      ? "recent-trade-status recent-trade-status-positive"
+      : trade.netPnl < 0
+        ? "recent-trade-status recent-trade-status-negative"
+        : "recent-trade-status recent-trade-status-flat";
+  }
+
+  const livePercent = getOpenTradePnlPercent(trade);
+  if (!Number.isFinite(livePercent)) {
+    return "recent-trade-status recent-trade-status-open";
+  }
+
+  const toneClass = getLiveToneClass(livePercent);
+  if (toneClass) {
+    return `recent-trade-status ${toneClass === "pnl-positive" ? "recent-trade-status-positive" : "recent-trade-status-negative"}`;
+  }
+
+  return "recent-trade-status recent-trade-status-flat";
+}
+
+function getLivePriceForSymbol(symbol) {
+  const normalized = normalizeMarketSymbol(symbol);
+  if (!normalized) {
+    return null;
+  }
+
+  const price = state.marketData.currentPrices[normalized];
+  return Number.isFinite(price) && price > 0 ? price : null;
+}
+
+function getOpenTradePnlPercent(trade) {
+  return getOpenTradeLiveSnapshot(trade)?.livePercent ?? null;
+}
+
+function getOpenTradePriceMove(trade) {
+  return getOpenTradeLiveSnapshot(trade)?.priceMove ?? null;
+}
+
+function getOpenTradeLiveSnapshot(trade) {
+  if (!trade || trade.status !== "open") {
+    return null;
+  }
+
+  const currentPrice = getLivePriceForSymbol(trade.asset);
+  const entryPrice = Number(trade.entryPrice);
+  if (!Number.isFinite(currentPrice) || !Number.isFinite(entryPrice) || entryPrice <= 0) {
+    return null;
+  }
+
+  const isSell = String(trade.direction || "").toLowerCase() === "sell";
+  const livePercent = round(
+    isSell
+      ? ((entryPrice - currentPrice) / entryPrice) * 100
+      : ((currentPrice - entryPrice) / entryPrice) * 100
+  );
+  const priceMove = round(currentPrice - entryPrice);
+  const metrics = calculateTradeMetrics({
+    ...trade,
+    exitPrice: currentPrice
+  });
+
+  return {
+    currentPrice,
+    livePercent,
+    priceMove,
+    dollarPnl: Number.isFinite(metrics.netPnl) ? metrics.netPnl : null,
+    toneClass: getLiveToneClass(livePercent)
+  };
+}
+
+function getLiveToneClass(value) {
+  if (!Number.isFinite(value) || value === 0) {
+    return "";
+  }
+
+  return value > 0 ? "pnl-positive" : "pnl-negative";
+}
+
+function formatSignedPercent(value) {
+  if (!Number.isFinite(value)) {
+    return "—";
+  }
+
+  const sign = value > 0 ? "+" : value < 0 ? "-" : "±";
+  return `${sign}${Math.abs(value).toFixed(2)}%`;
+}
+
+function formatPriceMove(value) {
+  if (!Number.isFinite(value)) {
+    return "—";
+  }
+
+  const sign = value > 0 ? "+" : value < 0 ? "-" : "±";
+  return `${sign}${formatProgressTradePrice(Math.abs(value))}`;
+}
+
+function formatSignedCurrency(value) {
+  if (!Number.isFinite(value)) {
+    return "—";
+  }
+
+  const sign = value > 0 ? "+" : value < 0 ? "-" : "±";
+  return `${sign}${formatCurrency(Math.abs(value))}`;
+}
+
+function formatLivePercentLabel(value, fallback = "OPEN") {
+  return Number.isFinite(value) ? formatSignedPercent(value) : fallback;
 }
 
 function parseIsoDate(value) {
@@ -4380,12 +4583,40 @@ async function loadRecentTrades(options = {}) {
 
     state.recentTrades = normalizeRecentTrades(body.trades);
     renderHeroRecentTrades();
+    refreshLivePrices({ immediate: true });
     return true;
   } catch (error) {
     state.recentTrades = [];
     renderHeroRecentTrades();
     if (!silent) {
       setMessage(ui.authMessage, error.message || "Recent trades load failed.", "error");
+    }
+    return false;
+  }
+}
+
+async function loadPublicRecentTrades(options = {}) {
+  const { silent = false } = options;
+
+  try {
+    const response = await fetch("trade_handler.php?action=public_recent_trades", {
+      method: "GET",
+      credentials: "same-origin"
+    });
+    const body = await response.json();
+    if (!response.ok || !body.ok || !Array.isArray(body.trades)) {
+      throw new Error(body.error || "Public recent trades load failed");
+    }
+
+    state.publicRecentTrades = normalizeRecentTrades(body.trades);
+    renderHeroRecentTrades();
+    refreshLivePrices({ immediate: true });
+    return true;
+  } catch (error) {
+    state.publicRecentTrades = [];
+    renderHeroRecentTrades();
+    if (!silent) {
+      setMessage(ui.authMessage, error.message || "Public recent trades load failed.", "error");
     }
     return false;
   }
@@ -4416,6 +4647,200 @@ function normalizeRecentTrades(input) {
     })
     .sort(sortTradesDesc)
     .slice(0, 5);
+}
+
+function normalizeMarketSymbol(symbol) {
+  return String(symbol || "").trim().toUpperCase();
+}
+
+function startLivePriceLoop() {
+  if (state.marketData.timerId) {
+    clearInterval(state.marketData.timerId);
+  }
+
+  state.marketData.timerId = window.setInterval(() => {
+    refreshLivePrices();
+  }, LIVE_PRICE_REFRESH_MS);
+
+  refreshLivePrices({ immediate: true });
+}
+
+async function refreshLivePrices(options = {}) {
+  const { immediate = false } = options;
+  if (state.marketData.inFlight) {
+    return;
+  }
+
+  if (!immediate && document.visibilityState === "hidden") {
+    return;
+  }
+
+  const symbols = collectTrackedSymbols();
+  const requests = buildLivePriceRequests(symbols);
+  if (!requests.length) {
+    return;
+  }
+
+  state.marketData.inFlight = true;
+  try {
+    const updates = {};
+
+    await Promise.all(
+      requests.map(async (request) => {
+        try {
+          const response = await fetch(request.url, {
+            method: "GET",
+            cache: "no-store"
+          });
+          if (!response.ok) {
+            throw new Error(`${request.key} price request failed`);
+          }
+
+          const body = await response.json();
+          const nextPrice = request.readPrice(body);
+          if (!Number.isFinite(nextPrice) || nextPrice <= 0) {
+            return;
+          }
+
+          request.aliases.forEach((alias) => {
+            updates[alias] = nextPrice;
+          });
+        } catch (error) {
+          // Keep the last known price if a source fails temporarily.
+        }
+      })
+    );
+
+    if (Object.keys(updates).length === 0) {
+      return;
+    }
+
+    state.marketData.currentPrices = {
+      ...state.marketData.currentPrices,
+      ...updates
+    };
+
+    renderHeroRecentTrades();
+    renderProgressTradeSummary();
+    renderJournalTable();
+    persistLivePrices(updates);
+  } finally {
+    state.marketData.inFlight = false;
+  }
+}
+
+function collectTrackedSymbols() {
+  const symbols = new Set();
+  const trades = canAccessApp()
+    ? state.trades
+    : Array.isArray(state.publicRecentTrades) && state.publicRecentTrades.length
+      ? state.publicRecentTrades
+      : state.recentTrades;
+
+  trades.forEach((trade) => {
+    const normalized = normalizeMarketSymbol(trade.asset);
+    if (normalized) {
+      symbols.add(normalized);
+    }
+  });
+
+  return Array.from(symbols);
+}
+
+function buildLivePriceRequests(symbols) {
+  const requests = new Map();
+
+  symbols.forEach((symbol) => {
+    const source = resolveLivePriceSource(symbol);
+    if (!source) {
+      return;
+    }
+
+    if (!requests.has(source.key)) {
+      requests.set(source.key, { ...source, aliases: new Set() });
+    }
+
+    requests.get(source.key).aliases.add(symbol);
+  });
+
+  return Array.from(requests.values()).map((request) => ({
+    ...request,
+    aliases: Array.from(request.aliases)
+  }));
+}
+
+function resolveLivePriceSource(symbol) {
+  const normalized = normalizeMarketSymbol(symbol);
+  if (!normalized) {
+    return null;
+  }
+
+  const cryptoMap = {
+    BTCUSD: "BTCUSDT",
+    BTCUSDT: "BTCUSDT",
+    ETHUSD: "ETHUSDT",
+    ETHUSDT: "ETHUSDT",
+    ETCUSD: "ETCUSDT",
+    ETCUSDT: "ETCUSDT",
+    SOLUSD: "SOLUSDT",
+    SOLUSDT: "SOLUSDT",
+    XRPUSD: "XRPUSDT",
+    XRPUSDT: "XRPUSDT",
+    ADAUSD: "ADAUSDT",
+    ADAUSDT: "ADAUSDT",
+    DOGEUSD: "DOGEUSDT",
+    DOGEUSDT: "DOGEUSDT",
+    BNBUSD: "BNBUSDT",
+    BNBUSDT: "BNBUSDT"
+  };
+
+  if (cryptoMap[normalized]) {
+    const marketSymbol = cryptoMap[normalized];
+    return {
+      key: `binance:${marketSymbol}`,
+      url: `https://api.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(marketSymbol)}`,
+      readPrice: (body) => {
+        const price = Number(body?.price);
+        return Number.isFinite(price) && price > 0 ? price : NaN;
+      }
+    };
+  }
+
+  if (normalized === "XAUUSD" || normalized === "XAGUSD") {
+    const metal = normalized.startsWith("XAG") ? "XAG" : "XAU";
+    return {
+      key: `metal:${metal}`,
+      url: `https://api.gold-api.com/price/${metal}`,
+      readPrice: (body) => {
+        const price = Number(body?.price);
+        return Number.isFinite(price) && price > 0 ? price : NaN;
+      }
+    };
+  }
+
+  return null;
+}
+
+async function persistLivePrices(priceMap) {
+  const prices = Object.entries(priceMap).map(([symbol, price]) => ({
+    symbol,
+    price
+  }));
+
+  if (!prices.length) {
+    return;
+  }
+
+  try {
+    await fetch("trade_handler.php?action=update_prices", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ prices })
+    });
+  } catch (error) {
+    // Best-effort cache only.
+  }
 }
 
 function formatCurrency(value) {

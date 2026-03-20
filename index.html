@@ -6,7 +6,7 @@
     <title>Trader Journal | Trading Analytics</title>
     <link rel="icon" href="favicon.svg?v=20260313-metallic" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260315-apple-touch" sizes="180x180" />
-    <link rel="stylesheet" href="styles.css?v=20260320-action-bar-static" />
+    <link rel="stylesheet" href="styles.css?v=20260320-live-market-feed" />
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -195,14 +195,9 @@
           </div>
 
           <article id="progressTradeSummary" class="progress-trade-summary" hidden aria-live="polite">
-            <p class="progress-trade-label">In Progress Trade</p>
-            <div class="progress-trade-main">
-              <strong id="progressTradeSymbol">—</strong>
-              <span class="progress-trade-badge">OPEN</span>
-            </div>
-            <div class="progress-trade-meta">
-              <span>Entry <strong id="progressTradeEntry">—</strong></span>
-              <span><strong id="progressTradeRisk">±0.00%</strong> capital risk</span>
+            <p id="progressTradeLabel" class="progress-trade-label">In Progress Trade</p>
+            <div class="progress-trade-viewport">
+              <div id="progressTradeTrack" class="progress-trade-track"></div>
             </div>
           </article>
         </div>
@@ -1082,6 +1077,6 @@
       <p class="footer-main">© 2026 leon. all rights reserved.</p>
     </footer>
 
-    <script src="app.js?v=20260320-sticky-action-bar"></script>
+    <script src="app.js?v=20260320-live-market-feed"></script>
   </body>
 </html>

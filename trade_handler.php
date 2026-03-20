@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 session_start();
-$_SESSION['user_id'] = 1;
+header('Content-Type: application/json; charset=utf-8');
 
 $action = isset($_GET['action']) ? (string) $_GET['action'] : 'load';
 
@@ -196,6 +196,20 @@ try {
         $auth = requireAuth($pdo);
         $trades = listRecentTrades($pdo, $auth['id']);
         respond(200, ['ok' => true, 'trades' => $trades]);
+    }
+
+    if ($action === 'public_recent_trades') {
+        $publicUser = findUserByIdentifier($pdo, 'chesterlsc');
+        $trades = $publicUser !== null ? listRecentTrades($pdo, (int) $publicUser['id']) : [];
+        respond(200, ['ok' => true, 'trades' => $trades]);
+    }
+
+    if ($action === 'update_prices') {
+        requireMethod('POST');
+        $decoded = readJsonBody();
+        $prices = isset($decoded['prices']) && is_array($decoded['prices']) ? $decoded['prices'] : [];
+        $updated = upsertSymbolPrices($pdo, $prices);
+        respond(200, ['ok' => true, 'updated' => $updated]);
     }
 
     if ($action === 'login_logs') {
@@ -414,6 +428,16 @@ function ensureSchema(PDO $pdo): void
 
     $pdo->exec(
         <<<SQL
+        CREATE TABLE IF NOT EXISTS symbol_prices (
+            symbol TEXT PRIMARY KEY,
+            price NUMERIC NOT NULL,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        SQL
+    );
+
+    $pdo->exec(
+        <<<SQL
         CREATE TABLE IF NOT EXISTS login_info (
             id BIGSERIAL PRIMARY KEY,
             user_id BIGINT NULL REFERENCES journal_users(id) ON DELETE SET NULL,
@@ -503,6 +527,12 @@ function ensureSchema(PDO $pdo): void
         'password_reset_requests',
         ['email', 'requested_at'],
         'CREATE INDEX IF NOT EXISTS idx_password_reset_requests_email_requested ON password_reset_requests (email, requested_at DESC)'
+    );
+    createIndexIfColumnsExist(
+        $pdo,
+        'symbol_prices',
+        ['updated_at'],
+        'CREATE INDEX IF NOT EXISTS idx_symbol_prices_updated_at ON symbol_prices (updated_at DESC)'
     );
 }
 
@@ -1036,7 +1066,7 @@ function loadJournalData(PDO $pdo, int $userId, array $defaults): array
 
     return [
         'settings' => sanitizeSettings(is_array($settings) ? $settings : []),
-        'trades' => sanitizeTradesPayload($trades),
+        'trades' => sanitizeArray($trades),
         'reflections' => sanitizeArray($reflections),
         'replayNotes' => sanitizeReplayNotes($replayNotes),
     ];
@@ -1045,7 +1075,7 @@ function loadJournalData(PDO $pdo, int $userId, array $defaults): array
 function upsertJournalData(PDO $pdo, int $userId, array $payload): void
 {
     $settingsJson = encodeJsonForDb(sanitizeSettings($payload['settings'] ?? []));
-    $tradesJson = encodeJsonForDb(sanitizeTradesPayload($payload['trades'] ?? []));
+    $tradesJson = encodeJsonForDb(sanitizeArray($payload['trades'] ?? []));
     $reflectionsJson = encodeJsonForDb(sanitizeArray($payload['reflections'] ?? []));
     $replayNotesJson = encodeJsonForDb(sanitizeReplayNotes($payload['replayNotes'] ?? []));
 
@@ -1167,6 +1197,11 @@ function sanitizeArray($value): array
     return is_array($value) ? $value : [];
 }
 
+function normalizeTradeStatus($value): string
+{
+    return trim((string) $value) === 'open' ? 'open' : 'closed';
+}
+
 function sanitizeTradesPayload($value): array
 {
     if (!is_array($value)) {
@@ -1184,12 +1219,19 @@ function sanitizeTradesPayload($value): array
         }
 
         $status = normalizeTradeStatus(($item['status'] ?? null) ?? (!empty($item['in_progress']) ? 'open' : 'closed'));
-        $createdAt = trim((string) ($item['createdAt'] ?? ''));
-        $updatedAt = trim((string) ($item['updatedAt'] ?? ''));
+        $createdAt = trim((string) ($item['createdAt'] ?? $item['created_at'] ?? ''));
+        $updatedAt = trim((string) ($item['updatedAt'] ?? $item['updated_at'] ?? $createdAt));
         $closedAt = $status === 'open'
             ? ''
-            : trim((string) ($item['closedAt'] ?? $updatedAt));
+            : trim((string) ($item['closedAt'] ?? $item['closed_at'] ?? $updatedAt));
 
+        $item['id'] = (string) ($item['id'] ?? '');
+        $item['asset'] = (string) ($item['asset'] ?? $item['symbol'] ?? '');
+        $item['direction'] = (string) ($item['direction'] ?? 'Buy');
+        $item['entryPrice'] = is_numeric($item['entryPrice'] ?? $item['entry_price'] ?? null) ? (float) ($item['entryPrice'] ?? $item['entry_price']) : 0.0;
+        $item['stopLoss'] = is_numeric($item['stopLoss'] ?? $item['stop_loss'] ?? null) ? (float) ($item['stopLoss'] ?? $item['stop_loss']) : 0.0;
+        $item['takeProfit'] = is_numeric($item['takeProfit'] ?? $item['take_profit'] ?? null) ? (float) ($item['takeProfit'] ?? $item['take_profit']) : 0.0;
+        $item['netPnl'] = is_numeric($item['netPnl'] ?? $item['profit_loss'] ?? null) ? (float) ($item['netPnl'] ?? $item['profit_loss']) : 0.0;
         $item['status'] = $status;
         $item['createdAt'] = $createdAt;
         $item['updatedAt'] = $updatedAt;
@@ -1198,11 +1240,6 @@ function sanitizeTradesPayload($value): array
     }
 
     return $result;
-}
-
-function normalizeTradeStatus($value): string
-{
-    return trim((string) $value) === 'open' ? 'open' : 'closed';
 }
 
 function listRecentTrades(PDO $pdo, int $userId): array
@@ -1219,8 +1256,8 @@ function listRecentTrades(PDO $pdo, int $userId): array
     usort(
         $trades,
         static function (array $a, array $b): int {
-            $left = (string) ($a['createdAt'] ?? '');
-            $right = (string) ($b['createdAt'] ?? '');
+            $left = (string) ($a['createdAt'] ?? $a['updatedAt'] ?? '');
+            $right = (string) ($b['createdAt'] ?? $b['updatedAt'] ?? '');
             return $right <=> $left;
         }
     );
@@ -1243,6 +1280,52 @@ function listRecentTrades(PDO $pdo, int $userId): array
         },
         $recent
     );
+}
+
+function upsertSymbolPrices(PDO $pdo, array $entries): int
+{
+    if ($entries === []) {
+        return 0;
+    }
+
+    $stmt = $pdo->prepare(
+        <<<SQL
+        INSERT INTO symbol_prices (symbol, price, updated_at)
+        VALUES (:symbol, :price, NOW())
+        ON CONFLICT (symbol)
+        DO UPDATE SET price = EXCLUDED.price, updated_at = NOW()
+        SQL
+    );
+
+    $updated = 0;
+    foreach ($entries as $item) {
+        if (is_object($item)) {
+            $item = get_object_vars($item);
+        }
+
+        if (!is_array($item)) {
+            continue;
+        }
+
+        $symbol = strtoupper(trim((string) ($item['symbol'] ?? '')));
+        $price = $item['price'] ?? null;
+        if ($symbol === '' || !preg_match('/^[A-Z0-9._=-]{2,24}$/', $symbol) || !is_numeric($price)) {
+            continue;
+        }
+
+        $priceValue = (float) $price;
+        if ($priceValue <= 0) {
+            continue;
+        }
+
+        $stmt->execute([
+            ':symbol' => $symbol,
+            ':price' => $priceValue,
+        ]);
+        $updated += 1;
+    }
+
+    return $updated;
 }
 
 function sanitizeReplayNotes($value): array
