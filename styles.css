@@ -2648,6 +2648,30 @@ body.is-authenticated .trust-row {
     gap: 9px;
   }
 
+  .recent-trades-verified {
+    gap: 6px;
+    padding: 4px 8px;
+  }
+
+  .recent-trades-verified-icon {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+  }
+
+  .recent-trades-verified-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .recent-trades-verified-copy strong {
+    font-size: 0.56rem;
+  }
+
+  .recent-trades-verified-copy span {
+    font-size: 0.56rem;
+  }
+
   .recent-trade-status {
     justify-self: start;
   }
