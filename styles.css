@@ -245,6 +245,20 @@ body.is-preview .auth-shell {
   transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
 }
 
+.recent-trade-row-public-positive {
+  border-color: rgba(42, 212, 143, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(42, 212, 143, 0.08);
+}
+
+.recent-trade-row-public-negative {
+  border-color: rgba(255, 90, 126, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(255, 90, 126, 0.08);
+}
+
+.recent-trade-row-public-neutral {
+  border-color: rgba(103, 130, 188, 0.18);
+}
+
 .recent-trade-row:hover {
   transform: translateY(-1px);
   border-color: rgba(87, 161, 255, 0.34);
@@ -306,13 +320,24 @@ body.is-preview .auth-shell {
   gap: 8px;
 }
 
-.recent-trade-prices-public span {
+.recent-trade-prices-public span,
+.recent-trade-price-cell {
   display: grid;
   gap: 2px;
   padding: 9px 10px;
   border-radius: 12px;
   background: rgba(15, 24, 43, 0.9);
   border: 1px solid rgba(103, 130, 188, 0.14);
+}
+
+.recent-trade-price-cell-positive {
+  border-color: rgba(42, 212, 143, 0.24);
+  background: linear-gradient(180deg, rgba(18, 37, 38, 0.88), rgba(12, 27, 30, 0.9));
+}
+
+.recent-trade-price-cell-negative {
+  border-color: rgba(255, 90, 126, 0.24);
+  background: linear-gradient(180deg, rgba(42, 18, 30, 0.9), rgba(28, 12, 21, 0.92));
 }
 
 .recent-trade-prices-public em {
@@ -2549,7 +2574,7 @@ body.is-authenticated .trust-row {
   }
 
   .recent-trade-prices-public {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 7px;
   }
 

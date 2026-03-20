@@ -3997,18 +3997,28 @@ function renderTradeFeedSection({ key, title, trades, emptyLabel, renderer }) {
 
 function renderClosedTradeFeedCard(trade) {
   const directionClass = trade.direction === "Sell" ? "recent-trade-direction recent-trade-direction-sell" : "recent-trade-direction recent-trade-direction-buy";
+  const resolution = getClosedTradeResolution(trade);
+  const rowToneClass = getClosedTradeToneClass(trade, resolution);
+  const tpCellClass = resolution?.type === "tp" ? "recent-trade-price-cell recent-trade-price-cell-positive" : "recent-trade-price-cell";
+  const slCellClass = resolution?.type === "sl" ? "recent-trade-price-cell recent-trade-price-cell-negative" : "recent-trade-price-cell";
+  const exitCellClass = rowToneClass === "recent-trade-row-public-positive"
+    ? "recent-trade-price-cell recent-trade-price-cell-positive"
+    : rowToneClass === "recent-trade-row-public-negative"
+      ? "recent-trade-price-cell recent-trade-price-cell-negative"
+      : "recent-trade-price-cell";
   return `
-    <button class="recent-trade-row recent-trade-row-public" type="button" data-trade-id="${escapeHtml(trade.id)}">
+    <button class="recent-trade-row recent-trade-row-public ${rowToneClass}" type="button" data-trade-id="${escapeHtml(trade.id)}">
       <div class="recent-trade-main">
         <div class="recent-trade-top">
           <strong class="recent-trade-symbol">${escapeHtml(trade.asset)}</strong>
           <span class="${directionClass}">${escapeHtml(trade.direction)}</span>
+          ${resolution ? `<span class="${escapeHtml(resolution.className)}">${escapeHtml(resolution.label)}</span>` : ""}
         </div>
         <div class="recent-trade-prices recent-trade-prices-public">
-          <span><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
-          <span><em>SL</em><strong>${formatProgressTradePrice(trade.stopLoss)}</strong></span>
-          <span><em>TP</em><strong>${formatProgressTradePrice(trade.takeProfit)}</strong></span>
-          <span><em>Exit</em><strong>${formatProgressTradePrice(trade.exitPrice)}</strong></span>
+          <span class="recent-trade-price-cell"><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
+          <span class="${slCellClass}"><em>SL</em><strong>${formatProgressTradePrice(trade.stopLoss)}</strong></span>
+          <span class="${tpCellClass}"><em>TP</em><strong>${formatProgressTradePrice(trade.takeProfit)}</strong></span>
+          <span class="${exitCellClass}"><em>Exit</em><strong>${formatProgressTradePrice(trade.exitPrice)}</strong></span>
         </div>
         <div class="recent-trade-time">${escapeHtml(formatCompactTradeDate(trade))}</div>
       </div>
@@ -4023,9 +4033,19 @@ function renderOpenTradeFeedCard(trade) {
   const livePips = liveSnapshot?.pips ?? null;
   const pipsTone = getLiveToneClass(livePips);
   const pipsText = Number.isFinite(livePips) ? `${livePips > 0 ? "+" : livePips < 0 ? "-" : "±"}${Math.abs(livePips).toFixed(2)} pips` : "OPEN";
+  const rowToneClass = pipsTone === "pnl-positive"
+    ? "recent-trade-row-public-positive"
+    : pipsTone === "pnl-negative"
+      ? "recent-trade-row-public-negative"
+      : "recent-trade-row-public-neutral";
+  const currentCellClass = pipsTone === "pnl-positive"
+    ? "recent-trade-price-cell recent-trade-price-cell-positive"
+    : pipsTone === "pnl-negative"
+      ? "recent-trade-price-cell recent-trade-price-cell-negative"
+      : "recent-trade-price-cell";
 
   return `
-    <button class="recent-trade-row recent-trade-row-public" type="button" data-trade-id="${escapeHtml(trade.id)}">
+    <button class="recent-trade-row recent-trade-row-public ${rowToneClass}" type="button" data-trade-id="${escapeHtml(trade.id)}">
       <div class="recent-trade-main">
         <div class="recent-trade-top">
           <strong class="recent-trade-symbol">${escapeHtml(trade.asset)}</strong>
@@ -4033,10 +4053,10 @@ function renderOpenTradeFeedCard(trade) {
           <span class="recent-trade-status recent-trade-status-open">OPEN</span>
         </div>
         <div class="recent-trade-prices recent-trade-prices-public">
-          <span><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
-          <span><em>SL</em><strong>${formatProgressTradePrice(trade.stopLoss)}</strong></span>
-          <span><em>TP</em><strong>${formatProgressTradePrice(trade.takeProfit)}</strong></span>
-          <span><em>Current</em><strong>${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : "—"}</strong></span>
+          <span class="recent-trade-price-cell"><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
+          <span class="recent-trade-price-cell"><em>SL</em><strong>${formatProgressTradePrice(trade.stopLoss)}</strong></span>
+          <span class="recent-trade-price-cell"><em>TP</em><strong>${formatProgressTradePrice(trade.takeProfit)}</strong></span>
+          <span class="${currentCellClass}"><em>Current</em><strong>${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : "—"}</strong></span>
         </div>
         <div class="recent-trade-foot">
           <div class="recent-trade-time">${escapeHtml(formatCompactTradeDate(trade))}</div>
@@ -4541,6 +4561,56 @@ function formatRecentTradeStatus(trade) {
     return formatLivePercentLabel(getOpenTradePnlPercent(trade), "OPEN");
   }
   return formatCurrency(trade.netPnl);
+}
+
+function getClosedTradeResolution(trade) {
+  const exitPrice = Number(trade.exitPrice);
+  const takeProfit = Number(trade.takeProfit);
+  const stopLoss = Number(trade.stopLoss);
+
+  if (!Number.isFinite(exitPrice)) {
+    return null;
+  }
+
+  const tolerance = Math.max(Math.abs(exitPrice) * 0.0005, 0.01);
+
+  if (Number.isFinite(takeProfit) && Math.abs(exitPrice - takeProfit) <= tolerance) {
+    return {
+      type: "tp",
+      label: "TP Hit",
+      className: "recent-trade-status recent-trade-status-positive"
+    };
+  }
+
+  if (Number.isFinite(stopLoss) && Math.abs(exitPrice - stopLoss) <= tolerance) {
+    return {
+      type: "sl",
+      label: "SL Hit",
+      className: "recent-trade-status recent-trade-status-negative"
+    };
+  }
+
+  return null;
+}
+
+function getClosedTradeToneClass(trade, resolution = getClosedTradeResolution(trade)) {
+  if (resolution?.type === "tp") {
+    return "recent-trade-row-public-positive";
+  }
+
+  if (resolution?.type === "sl") {
+    return "recent-trade-row-public-negative";
+  }
+
+  if (Number(trade.netPnl) > 0 || String(trade.result || "").toLowerCase() === "win") {
+    return "recent-trade-row-public-positive";
+  }
+
+  if (Number(trade.netPnl) < 0 || String(trade.result || "").toLowerCase() === "loss") {
+    return "recent-trade-row-public-negative";
+  }
+
+  return "recent-trade-row-public-neutral";
 }
 
 function getRecentTradeStatusClass(trade) {
