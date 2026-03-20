@@ -1218,12 +1218,6 @@ input:-webkit-autofill:focus {
   gap: 14px;
   flex-wrap: wrap;
   margin: 0 0 12px;
-  padding: 10px 0 8px;
-  position: sticky;
-  top: 12px;
-  z-index: 18;
-  background: linear-gradient(180deg, rgba(7, 12, 24, 0.9), rgba(7, 12, 24, 0.76));
-  backdrop-filter: blur(12px);
 }
 
 .journal-action-buttons {
@@ -2317,8 +2311,6 @@ body.is-authenticated .trust-row {
   .journal-action-bar {
     justify-content: center;
     gap: 12px;
-    top: 10px;
-    padding: 8px 0 6px;
   }
 
   .journal-action-buttons {
