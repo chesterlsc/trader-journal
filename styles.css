@@ -89,7 +89,7 @@ body.is-preview .auth-shell {
   z-index: 1;
   width: min(1360px, 95vw);
   margin: 18px auto;
-  padding: 20px 22px;
+  padding: 24px;
   border: 1px solid var(--line);
   border-radius: 30px;
   background:
@@ -98,8 +98,6 @@ body.is-preview .auth-shell {
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
   overflow: hidden;
   animation: fadeUp 420ms ease;
-  display: grid;
-  align-content: start;
 }
 
 .auth-shell-topbar {
@@ -107,7 +105,7 @@ body.is-preview .auth-shell {
   align-items: center;
   justify-content: flex-start;
   gap: 14px;
-  margin-bottom: 12px;
+  margin-bottom: 18px;
 }
 
 .auth-shell-brand {
@@ -117,14 +115,14 @@ body.is-preview .auth-shell {
 
 .auth-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(300px, 360px);
-  gap: 26px;
-  align-items: start;
-  min-height: calc(100svh - 122px);
+  grid-template-columns: minmax(0, 1.12fr) minmax(320px, 392px);
+  gap: 42px;
+  align-items: center;
+  min-height: 62vh;
 }
 
 .auth-hero-copy {
-  padding: 2px 6px 0 0;
+  padding: 6px 8px 6px 0;
   animation: fadeUp 480ms ease;
   width: 100%;
   max-width: 760px;
@@ -133,7 +131,7 @@ body.is-preview .auth-shell {
 .auth-hero-copy h2 {
   margin: 0;
   max-width: 640px;
-  font: 700 clamp(2.6rem, 4.9vw, 4.25rem)/0.95 "Sora", "Manrope", sans-serif;
+  font: 700 clamp(3rem, 6vw, 5rem)/0.97 "Sora", "Manrope", sans-serif;
   letter-spacing: -0.05em;
   transition: transform 220ms ease, text-shadow 220ms ease;
 }
@@ -145,17 +143,17 @@ body.is-preview .auth-shell {
 
 .auth-hero-text {
   max-width: 520px;
-  margin: 12px 0 0;
+  margin: 16px 0 0;
   color: var(--text-soft);
-  font-size: 1.02rem;
-  line-height: 1.5;
+  font-size: 1.12rem;
+  line-height: 1.6;
 }
 
 .hero-cta-row {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 18px;
+  margin-top: 24px;
 }
 
 .hero-cta-btn {
@@ -170,27 +168,25 @@ body.is-preview .auth-shell {
 
 .hero-cta-note {
   display: none;
-  margin: 10px 0 0;
-  padding-bottom: 8px;
+  margin: 12px 0 0;
+  padding-bottom: 12px;
   color: var(--text-soft);
-  font-size: 0.88rem;
+  font-size: 0.92rem;
 }
 
 .recent-trades-board {
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 18px;
-  align-items: stretch;
+  gap: 14px;
+  margin-top: 28px;
   animation: fadeUp 320ms ease;
 }
 
 .recent-trades-card {
   width: 100%;
   display: grid;
-  gap: 10px;
-  padding: 12px;
+  gap: 12px;
+  padding: 16px;
   border: 1px solid rgba(132, 156, 214, 0.16);
   border-radius: 20px;
   background: linear-gradient(180deg, rgba(10, 17, 31, 0.72), rgba(9, 14, 28, 0.54));
@@ -227,7 +223,7 @@ body.is-preview .auth-shell {
 
 .recent-trades-list {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .recent-trades-list-expanded {
@@ -238,8 +234,8 @@ body.is-preview .auth-shell {
   width: 100%;
   appearance: none;
   display: grid;
-  gap: 8px;
-  padding: 12px;
+  gap: 10px;
+  padding: 14px;
   border: 1px solid rgba(103, 130, 188, 0.18);
   border-radius: 16px;
   background: rgba(11, 18, 33, 0.72);
@@ -273,7 +269,7 @@ body.is-preview .auth-shell {
 .recent-trade-main {
   min-width: 0;
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .recent-trade-top {
@@ -329,7 +325,7 @@ body.is-preview .auth-shell {
 .recent-trade-price-cell {
   display: grid;
   gap: 2px;
-  padding: 8px 9px;
+  padding: 9px 10px;
   border-radius: 12px;
   background: rgba(15, 24, 43, 0.9);
   border: 1px solid rgba(103, 130, 188, 0.14);
@@ -425,7 +421,7 @@ body.is-preview .auth-shell {
 
 .auth-panel {
   justify-self: start;
-  width: min(100%, 360px);
+  width: min(100%, 392px);
   animation: fadeUp 620ms ease;
 }
 
@@ -588,9 +584,9 @@ h1 {
   border: 1px solid rgba(132, 156, 214, 0.16);
   border-radius: 22px;
   background: linear-gradient(180deg, rgba(11, 18, 36, 0.9), rgba(10, 16, 31, 0.93));
-  padding: 18px;
+  padding: 22px;
   display: grid;
-  gap: 10px;
+  gap: 12px;
   box-shadow: 0 10px 24px rgba(6, 14, 30, 0.24);
 }
 
@@ -2166,7 +2162,7 @@ body.is-authenticated .trust-row {
   .auth-shell {
     width: min(100%, calc(100vw - 16px));
     margin: 8px auto 16px;
-    padding: 16px;
+    padding: 18px;
     border-radius: 24px;
   }
 
@@ -2176,12 +2172,12 @@ body.is-authenticated .trust-row {
   }
 
   .auth-hero-copy h2 {
-    font-size: clamp(2.25rem, 8vw, 3.7rem);
+    font-size: clamp(2.5rem, 9vw, 4.4rem);
   }
 
   .auth-hero {
     grid-template-columns: 1fr;
-    gap: 14px;
+    gap: 18px;
     min-height: auto;
   }
 
@@ -2353,8 +2349,8 @@ body.is-authenticated .trust-row {
   .auth-panel {
     order: 2;
     width: 100%;
-    max-width: 520px;
-    padding: 16px;
+    max-width: 560px;
+    padding: 18px;
   }
 
   .shortcut-hint {
@@ -2503,20 +2499,20 @@ body.is-authenticated .trust-row {
   .auth-shell-topbar {
     align-items: flex-start;
     justify-content: flex-start;
-    padding-bottom: 12px;
+    padding-bottom: clamp(28px, 3vh, 72px);
   }
 
   .auth-shell {
     width: min(100%, calc(100vw - 20px));
     min-height: calc(100svh - 20px);
-    padding: 12px;
+    padding: 14px;
     border-radius: 20px;
     display: grid;
     align-content: start;
   }
 
   .auth-hero {
-    gap: 10px;
+    gap: 14px;
   }
 
   .auth-hero-copy {
@@ -2525,36 +2521,30 @@ body.is-authenticated .trust-row {
   }
 
   .auth-hero-copy h2 {
-    font-size: clamp(1.72rem, 7.2vw, 2.34rem);
-    line-height: 0.98;
+    font-size: clamp(1.9rem, 9.8vw, 3rem);
+    line-height: 1;
     letter-spacing: -0.045em;
   }
 
   .auth-hero-text {
-    margin-top: 10px;
-    font-size: 0.9rem;
-    line-height: 1.42;
+    margin-top: 14px;
+    font-size: 0.98rem;
+    line-height: 1.55;
   }
 
   .hero-cta-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 14px;
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .hero-cta-btn {
-    width: auto;
-    min-width: 134px;
-    min-height: 42px;
-    padding: 10px 14px;
-    font-size: 0.86rem;
+    width: 100%;
   }
 
   .hero-cta-note {
     display: block;
-    font-size: 0.8rem;
-    padding-bottom: 10px;
+    font-size: 0.88rem;
+    padding-bottom: 16px;
   }
 
   .hero-mobile-bullets {
@@ -2569,35 +2559,15 @@ body.is-authenticated .trust-row {
 
   .recent-trades-card {
     margin-top: 0;
-    min-width: min(84vw, 340px);
-    padding: 12px;
-    scroll-snap-align: start;
+    padding: 14px;
   }
 
   .recent-trades-header {
     align-items: flex-start;
   }
 
-  .recent-trades-board {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(84vw, 1fr);
-    grid-template-columns: none;
-    gap: 10px;
-    margin-top: 12px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 2px 2px 6px;
-    scroll-snap-type: x proximity;
-    scrollbar-width: none;
-  }
-
-  .recent-trades-board::-webkit-scrollbar {
-    display: none;
-  }
-
   .recent-trade-row {
-    gap: 8px;
+    gap: 9px;
   }
 
   .recent-trade-status {
@@ -2703,8 +2673,7 @@ body.is-authenticated .trust-row {
   }
 
   .auth-shell.mobile-auth-expanded .hero-cta-row,
-  .auth-shell.mobile-auth-expanded .hero-cta-note,
-  .auth-shell.mobile-auth-expanded .recent-trades-board {
+  .auth-shell.mobile-auth-expanded .hero-cta-note {
     display: none;
   }
 
