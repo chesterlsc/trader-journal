@@ -56,6 +56,10 @@ const state = {
     timerId: null,
     inFlight: false
   },
+  landingFeed: {
+    closedExpanded: false,
+    openExpanded: false
+  },
   filters: {
     dateFrom: "",
     dateTo: "",
@@ -3913,33 +3917,39 @@ function renderHeroRecentTrades() {
     return;
   }
 
-  ui.recentTradesList.innerHTML = trades
-    .map((trade) => {
-      const directionClass = trade.direction === "Sell" ? "recent-trade-direction recent-trade-direction-sell" : "recent-trade-direction recent-trade-direction-buy";
-      const statusClass = getRecentTradeStatusClass(trade);
+  const closedTrades = trades.filter((trade) => trade.status !== "open").slice(0, 10);
+  const openTrades = trades.filter((trade) => trade.status === "open").slice(0, 10);
 
-      return `
-        <button class="recent-trade-row" type="button" data-trade-id="${escapeHtml(trade.id)}">
-          <div class="recent-trade-main">
-            <div class="recent-trade-top">
-              <strong class="recent-trade-symbol">${escapeHtml(trade.asset)}</strong>
-              <span class="${directionClass}">${escapeHtml(trade.direction)}</span>
-            </div>
-            <div class="recent-trade-prices">
-              <span>${formatHeroPrice(trade.entryPrice)}</span>
-              <span>${formatHeroPrice(trade.stopLoss)}</span>
-              <span>${formatHeroPrice(trade.takeProfit)}</span>
-            </div>
-            <div class="recent-trade-time">${escapeHtml(formatTradeTimeline(trade))}</div>
-          </div>
-          <span class="${statusClass}">${escapeHtml(formatRecentTradeStatus(trade))}</span>
-        </button>
-      `;
+  ui.recentTradesList.innerHTML = [
+    renderTradeFeedSection({
+      key: "closed",
+      title: "Leon Closed Trades",
+      trades: closedTrades,
+      emptyLabel: "No closed trades yet.",
+      renderer: renderClosedTradeFeedCard
+    }),
+    renderTradeFeedSection({
+      key: "open",
+      title: "Leon In Progress Trades",
+      trades: openTrades,
+      emptyLabel: "No in progress trades yet.",
+      renderer: renderOpenTradeFeedCard
     })
-    .join("");
+  ].join("");
 }
 
 function handleRecentTradesClick(event) {
+  const toggle = event.target.closest("[data-trade-feed-toggle]");
+  if (toggle) {
+    const key = String(toggle.dataset.tradeFeedToggle || "");
+    if (key === "closed" || key === "open") {
+      const stateKey = key === "closed" ? "closedExpanded" : "openExpanded";
+      state.landingFeed[stateKey] = !state.landingFeed[stateKey];
+      renderHeroRecentTrades();
+    }
+    return;
+  }
+
   const row = event.target.closest("[data-trade-id]");
   if (!row) {
     return;
@@ -3955,14 +3965,86 @@ function handleRecentTradesClick(event) {
 
 function getRecentTradesSource() {
   if (canAccessApp() && Array.isArray(state.trades) && state.trades.length > 0) {
-    return [...state.trades].sort(sortTradesDesc).slice(0, 5);
+    return [...state.trades].sort(sortTradesDesc);
   }
 
   if (!canAccessApp() && Array.isArray(state.publicRecentTrades) && state.publicRecentTrades.length > 0) {
-    return state.publicRecentTrades.slice(0, 5);
+    return [...state.publicRecentTrades].sort(sortTradesDesc);
   }
 
-  return canAccessApp() && Array.isArray(state.recentTrades) ? state.recentTrades.slice(0, 5) : [];
+  return canAccessApp() && Array.isArray(state.recentTrades) ? [...state.recentTrades].sort(sortTradesDesc) : [];
+}
+
+function renderTradeFeedSection({ key, title, trades, emptyLabel, renderer }) {
+  const expanded = key === "closed" ? state.landingFeed.closedExpanded : state.landingFeed.openExpanded;
+  const firstTrade = trades[0];
+  const remainingTrades = trades.slice(1, 10);
+  const canExpand = remainingTrades.length > 0;
+
+  return `
+    <section class="recent-trades-card" aria-label="${escapeHtml(title)}">
+      <div class="recent-trades-header">
+        <p class="recent-trades-label">${escapeHtml(title)}</p>
+        ${canExpand ? `<button class="recent-trades-toggle" type="button" data-trade-feed-toggle="${escapeHtml(key)}">${expanded ? "Hide Trades" : "Show Trades"}</button>` : ""}
+      </div>
+      <div class="recent-trades-list">
+        ${firstTrade ? renderer(firstTrade) : `<p class="recent-trade-empty">${escapeHtml(emptyLabel)}</p>`}
+      </div>
+      ${expanded && remainingTrades.length ? `<div class="recent-trades-list recent-trades-list-expanded">${remainingTrades.map(renderer).join("")}</div>` : ""}
+    </section>
+  `;
+}
+
+function renderClosedTradeFeedCard(trade) {
+  const directionClass = trade.direction === "Sell" ? "recent-trade-direction recent-trade-direction-sell" : "recent-trade-direction recent-trade-direction-buy";
+  return `
+    <button class="recent-trade-row recent-trade-row-public" type="button" data-trade-id="${escapeHtml(trade.id)}">
+      <div class="recent-trade-main">
+        <div class="recent-trade-top">
+          <strong class="recent-trade-symbol">${escapeHtml(trade.asset)}</strong>
+          <span class="${directionClass}">${escapeHtml(trade.direction)}</span>
+        </div>
+        <div class="recent-trade-prices recent-trade-prices-public">
+          <span><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
+          <span><em>SL</em><strong>${formatProgressTradePrice(trade.stopLoss)}</strong></span>
+          <span><em>TP</em><strong>${formatProgressTradePrice(trade.takeProfit)}</strong></span>
+          <span><em>Exit</em><strong>${formatProgressTradePrice(trade.exitPrice)}</strong></span>
+        </div>
+        <div class="recent-trade-time">${escapeHtml(formatCompactTradeDate(trade))}</div>
+      </div>
+    </button>
+  `;
+}
+
+function renderOpenTradeFeedCard(trade) {
+  const directionClass = trade.direction === "Sell" ? "recent-trade-direction recent-trade-direction-sell" : "recent-trade-direction recent-trade-direction-buy";
+  const liveSnapshot = getOpenTradeLiveSnapshot(trade);
+  const currentPrice = liveSnapshot?.currentPrice ?? null;
+  const livePips = liveSnapshot?.pips ?? null;
+  const pipsTone = getLiveToneClass(livePips);
+  const pipsText = Number.isFinite(livePips) ? `${livePips > 0 ? "+" : livePips < 0 ? "-" : "±"}${Math.abs(livePips).toFixed(2)} pips` : "OPEN";
+
+  return `
+    <button class="recent-trade-row recent-trade-row-public" type="button" data-trade-id="${escapeHtml(trade.id)}">
+      <div class="recent-trade-main">
+        <div class="recent-trade-top">
+          <strong class="recent-trade-symbol">${escapeHtml(trade.asset)}</strong>
+          <span class="${directionClass}">${escapeHtml(trade.direction)}</span>
+          <span class="recent-trade-status recent-trade-status-open">OPEN</span>
+        </div>
+        <div class="recent-trade-prices recent-trade-prices-public">
+          <span><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
+          <span><em>SL</em><strong>${formatProgressTradePrice(trade.stopLoss)}</strong></span>
+          <span><em>TP</em><strong>${formatProgressTradePrice(trade.takeProfit)}</strong></span>
+          <span><em>Current</em><strong>${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : "—"}</strong></span>
+        </div>
+        <div class="recent-trade-foot">
+          <div class="recent-trade-time">${escapeHtml(formatCompactTradeDate(trade))}</div>
+          <div class="recent-trade-pips ${pipsTone}">${escapeHtml(pipsText)}</div>
+        </div>
+      </div>
+    </button>
+  `;
 }
 
 function hydrateSetupFilter() {
@@ -4439,6 +4521,21 @@ function formatTradeTimeline(trade) {
   return `${entryDate} ${entryTime} → ${exitLabel}`;
 }
 
+function formatCompactTradeDate(trade) {
+  const date = parseIsoDate(trade.createdAt || trade.closedAt || trade.updatedAt);
+  if (!date) {
+    return trade.date || "—";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(date);
+}
+
 function formatRecentTradeStatus(trade) {
   if (trade.status === "open") {
     return formatLivePercentLabel(getOpenTradePnlPercent(trade), "OPEN");
@@ -4514,6 +4611,7 @@ function getOpenTradeLiveSnapshot(trade) {
     livePercent,
     priceMove,
     dollarPnl: Number.isFinite(metrics.netPnl) ? metrics.netPnl : null,
+    pips: Number.isFinite(metrics.pips) ? metrics.pips : null,
     toneClass: getLiveToneClass(livePercent)
   };
 }
@@ -4637,6 +4735,7 @@ function normalizeRecentTrades(input) {
         entryPrice: ensurePositiveNumber(item.entry_price ?? item.entryPrice, 0),
         stopLoss: ensurePositiveNumber(item.stop_loss ?? item.stopLoss, 0),
         takeProfit: ensurePositiveNumber(item.take_profit ?? item.takeProfit, 0),
+        exitPrice: ensurePositiveNumber(item.exit_price ?? item.exitPrice, 0),
         status: item.status === "open" ? "open" : "closed",
         netPnl: ensureNumber(item.profit_loss ?? item.profitLoss, 0),
         createdAt: String(item.created_at || item.createdAt || ""),
@@ -4645,8 +4744,7 @@ function normalizeRecentTrades(input) {
       };
       return trade;
     })
-    .sort(sortTradesDesc)
-    .slice(0, 5);
+    .sort(sortTradesDesc);
 }
 
 function normalizeMarketSymbol(symbol) {

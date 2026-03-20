@@ -1231,6 +1231,7 @@ function sanitizeTradesPayload($value): array
         $item['entryPrice'] = is_numeric($item['entryPrice'] ?? $item['entry_price'] ?? null) ? (float) ($item['entryPrice'] ?? $item['entry_price']) : 0.0;
         $item['stopLoss'] = is_numeric($item['stopLoss'] ?? $item['stop_loss'] ?? null) ? (float) ($item['stopLoss'] ?? $item['stop_loss']) : 0.0;
         $item['takeProfit'] = is_numeric($item['takeProfit'] ?? $item['take_profit'] ?? null) ? (float) ($item['takeProfit'] ?? $item['take_profit']) : 0.0;
+        $item['exitPrice'] = is_numeric($item['exitPrice'] ?? $item['exit_price'] ?? null) ? (float) ($item['exitPrice'] ?? $item['exit_price']) : 0.0;
         $item['netPnl'] = is_numeric($item['netPnl'] ?? $item['profit_loss'] ?? null) ? (float) ($item['netPnl'] ?? $item['profit_loss']) : 0.0;
         $item['status'] = $status;
         $item['createdAt'] = $createdAt;
@@ -1262,7 +1263,6 @@ function listRecentTrades(PDO $pdo, int $userId): array
         }
     );
 
-    $recent = array_slice($trades, 0, 5);
     return array_map(
         static function (array $trade): array {
             return [
@@ -1272,13 +1272,14 @@ function listRecentTrades(PDO $pdo, int $userId): array
                 'entry_price' => is_numeric($trade['entryPrice'] ?? null) ? (float) $trade['entryPrice'] : 0.0,
                 'stop_loss' => is_numeric($trade['stopLoss'] ?? null) ? (float) $trade['stopLoss'] : 0.0,
                 'take_profit' => is_numeric($trade['takeProfit'] ?? null) ? (float) $trade['takeProfit'] : 0.0,
+                'exit_price' => is_numeric($trade['exitPrice'] ?? null) ? (float) $trade['exitPrice'] : 0.0,
                 'profit_loss' => is_numeric($trade['netPnl'] ?? null) ? (float) $trade['netPnl'] : 0.0,
                 'status' => normalizeTradeStatus($trade['status'] ?? 'closed'),
                 'created_at' => (string) ($trade['createdAt'] ?? ''),
                 'closed_at' => (string) ($trade['closedAt'] ?? ''),
             ];
         },
-        $recent
+        $trades
     );
 }
 

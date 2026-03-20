@@ -174,16 +174,29 @@ body.is-preview .auth-shell {
   font-size: 0.92rem;
 }
 
+.recent-trades-board {
+  width: 100%;
+  display: grid;
+  gap: 14px;
+  margin-top: 28px;
+}
+
 .recent-trades-card {
   width: 100%;
   display: grid;
   gap: 12px;
-  max-width: 560px;
-  margin-top: 28px;
   padding: 16px;
   border: 1px solid rgba(132, 156, 214, 0.16);
   border-radius: 20px;
   background: linear-gradient(180deg, rgba(10, 17, 31, 0.72), rgba(9, 14, 28, 0.54));
+}
+
+.recent-trades-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .recent-trades-label {
@@ -194,18 +207,33 @@ body.is-preview .auth-shell {
   text-transform: uppercase;
 }
 
+.recent-trades-toggle {
+  appearance: none;
+  border: 1px solid rgba(103, 130, 188, 0.16);
+  background: rgba(12, 20, 36, 0.52);
+  color: var(--text-soft);
+  border-radius: 999px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font: 600 0.65rem/1 "JetBrains Mono", "Consolas", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .recent-trades-list {
   display: grid;
   gap: 12px;
+}
+
+.recent-trades-list-expanded {
+  padding-top: 2px;
 }
 
 .recent-trade-row {
   width: 100%;
   appearance: none;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px 16px;
-  align-items: center;
+  gap: 10px;
   padding: 14px;
   border: 1px solid rgba(103, 130, 188, 0.18);
   border-radius: 16px;
@@ -272,8 +300,32 @@ body.is-preview .auth-shell {
   font: 600 0.85rem/1.4 "JetBrains Mono", "Consolas", monospace;
 }
 
-.recent-trade-prices span {
-  white-space: nowrap;
+.recent-trade-prices-public {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.recent-trade-prices-public span {
+  display: grid;
+  gap: 2px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: rgba(15, 24, 43, 0.9);
+  border: 1px solid rgba(103, 130, 188, 0.14);
+}
+
+.recent-trade-prices-public em {
+  font-style: normal;
+  color: var(--text-soft);
+  font: 500 0.62rem/1.1 "JetBrains Mono", "Consolas", monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.recent-trade-prices-public strong {
+  color: #dbe8ff;
+  font: 700 0.86rem/1.1 "JetBrains Mono", "Consolas", monospace;
 }
 
 .recent-trade-time {
@@ -281,14 +333,36 @@ body.is-preview .auth-shell {
   font: 500 11px/1.35 "JetBrains Mono", "Consolas", monospace;
 }
 
+.recent-trade-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.recent-trade-pips {
+  color: var(--text-soft);
+  font: 700 11px/1 "JetBrains Mono", "Consolas", monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.recent-trade-pips.pnl-positive {
+  color: var(--green);
+}
+
+.recent-trade-pips.pnl-negative {
+  color: var(--red);
+}
+
 .recent-trade-status {
-  justify-self: end;
   display: inline-flex;
   align-items: center;
-  min-height: 30px;
-  padding: 6px 10px;
+  min-height: 24px;
+  padding: 4px 9px;
   border-radius: 999px;
-  font: 700 11px/1 "JetBrains Mono", "Consolas", monospace;
+  font: 700 10px/1 "JetBrains Mono", "Consolas", monospace;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -2458,17 +2532,34 @@ body.is-authenticated .trust-row {
   }
 
   .recent-trades-card {
-    margin-top: 18px;
+    margin-top: 0;
     padding: 14px;
   }
 
+  .recent-trades-header {
+    align-items: flex-start;
+  }
+
   .recent-trade-row {
-    grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 9px;
   }
 
   .recent-trade-status {
     justify-self: start;
+  }
+
+  .recent-trade-prices-public {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .recent-trade-prices-public span {
+    padding: 8px 9px;
+  }
+
+  .recent-trade-foot {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .journal-action-bar {
