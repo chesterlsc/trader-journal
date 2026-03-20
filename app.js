@@ -3922,18 +3922,18 @@ function renderHeroRecentTrades() {
 
   ui.recentTradesList.innerHTML = [
     renderTradeFeedSection({
-      key: "closed",
-      title: "Leon Closed Trades",
-      trades: closedTrades,
-      emptyLabel: "No closed trades yet.",
-      renderer: renderClosedTradeFeedCard
-    }),
-    renderTradeFeedSection({
       key: "open",
       title: "Leon In Progress Trades",
       trades: openTrades,
       emptyLabel: "No in progress trades yet.",
       renderer: renderOpenTradeFeedCard
+    }),
+    renderTradeFeedSection({
+      key: "closed",
+      title: "Leon Closed Trades",
+      trades: closedTrades,
+      emptyLabel: "No closed trades yet.",
+      renderer: renderClosedTradeFeedCard
     })
   ].join("");
 }
