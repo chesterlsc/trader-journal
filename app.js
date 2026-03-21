@@ -1980,6 +1980,7 @@ function calculateTradeMetrics(trade) {
 function getPipSpec(trade) {
   const asset = String(trade.asset || "").toUpperCase();
   const market = String(trade.market || "").toLowerCase();
+  const isCryptoLike = isCryptoMarketSymbol(asset, market);
 
   // User-requested XAUUSD model: 0.01 lot => $1 per pip (1.0 price move).
   if (asset.startsWith("XAU")) {
@@ -1988,6 +1989,14 @@ function getPipSpec(trade) {
 
   if (asset.startsWith("XAG")) {
     return { mode: "pip-lot", pipSize: 0.01, pipValuePerLot: 50 };
+  }
+
+  if (isCryptoLike) {
+    return {
+      mode: "unit",
+      pipSize: inferPipSizeFromPrice(trade.entryPrice, "crypto"),
+      pipValuePerLot: 0
+    };
   }
 
   const isForexPair = /^[A-Z]{6}$/.test(asset);
@@ -2029,6 +2038,43 @@ function inferPipSizeFromPrice(entryPrice, market) {
   }
 
   return 0.01;
+}
+
+function isCryptoMarketSymbol(asset, market) {
+  if (market === "crypto") {
+    return true;
+  }
+
+  if (!asset) {
+    return false;
+  }
+
+  if (/(USDT|USDC)$/.test(asset)) {
+    return true;
+  }
+
+  const knownCryptoUsdPairs = new Set([
+    "BTCUSD",
+    "ETHUSD",
+    "ETCUSD",
+    "SOLUSD",
+    "XRPUSD",
+    "ADAUSD",
+    "DOGEUSD",
+    "BNBUSD",
+    "LTCUSD",
+    "BCHUSD",
+    "AVAXUSD",
+    "LINKUSD",
+    "DOTUSD",
+    "TRXUSD",
+    "MATICUSD",
+    "SUIUSD",
+    "TONUSD",
+    "SHIBUSD"
+  ]);
+
+  return knownCryptoUsdPairs.has(asset);
 }
 
 function handleScreenshotUpload(event) {
