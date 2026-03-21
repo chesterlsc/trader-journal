@@ -55,10 +55,10 @@ body::before {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.48;
+  opacity: 0.68;
   background-image:
-    linear-gradient(rgba(118, 148, 214, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(118, 148, 214, 0.07) 1px, transparent 1px);
+    linear-gradient(rgba(118, 148, 214, 0.17) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(118, 148, 214, 0.17) 1px, transparent 1px);
   background-size: 54px 54px;
   mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.92), rgba(0, 0, 0, 0.52) 66%, transparent 100%);
 }
