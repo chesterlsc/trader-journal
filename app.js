@@ -41,6 +41,7 @@ const state = {
     username: "",
     isAdmin: false,
     previewMode: false,
+    landingPreviewMode: false,
     intent: "register",
     mobileAuthVisible: false,
     sessionCheckVersion: 0,
@@ -82,6 +83,7 @@ const ui = {
   sidebar: document.getElementById("sidebar"),
   mainNav: document.getElementById("mainNav"),
   navToggleBtn: document.getElementById("navToggleBtn"),
+  authOverlay: document.getElementById("authOverlay"),
   authPanel: document.querySelector(".auth-panel"),
   brandTitle: document.getElementById("brandTitle"),
   brandTitles: Array.from(document.querySelectorAll("[data-brand-title]")),
@@ -93,6 +95,7 @@ const ui = {
   authStatus: document.getElementById("authStatus"),
   authMessage: document.getElementById("authMessage"),
   recentTradesList: document.getElementById("recentTradesList"),
+  landingScrollHint: document.getElementById("landingScrollHint"),
   authControls: document.getElementById("authControls"),
   authIdentifier: document.getElementById("authIdentifier"),
   authPassword: document.getElementById("authPassword"),
@@ -227,11 +230,16 @@ const ui = {
 init();
 
 function init() {
-  state.auth.previewMode = isLocalPreviewMode();
+  const localPreview = isLocalPreviewMode();
+  state.auth.landingPreviewMode = localPreview && isLocalLandingPreviewRequested();
+  state.auth.previewMode = localPreview && !state.auth.landingPreviewMode;
   state.auth.resetToken = getResetTokenFromUrl();
   state.auth.resetTokenStatus = state.auth.resetToken ? "pending" : "idle";
-  state.auth.mobileAuthVisible = !isCompactAuthViewport() || Boolean(state.auth.resetToken);
+  state.auth.mobileAuthVisible = Boolean(state.auth.resetToken);
   if (state.auth.previewMode) {
+    state.auth.checked = true;
+    state.auth.mobileAuthVisible = false;
+  } else if (state.auth.landingPreviewMode) {
     state.auth.checked = true;
     state.auth.mobileAuthVisible = false;
   }
@@ -255,6 +263,12 @@ function init() {
   startLivePriceLoop();
   if (state.auth.previewMode) {
     state.recentTrades = normalizeRecentTrades(state.trades);
+    renderHeroRecentTrades();
+    refreshLivePrices({ immediate: true });
+    return;
+  }
+  if (state.auth.landingPreviewMode) {
+    state.publicRecentTrades = normalizeRecentTrades(state.trades);
     renderHeroRecentTrades();
     refreshLivePrices({ immediate: true });
     return;
@@ -318,6 +332,20 @@ function bindEvents() {
   if (ui.forgotPasswordBtn) {
     ui.forgotPasswordBtn.addEventListener("click", handleForgotPassword);
   }
+  if (ui.landingScrollHint) {
+    ui.landingScrollHint.addEventListener("click", () => {
+      toggleLandingTradePreview();
+    });
+  }
+  if (ui.authOverlay) {
+    ui.authOverlay.addEventListener("click", closeLandingAuthModal);
+  }
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeLandingAuthModal();
+    }
+  });
+  window.addEventListener("scroll", handleLandingPreviewAutoExpand, { passive: true });
   if (ui.heroRegisterBtn) {
     ui.heroRegisterBtn.addEventListener("click", () => {
       setAuthIntent("register", { focus: true });
@@ -533,6 +561,16 @@ function isLocalPreviewMode() {
   return protocol === "file:" || hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0" || hostname === "::1";
 }
 
+function isLocalLandingPreviewRequested() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const value = String(params.get("landing") || "").trim().toLowerCase();
+    return value === "1" || value === "true" || value === "yes";
+  } catch (error) {
+    return false;
+  }
+}
+
 function canAccessApp() {
   return state.auth.previewMode || (state.auth.checked && state.auth.isAuthenticated);
 }
@@ -548,10 +586,47 @@ function setAuthIntent(intent, options = {}) {
   updateAuthUi();
 
   if (options.focus && !state.auth.isAuthenticated) {
-    ui.authPanel?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     window.setTimeout(() => {
       ui.authIdentifier?.focus();
     }, 120);
+  }
+}
+
+function closeLandingAuthModal() {
+  if (state.auth.isAuthenticated || state.auth.previewMode) {
+    return;
+  }
+
+  state.auth.mobileAuthVisible = false;
+  updateAuthUi();
+  setMessage(ui.authMessage, "", "");
+}
+
+function toggleLandingTradePreview(forceExpanded) {
+  if (!ui.recentTradesList || !ui.landingScrollHint) {
+    return;
+  }
+
+  const nextExpanded = typeof forceExpanded === "boolean"
+    ? forceExpanded
+    : !ui.recentTradesList.classList.contains("is-preview-expanded");
+
+  ui.recentTradesList.classList.toggle("is-preview-expanded", nextExpanded);
+  ui.landingScrollHint.classList.toggle("is-open", nextExpanded);
+  ui.landingScrollHint.querySelector(".landing-scroll-hint-label").textContent = nextExpanded ? "Hide trades" : "View trades";
+
+  if (nextExpanded) {
+    ui.recentTradesList.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+}
+
+function handleLandingPreviewAutoExpand() {
+  if (!ui.recentTradesList || canAccessApp() || !isMobileViewport()) {
+    return;
+  }
+
+  if (window.scrollY > 18 && !ui.recentTradesList.classList.contains("is-preview-expanded")) {
+    toggleLandingTradePreview(true);
   }
 }
 
@@ -701,7 +776,7 @@ async function checkAuthSession() {
       state.auth.isAuthenticated = false;
       state.auth.username = "";
       state.auth.isAdmin = false;
-      state.auth.mobileAuthVisible = !isCompactAuthViewport() || Boolean(state.auth.resetToken);
+      state.auth.mobileAuthVisible = Boolean(state.auth.resetToken);
     }
   } catch (error) {
     if (checkVersion !== state.auth.sessionCheckVersion) {
@@ -787,7 +862,7 @@ async function handleLogout() {
   state.auth.username = "";
   state.auth.isAdmin = false;
   state.auth.intent = "register";
-  state.auth.mobileAuthVisible = !isCompactAuthViewport();
+  state.auth.mobileAuthVisible = false;
   state.recentTrades = [];
   state.loginLogs = [];
   state.adminUsers = [];
@@ -887,9 +962,8 @@ function updateAuthUi() {
   const isResetPending = hasResetToken && state.auth.resetTokenStatus === "pending";
   const isResetMode = hasResetToken && state.auth.resetTokenStatus === "valid";
   const loginMode = state.auth.intent === "login";
-  const collapseForCompactMobile =
+  const collapseForLanding =
     !state.auth.isAuthenticated &&
-    isCompactAuthViewport() &&
     !state.auth.mobileAuthVisible &&
     !isResetMode &&
     !isResetPending;
@@ -934,15 +1008,21 @@ function updateAuthUi() {
     ui.forgotPasswordBtn.hidden = isResetMode || isResetPending || !loginMode;
   }
   if (ui.authShell) {
-    ui.authShell.classList.toggle("mobile-auth-expanded", !collapseForCompactMobile);
-    ui.authShell.classList.toggle("mobile-auth-collapsed", collapseForCompactMobile);
+    ui.authShell.classList.toggle("auth-panel-visible", !collapseForLanding);
+    ui.authShell.classList.toggle("auth-panel-hidden", collapseForLanding);
+    ui.authShell.classList.toggle("mobile-auth-expanded", !collapseForLanding);
+    ui.authShell.classList.toggle("mobile-auth-collapsed", collapseForLanding);
   }
+  if (ui.authOverlay) {
+    ui.authOverlay.hidden = false;
+  }
+  document.body.classList.toggle("modal-open", !collapseForLanding && !state.auth.isAuthenticated && !state.auth.previewMode);
 
   if (!state.auth.checked) {
     ui.authStatus.textContent = isResetPending ? "Verifying reset link..." : "";
     if (ui.authPanel) {
-      ui.authPanel.hidden = collapseForCompactMobile;
-      ui.authPanel.style.display = collapseForCompactMobile ? "none" : "grid";
+      ui.authPanel.hidden = false;
+      ui.authPanel.style.display = "grid";
     }
     ui.desktopLogoutBtn.hidden = true;
     ui.mobileLogoutBtn.hidden = true;
@@ -964,8 +1044,8 @@ function updateAuthUi() {
       ui.authPassword.disabled = false;
     }
     if (ui.authPanel) {
-      ui.authPanel.hidden = true;
-      ui.authPanel.style.display = "none";
+      ui.authPanel.hidden = false;
+      ui.authPanel.style.display = "grid";
     }
     renderAdminUsers();
     updateAccessGate();
@@ -986,8 +1066,8 @@ function updateAuthUi() {
     ui.desktopLogoutBtn.hidden = false;
     ui.mobileLogoutBtn.hidden = false;
     if (ui.authPanel) {
-      ui.authPanel.hidden = true;
-      ui.authPanel.style.display = "none";
+      ui.authPanel.hidden = false;
+      ui.authPanel.style.display = "grid";
     }
     if (ui.authPassword) {
       ui.authPassword.disabled = true;
@@ -1006,8 +1086,8 @@ function updateAuthUi() {
     ui.desktopLogoutBtn.hidden = true;
     ui.mobileLogoutBtn.hidden = true;
     if (ui.authPanel) {
-      ui.authPanel.hidden = collapseForCompactMobile;
-      ui.authPanel.style.display = collapseForCompactMobile ? "none" : "grid";
+      ui.authPanel.hidden = false;
+      ui.authPanel.style.display = "grid";
     }
     if (ui.authIdentifier) {
       ui.authIdentifier.disabled = false;

@@ -28,9 +28,13 @@ html,
 body {
   margin: 0;
   min-height: 100%;
+  height: 100%;
 }
 
 body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
   font-family: "Sora", "Manrope", "Trebuchet MS", sans-serif;
   color: var(--text);
   background:
@@ -38,6 +42,25 @@ body {
     radial-gradient(circle at 88% 10%, rgba(87, 161, 255, 0.14), transparent 42%),
     linear-gradient(145deg, #04060c 0%, #0a0f1d 50%, #060a14 100%);
   line-height: 1.4;
+  position: relative;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.34;
+  background-image:
+    linear-gradient(rgba(118, 148, 214, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(118, 148, 214, 0.05) 1px, transparent 1px);
+  background-size: 54px 54px;
+  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.92), rgba(0, 0, 0, 0.52) 66%, transparent 100%);
 }
 
 .ambient {
@@ -87,53 +110,71 @@ body.is-preview .auth-shell {
 .auth-shell {
   position: relative;
   z-index: 1;
-  width: min(1360px, 95vw);
-  margin: 18px auto;
-  padding: 24px;
-  border: 1px solid var(--line);
-  border-radius: 30px;
-  background:
-    radial-gradient(circle at top left, rgba(56, 108, 255, 0.16), transparent 34%),
-    linear-gradient(180deg, rgba(8, 14, 36, 0.98), rgba(8, 12, 28, 0.97));
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
-  overflow: hidden;
+  width: min(1280px, 96vw);
+  flex: 1 0 auto;
+  margin: 0 auto;
+  padding: 6px 24px 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
   animation: fadeUp 420ms ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .auth-shell-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 14px;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
+  padding: 10px 0 8px;
+  background: transparent;
+  backdrop-filter: none;
 }
 
 .auth-shell-brand {
   display: grid;
   gap: 4px;
+  justify-items: center;
+  text-align: center;
 }
 
 .auth-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(320px, 392px);
-  gap: 42px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
   align-items: center;
-  min-height: 62vh;
+  justify-items: center;
+  width: 100%;
+  max-width: 980px;
+  margin: auto;
 }
 
 .auth-hero-copy {
-  padding: 6px 8px 6px 0;
+  padding: 0;
   animation: fadeUp 480ms ease;
   width: 100%;
-  max-width: 760px;
+  max-width: 860px;
+  text-align: center;
 }
 
 .auth-hero-copy h2 {
   margin: 0;
-  max-width: 640px;
-  font: 700 clamp(3rem, 6vw, 5rem)/0.97 "Sora", "Manrope", sans-serif;
-  letter-spacing: -0.05em;
+  max-width: 920px;
+  font: 700 clamp(2rem, 5vw, 3.5rem)/1.12 "Sora", "Manrope", sans-serif;
+  letter-spacing: -0.012em;
   transition: transform 220ms ease, text-shadow 220ms ease;
+}
+
+.hero-line {
+  display: block;
 }
 
 .auth-hero-copy:hover h2 {
@@ -142,53 +183,70 @@ body.is-preview .auth-shell {
 }
 
 .auth-hero-text {
-  max-width: 520px;
-  margin: 16px 0 0;
+  max-width: 620px;
+  margin: 10px auto 0;
   color: var(--text-soft);
-  font-size: 1.12rem;
-  line-height: 1.6;
+  font-size: 1rem;
+  line-height: 1.56;
+  letter-spacing: 0.012em;
 }
 
 .hero-cta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 220px));
+  gap: 10px;
+  margin-top: 14px;
+  justify-content: center;
 }
 
 .hero-cta-btn {
-  min-width: 184px;
+  width: 100%;
+  min-width: 0;
   padding-inline: 18px;
+  min-height: 48px;
+  background: linear-gradient(180deg, rgba(17, 31, 62, 0.94), rgba(10, 21, 44, 0.94));
+  border-color: rgba(242, 246, 255, 0.7);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.hero-cta-btn.primary {
+  background: linear-gradient(180deg, rgba(27, 49, 92, 0.96), rgba(15, 33, 66, 0.94));
+  border-color: rgba(242, 246, 255, 0.78);
 }
 
 .hero-cta-btn.hero-cta-btn-secondary {
-  background: rgba(12, 18, 35, 0.74);
-  border-color: rgba(132, 156, 214, 0.28);
+  background: linear-gradient(180deg, rgba(10, 19, 38, 0.96), rgba(6, 12, 24, 0.95));
+  border-color: rgba(242, 246, 255, 0.6);
 }
 
 .hero-cta-note {
   display: none;
-  margin: 12px 0 0;
-  padding-bottom: 12px;
+  margin: 8px 0 0;
+  padding-bottom: 2px;
   color: var(--text-soft);
   font-size: 0.92rem;
+  text-align: center;
 }
 
 .recent-trades-board {
   width: 100%;
+  max-width: 1120px;
   display: grid;
-  gap: 14px;
-  margin-top: 28px;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin: 8px auto 0;
   animation: fadeUp 320ms ease;
+  justify-items: center;
 }
 
 .recent-trades-card {
   width: 100%;
   display: grid;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 12px;
   border: 1px solid rgba(132, 156, 214, 0.16);
-  border-radius: 20px;
+  border-radius: 18px;
   background: linear-gradient(180deg, rgba(10, 17, 31, 0.72), rgba(9, 14, 28, 0.54));
 }
 
@@ -280,7 +338,7 @@ body.is-preview .auth-shell {
   background: rgba(12, 20, 36, 0.52);
   color: var(--text-soft);
   border-radius: 999px;
-  padding: 6px 10px;
+  padding: 5px 9px;
   cursor: pointer;
   font: 600 0.65rem/1 "JetBrains Mono", "Consolas", monospace;
   letter-spacing: 0.08em;
@@ -289,7 +347,7 @@ body.is-preview .auth-shell {
 
 .recent-trades-list {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .recent-trades-list-expanded {
@@ -300,8 +358,8 @@ body.is-preview .auth-shell {
   width: 100%;
   appearance: none;
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  gap: 8px;
+  padding: 11px;
   border: 1px solid rgba(103, 130, 188, 0.18);
   border-radius: 16px;
   background: rgba(11, 18, 33, 0.72);
@@ -335,28 +393,28 @@ body.is-preview .auth-shell {
 .recent-trade-main {
   min-width: 0;
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .recent-trade-top {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .recent-trade-symbol {
-  font: 700 1rem/1 "Sora", "Manrope", sans-serif;
+  font: 700 0.94rem/1 "Sora", "Manrope", sans-serif;
   letter-spacing: -0.03em;
 }
 
 .recent-trade-direction {
   display: inline-flex;
   align-items: center;
-  min-height: 24px;
-  padding: 4px 9px;
+  min-height: 22px;
+  padding: 4px 8px;
   border-radius: 999px;
-  font: 600 10px/1 "JetBrains Mono", "Consolas", monospace;
+  font: 600 9.5px/1 "JetBrains Mono", "Consolas", monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -384,14 +442,14 @@ body.is-preview .auth-shell {
 .recent-trade-prices-public {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .recent-trade-prices-public span,
 .recent-trade-price-cell {
   display: grid;
   gap: 2px;
-  padding: 9px 10px;
+  padding: 7px 9px;
   border-radius: 12px;
   background: rgba(15, 24, 43, 0.9);
   border: 1px solid rgba(103, 130, 188, 0.14);
@@ -410,19 +468,19 @@ body.is-preview .auth-shell {
 .recent-trade-prices-public em {
   font-style: normal;
   color: var(--text-soft);
-  font: 500 0.62rem/1.1 "JetBrains Mono", "Consolas", monospace;
+  font: 500 0.58rem/1.1 "JetBrains Mono", "Consolas", monospace;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .recent-trade-prices-public strong {
   color: #dbe8ff;
-  font: 700 0.86rem/1.1 "JetBrains Mono", "Consolas", monospace;
+  font: 700 0.8rem/1.1 "JetBrains Mono", "Consolas", monospace;
 }
 
 .recent-trade-time {
   color: var(--text-soft);
-  font: 500 11px/1.35 "JetBrains Mono", "Consolas", monospace;
+  font: 500 10px/1.35 "JetBrains Mono", "Consolas", monospace;
 }
 
 .recent-trade-foot {
@@ -435,7 +493,7 @@ body.is-preview .auth-shell {
 
 .recent-trade-pips {
   color: var(--text-soft);
-  font: 700 11px/1 "JetBrains Mono", "Consolas", monospace;
+  font: 700 10px/1 "JetBrains Mono", "Consolas", monospace;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -491,10 +549,52 @@ body.is-preview .auth-shell {
   font: 500 12px/1.4 "JetBrains Mono", "Consolas", monospace;
 }
 
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 14;
+  background: rgba(4, 9, 19, 0.66);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 180ms ease, visibility 0s linear 180ms;
+}
+
 .auth-panel {
-  justify-self: start;
-  width: min(100%, 392px);
-  animation: fadeUp 620ms ease;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 15;
+  transform: translate(-50%, calc(-50% + 12px));
+  width: min(90vw, 400px);
+  max-height: min(82vh, 680px);
+  overflow-y: auto;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 190ms ease,
+    transform 240ms cubic-bezier(0.22, 0.8, 0.22, 1),
+    visibility 0s linear 190ms;
+}
+
+.auth-shell.auth-panel-visible .auth-overlay {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 180ms ease, visibility 0s;
+}
+
+.auth-shell.auth-panel-visible .auth-panel {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+  transition:
+    opacity 190ms ease,
+    transform 240ms cubic-bezier(0.22, 0.8, 0.22, 1),
+    visibility 0s;
 }
 
 .sidebar {
@@ -656,9 +756,9 @@ h1 {
   border: 1px solid rgba(132, 156, 214, 0.16);
   border-radius: 22px;
   background: linear-gradient(180deg, rgba(11, 18, 36, 0.9), rgba(10, 16, 31, 0.93));
-  padding: 22px;
+  padding: 18px;
   display: grid;
-  gap: 12px;
+  gap: 10px;
   box-shadow: 0 10px 24px rgba(6, 14, 30, 0.24);
 }
 
@@ -699,8 +799,38 @@ h1 {
 .auth-copy {
   margin: 0;
   color: var(--text-soft);
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: 0.86rem;
+  line-height: 1.42;
+}
+
+.landing-scroll-hint {
+  display: none;
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  cursor: pointer;
+}
+
+.landing-scroll-hint-label {
+  display: block;
+}
+
+.landing-scroll-hint-arrow {
+  display: block;
+  margin-top: 2px;
+  color: #d7e9ff;
+  font: 700 1.7rem/1 "Sora", "Manrope", sans-serif;
+  transition: transform 180ms ease;
+}
+
+.landing-scroll-hint.is-open .landing-scroll-hint-arrow {
+  transform: rotate(180deg);
 }
 
 #resetPasswordView {
@@ -2078,14 +2208,14 @@ body.auth-locked .view {
 }
 
 .site-footer {
-  width: min(1420px, 96vw);
-  margin: 0 auto 24px;
+  width: min(1280px, 96vw);
+  margin: auto auto 16px;
   padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: rgba(10, 16, 29, 0.78);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--text-soft);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+  box-shadow: none;
   font: 500 12px/1.45 "JetBrains Mono", "Consolas", monospace;
   text-align: center;
 }
@@ -2110,6 +2240,11 @@ body.auth-locked .view {
 }
 
 body.is-authenticated .trust-row {
+  display: none;
+}
+
+body.auth-locked .trust-row,
+body.is-preview .trust-row {
   display: none;
 }
 
@@ -2201,17 +2336,13 @@ body.is-authenticated .trust-row {
   }
 
   .auth-hero-copy {
-    padding: 4px 0;
-    text-align: left;
+    padding: 0;
+    text-align: center;
   }
 
   .auth-hero-text {
-    margin-left: 0;
-    margin-right: 0;
-  }
-
-  .auth-panel {
-    justify-self: start;
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 
@@ -2233,33 +2364,36 @@ body.is-authenticated .trust-row {
 
   .auth-shell {
     width: min(100%, calc(100vw - 16px));
-    margin: 8px auto 16px;
-    padding: 18px;
-    border-radius: 24px;
+    margin: 0 auto;
+    padding: 6px 18px 8px;
+    border-radius: 0;
   }
 
   .auth-shell-topbar {
-    justify-content: flex-start;
-    margin-bottom: 14px;
+    justify-content: center;
+    margin-bottom: 10px;
   }
 
   .auth-hero-copy h2 {
-    font-size: clamp(2.5rem, 9vw, 4.4rem);
+    font-size: clamp(2.2rem, 8vw, 3.7rem);
+    line-height: 0.93;
   }
 
   .auth-hero {
     grid-template-columns: 1fr;
-    gap: 18px;
+    gap: 14px;
     min-height: auto;
   }
 
   .auth-hero-copy {
     max-width: none;
     padding: 0;
+    text-align: center;
   }
 
   .recent-trades-card {
     max-width: none;
+    padding: 12px;
   }
 
   .trust-row {
@@ -2569,54 +2703,70 @@ body.is-authenticated .trust-row {
   }
 
   .auth-shell-topbar {
-    align-items: flex-start;
-    justify-content: flex-start;
-    padding-bottom: clamp(28px, 3vh, 72px);
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 4px;
   }
 
   .auth-shell {
-    width: min(100%, calc(100vw - 20px));
-    min-height: calc(100svh - 20px);
-    padding: 14px;
-    border-radius: 20px;
-    display: grid;
-    align-content: start;
+    width: min(100%, calc(100vw - 16px));
+    padding: 4px 12px 8px;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
   .auth-hero {
-    gap: 14px;
+    gap: 6px;
+    margin: auto;
   }
 
   .auth-hero-copy {
     padding: 0;
-    text-align: left;
+    text-align: center;
   }
 
   .auth-hero-copy h2 {
-    font-size: clamp(1.9rem, 9.8vw, 3rem);
-    line-height: 1;
-    letter-spacing: -0.045em;
+    font-size: clamp(1.4rem, 6.6vw, 2rem);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
   }
 
   .auth-hero-text {
-    margin-top: 14px;
-    font-size: 0.98rem;
-    line-height: 1.55;
+    margin-top: 6px;
+    font-size: 0.86rem;
+    line-height: 1.52;
+    letter-spacing: 0.01em;
   }
 
   .hero-cta-row {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 14px;
   }
 
   .hero-cta-btn {
     width: 100%;
+    min-width: 0;
+    padding-inline: 10px;
+  }
+
+  #heroLoginBtn {
+    order: 1;
+  }
+
+  #heroRegisterBtn {
+    order: 2;
   }
 
   .hero-cta-note {
     display: block;
-    font-size: 0.88rem;
-    padding-bottom: 16px;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    padding-bottom: 4px;
+    text-align: center;
   }
 
   .hero-mobile-bullets {
@@ -2625,13 +2775,42 @@ body.is-authenticated .trust-row {
 
   .auth-shell-brand {
     width: 100%;
-    justify-items: start;
-    text-align: left;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .recent-trades-board {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-top: 8px;
+    max-height: 240px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .recent-trades-board.is-preview-expanded {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .recent-trades-board::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 48px;
+    background: linear-gradient(180deg, rgba(8, 14, 36, 0), rgba(8, 12, 28, 0.96));
+    pointer-events: none;
+  }
+
+  .recent-trades-board.is-preview-expanded::after {
+    display: none;
   }
 
   .recent-trades-card {
     margin-top: 0;
-    padding: 14px;
+    padding: 12px 10px;
   }
 
   .recent-trades-header {
@@ -2645,7 +2824,7 @@ body.is-authenticated .trust-row {
   }
 
   .recent-trade-row {
-    gap: 9px;
+    gap: 8px;
   }
 
   .recent-trades-verified {
@@ -2688,6 +2867,12 @@ body.is-authenticated .trust-row {
   .recent-trade-foot {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .landing-scroll-hint {
+    display: block;
+    margin-top: -1px;
+    font-size: 10px;
   }
 
   .journal-action-bar {
@@ -2772,11 +2957,6 @@ body.is-authenticated .trust-row {
 
   .progress-trade-stat strong {
     font-size: 0.76rem;
-  }
-
-  .auth-shell.mobile-auth-expanded .hero-cta-row,
-  .auth-shell.mobile-auth-expanded .hero-cta-note {
-    display: none;
   }
 
   body:not(.auth-ready):not(.is-authenticated) .auth-panel,
@@ -2920,7 +3100,7 @@ body.is-authenticated .trust-row {
   .auth-title,
   .auth-status,
   .auth-copy {
-    text-align: left;
+    text-align: center;
   }
 
   .auth-form-actions {

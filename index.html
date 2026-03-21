@@ -6,7 +6,7 @@
     <title>Trader Journal | Trading Analytics</title>
     <link rel="icon" href="favicon.svg?v=20260313-metallic" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260315-apple-touch" sizes="180x180" />
-    <link rel="stylesheet" href="styles.css?v=20260320-home-view-restore" />
+    <link rel="stylesheet" href="styles.css?v=20260321-landing-fold-opt" />
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -26,16 +26,25 @@
 
       <div class="auth-hero">
         <section class="auth-hero-copy">
-          <h2>Journal your trades, mistakes, and emotions in one place.</h2>
+          <h2>
+            <span class="hero-line">Journal your trades,</span>
+            <span class="hero-line">mistakes, and emotions</span>
+            <span class="hero-line">in one place.</span>
+          </h2>
           <p class="auth-hero-text">Log your trades fast. Review screenshots. Track psychology.</p>
           <div class="hero-cta-row">
-            <button id="heroRegisterBtn" class="btn primary hero-cta-btn" type="button">Create Free Account</button>
             <button id="heroLoginBtn" class="btn hero-cta-btn hero-cta-btn-secondary" type="button">Log In</button>
+            <button id="heroRegisterBtn" class="btn hero-cta-btn hero-cta-btn-secondary" type="button">Sign Up</button>
           </div>
           <p class="hero-cta-note">Free. No subscription.</p>
           <div class="recent-trades-board" id="recentTradesList" aria-label="Leon public trades"></div>
+          <button id="landingScrollHint" class="landing-scroll-hint" type="button">
+            <span class="landing-scroll-hint-label">View trades</span>
+            <span class="landing-scroll-hint-arrow">⌄</span>
+          </button>
         </section>
 
+        <div id="authOverlay" class="auth-overlay"></div>
         <section class="auth-panel" aria-label="Account access">
           <p class="auth-title" id="authTitle">Create your free account</p>
           <p class="auth-status" id="authStatus"></p>
@@ -1074,6 +1083,6 @@
       <p class="footer-main">© 2026 leon. all rights reserved.</p>
     </footer>
 
-    <script src="app.js?v=20260320-home-card-animation"></script>
+    <script src="app.js?v=20260321-landing-fold-opt"></script>
   </body>
 </html>
