@@ -620,6 +620,16 @@ function toggleLandingTradePreview(forceExpanded) {
   }
 }
 
+function syncLandingExpandedLayout() {
+  if (!ui.authShell) {
+    return;
+  }
+
+  const layoutExpanded = state.landingFeed.closedExpanded || state.landingFeed.openExpanded
+    || ui.recentTradesList?.classList.contains("is-preview-expanded");
+  ui.authShell.classList.toggle("is-trades-expanded", Boolean(layoutExpanded));
+}
+
 function handleLandingPreviewAutoExpand() {
   return;
 }
@@ -3988,6 +3998,10 @@ function renderHeroRecentTrades() {
   const trades = getRecentTradesSource();
   if (!trades.length) {
     ui.recentTradesList.innerHTML = '<p class="recent-trade-empty">No trades yet.</p>';
+    if (ui.landingScrollHint) {
+      ui.landingScrollHint.style.display = "none";
+    }
+    syncLandingExpandedLayout();
     return;
   }
 
@@ -4012,6 +4026,18 @@ function renderHeroRecentTrades() {
       sectionOrder: 1
     })
   ].join("");
+
+  if (ui.landingScrollHint) {
+    const hasHiddenMobileContent = isMobileViewport() && closedTrades.length > 0;
+    ui.landingScrollHint.style.display = hasHiddenMobileContent ? "" : "none";
+    ui.landingScrollHint.classList.toggle("is-open", ui.recentTradesList.classList.contains("is-preview-expanded"));
+    const labelNode = ui.landingScrollHint.querySelector(".landing-scroll-hint-label");
+    if (labelNode) {
+      labelNode.textContent = ui.recentTradesList.classList.contains("is-preview-expanded") ? "Hide trades" : "View trades";
+    }
+  }
+
+  syncLandingExpandedLayout();
 }
 
 function handleRecentTradesClick(event) {
@@ -4058,7 +4084,7 @@ function renderTradeFeedSection({ key, title, trades, emptyLabel, renderer, sect
   const canExpand = remainingTrades.length > 0;
 
   return `
-    <section class="recent-trades-card" aria-label="${escapeHtml(title)}" style="--trade-section-order:${Number(sectionOrder)};">
+    <section class="recent-trades-card recent-trades-card-${escapeHtml(key)}" aria-label="${escapeHtml(title)}" style="--trade-section-order:${Number(sectionOrder)};">
       <div class="recent-trades-header">
         <p class="recent-trades-label">${escapeHtml(title)}</p>
         ${canExpand ? `<button class="recent-trades-toggle" type="button" data-trade-feed-toggle="${escapeHtml(key)}">${expanded ? "Hide Trades" : "Show Trades"}</button>` : ""}
