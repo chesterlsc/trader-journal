@@ -1994,7 +1994,7 @@ function getPipSpec(trade) {
   if (isCryptoLike) {
     return {
       mode: "unit",
-      pipSize: inferPipSizeFromPrice(trade.entryPrice, "crypto"),
+      pipSize: 1,
       pipValuePerLot: 0
     };
   }
