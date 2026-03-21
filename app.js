@@ -5039,39 +5039,16 @@ async function refreshLivePrices(options = {}) {
 
   const symbols = collectTrackedSymbols();
   const requests = buildLivePriceRequests(symbols);
-  if (!requests.length) {
+  if (!symbols.length && !requests.length) {
     return;
   }
 
   state.marketData.inFlight = true;
   try {
-    const updates = {};
-
-    await Promise.all(
-      requests.map(async (request) => {
-        try {
-          const response = await fetch(request.url, {
-            method: "GET",
-            cache: "no-store"
-          });
-          if (!response.ok) {
-            throw new Error(`${request.key} price request failed`);
-          }
-
-          const body = await response.json();
-          const nextPrice = request.readPrice(body);
-          if (!Number.isFinite(nextPrice) || nextPrice <= 0) {
-            return;
-          }
-
-          request.aliases.forEach((alias) => {
-            updates[alias] = nextPrice;
-          });
-        } catch (error) {
-          // Keep the last known price if a source fails temporarily.
-        }
-      })
-    );
+    let updates = await fetchLivePricesFromBackend(symbols);
+    if (Object.keys(updates).length === 0 && requests.length) {
+      updates = await fetchLivePricesDirect(requests);
+    }
 
     if (Object.keys(updates).length === 0) {
       return;
@@ -5089,6 +5066,70 @@ async function refreshLivePrices(options = {}) {
   } finally {
     state.marketData.inFlight = false;
   }
+}
+
+async function fetchLivePricesFromBackend(symbols) {
+  if (!Array.isArray(symbols) || symbols.length === 0) {
+    return {};
+  }
+
+  try {
+    const query = encodeURIComponent(symbols.join(","));
+    const response = await fetch(`trade_handler.php?action=live_prices&symbols=${query}`, {
+      method: "GET",
+      credentials: "same-origin",
+      cache: "no-store"
+    });
+    const body = await response.json();
+    if (!response.ok || !body?.ok || !body.prices || typeof body.prices !== "object") {
+      return {};
+    }
+
+    const updates = {};
+    Object.entries(body.prices).forEach(([symbol, price]) => {
+      const normalized = normalizeMarketSymbol(symbol);
+      const nextPrice = Number(price);
+      if (normalized && Number.isFinite(nextPrice) && nextPrice > 0) {
+        updates[normalized] = nextPrice;
+      }
+    });
+
+    return updates;
+  } catch (error) {
+    return {};
+  }
+}
+
+async function fetchLivePricesDirect(requests) {
+  const updates = {};
+
+  await Promise.all(
+    requests.map(async (request) => {
+      try {
+        const response = await fetch(request.url, {
+          method: "GET",
+          cache: "no-store"
+        });
+        if (!response.ok) {
+          throw new Error(`${request.key} price request failed`);
+        }
+
+        const body = await response.json();
+        const nextPrice = request.readPrice(body);
+        if (!Number.isFinite(nextPrice) || nextPrice <= 0) {
+          return;
+        }
+
+        request.aliases.forEach((alias) => {
+          updates[alias] = nextPrice;
+        });
+      } catch (error) {
+        // Keep the last known price if a source fails temporarily.
+      }
+    })
+  );
+
+  return updates;
 }
 
 function collectTrackedSymbols() {

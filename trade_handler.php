@@ -204,6 +204,13 @@ try {
         respond(200, ['ok' => true, 'trades' => $trades]);
     }
 
+    if ($action === 'live_prices') {
+        $symbolsParam = $_GET['symbols'] ?? '';
+        $symbols = is_array($symbolsParam) ? $symbolsParam : explode(',', (string) $symbolsParam);
+        $prices = fetchLivePrices($pdo, $symbols);
+        respond(200, ['ok' => true, 'prices' => $prices]);
+    }
+
     if ($action === 'update_prices') {
         requireMethod('POST');
         $decoded = readJsonBody();
@@ -1336,6 +1343,262 @@ function upsertSymbolPrices(PDO $pdo, array $entries): int
     }
 
     return $updated;
+}
+
+function fetchLivePrices(PDO $pdo, array $symbols): array
+{
+    $normalizedSymbols = [];
+    foreach ($symbols as $symbol) {
+        $normalized = normalizeLivePriceSymbol((string) $symbol);
+        if ($normalized !== '') {
+            $normalizedSymbols[$normalized] = true;
+        }
+    }
+
+    if ($normalizedSymbols === []) {
+        return [];
+    }
+
+    $requests = buildLivePriceRequests(array_keys($normalizedSymbols));
+    $updates = [];
+
+    foreach ($requests as $request) {
+        $body = fetchRemoteJson((string) $request['url']);
+        if (!is_array($body)) {
+            continue;
+        }
+
+        $price = $request['readPrice']($body);
+        if (!is_float($price) && !is_int($price)) {
+            continue;
+        }
+
+        $priceValue = (float) $price;
+        if ($priceValue <= 0) {
+            continue;
+        }
+
+        foreach ($request['aliases'] as $alias) {
+            $updates[(string) $alias] = $priceValue;
+        }
+    }
+
+    if ($updates !== []) {
+        $entries = [];
+        foreach ($updates as $symbol => $price) {
+            $entries[] = ['symbol' => $symbol, 'price' => $price];
+        }
+        upsertSymbolPrices($pdo, $entries);
+    }
+
+    $cached = loadCachedSymbolPrices($pdo, array_keys($normalizedSymbols));
+    foreach ($cached as $symbol => $price) {
+        if (!isset($updates[$symbol])) {
+            $updates[$symbol] = $price;
+        }
+    }
+
+    return $updates;
+}
+
+function normalizeLivePriceSymbol(string $symbol): string
+{
+    $raw = strtoupper(trim($symbol));
+    if ($raw === '') {
+        return '';
+    }
+
+    $normalized = preg_replace('/[:\/\s_-]+/', '', $raw);
+    $normalized = preg_replace('/[^A-Z0-9.]/', '', (string) $normalized);
+    $normalized = preg_replace('/\.(P|M|PRO|RAW|CASH)$/', '', (string) $normalized);
+    $normalized = preg_replace('/(USDT|USDC|USD|BTC|ETH)(PERP|FUT|SWAP|SPOT)$/', '$1', (string) $normalized);
+    $normalized = preg_replace('/(USDT|USDC|USD|BTC|ETH)(M|PRO)$/', '$1', (string) $normalized);
+
+    return (string) $normalized;
+}
+
+function buildLivePriceRequests(array $symbols): array
+{
+    $requests = [];
+
+    foreach ($symbols as $symbol) {
+        $source = resolveLivePriceSource($symbol);
+        if ($source === null) {
+            continue;
+        }
+
+        $key = (string) $source['key'];
+        if (!isset($requests[$key])) {
+            $requests[$key] = $source + ['aliases' => []];
+        }
+        $requests[$key]['aliases'][$symbol] = $symbol;
+    }
+
+    foreach ($requests as &$request) {
+        $request['aliases'] = array_values($request['aliases']);
+    }
+    unset($request);
+
+    return array_values($requests);
+}
+
+function resolveLivePriceSource(string $symbol): ?array
+{
+    $normalized = normalizeLivePriceSymbol($symbol);
+    if ($normalized === '') {
+        return null;
+    }
+
+    $cryptoMap = [
+        'BTCUSD' => 'BTCUSDT',
+        'BTCUSDT' => 'BTCUSDT',
+        'ETHUSD' => 'ETHUSDT',
+        'ETHUSDT' => 'ETHUSDT',
+        'ETCUSD' => 'ETCUSDT',
+        'ETCUSDT' => 'ETCUSDT',
+        'SOLUSD' => 'SOLUSDT',
+        'SOLUSDT' => 'SOLUSDT',
+        'XRPUSD' => 'XRPUSDT',
+        'XRPUSDT' => 'XRPUSDT',
+        'ADAUSD' => 'ADAUSDT',
+        'ADAUSDT' => 'ADAUSDT',
+        'DOGEUSD' => 'DOGEUSDT',
+        'DOGEUSDT' => 'DOGEUSDT',
+        'BNBUSD' => 'BNBUSDT',
+        'BNBUSDT' => 'BNBUSDT',
+        'LTCUSD' => 'LTCUSDT',
+        'LTCUSDT' => 'LTCUSDT',
+        'BCHUSD' => 'BCHUSDT',
+        'BCHUSDT' => 'BCHUSDT',
+        'AVAXUSD' => 'AVAXUSDT',
+        'AVAXUSDT' => 'AVAXUSDT',
+        'LINKUSD' => 'LINKUSDT',
+        'LINKUSDT' => 'LINKUSDT',
+        'DOTUSD' => 'DOTUSDT',
+        'DOTUSDT' => 'DOTUSDT',
+        'TRXUSD' => 'TRXUSDT',
+        'TRXUSDT' => 'TRXUSDT',
+        'MATICUSD' => 'MATICUSDT',
+        'MATICUSDT' => 'MATICUSDT',
+        'SUIUSD' => 'SUIUSDT',
+        'SUIUSDT' => 'SUIUSDT',
+        'TONUSD' => 'TONUSDT',
+        'TONUSDT' => 'TONUSDT',
+        'SHIBUSD' => 'SHIBUSDT',
+        'SHIBUSDT' => 'SHIBUSDT',
+    ];
+
+    if (isset($cryptoMap[$normalized])) {
+        $marketSymbol = $cryptoMap[$normalized];
+        return [
+            'key' => 'binance:' . $marketSymbol,
+            'url' => 'https://api.binance.com/api/v3/ticker/price?symbol=' . rawurlencode($marketSymbol),
+            'readPrice' => static function (array $body): ?float {
+                $price = $body['price'] ?? null;
+                return is_numeric($price) && (float) $price > 0 ? (float) $price : null;
+            },
+        ];
+    }
+
+    if ($normalized === 'XAUUSD' || $normalized === 'XAGUSD') {
+        $metal = str_starts_with($normalized, 'XAG') ? 'XAG' : 'XAU';
+        return [
+            'key' => 'metal:' . $metal,
+            'url' => 'https://api.gold-api.com/price/' . rawurlencode($metal),
+            'readPrice' => static function (array $body): ?float {
+                $price = $body['price'] ?? null;
+                return is_numeric($price) && (float) $price > 0 ? (float) $price : null;
+            },
+        ];
+    }
+
+    return null;
+}
+
+function fetchRemoteJson(string $url): ?array
+{
+    if ($url === '') {
+        return null;
+    }
+
+    $headers = [
+        'Accept: application/json',
+        'User-Agent: TraderJournal/1.0',
+    ];
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        if ($ch === false) {
+            return null;
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_CONNECTTIMEOUT => 4,
+            CURLOPT_TIMEOUT => 6,
+            CURLOPT_HTTPHEADER => $headers,
+        ]);
+
+        $raw = curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        curl_close($ch);
+
+        if (!is_string($raw) || $raw === '' || $status < 200 || $status >= 300) {
+            return null;
+        }
+
+        $decoded = json_decode($raw, true);
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => implode("\r\n", $headers),
+            'timeout' => 6,
+            'ignore_errors' => true,
+        ],
+    ]);
+
+    $raw = @file_get_contents($url, false, $context);
+    if (!is_string($raw) || $raw === '') {
+        return null;
+    }
+
+    $decoded = json_decode($raw, true);
+    return is_array($decoded) ? $decoded : null;
+}
+
+function loadCachedSymbolPrices(PDO $pdo, array $symbols): array
+{
+    if ($symbols === []) {
+        return [];
+    }
+
+    $placeholders = [];
+    $params = [];
+    foreach (array_values($symbols) as $index => $symbol) {
+        $key = ':symbol_' . $index;
+        $placeholders[] = $key;
+        $params[$key] = $symbol;
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT symbol, price FROM symbol_prices WHERE symbol IN (' . implode(', ', $placeholders) . ')'
+    );
+    $stmt->execute($params);
+
+    $result = [];
+    while ($row = $stmt->fetch()) {
+        $symbol = strtoupper(trim((string) ($row['symbol'] ?? '')));
+        $price = $row['price'] ?? null;
+        if ($symbol !== '' && is_numeric($price) && (float) $price > 0) {
+            $result[$symbol] = (float) $price;
+        }
+    }
+
+    return $result;
 }
 
 function sanitizeReplayNotes($value): array
