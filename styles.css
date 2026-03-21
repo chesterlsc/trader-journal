@@ -37,10 +37,9 @@ body {
   min-height: 100vh;
   font-family: "Sora", "Manrope", "Trebuchet MS", sans-serif;
   color: var(--text);
-  background:
-    radial-gradient(circle at 8% 12%, rgba(57, 211, 255, 0.12), transparent 35%),
-    radial-gradient(circle at 88% 10%, rgba(87, 161, 255, 0.14), transparent 42%),
-    linear-gradient(145deg, #04060c 0%, #0a0f1d 50%, #060a14 100%);
+  background: linear-gradient(145deg, #04060c 0%, #0a0f1d 50%, #060a14 100%);
+  background-attachment: fixed;
+  background-color: #05080f;
   line-height: 1.4;
   position: relative;
 }
