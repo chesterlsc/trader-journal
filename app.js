@@ -4999,7 +4999,20 @@ function normalizeRecentTrades(input) {
 }
 
 function normalizeMarketSymbol(symbol) {
-  return String(symbol || "").trim().toUpperCase();
+  const raw = String(symbol || "").trim().toUpperCase();
+  if (!raw) {
+    return "";
+  }
+
+  let normalized = raw
+    .replace(/[:/\s_-]+/g, "")
+    .replace(/[^A-Z0-9.]/g, "");
+
+  normalized = normalized.replace(/\.(P|M|PRO|RAW|CASH)$/i, "");
+  normalized = normalized.replace(/(USDT|USDC|USD|BTC|ETH)(PERP|FUT|SWAP|SPOT)$/i, "$1");
+  normalized = normalized.replace(/(USDT|USDC|USD|BTC|ETH)(M|PRO)$/i, "$1");
+
+  return normalized;
 }
 
 function startLivePriceLoop() {
