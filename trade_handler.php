@@ -1383,6 +1383,19 @@ function fetchLivePrices(PDO $pdo, array $symbols): array
         }
     }
 
+    $missingSymbols = array_values(array_filter(
+        array_keys($normalizedSymbols),
+        static fn (string $symbol): bool => !isset($updates[$symbol])
+    ));
+
+    if ($missingSymbols !== []) {
+        foreach (fetchCoinGeckoFallbackPrices($missingSymbols) as $symbol => $price) {
+            if (!isset($updates[$symbol]) && is_numeric($price) && (float) $price > 0) {
+                $updates[$symbol] = (float) $price;
+            }
+        }
+    }
+
     if ($updates !== []) {
         $entries = [];
         foreach ($updates as $symbol => $price) {
@@ -1568,6 +1581,90 @@ function fetchRemoteJson(string $url): ?array
 
     $decoded = json_decode($raw, true);
     return is_array($decoded) ? $decoded : null;
+}
+
+function fetchCoinGeckoFallbackPrices(array $symbols): array
+{
+    $coinIds = [];
+    $symbolToCoin = [];
+
+    foreach ($symbols as $symbol) {
+        $normalized = normalizeLivePriceSymbol((string) $symbol);
+        $coinId = resolveCoinGeckoId($normalized);
+        if ($normalized === '' || $coinId === null) {
+            continue;
+        }
+
+        $symbolToCoin[$normalized] = $coinId;
+        $coinIds[$coinId] = true;
+    }
+
+    if ($coinIds === []) {
+        return [];
+    }
+
+    $url = 'https://api.coingecko.com/api/v3/simple/price?ids='
+        . rawurlencode(implode(',', array_keys($coinIds)))
+        . '&vs_currencies=usd';
+
+    $body = fetchRemoteJson($url);
+    if (!is_array($body)) {
+        return [];
+    }
+
+    $result = [];
+    foreach ($symbolToCoin as $symbol => $coinId) {
+        $price = $body[$coinId]['usd'] ?? null;
+        if (is_numeric($price) && (float) $price > 0) {
+            $result[$symbol] = (float) $price;
+        }
+    }
+
+    return $result;
+}
+
+function resolveCoinGeckoId(string $symbol): ?string
+{
+    $map = [
+        'BTCUSD' => 'bitcoin',
+        'BTCUSDT' => 'bitcoin',
+        'ETHUSD' => 'ethereum',
+        'ETHUSDT' => 'ethereum',
+        'ETCUSD' => 'ethereum-classic',
+        'ETCUSDT' => 'ethereum-classic',
+        'SOLUSD' => 'solana',
+        'SOLUSDT' => 'solana',
+        'XRPUSD' => 'ripple',
+        'XRPUSDT' => 'ripple',
+        'ADAUSD' => 'cardano',
+        'ADAUSDT' => 'cardano',
+        'DOGEUSD' => 'dogecoin',
+        'DOGEUSDT' => 'dogecoin',
+        'BNBUSD' => 'binancecoin',
+        'BNBUSDT' => 'binancecoin',
+        'LTCUSD' => 'litecoin',
+        'LTCUSDT' => 'litecoin',
+        'BCHUSD' => 'bitcoin-cash',
+        'BCHUSDT' => 'bitcoin-cash',
+        'AVAXUSD' => 'avalanche-2',
+        'AVAXUSDT' => 'avalanche-2',
+        'LINKUSD' => 'chainlink',
+        'LINKUSDT' => 'chainlink',
+        'DOTUSD' => 'polkadot',
+        'DOTUSDT' => 'polkadot',
+        'TRXUSD' => 'tron',
+        'TRXUSDT' => 'tron',
+        'MATICUSD' => 'matic-network',
+        'MATICUSDT' => 'matic-network',
+        'SUIUSD' => 'sui',
+        'SUIUSDT' => 'sui',
+        'TONUSD' => 'the-open-network',
+        'TONUSDT' => 'the-open-network',
+        'SHIBUSD' => 'shiba-inu',
+        'SHIBUSDT' => 'shiba-inu',
+    ];
+
+    return $map[$symbol] ?? null;
 }
 
 function loadCachedSymbolPrices(PDO $pdo, array $symbols): array
