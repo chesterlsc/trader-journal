@@ -621,13 +621,7 @@ function toggleLandingTradePreview(forceExpanded) {
 }
 
 function handleLandingPreviewAutoExpand() {
-  if (!ui.recentTradesList || canAccessApp() || !isMobileViewport()) {
-    return;
-  }
-
-  if (window.scrollY > 18 && !ui.recentTradesList.classList.contains("is-preview-expanded")) {
-    toggleLandingTradePreview(true);
-  }
+  return;
 }
 
 function getResetTokenFromUrl() {

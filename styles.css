@@ -83,7 +83,7 @@ body::before {
 .ambient-two {
   width: 320px;
   height: 320px;
-  bottom: -120px;
+  top: -120px;
   right: -110px;
   background: #6d8dff;
 }
@@ -126,8 +126,7 @@ body.is-preview .auth-shell {
 }
 
 .auth-shell-topbar {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 10;
   display: flex;
   align-items: center;
@@ -2209,7 +2208,7 @@ body.auth-locked .view {
 
 .site-footer {
   width: min(1280px, 96vw);
-  margin: auto auto 16px;
+  margin: 12px auto 16px;
   padding: 12px 14px;
   border: 0;
   border-radius: 0;
@@ -2783,8 +2782,8 @@ body.is-preview .trust-row {
     grid-template-columns: 1fr;
     gap: 8px;
     margin-top: 8px;
-    max-height: 240px;
-    overflow: hidden;
+    max-height: none;
+    overflow: visible;
     position: relative;
   }
 
@@ -2794,14 +2793,7 @@ body.is-preview .trust-row {
   }
 
   .recent-trades-board::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 48px;
-    background: linear-gradient(180deg, rgba(8, 14, 36, 0), rgba(8, 12, 28, 0.96));
-    pointer-events: none;
+    display: none;
   }
 
   .recent-trades-board.is-preview-expanded::after {
@@ -2870,9 +2862,7 @@ body.is-preview .trust-row {
   }
 
   .landing-scroll-hint {
-    display: block;
-    margin-top: -1px;
-    font-size: 10px;
+    display: none;
   }
 
   .journal-action-bar {
