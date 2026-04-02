@@ -2540,7 +2540,7 @@ async function saveToPhpStorage(options = {}) {
 }
 
 async function loadFromPhpStorage(options = {}) {
-  const { silent = false, preferLocalIfServerEmpty = false } = options;
+  const { silent = false, preferLocalIfServerEmpty = true } = options;
 
   if (!state.auth.isAuthenticated) {
     if (!silent) {
@@ -2567,15 +2567,16 @@ async function loadFromPhpStorage(options = {}) {
       throw new Error(body.error || "Server load failed");
     }
 
+    const rawServerTrades = Array.isArray(body.data.trades) ? body.data.trades : [];
     const serverSettings = normalizeSettings(body.data.settings);
-    const serverTrades = normalizeTrades(body.data.trades);
+    const serverTrades = normalizeTrades(rawServerTrades);
     const serverReflections = normalizeReflections(body.data.reflections);
     const serverReplayNotes = normalizeReplayNotes(body.data.replayNotes);
+    const serverTradesMalformed = rawServerTrades.length > 0 && serverTrades.length === 0;
 
     const shouldKeepLocal =
-      preferLocalIfServerEmpty &&
-      serverTrades.length === 0 &&
-      localSnapshot.trades.length > 0;
+      localSnapshot.trades.length > 0 &&
+      ((preferLocalIfServerEmpty && serverTrades.length === 0) || serverTradesMalformed);
 
     if (shouldKeepLocal) {
       state.settings = localSnapshot.settings;
@@ -2584,9 +2585,19 @@ async function loadFromPhpStorage(options = {}) {
       state.replayNotes = localSnapshot.replayNotes;
       persistState();
       if (!silent) {
-        setMessage(ui.journalMessage, "Server was empty. Kept local trades and synced to server.", "success");
+        setMessage(
+          ui.journalMessage,
+          serverTradesMalformed
+            ? "Server trade data looked malformed. Kept local trades and synced them back to the server."
+            : "Server was empty. Kept local trades and synced them back to the server.",
+          "success"
+        );
       }
       return true;
+    }
+
+    if (serverTradesMalformed) {
+      throw new Error("Server trade data is malformed. Update the backend fix before loading this journal.");
     }
 
     state.settings = serverSettings;

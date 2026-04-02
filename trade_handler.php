@@ -1489,6 +1489,7 @@ function sanitizeTradesPayload($value): array
         }
 
         $status = normalizeTradeStatus(($item['status'] ?? null) ?? (!empty($item['in_progress']) ? 'open' : 'closed'));
+        $date = resolveTradeDateValue($item);
         $createdAt = trim((string) ($item['createdAt'] ?? $item['created_at'] ?? ''));
         $updatedAt = trim((string) ($item['updatedAt'] ?? $item['updated_at'] ?? $createdAt));
         $closedAt = $status === 'open'
@@ -1496,6 +1497,7 @@ function sanitizeTradesPayload($value): array
             : trim((string) ($item['closedAt'] ?? $item['closed_at'] ?? $updatedAt));
 
         $item['id'] = (string) ($item['id'] ?? '');
+        $item['date'] = $date;
         $item['asset'] = (string) ($item['asset'] ?? $item['symbol'] ?? '');
         $item['direction'] = (string) ($item['direction'] ?? 'Buy');
         $item['entryPrice'] = is_numeric($item['entryPrice'] ?? $item['entry_price'] ?? null) ? (float) ($item['entryPrice'] ?? $item['entry_price']) : 0.0;
@@ -1523,6 +1525,46 @@ function sanitizeTradesPayload($value): array
     }
 
     return $result;
+}
+
+function resolveTradeDateValue(array $item): string
+{
+    $directDate = trim((string) ($item['date'] ?? $item['trade_date'] ?? ''));
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $directDate) === 1) {
+        return $directDate;
+    }
+
+    $fallbackCandidates = [
+        $item['closedAt'] ?? null,
+        $item['closed_at'] ?? null,
+        $item['createdAt'] ?? null,
+        $item['created_at'] ?? null,
+        $item['updatedAt'] ?? null,
+        $item['updated_at'] ?? null,
+    ];
+
+    foreach ($fallbackCandidates as $candidate) {
+        $date = extractIsoDatePrefix($candidate);
+        if ($date !== '') {
+            return $date;
+        }
+    }
+
+    return $directDate;
+}
+
+function extractIsoDatePrefix($value): string
+{
+    $text = trim((string) $value);
+    if ($text === '') {
+        return '';
+    }
+
+    if (preg_match('/^(\d{4}-\d{2}-\d{2})/', $text, $matches) === 1) {
+        return (string) $matches[1];
+    }
+
+    return '';
 }
 
 function listRecentTrades(PDO $pdo, int $userId): array
