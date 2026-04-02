@@ -1168,12 +1168,12 @@ body.is-authenticated .auth-panel {
   color: #eff6ff;
 }
 
-.panel-leon-score {
+.panel-trader-score {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
-.leon-score-foot {
+.trader-score-foot {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 16px;
@@ -1183,18 +1183,18 @@ body.is-authenticated .auth-panel {
   border-top: 1px solid rgba(132, 156, 214, 0.18);
 }
 
-.leon-score-value-wrap {
+.trader-score-value-wrap {
   display: grid;
   gap: 6px;
 }
 
-.leon-score-value {
+.trader-score-value {
   margin: 0;
   font: 700 2rem/1 "Sora", "Manrope", sans-serif;
   color: #f3f7ff;
 }
 
-.leon-score-caption {
+.trader-score-caption {
   margin: 0;
   color: var(--text-soft);
   font-size: 0.88rem;
@@ -2560,7 +2560,7 @@ body.is-preview .trust-row {
     gap: 8px;
   }
 
-  .leon-score-foot {
+  .trader-score-foot {
     grid-template-columns: 1fr;
     gap: 10px;
     align-items: start;

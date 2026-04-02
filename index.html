@@ -6,7 +6,7 @@
     <title>Trader Journal | Trading Analytics</title>
     <link rel="icon" href="favicon.svg?v=20260313-metallic" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260315-apple-touch" sizes="180x180" />
-    <link rel="stylesheet" href="styles.css?v=20260321-landing-bg-unify" />
+    <link rel="stylesheet" href="styles.css?v=20260403-launch-readiness" />
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -26,7 +26,6 @@
 
       <div class="auth-hero">
         <section class="auth-hero-copy">
-          <p class="hero-preheadline">Free. No subscription.</p>
           <h2>
             <span class="hero-line">Journal your trades,</span>
             <span class="hero-line">mistakes, and emotions</span>
@@ -35,21 +34,20 @@
           <p class="auth-hero-text">Log your trades fast. Review screenshots. Track psychology.</p>
           <div class="hero-cta-row">
             <button id="heroLoginBtn" class="btn hero-cta-btn hero-cta-btn-secondary" type="button">Log In</button>
-            <button id="heroRegisterBtn" class="btn hero-cta-btn hero-cta-btn-secondary" type="button">Sign Up</button>
+            <button id="heroRegisterBtn" class="btn hero-cta-btn hero-cta-btn-secondary" type="button">Get Started</button>
           </div>
-          <p class="hero-cta-note">Free. No subscription.</p>
-          <div class="recent-trades-board" id="recentTradesList" aria-label="Leon public trades"></div>
+          <div class="recent-trades-board" id="recentTradesList" aria-label="Public recent trades"></div>
           <button id="landingScrollHint" class="landing-scroll-hint" type="button">
             <span class="landing-scroll-hint-label">View trades</span>
-            <span class="landing-scroll-hint-arrow">⌄</span>
+            <span class="landing-scroll-hint-arrow">&darr;</span>
           </button>
         </section>
 
         <div id="authOverlay" class="auth-overlay"></div>
         <section class="auth-panel" aria-label="Account access">
-          <p class="auth-title" id="authTitle">Create your free account</p>
+          <p class="auth-title" id="authTitle">Create your account</p>
           <p class="auth-status" id="authStatus"></p>
-          <p class="auth-copy" id="authCopy">Start free with a username or email.</p>
+          <p class="auth-copy" id="authCopy">Create your account with a username or email.</p>
 
           <div id="authControls">
             <label>
@@ -74,7 +72,7 @@
             </label>
 
             <div class="form-actions auth-form-actions">
-              <button id="registerBtn" class="btn primary" type="button">Create Free Account</button>
+              <button id="registerBtn" class="btn primary" type="button">Get Started</button>
               <button id="loginBtn" class="btn" type="button">Log In</button>
             </div>
             <button id="forgotPasswordBtn" class="auth-link-btn" type="button">Forgot password?</button>
@@ -315,18 +313,18 @@
                 aria-label="Strategy performance chart"
               ></canvas>
             </article>
-            <article class="panel panel-chart panel-leon-score">
+            <article class="panel panel-chart panel-trader-score">
               <div class="panel-head">
-                <h3>Leon Score</h3>
+                <h3>Trader Score</h3>
                 <p>Composite read on win quality, recovery, and consistency.</p>
               </div>
-              <canvas id="leonScoreChart" width="900" height="320" data-height="300" aria-label="Leon score radar chart"></canvas>
-              <div class="leon-score-foot">
-                <div class="leon-score-value-wrap">
-                  <p class="metric-label">Leon Score</p>
-                  <p id="leonScoreValue" class="leon-score-value">0.0</p>
+              <canvas id="traderScoreChart" width="900" height="320" data-height="300" aria-label="Trader score radar chart"></canvas>
+              <div class="trader-score-foot">
+                <div class="trader-score-value-wrap">
+                  <p class="metric-label">Trader Score</p>
+                  <p id="traderScoreValue" class="trader-score-value">0.0</p>
                 </div>
-                <p id="leonScoreCaption" class="leon-score-caption">Add more trade data to build the score.</p>
+                <p id="traderScoreCaption" class="trader-score-caption">Add more trade data to build the score.</p>
               </div>
             </article>
           </section>
@@ -1081,9 +1079,9 @@
           </p>
         </div>
       </details>
-      <p class="footer-main">© 2026 leon. all rights reserved.</p>
+      <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script src="app.js?v=20260321-landing-bg-unify"></script>
+    <script type="module" src="app.js?v=20260403-launch-readiness"></script>
   </body>
 </html>

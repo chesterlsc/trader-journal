@@ -199,8 +199,8 @@ try {
     }
 
     if ($action === 'public_recent_trades') {
-        $publicUser = findUserByIdentifier($pdo, 'chesterlsc');
-        $trades = $publicUser !== null ? listRecentTrades($pdo, (int) $publicUser['id']) : [];
+        $publicUserId = resolvePublicRecentTradesUserId($pdo);
+        $trades = $publicUserId !== null ? listRecentTrades($pdo, $publicUserId) : [];
         respond(200, ['ok' => true, 'trades' => $trades]);
     }
 
@@ -468,7 +468,6 @@ function ensureSchema(PDO $pdo): void
     $pdo->exec('ALTER TABLE journal_users ADD COLUMN IF NOT EXISTS email VARCHAR(190)');
     $pdo->exec('ALTER TABLE journal_users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(24) NOT NULL DEFAULT \'email\'');
     $pdo->exec('ALTER TABLE journal_users ADD COLUMN IF NOT EXISTS oauth_subject TEXT');
-    $pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_users_email ON journal_users (email)');
     $pdo->exec('ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS user_id BIGINT');
     $pdo->exec('ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS token_hash VARCHAR(64)');
     $pdo->exec('ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ');
@@ -510,18 +509,6 @@ function ensureSchema(PDO $pdo): void
         'trade_screenshots',
         ['user_id', 'trade_id'],
         'CREATE INDEX IF NOT EXISTS idx_trade_screenshots_user_trade ON trade_screenshots (user_id, trade_id)'
-    );
-    createIndexIfColumnsExist(
-        $pdo,
-        'journal_notes',
-        ['user_id'],
-        'CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_notes_user_id ON journal_notes (user_id)'
-    );
-    createIndexIfColumnsExist(
-        $pdo,
-        'trades',
-        ['user_id'],
-        'CREATE UNIQUE INDEX IF NOT EXISTS idx_trades_user_id ON trades (user_id)'
     );
     createIndexIfColumnsExist(
         $pdo,
@@ -851,32 +838,130 @@ function buildResetUrl(string $token): string
 
 function sendPasswordResetEmail(string $email, string $resetUrl, string $username): void
 {
-    if (!function_exists('mail')) {
-        return;
-    }
-
-    $subject = 'Your Journal password reset';
+    $subject = 'Trader Journal password reset';
     $safeUsername = $username !== '' ? $username : 'trader';
-    $message = implode("\r\n", [
+    $textBody = implode("\r\n", [
         "Hello {$safeUsername},",
         '',
-        'A password reset was requested for your Your Journal account.',
+        'A password reset was requested for your Trader Journal account.',
         'Open the link below to set a new password:',
         $resetUrl,
         '',
         'This link expires in 60 minutes.',
         'If you did not request this, you can ignore this email.',
     ]);
+    $htmlBody = buildPasswordResetHtmlBody($safeUsername, $resetUrl);
+
+    if (sendPasswordResetEmailViaResend($email, $subject, $textBody, $htmlBody)) {
+        return;
+    }
+    if (!function_exists('mail')) {
+        return;
+    }
 
     $fromAddress = trim((string) getenv('MAIL_FROM'));
+    $fromName = trim((string) getenv('MAIL_FROM_NAME'));
     $headers = [];
     if ($fromAddress !== '') {
-        $headers[] = 'From: ' . $fromAddress;
+        $fromHeader = $fromName !== '' ? sprintf('%s <%s>', $fromName, $fromAddress) : $fromAddress;
+        $headers[] = 'From: ' . $fromHeader;
         $headers[] = 'Reply-To: ' . $fromAddress;
     }
+    $headers[] = 'MIME-Version: 1.0';
     $headers[] = 'Content-Type: text/plain; charset=UTF-8';
 
-    @mail($email, $subject, $message, implode("\r\n", $headers));
+    @mail($email, $subject, $textBody, implode("\r\n", $headers));
+}
+
+function buildPasswordResetHtmlBody(string $username, string $resetUrl): string
+{
+    $safeUsername = htmlspecialchars($username !== '' ? $username : 'trader', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $safeUrl = htmlspecialchars($resetUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+    return implode('', [
+        '<p>Hello ', $safeUsername, ',</p>',
+        '<p>A password reset was requested for your Trader Journal account.</p>',
+        '<p><a href="', $safeUrl, '">Open your reset link</a></p>',
+        '<p>This link expires in 60 minutes. If you did not request this, you can ignore this email.</p>',
+    ]);
+}
+
+function sendPasswordResetEmailViaResend(string $email, string $subject, string $textBody, string $htmlBody): bool
+{
+    $apiKey = trim((string) getenv('RESEND_API_KEY'));
+    $fromAddress = trim((string) getenv('MAIL_FROM'));
+    if ($apiKey === '' || $fromAddress === '') {
+        return false;
+    }
+
+    $fromName = trim((string) getenv('MAIL_FROM_NAME'));
+    $fromValue = $fromName !== '' ? sprintf('%s <%s>', $fromName, $fromAddress) : $fromAddress;
+    $status = postJsonRequest(
+        'https://api.resend.com/emails',
+        [
+            'from' => $fromValue,
+            'to' => [$email],
+            'subject' => $subject,
+            'text' => $textBody,
+            'html' => $htmlBody,
+        ],
+        [
+            'Authorization: Bearer ' . $apiKey,
+            'Accept: application/json',
+            'Content-Type: application/json',
+        ]
+    );
+
+    return $status >= 200 && $status < 300;
+}
+
+function postJsonRequest(string $url, array $payload, array $headers = []): int
+{
+    $json = json_encode($payload, JSON_UNESCAPED_SLASHES);
+    if (!is_string($json) || $json === '') {
+        return 0;
+    }
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        if ($ch === false) {
+            return 0;
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $json,
+            CURLOPT_HTTPHEADER => array_merge($headers, ['Content-Length: ' . strlen($json)]),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_CONNECTTIMEOUT => 4,
+            CURLOPT_TIMEOUT => 10,
+        ]);
+
+        curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        curl_close($ch);
+
+        return $status;
+    }
+
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => implode("\r\n", array_merge($headers, ['Content-Length: ' . strlen($json)])),
+            'content' => $json,
+            'timeout' => 10,
+            'ignore_errors' => true,
+        ],
+    ]);
+
+    @file_get_contents($url, false, $context);
+    $statusLine = $http_response_header[0] ?? '';
+    if (is_string($statusLine) && preg_match('/\s(\d{3})\s/', $statusLine, $matches)) {
+        return (int) $matches[1];
+    }
+
+    return 0;
 }
 
 function shouldExposeResetUrl(): bool
@@ -909,7 +994,45 @@ function isAdminUsername(PDO $pdo, string $username): bool
         return in_array($candidate, $admins, true);
     }
 
-    return $candidate === 'chesterlsc';
+    $bootstrapAdmin = findBootstrapAdminUsername($pdo);
+    return $bootstrapAdmin !== null && $candidate === $bootstrapAdmin;
+}
+
+function findBootstrapAdminUsername(PDO $pdo): ?string
+{
+    static $resolved = false;
+    static $cached = null;
+
+    if ($resolved) {
+        return $cached;
+    }
+
+    $resolved = true;
+    $stmt = $pdo->query('SELECT username FROM journal_users ORDER BY created_at ASC, id ASC LIMIT 1');
+    $username = $stmt->fetchColumn();
+    if (!is_string($username) || trim($username) === '') {
+        $cached = null;
+        return null;
+    }
+
+    $cached = strtolower(trim($username));
+    return $cached;
+}
+
+function resolvePublicRecentTradesUserId(PDO $pdo): ?int
+{
+    $configuredId = trim((string) getenv('PUBLIC_RECENT_TRADES_USER_ID'));
+    if ($configuredId !== '' && ctype_digit($configuredId) && (int) $configuredId > 0) {
+        return (int) $configuredId;
+    }
+
+    $identifier = strtolower(trim((string) getenv('PUBLIC_RECENT_TRADES_USERNAME')));
+    if ($identifier === '') {
+        return null;
+    }
+
+    $user = findUserByIdentifier($pdo, $identifier);
+    return $user !== null ? (int) $user['id'] : null;
 }
 
 function listAdminUsers(PDO $pdo): array
@@ -1070,10 +1193,11 @@ function loadJournalData(PDO $pdo, int $userId, array $defaults): array
     $trades = json_decode((string) ($tradesRow['payload'] ?? ''), true);
     $reflections = json_decode((string) ($notesRow['reflections'] ?? ''), true);
     $replayNotes = json_decode((string) ($notesRow['replay_notes'] ?? ''), true);
+    $tradeList = sanitizeTradesPayload(is_array($trades) ? $trades : []);
 
     return [
         'settings' => sanitizeSettings(is_array($settings) ? $settings : []),
-        'trades' => sanitizeArray($trades),
+        'trades' => mergeTradeScreenshots($tradeList, loadTradeScreenshots($pdo, $userId)),
         'reflections' => sanitizeArray($reflections),
         'replayNotes' => sanitizeReplayNotes($replayNotes),
     ];
@@ -1081,80 +1205,219 @@ function loadJournalData(PDO $pdo, int $userId, array $defaults): array
 
 function upsertJournalData(PDO $pdo, int $userId, array $payload): void
 {
+    $sanitizedTrades = sanitizeTradesPayload($payload['trades'] ?? []);
     $settingsJson = encodeJsonForDb(sanitizeSettings($payload['settings'] ?? []));
-    $tradesJson = encodeJsonForDb(sanitizeArray($payload['trades'] ?? []));
+    $tradesJson = encodeJsonForDb(stripTradeScreenshotsFromTrades($sanitizedTrades));
     $reflectionsJson = encodeJsonForDb(sanitizeArray($payload['reflections'] ?? []));
     $replayNotesJson = encodeJsonForDb(sanitizeReplayNotes($payload['replayNotes'] ?? []));
+    $startedTransaction = !$pdo->inTransaction();
 
-    $updateNotes = $pdo->prepare(
-        <<<SQL
-        UPDATE journal_notes
-        SET
-            settings = CAST(:settings AS jsonb),
-            reflections = CAST(:reflections AS jsonb),
-            replay_notes = CAST(:replay_notes AS jsonb),
-            updated_at = NOW()
-        WHERE user_id = :user_id
-        SQL
-    );
+    if ($startedTransaction) {
+        $pdo->beginTransaction();
+    }
 
-    $updateNotes->execute([
-        ':user_id' => $userId,
-        ':settings' => $settingsJson,
-        ':reflections' => $reflectionsJson,
-        ':replay_notes' => $replayNotesJson,
-    ]);
-
-    if ($updateNotes->rowCount() === 0) {
-        $insertNotes = $pdo->prepare(
+    try {
+        $updateNotes = $pdo->prepare(
             <<<SQL
-            INSERT INTO journal_notes (user_id, settings, reflections, replay_notes, updated_at)
-            VALUES (
-                :user_id,
-                CAST(:settings AS jsonb),
-                CAST(:reflections AS jsonb),
-                CAST(:replay_notes AS jsonb),
-                NOW()
-            )
+            UPDATE journal_notes
+            SET
+                settings = CAST(:settings AS jsonb),
+                reflections = CAST(:reflections AS jsonb),
+                replay_notes = CAST(:replay_notes AS jsonb),
+                updated_at = NOW()
+            WHERE user_id = :user_id
             SQL
         );
 
-        $insertNotes->execute([
+        $updateNotes->execute([
             ':user_id' => $userId,
             ':settings' => $settingsJson,
             ':reflections' => $reflectionsJson,
             ':replay_notes' => $replayNotesJson,
         ]);
-    }
 
-    $updateTrades = $pdo->prepare(
-        <<<SQL
-        UPDATE trades
-        SET
-            payload = CAST(:trades AS jsonb),
-            updated_at = NOW()
-        WHERE user_id = :user_id
-        SQL
-    );
+        if ($updateNotes->rowCount() === 0) {
+            $insertNotes = $pdo->prepare(
+                <<<SQL
+                INSERT INTO journal_notes (user_id, settings, reflections, replay_notes, updated_at)
+                VALUES (
+                    :user_id,
+                    CAST(:settings AS jsonb),
+                    CAST(:reflections AS jsonb),
+                    CAST(:replay_notes AS jsonb),
+                    NOW()
+                )
+                SQL
+            );
 
-    $updateTrades->execute([
-        ':user_id' => $userId,
-        ':trades' => $tradesJson,
-    ]);
+            $insertNotes->execute([
+                ':user_id' => $userId,
+                ':settings' => $settingsJson,
+                ':reflections' => $reflectionsJson,
+                ':replay_notes' => $replayNotesJson,
+            ]);
+        }
 
-    if ($updateTrades->rowCount() === 0) {
-        $insertTrades = $pdo->prepare(
+        $updateTrades = $pdo->prepare(
             <<<SQL
-            INSERT INTO trades (user_id, payload, updated_at)
-            VALUES (:user_id, CAST(:trades AS jsonb), NOW())
+            UPDATE trades
+            SET
+                payload = CAST(:trades AS jsonb),
+                updated_at = NOW()
+            WHERE user_id = :user_id
             SQL
         );
 
-        $insertTrades->execute([
+        $updateTrades->execute([
             ':user_id' => $userId,
             ':trades' => $tradesJson,
         ]);
+
+        if ($updateTrades->rowCount() === 0) {
+            $insertTrades = $pdo->prepare(
+                <<<SQL
+                INSERT INTO trades (user_id, payload, updated_at)
+                VALUES (:user_id, CAST(:trades AS jsonb), NOW())
+                SQL
+            );
+
+            $insertTrades->execute([
+                ':user_id' => $userId,
+                ':trades' => $tradesJson,
+            ]);
+        }
+
+        syncTradeScreenshots($pdo, $userId, $sanitizedTrades);
+
+        if ($startedTransaction) {
+            $pdo->commit();
+        }
+    } catch (Throwable $error) {
+        if ($startedTransaction && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $error;
     }
+}
+
+function stripTradeScreenshotsFromTrades(array $trades): array
+{
+    $result = [];
+    foreach ($trades as $trade) {
+        if (!is_array($trade)) {
+            continue;
+        }
+
+        $row = $trade;
+        $tradeId = trim((string) ($row['id'] ?? ''));
+        if ($tradeId !== '') {
+            unset($row['screenshotName'], $row['screenshotData'], $row['screenshot_name'], $row['screenshot_data']);
+        }
+        $result[] = $row;
+    }
+
+    return $result;
+}
+
+function syncTradeScreenshots(PDO $pdo, int $userId, array $trades): void
+{
+    $deleteStmt = $pdo->prepare('DELETE FROM trade_screenshots WHERE user_id = :user_id');
+    $deleteStmt->execute([':user_id' => $userId]);
+
+    $screenshots = collectTradeScreenshots($trades);
+    if ($screenshots === []) {
+        return;
+    }
+
+    $insertStmt = $pdo->prepare(
+        <<<SQL
+        INSERT INTO trade_screenshots (user_id, trade_id, screenshot_name, screenshot_data, created_at, updated_at)
+        VALUES (:user_id, :trade_id, :screenshot_name, :screenshot_data, NOW(), NOW())
+        SQL
+    );
+
+    foreach ($screenshots as $screenshot) {
+        $insertStmt->execute([
+            ':user_id' => $userId,
+            ':trade_id' => $screenshot['tradeId'],
+            ':screenshot_name' => $screenshot['screenshotName'],
+            ':screenshot_data' => $screenshot['screenshotData'],
+        ]);
+    }
+}
+
+function collectTradeScreenshots(array $trades): array
+{
+    $result = [];
+    foreach ($trades as $trade) {
+        if (!is_array($trade)) {
+            continue;
+        }
+
+        $tradeId = trim((string) ($trade['id'] ?? ''));
+        if ($tradeId === '') {
+            continue;
+        }
+
+        $screenshotName = trim((string) ($trade['screenshotName'] ?? $trade['screenshot_name'] ?? ''));
+        $screenshotData = trim((string) ($trade['screenshotData'] ?? $trade['screenshot_data'] ?? ''));
+        if ($screenshotName === '' && $screenshotData === '') {
+            continue;
+        }
+
+        $result[$tradeId] = [
+            'tradeId' => substr($tradeId, 0, 64),
+            'screenshotName' => $screenshotName,
+            'screenshotData' => $screenshotData,
+        ];
+    }
+
+    return array_values($result);
+}
+
+function loadTradeScreenshots(PDO $pdo, int $userId): array
+{
+    $stmt = $pdo->prepare(
+        'SELECT trade_id, screenshot_name, screenshot_data FROM trade_screenshots WHERE user_id = :user_id ORDER BY updated_at DESC, id DESC'
+    );
+    $stmt->execute([':user_id' => $userId]);
+
+    $result = [];
+    while ($row = $stmt->fetch()) {
+        $tradeId = trim((string) ($row['trade_id'] ?? ''));
+        if ($tradeId === '' || isset($result[$tradeId])) {
+            continue;
+        }
+
+        $result[$tradeId] = [
+            'screenshotName' => (string) ($row['screenshot_name'] ?? ''),
+            'screenshotData' => (string) ($row['screenshot_data'] ?? ''),
+        ];
+    }
+
+    return $result;
+}
+
+function mergeTradeScreenshots(array $trades, array $screenshots): array
+{
+    foreach ($trades as &$trade) {
+        if (!is_array($trade)) {
+            continue;
+        }
+
+        $tradeId = trim((string) ($trade['id'] ?? ''));
+        if ($tradeId !== '' && isset($screenshots[$tradeId])) {
+            $trade['screenshotName'] = (string) ($screenshots[$tradeId]['screenshotName'] ?? '');
+            $trade['screenshotData'] = (string) ($screenshots[$tradeId]['screenshotData'] ?? '');
+            continue;
+        }
+
+        $trade['screenshotName'] = trim((string) ($trade['screenshotName'] ?? $trade['screenshot_name'] ?? ''));
+        $trade['screenshotData'] = trim((string) ($trade['screenshotData'] ?? $trade['screenshot_data'] ?? ''));
+    }
+    unset($trade);
+
+    return $trades;
 }
 
 function encodeJsonForDb($value): string
@@ -1239,7 +1502,19 @@ function sanitizeTradesPayload($value): array
         $item['stopLoss'] = is_numeric($item['stopLoss'] ?? $item['stop_loss'] ?? null) ? (float) ($item['stopLoss'] ?? $item['stop_loss']) : 0.0;
         $item['takeProfit'] = is_numeric($item['takeProfit'] ?? $item['take_profit'] ?? null) ? (float) ($item['takeProfit'] ?? $item['take_profit']) : 0.0;
         $item['exitPrice'] = is_numeric($item['exitPrice'] ?? $item['exit_price'] ?? null) ? (float) ($item['exitPrice'] ?? $item['exit_price']) : 0.0;
+        $item['riskPercent'] = is_numeric($item['riskPercent'] ?? $item['risk_percent'] ?? null) ? (float) ($item['riskPercent'] ?? $item['risk_percent']) : 0.0;
+        $item['positionSize'] = is_numeric($item['positionSize'] ?? $item['position_size'] ?? null) ? (float) ($item['positionSize'] ?? $item['position_size']) : 0.0;
         $item['netPnl'] = is_numeric($item['netPnl'] ?? $item['profit_loss'] ?? null) ? (float) ($item['netPnl'] ?? $item['profit_loss']) : 0.0;
+        $item['session'] = (string) ($item['session'] ?? 'Custom');
+        $item['market'] = (string) ($item['market'] ?? 'Forex');
+        $item['tradeResult'] = (string) ($item['tradeResult'] ?? $item['trade_result'] ?? 'Auto');
+        $item['setupType'] = (string) ($item['setupType'] ?? $item['setup_type'] ?? 'Custom');
+        $item['timeframe'] = (string) ($item['timeframe'] ?? 'M15');
+        $item['psychology'] = (string) ($item['psychology'] ?? 'Focused');
+        $item['executionQuality'] = (string) ($item['executionQuality'] ?? $item['execution_quality'] ?? 'B');
+        $item['screenshotName'] = trim((string) ($item['screenshotName'] ?? $item['screenshot_name'] ?? ''));
+        $item['screenshotData'] = trim((string) ($item['screenshotData'] ?? $item['screenshot_data'] ?? ''));
+        $item['notes'] = (string) ($item['notes'] ?? '');
         $item['status'] = $status;
         $item['createdAt'] = $createdAt;
         $item['updatedAt'] = $updatedAt;

@@ -1,4 +1,34 @@
-"use strict";
+﻿import {
+  readStorageJson,
+  writeStorageJson,
+  createId,
+  toDateInputValue,
+  parseNumber,
+  ensureNumber,
+  ensurePositiveNumber,
+  ensureNonNegative,
+  sortTradesAsc,
+  sortTradesDesc,
+  escapeCsvValue,
+  triggerDownload,
+  setMessage,
+  round,
+  clamp,
+  escapeHtml,
+  getWeekKey,
+  debounce
+} from "./src/lib/core.js";
+import { formatCurrency } from "./src/lib/format.js";
+import {
+  normalizeMarketSymbol,
+  fetchLivePricesFromBackend,
+  fetchLivePricesDirect,
+  buildLivePriceRequests,
+  persistLivePrices
+} from "./src/modules/livePrices.js";
+import { createTradeDisplayHelpers } from "./src/modules/tradeDisplay.js";
+import { createRecentTradesView } from "./src/modules/recentTradesView.js";
+import { createChartsModule } from "./src/modules/charts.js";
 
 const STORAGE_KEYS = {
   trades: "axiom_journal_trades_v1",
@@ -133,9 +163,9 @@ const ui = {
   strategyPerformanceChart: document.getElementById("strategyPerformanceChart"),
   strategyDimensionButtons: Array.from(document.querySelectorAll("[data-performance-dimension]")),
   strategyMetricButtons: Array.from(document.querySelectorAll("[data-performance-metric]")),
-  leonScoreChart: document.getElementById("leonScoreChart"),
-  leonScoreValue: document.getElementById("leonScoreValue"),
-  leonScoreCaption: document.getElementById("leonScoreCaption"),
+  traderScoreChart: document.getElementById("traderScoreChart"),
+  traderScoreValue: document.getElementById("traderScoreValue"),
+  traderScoreCaption: document.getElementById("traderScoreCaption"),
 
   tradeForm: document.getElementById("tradeForm"),
   tradeSubmitBtn: document.getElementById("tradeSubmitBtn"),
@@ -226,6 +256,56 @@ const ui = {
   saveReplayBtn: document.getElementById("saveReplayBtn"),
   replayMessage: document.getElementById("replayMessage")
 };
+
+const tradeDisplay = createTradeDisplayHelpers({ state, calculateTradeMetrics });
+const {
+  formatHeroPrice,
+  formatProgressTradePrice,
+  formatTradeTimeline,
+  formatCompactTradeDate,
+  formatRecentTradeStatus,
+  getClosedTradeResolution,
+  parseTradeEntryDate,
+  formatSignedPips,
+  sortRecentTradeRowsDesc,
+  sortRecentTradeRowsAsc,
+  getClosedTradeToneClass,
+  getRecentTradeStatusClass,
+  getOpenTradePnlPercent,
+  getOpenTradePriceMove,
+  getOpenTradeLiveSnapshot,
+  getLiveToneClass,
+  formatSignedPercent,
+  formatPriceMove,
+  formatSignedCurrency,
+  formatLivePercentLabel,
+  parseIsoDate
+} = tradeDisplay;
+
+const recentTradesView = createRecentTradesView({
+  state,
+  ui,
+  canAccessApp,
+  switchView,
+  setAuthIntent,
+  syncLandingExpandedLayout,
+  isMobileViewport,
+  getClosedTradeResolution,
+  getClosedTradeToneClass,
+  getOpenTradeLiveSnapshot,
+  getLiveToneClass,
+  formatProgressTradePrice,
+  formatCompactTradeDate,
+  formatSignedPips,
+  sortRecentTradeRowsDesc
+});
+const {
+  renderHeroRecentTrades,
+  handleRecentTradesClick,
+  normalizeRecentTrades
+} = recentTradesView;
+
+const { renderCharts } = createChartsModule({ ui, state });
 
 init();
 
@@ -979,7 +1059,7 @@ function updateAuthUi() {
         ? "Verifying reset link"
       : loginMode
         ? "Log in to Trader Journal"
-        : "Create your free account";
+        : "Create your account";
   }
   if (ui.authCopy) {
     ui.authCopy.textContent = isResetMode
@@ -2851,7 +2931,7 @@ function renderProgressTradeSummary() {
         <article class="progress-trade-card">
           <div class="progress-trade-card-top">
             <div class="progress-trade-card-top-main">
-              <strong class="progress-trade-card-symbol">${escapeHtml(trade.asset || "—")}</strong>
+              <strong class="progress-trade-card-symbol">${escapeHtml(trade.asset || "â€”")}</strong>
               <span class="recent-trade-direction ${directionClass}">${escapeHtml(trade.direction || "Buy")}</span>
               <span class="progress-trade-badge">OPEN</span>
             </div>
@@ -2860,7 +2940,7 @@ function renderProgressTradeSummary() {
           <div class="progress-trade-card-prices">
             <span class="progress-trade-price-chip"><em>Move</em><strong class="${pnlToneClass}">${formatPriceMove(priceMove)}</strong></span>
             <span class="progress-trade-price-chip"><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
-            <span class="progress-trade-price-chip progress-trade-price-chip-live"><em>Current Price</em><strong class="${pnlToneClass}">${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : "—"}</strong></span>
+            <span class="progress-trade-price-chip progress-trade-price-chip-live"><em>Current Price</em><strong class="${pnlToneClass}">${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : "â€”"}</strong></span>
             <button class="progress-trade-price-chip progress-trade-price-chip-toggle" type="button" data-progress-details-toggle aria-expanded="false">
               <strong>Show</strong>
             </button>
@@ -3047,7 +3127,7 @@ function calculateAnalytics(trades, settings, reflections) {
 
   const goalRange = Math.max(settings.equityGoal - settings.startingBalance, 1);
   const goalProgress = ((currentBalance - settings.startingBalance) / goalRange) * 100;
-  const leonScore = computeLeonScore({
+  const traderScore = computeTraderScore({
     winRate,
     profitFactor,
     avgWin,
@@ -3095,11 +3175,11 @@ function calculateAnalytics(trades, settings, reflections) {
     disciplineScore,
     dailyTradingScore,
     goalProgress,
-    leonScore
+    traderScore
   };
 }
 
-function computeLeonScore({ winRate, profitFactor, avgWin, avgLoss, totalPnl, maxDrawdown, dailyPnl, startingBalance }) {
+function computeTraderScore({ winRate, profitFactor, avgWin, avgLoss, totalPnl, maxDrawdown, dailyPnl, startingBalance }) {
   const avgWinLossRatio = avgLoss < 0 ? avgWin / Math.abs(avgLoss) : avgWin > 0 ? 2.5 : 0;
   const recoveryFactor = maxDrawdown > 0 ? totalPnl / maxDrawdown : totalPnl > 0 ? 4 : 0;
   const drawdownPercent = startingBalance > 0 ? (maxDrawdown / startingBalance) * 100 : 0;
@@ -3262,7 +3342,7 @@ function renderDashboardMetrics(analytics) {
     totalTrades: String(analytics.totalTrades),
     winRate: `${analytics.winRate.toFixed(1)}%`,
     avgRR: analytics.avgRR.toFixed(2),
-    profitFactor: analytics.profitFactor >= 999 ? "∞" : analytics.profitFactor.toFixed(2),
+    profitFactor: analytics.profitFactor >= 999 ? "âˆž" : analytics.profitFactor.toFixed(2),
     currentDrawdown: formatCurrency(analytics.currentDrawdown),
     maxDrawdown: formatCurrency(analytics.maxDrawdown),
     bestDay: analytics.bestDay.day === "-" ? "-" : `${formatCurrency(analytics.bestDay.pnl)} (${analytics.bestDay.day})`,
@@ -3296,11 +3376,11 @@ function renderDashboardMetrics(analytics) {
   ui.disciplineScore.textContent = String(analytics.disciplineScore);
   ui.dailyTradingScore.textContent = String(analytics.dailyTradingScore);
   ui.goalProgress.textContent = `${clamp(Math.round(analytics.goalProgress), 0, 300)}%`;
-  if (ui.leonScoreValue) {
-    ui.leonScoreValue.textContent = analytics.leonScore.score.toFixed(1);
+  if (ui.traderScoreValue) {
+    ui.traderScoreValue.textContent = analytics.traderScore.score.toFixed(1);
   }
-  if (ui.leonScoreCaption) {
-    ui.leonScoreCaption.textContent = analytics.leonScore.caption;
+  if (ui.traderScoreCaption) {
+    ui.traderScoreCaption.textContent = analytics.traderScore.caption;
   }
 }
 
@@ -3481,509 +3561,6 @@ function renderEdgeTable(analytics) {
     .join("");
 }
 
-function renderCharts(analytics) {
-  if (!analytics) {
-    return;
-  }
-
-  drawLineChart(ui.equityChart, analytics.equity, {
-    lineColor: "#39d3ff",
-    fillColor: "rgba(57, 211, 255, 0.15)",
-    labels: analytics.equityDates,
-    emptyLabel: "No equity data yet"
-  });
-
-  drawLineChart(ui.drawdownChart, analytics.drawdowns, {
-    lineColor: "#ff5a7e",
-    fillColor: "rgba(255, 90, 126, 0.16)",
-    labels: analytics.drawdownDates,
-    emptyLabel: "No drawdown data yet"
-  });
-
-  renderStrategyPerformanceChart(analytics);
-  drawRadarChart(ui.leonScoreChart, analytics.leonScore);
-}
-
-function drawLineChart(canvas, data, options) {
-  const ctxData = getCanvasContext(canvas);
-  if (!ctxData) {
-    return;
-  }
-
-  const { ctx, width, height } = ctxData;
-  clearCanvas(ctx, width, height);
-
-  const padX = 28;
-  const padTop = 30;
-  const padBottom = 34;
-  const chartHeight = height - padTop - padBottom;
-  drawGrid(ctx, width, height, padX, padTop, padBottom);
-
-  if (!Array.isArray(data) || data.length < 2) {
-    drawCenteredText(ctx, width, height, options.emptyLabel || "No data");
-    return;
-  }
-
-  let min = Math.min(...data);
-  let max = Math.max(...data);
-
-  if (min === max) {
-    min -= 1;
-    max += 1;
-  }
-
-  const points = data.map((value, index) => {
-    const x = padX + (index / (data.length - 1)) * (width - padX * 2);
-    const y = height - padBottom - ((value - min) / (max - min)) * chartHeight;
-    return { x, y };
-  });
-
-  ctx.beginPath();
-  ctx.moveTo(points[0].x, points[0].y);
-  for (let i = 1; i < points.length; i += 1) {
-    ctx.lineTo(points[i].x, points[i].y);
-  }
-
-  ctx.strokeStyle = options.lineColor;
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  ctx.lineTo(points[points.length - 1].x, height - padBottom);
-  ctx.lineTo(points[0].x, height - padBottom);
-  ctx.closePath();
-  ctx.fillStyle = options.fillColor;
-  ctx.fill();
-
-  const last = data[data.length - 1];
-  ctx.fillStyle = "#d3e6ff";
-  ctx.font = "600 12px JetBrains Mono, Consolas, monospace";
-  ctx.fillText(`Last: ${formatCurrency(last)}`, padX, padTop - 10);
-
-  ctx.fillStyle = options.lineColor;
-  points.forEach((point, index) => {
-    const radius = index === 0 || index === points.length - 1 ? 4.5 : 2.5;
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(8, 12, 24, 0.92)";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  });
-
-  drawLineChartDateLabels(ctx, points, options.labels, height, padBottom);
-}
-
-function drawLineChartDateLabels(ctx, points, labels, height, padBottom) {
-  if (!Array.isArray(labels) || labels.length !== points.length || !points.length) {
-    return;
-  }
-
-  const indices = Array.from(new Set([0, Math.floor((points.length - 1) / 2), points.length - 1]));
-  ctx.fillStyle = "rgba(182, 198, 228, 0.76)";
-  ctx.font = "500 10px JetBrains Mono, Consolas, monospace";
-  ctx.textBaseline = "top";
-
-  indices.forEach((index, labelIndex) => {
-    const label = formatChartDateLabel(labels[index]);
-    if (!label) {
-      return;
-    }
-
-    let x = points[index].x;
-    if (labelIndex === 0) {
-      x = points[index].x;
-      ctx.textAlign = "left";
-    } else if (labelIndex === indices.length - 1) {
-      x = points[index].x;
-      ctx.textAlign = "right";
-    } else {
-      ctx.textAlign = "center";
-    }
-    ctx.fillText(label, x, height - padBottom + 12);
-  });
-
-  ctx.textAlign = "left";
-}
-
-function renderStrategyPerformanceChart(analytics) {
-  const dimension = state.dashboard.performanceDimension;
-  const metric = state.dashboard.performanceMetric;
-  const entries = Array.isArray(analytics?.strategyPerformance?.[dimension])
-    ? analytics.strategyPerformance[dimension]
-    : [];
-
-  ui.strategyDimensionButtons.forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.performanceDimension === dimension);
-  });
-  ui.strategyMetricButtons.forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.performanceMetric === metric);
-  });
-
-  const sortedEntries = getStrategyPerformanceRows(entries, { dimension, metric });
-  drawStrategyPerformanceChart(ui.strategyPerformanceChart, sortedEntries, {
-    metric,
-    emptyLabel: `No ${dimension} performance data yet`
-  });
-}
-
-function getStrategyPerformanceRows(entries, options = {}) {
-  const { dimension = "setup", metric = "pnl" } = options;
-  const rows = [...entries];
-
-  if (dimension === "day") {
-    return rows;
-  }
-
-  if (metric === "count") {
-    return rows.sort((a, b) => b.count - a.count || b.pnl - a.pnl).slice(0, 8);
-  }
-
-  return rows.sort((a, b) => b.pnl - a.pnl || b.count - a.count).slice(0, 8);
-}
-
-function drawStrategyPerformanceChart(canvas, entries, options) {
-  const ctxData = getCanvasContext(canvas);
-  if (!ctxData) {
-    return;
-  }
-
-  const { ctx, width, height } = ctxData;
-  clearCanvas(ctx, width, height);
-
-  if (!Array.isArray(entries) || !entries.length) {
-    drawCenteredText(ctx, width, height, options.emptyLabel || "No strategy data");
-    return;
-  }
-
-  const metric = options.metric === "count" ? "count" : "pnl";
-  const padLeft = width < 460 ? 112 : 142;
-  const padRight = 18;
-  const padTop = 16;
-  const padBottom = 26;
-  const chartHeight = height - padTop - padBottom;
-  const rowGap = chartHeight / entries.length;
-  const barHeight = Math.min(24, rowGap * 0.56);
-  const labelColor = "#dbe8ff";
-  ctx.strokeStyle = "rgba(132, 156, 214, 0.1)";
-  ctx.lineWidth = 1;
-
-  entries.forEach((_, index) => {
-    const y = padTop + rowGap * index + rowGap / 2;
-    ctx.beginPath();
-    ctx.moveTo(padLeft, y);
-    ctx.lineTo(width - padRight, y);
-    ctx.stroke();
-  });
-
-  ctx.font = width < 460 ? '500 11px "JetBrains Mono", "Consolas", monospace' : '500 12px "JetBrains Mono", "Consolas", monospace';
-  ctx.textBaseline = "middle";
-
-  if (metric === "count") {
-    const maxValue = Math.max(...entries.map((entry) => entry.count), 1);
-    const zeroX = padLeft;
-    const usableWidth = width - padLeft - padRight;
-
-    ctx.strokeStyle = "rgba(87, 161, 255, 0.24)";
-    ctx.beginPath();
-    ctx.moveTo(zeroX, padTop - 2);
-    ctx.lineTo(zeroX, height - padBottom + 2);
-    ctx.stroke();
-
-    entries.forEach((entry, index) => {
-      const centerY = padTop + rowGap * index + rowGap / 2;
-      const length = (entry.count / maxValue) * usableWidth;
-      const labelX = padLeft - 12;
-      ctx.fillStyle = labelColor;
-      ctx.textAlign = "right";
-      drawPerformanceCanvasLabel(ctx, entry.label, labelX, centerY, width);
-
-      fillRoundedRect(ctx, zeroX, centerY - barHeight / 2, length, barHeight, 8, "rgba(87, 161, 255, 0.86)");
-      ctx.fillStyle = "#eaf2ff";
-      ctx.textAlign = "left";
-      ctx.fillText(String(entry.count), Math.min(zeroX + length + 8, width - padRight - 14), centerY);
-    });
-
-    drawStrategyAxisLabels(ctx, {
-      left: zeroX,
-      right: width - padRight,
-      bottom: height - padBottom + 12,
-      values: [0, Math.round(maxValue / 2), maxValue],
-      formatter: (value) => String(value)
-    });
-    return;
-  }
-
-  const maxAbs = Math.max(...entries.map((entry) => Math.abs(entry.pnl)), 1);
-  const zeroX = padLeft + (width - padLeft - padRight) / 2;
-  const barWidth = (width - padLeft - padRight) / 2 - 8;
-
-  ctx.strokeStyle = "rgba(132, 156, 214, 0.24)";
-  ctx.beginPath();
-  ctx.moveTo(zeroX, padTop - 2);
-  ctx.lineTo(zeroX, height - padBottom + 2);
-  ctx.stroke();
-
-  entries.forEach((entry, index) => {
-    const centerY = padTop + rowGap * index + rowGap / 2;
-    const labelX = padLeft - 12;
-    const amount = entry.pnl;
-    const length = (Math.abs(amount) / maxAbs) * barWidth;
-    const barX = amount >= 0 ? zeroX : zeroX - length;
-    const barColor = amount >= 0 ? "rgba(42, 212, 143, 0.88)" : "rgba(255, 90, 126, 0.9)";
-
-    ctx.fillStyle = labelColor;
-    ctx.textAlign = "right";
-    drawPerformanceCanvasLabel(ctx, entry.label, labelX, centerY, width);
-
-    fillRoundedRect(ctx, barX, centerY - barHeight / 2, Math.max(length, 2), barHeight, 8, barColor);
-  });
-
-  drawStrategyAxisLabels(ctx, {
-    left: padLeft,
-    right: width - padRight,
-    bottom: height - padBottom + 12,
-    values: [-maxAbs, 0, maxAbs],
-    formatter: formatCompactCurrency
-  });
-}
-
-function drawStrategyAxisLabels(ctx, options) {
-  const { left, right, bottom, values, formatter } = options;
-  const steps = Math.max(values.length - 1, 1);
-  ctx.fillStyle = "rgba(168, 188, 226, 0.72)";
-  ctx.font = '500 10px "JetBrains Mono", "Consolas", monospace';
-  ctx.textBaseline = "top";
-
-  values.forEach((value, index) => {
-    const x = left + ((right - left) * index) / steps;
-    if (index === 0) {
-      ctx.textAlign = "left";
-    } else if (index === values.length - 1) {
-      ctx.textAlign = "right";
-    } else {
-      ctx.textAlign = "center";
-    }
-    ctx.fillText(formatter(value), x, bottom);
-  });
-
-  ctx.textAlign = "left";
-}
-
-function drawPerformanceCanvasLabel(ctx, label, x, y, width) {
-  const lines = formatPerformanceCanvasLabel(label, width);
-  const offset = lines.length > 1 ? 6 : 0;
-  lines.forEach((line, index) => {
-    const lineY = y + (index === 0 ? -offset : offset);
-    ctx.fillText(line, x, lineY);
-  });
-}
-
-function formatPerformanceCanvasLabel(label, width) {
-  const text = String(label || "").trim();
-  if (!text) {
-    return [""];
-  }
-
-  const singleLineLimit = width < 460 ? 10 : 15;
-  const words = text.split(/\s+/).filter(Boolean);
-
-  if (words.length === 1) {
-    return [truncatePerformanceLabel(text, singleLineLimit)];
-  }
-
-  const lines = [];
-  let current = "";
-  for (const word of words) {
-    const candidate = current ? `${current} ${word}` : word;
-    if (candidate.length <= singleLineLimit || !current) {
-      current = candidate;
-      continue;
-    }
-
-    lines.push(current);
-    current = word;
-    if (lines.length === 1) {
-      continue;
-    }
-    break;
-  }
-
-  if (current) {
-    lines.push(current);
-  }
-
-  return lines.slice(0, 2).map((line, index, collection) => {
-    const limit = index === collection.length - 1 ? singleLineLimit : singleLineLimit + 2;
-    return truncatePerformanceLabel(line, limit);
-  });
-}
-
-function truncatePerformanceLabel(text, limit) {
-  return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
-}
-
-function fillRoundedRect(ctx, x, y, width, height, radius, fillStyle) {
-  const safeWidth = Math.max(width, 2);
-  const safeHeight = Math.max(height, 2);
-  const safeRadius = Math.min(radius, safeHeight / 2, safeWidth / 2);
-  ctx.beginPath();
-  if (typeof ctx.roundRect === "function") {
-    ctx.roundRect(x, y, safeWidth, safeHeight, safeRadius);
-  } else {
-    ctx.moveTo(x + safeRadius, y);
-    ctx.arcTo(x + safeWidth, y, x + safeWidth, y + safeHeight, safeRadius);
-    ctx.arcTo(x + safeWidth, y + safeHeight, x, y + safeHeight, safeRadius);
-    ctx.arcTo(x, y + safeHeight, x, y, safeRadius);
-    ctx.arcTo(x, y, x + safeWidth, y, safeRadius);
-    ctx.closePath();
-  }
-  ctx.fillStyle = fillStyle;
-  ctx.fill();
-}
-
-function drawRadarChart(canvas, scoreData) {
-  const ctxData = getCanvasContext(canvas);
-  if (!ctxData) {
-    return;
-  }
-
-  const { ctx, width, height } = ctxData;
-  clearCanvas(ctx, width, height);
-
-  const metrics = Array.isArray(scoreData?.metrics) ? scoreData.metrics : [];
-  if (!metrics.length) {
-    drawCenteredText(ctx, width, height, "No Leon score data yet");
-    return;
-  }
-
-  const centerX = width / 2;
-  const centerY = height / 2 - 6;
-  const radius = Math.min(width * 0.24, height * 0.3);
-  const steps = 5;
-  const angleStep = (Math.PI * 2) / metrics.length;
-
-  ctx.strokeStyle = "rgba(132, 156, 214, 0.2)";
-  ctx.lineWidth = 1;
-  for (let ring = 1; ring <= steps; ring += 1) {
-    const ringRadius = (radius / steps) * ring;
-    ctx.beginPath();
-    metrics.forEach((_, index) => {
-      const angle = -Math.PI / 2 + index * angleStep;
-      const x = centerX + Math.cos(angle) * ringRadius;
-      const y = centerY + Math.sin(angle) * ringRadius;
-      if (index === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    });
-    ctx.closePath();
-    ctx.stroke();
-  }
-
-  metrics.forEach((metric, index) => {
-    const angle = -Math.PI / 2 + index * angleStep;
-    const outerX = centerX + Math.cos(angle) * radius;
-    const outerY = centerY + Math.sin(angle) * radius;
-
-    ctx.strokeStyle = "rgba(132, 156, 214, 0.26)";
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.lineTo(outerX, outerY);
-    ctx.stroke();
-
-    const labelX = centerX + Math.cos(angle) * (radius + 24);
-    const labelY = centerY + Math.sin(angle) * (radius + 22);
-    ctx.fillStyle = "#cbdcff";
-    ctx.font = "500 12px Sora, Manrope, sans-serif";
-    ctx.textAlign = labelX >= centerX + 6 ? "left" : labelX <= centerX - 6 ? "right" : "center";
-    ctx.textBaseline = labelY >= centerY ? "top" : "bottom";
-    ctx.fillText(metric.label, labelX, labelY);
-  });
-
-  ctx.beginPath();
-  metrics.forEach((metric, index) => {
-    const angle = -Math.PI / 2 + index * angleStep;
-    const pointRadius = radius * (clamp(metric.value, 0, 100) / 100);
-    const x = centerX + Math.cos(angle) * pointRadius;
-    const y = centerY + Math.sin(angle) * pointRadius;
-    if (index === 0) {
-      ctx.moveTo(x, y);
-    } else {
-      ctx.lineTo(x, y);
-    }
-  });
-  ctx.closePath();
-  ctx.fillStyle = "rgba(89, 113, 255, 0.32)";
-  ctx.strokeStyle = "#8b8cff";
-  ctx.lineWidth = 2;
-  ctx.fill();
-  ctx.stroke();
-
-  metrics.forEach((metric, index) => {
-    const angle = -Math.PI / 2 + index * angleStep;
-    const pointRadius = radius * (clamp(metric.value, 0, 100) / 100);
-    const x = centerX + Math.cos(angle) * pointRadius;
-    const y = centerY + Math.sin(angle) * pointRadius;
-    ctx.beginPath();
-    ctx.fillStyle = "#c5ccff";
-    ctx.arc(x, y, 3.5, 0, Math.PI * 2);
-    ctx.fill();
-  });
-}
-
-function getCanvasContext(canvas) {
-  if (!canvas) {
-    return null;
-  }
-
-  const ratio = window.devicePixelRatio || 1;
-  const width = canvas.clientWidth || 900;
-  const height = Number(canvas.dataset.height || 280);
-
-  canvas.width = Math.floor(width * ratio);
-  canvas.height = Math.floor(height * ratio);
-
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    return null;
-  }
-
-  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-  return { ctx, width, height };
-}
-
-function clearCanvas(ctx, width, height) {
-  ctx.clearRect(0, 0, width, height);
-}
-
-function drawGrid(ctx, width, height, padX, padTop = padX, padBottom = padTop) {
-  ctx.strokeStyle = "rgba(130, 157, 210, 0.2)";
-  ctx.lineWidth = 1;
-  const chartHeight = height - padTop - padBottom;
-
-  for (let i = 0; i <= 4; i += 1) {
-    const y = padTop + (i / 4) * chartHeight;
-    ctx.beginPath();
-    ctx.moveTo(padX, y);
-    ctx.lineTo(width - padX, y);
-    ctx.stroke();
-  }
-
-  ctx.strokeStyle = "rgba(130, 157, 210, 0.35)";
-  ctx.beginPath();
-  ctx.moveTo(padX, height - padBottom);
-  ctx.lineTo(width - padX, height - padBottom);
-  ctx.stroke();
-}
-
-function drawCenteredText(ctx, width, height, text) {
-  ctx.fillStyle = "#9db0d8";
-  ctx.font = "500 12px JetBrains Mono, Consolas, monospace";
-  const textWidth = ctx.measureText(text).width;
-  ctx.fillText(text, (width - textWidth) / 2, height / 2);
-}
-
 function renderJournalTable() {
   const filtered = getFilteredTrades();
 
@@ -4021,9 +3598,9 @@ function renderJournalTable() {
           <td data-label="Setup">${escapeHtml(trade.setupType)}</td>
           <td data-label="Timeframe">${escapeHtml(trade.timeframe)}</td>
           <td data-label="Result"><span class="${resultClass}">${escapeHtml(trade.result)}</span></td>
-          <td data-label="Pips" class="${pipClass}">${isOpen ? "—" : Number.isFinite(trade.pips) ? trade.pips.toFixed(2) : "0.00"}</td>
+          <td data-label="Pips" class="${pipClass}">${isOpen ? "â€”" : Number.isFinite(trade.pips) ? trade.pips.toFixed(2) : "0.00"}</td>
           <td data-label="Net P&L" class="${pnlClass}">${isOpen ? escapeHtml(formatLivePercentLabel(livePercent, "OPEN")) : formatCurrency(trade.netPnl)}</td>
-          <td data-label="R-Multiple">${isOpen ? "—" : Number.isFinite(trade.rMultiple) ? trade.rMultiple.toFixed(2) : "0.00"}R</td>
+          <td data-label="R-Multiple">${isOpen ? "â€”" : Number.isFinite(trade.rMultiple) ? trade.rMultiple.toFixed(2) : "0.00"}R</td>
           <td data-label="Psychology">${escapeHtml(trade.psychology)}</td>
           <td data-label="Execution">${escapeHtml(trade.executionQuality)}</td>
           <td class="row-actions">
@@ -4034,210 +3611,6 @@ function renderJournalTable() {
       `;
     })
     .join("");
-}
-
-function renderHeroRecentTrades() {
-  if (!ui.recentTradesList) {
-    return;
-  }
-
-  const trades = getRecentTradesSource();
-  if (!trades.length) {
-    ui.recentTradesList.innerHTML = '<p class="recent-trade-empty">No trades yet.</p>';
-    if (ui.landingScrollHint) {
-      ui.landingScrollHint.style.display = "none";
-    }
-    syncLandingExpandedLayout();
-    return;
-  }
-
-  const closedTrades = trades.filter((trade) => trade.status !== "open").slice(0, 10);
-  const openTrades = trades.filter((trade) => trade.status === "open").slice(0, 10);
-
-  ui.recentTradesList.innerHTML = [
-    renderTradeFeedSection({
-      key: "open",
-      title: "Leon In Progress Trades",
-      trades: openTrades,
-      emptyLabel: "No in progress trades yet.",
-      renderer: renderOpenTradeFeedCard,
-      sectionOrder: 0
-    }),
-    renderTradeFeedSection({
-      key: "closed",
-      title: "Leon Closed Trades",
-      trades: closedTrades,
-      emptyLabel: "No closed trades yet.",
-      renderer: renderClosedTradeFeedCard,
-      sectionOrder: 1
-    })
-  ].join("");
-
-  if (ui.landingScrollHint) {
-    const hasHiddenMobileContent = isMobileViewport() && closedTrades.length > 0;
-    ui.landingScrollHint.style.display = hasHiddenMobileContent ? "" : "none";
-    ui.landingScrollHint.classList.toggle("is-open", ui.recentTradesList.classList.contains("is-preview-expanded"));
-    const labelNode = ui.landingScrollHint.querySelector(".landing-scroll-hint-label");
-    if (labelNode) {
-      labelNode.textContent = ui.recentTradesList.classList.contains("is-preview-expanded") ? "Hide trades" : "View trades";
-    }
-  }
-
-  syncLandingExpandedLayout();
-}
-
-function handleRecentTradesClick(event) {
-  const toggle = event.target.closest("[data-trade-feed-toggle]");
-  if (toggle) {
-    const key = String(toggle.dataset.tradeFeedToggle || "");
-    if (key === "closed" || key === "open") {
-      const stateKey = key === "closed" ? "closedExpanded" : "openExpanded";
-      state.landingFeed[stateKey] = !state.landingFeed[stateKey];
-      renderHeroRecentTrades();
-    }
-    return;
-  }
-
-  const row = event.target.closest("[data-trade-id]");
-  if (!row) {
-    return;
-  }
-
-  if (canAccessApp()) {
-    switchView("journal");
-    return;
-  }
-
-  setAuthIntent("login", { focus: true });
-}
-
-function getRecentTradesSource() {
-  if (canAccessApp() && Array.isArray(state.trades) && state.trades.length > 0) {
-    return [...state.trades].sort(sortTradesDesc);
-  }
-
-  if (!canAccessApp() && Array.isArray(state.publicRecentTrades) && state.publicRecentTrades.length > 0) {
-    return [...state.publicRecentTrades].sort(sortTradesDesc);
-  }
-
-  return canAccessApp() && Array.isArray(state.recentTrades) ? [...state.recentTrades].sort(sortTradesDesc) : [];
-}
-
-function renderTradeFeedSection({ key, title, trades, emptyLabel, renderer, sectionOrder = 0 }) {
-  const expanded = key === "closed" ? state.landingFeed.closedExpanded : state.landingFeed.openExpanded;
-  const firstTrade = trades[0];
-  const remainingTrades = trades.slice(1, 10);
-  const canExpand = remainingTrades.length > 0;
-
-  return `
-    <section class="recent-trades-card recent-trades-card-${escapeHtml(key)}" aria-label="${escapeHtml(title)}" style="--trade-section-order:${Number(sectionOrder)};">
-      <div class="recent-trades-header">
-        <p class="recent-trades-label">${escapeHtml(title)}</p>
-        ${canExpand ? `<button class="recent-trades-toggle" type="button" data-trade-feed-toggle="${escapeHtml(key)}">${expanded ? "Hide Trades" : "Show Trades"}</button>` : ""}
-      </div>
-      <div class="recent-trades-list">
-        ${firstTrade ? renderer(firstTrade, 0) : `<p class="recent-trade-empty">${escapeHtml(emptyLabel)}</p>`}
-      </div>
-      ${expanded && remainingTrades.length ? `<div class="recent-trades-list recent-trades-list-expanded">${remainingTrades.map((trade, index) => renderer(trade, index + 1)).join("")}</div>` : ""}
-    </section>
-  `;
-}
-
-function renderTradeVerifiedPill() {
-  return `
-    <div class="recent-trades-verified recent-trades-verified-card" aria-label="Verified Vantage trades">
-      <span class="recent-trades-verified-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" focusable="false">
-          <path d="M12 1.8 14.74 4l3.49-.27 1.34 3.24 3.05 1.72-.81 3.4.81 3.4-3.05 1.72-1.34 3.24-3.49-.27L12 22.2l-2.74-2.2-3.49.27-1.34-3.24-3.05-1.72.81-3.4-.81-3.4 3.05-1.72L5.77 3.73 9.26 4 12 1.8Z" />
-          <path d="m7.8 12.3 2.64 2.64L16.8 8.58" />
-        </svg>
-      </span>
-      <span class="recent-trades-verified-copy">
-        <strong>Verified</strong>
-        <span>Vantage Trades</span>
-      </span>
-    </div>
-  `;
-}
-
-function renderClosedTradeFeedCard(trade, cardOrder = 0) {
-  const directionClass = trade.direction === "Sell" ? "recent-trade-direction recent-trade-direction-sell" : "recent-trade-direction recent-trade-direction-buy";
-  const resolution = getClosedTradeResolution(trade);
-  const rowToneClass = getClosedTradeToneClass(trade, resolution);
-  const tpCellClass = resolution?.type === "tp" ? "recent-trade-price-cell recent-trade-price-cell-positive" : "recent-trade-price-cell";
-  const slCellClass = resolution?.type === "sl" ? "recent-trade-price-cell recent-trade-price-cell-negative" : "recent-trade-price-cell";
-  const closedPips = ensureNumber(trade.pips, NaN);
-  const closedPipsTone = getLiveToneClass(closedPips);
-  const closedPipsText = formatSignedPips(closedPips);
-  const exitCellClass = rowToneClass === "recent-trade-row-public-positive"
-    ? "recent-trade-price-cell recent-trade-price-cell-positive"
-    : rowToneClass === "recent-trade-row-public-negative"
-      ? "recent-trade-price-cell recent-trade-price-cell-negative"
-      : "recent-trade-price-cell";
-  return `
-    <button class="recent-trade-row recent-trade-row-public ${rowToneClass}" type="button" data-trade-id="${escapeHtml(trade.id)}" style="--trade-row-order:${Number(cardOrder)};">
-      <div class="recent-trade-main">
-        <div class="recent-trade-top">
-          <strong class="recent-trade-symbol">${escapeHtml(trade.asset)}</strong>
-          <span class="${directionClass}">${escapeHtml(trade.direction)}</span>
-          ${resolution ? `<span class="${escapeHtml(resolution.className)}">${escapeHtml(resolution.label)}</span>` : ""}
-          ${renderTradeVerifiedPill()}
-        </div>
-        <div class="recent-trade-prices recent-trade-prices-public">
-          <span class="recent-trade-price-cell"><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
-          <span class="${slCellClass}"><em>SL</em><strong>${formatProgressTradePrice(trade.stopLoss)}</strong></span>
-          <span class="${tpCellClass}"><em>TP</em><strong>${formatProgressTradePrice(trade.takeProfit)}</strong></span>
-          <span class="${exitCellClass}"><em>Exit</em><strong>${formatProgressTradePrice(trade.exitPrice)}</strong></span>
-        </div>
-        <div class="recent-trade-foot">
-          <div class="recent-trade-time">${escapeHtml(formatCompactTradeDate(trade))}</div>
-          <div class="recent-trade-pips ${closedPipsTone}">${escapeHtml(closedPipsText)}</div>
-        </div>
-      </div>
-    </button>
-  `;
-}
-
-function renderOpenTradeFeedCard(trade, cardOrder = 0) {
-  const directionClass = trade.direction === "Sell" ? "recent-trade-direction recent-trade-direction-sell" : "recent-trade-direction recent-trade-direction-buy";
-  const liveSnapshot = getOpenTradeLiveSnapshot(trade);
-  const currentPrice = liveSnapshot?.currentPrice ?? null;
-  const livePips = liveSnapshot?.pips ?? null;
-  const pipsTone = getLiveToneClass(livePips);
-  const pipsText = Number.isFinite(livePips) ? `${livePips > 0 ? "+" : livePips < 0 ? "-" : "±"}${Math.abs(livePips).toFixed(2)} pips` : "OPEN";
-  const rowToneClass = pipsTone === "pnl-positive"
-    ? "recent-trade-row-public-positive"
-    : pipsTone === "pnl-negative"
-      ? "recent-trade-row-public-negative"
-      : "recent-trade-row-public-neutral";
-  const currentCellClass = pipsTone === "pnl-positive"
-    ? "recent-trade-price-cell recent-trade-price-cell-positive"
-    : pipsTone === "pnl-negative"
-      ? "recent-trade-price-cell recent-trade-price-cell-negative"
-      : "recent-trade-price-cell";
-
-  return `
-    <button class="recent-trade-row recent-trade-row-public ${rowToneClass}" type="button" data-trade-id="${escapeHtml(trade.id)}" style="--trade-row-order:${Number(cardOrder)};">
-      <div class="recent-trade-main">
-        <div class="recent-trade-top">
-          <strong class="recent-trade-symbol">${escapeHtml(trade.asset)}</strong>
-          <span class="${directionClass}">${escapeHtml(trade.direction)}</span>
-          <span class="recent-trade-status recent-trade-status-open">OPEN</span>
-          ${renderTradeVerifiedPill()}
-        </div>
-        <div class="recent-trade-prices recent-trade-prices-public">
-          <span class="recent-trade-price-cell"><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
-          <span class="recent-trade-price-cell"><em>SL</em><strong>${formatProgressTradePrice(trade.stopLoss)}</strong></span>
-          <span class="recent-trade-price-cell"><em>TP</em><strong>${formatProgressTradePrice(trade.takeProfit)}</strong></span>
-          <span class="${currentCellClass}"><em>Current</em><strong>${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : "—"}</strong></span>
-        </div>
-        <div class="recent-trade-foot">
-          <div class="recent-trade-time">${escapeHtml(formatCompactTradeDate(trade))}</div>
-          <div class="recent-trade-pips ${pipsTone}">${escapeHtml(pipsText)}</div>
-        </div>
-      </div>
-    </button>
-  `;
 }
 
 function hydrateSetupFilter() {
@@ -4579,382 +3952,6 @@ function updateBranding() {
   document.title = `${PRODUCT_BRAND_TEXT} | Trading Analytics`;
 }
 
-function readStorageJson(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) {
-      return fallback;
-    }
-
-    return JSON.parse(raw);
-  } catch (error) {
-    return fallback;
-  }
-}
-
-function writeStorageJson(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.error("Storage write failed:", error);
-  }
-}
-
-function createId() {
-  if (window.crypto && typeof window.crypto.randomUUID === "function") {
-    return window.crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function toDateInputValue(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function parseNumber(value) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : NaN;
-}
-
-function ensureNumber(value, fallback) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function ensurePositiveNumber(value, fallback) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-function ensureNonNegative(value, fallback) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
-}
-
-function sortTradesAsc(a, b) {
-  const dateSort = String(a.date).localeCompare(String(b.date));
-  if (dateSort !== 0) {
-    return dateSort;
-  }
-
-  return String(a.createdAt || "").localeCompare(String(b.createdAt || ""));
-}
-
-function sortTradesDesc(a, b) {
-  return sortTradesAsc(b, a);
-}
-
-function getClosedTrades(trades = state.trades) {
-  return trades.filter((trade) => trade.status !== "open");
-}
-
-function formatHeroPrice(value) {
-  if (!Number.isFinite(value) || value <= 0) {
-    return "—";
-  }
-
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 4
-  }).format(value);
-}
-
-function formatProgressTradePrice(value) {
-  if (!Number.isFinite(value) || value <= 0) {
-    return "—";
-  }
-
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(value);
-}
-
-function formatTradeTimeline(trade) {
-  const entry = parseIsoDate(trade.createdAt);
-  const exit = trade.status === "open" ? null : parseIsoDate(trade.closedAt || trade.updatedAt);
-
-  if (!entry) {
-    return trade.date || "—";
-  }
-
-  const entryDate = new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric"
-  }).format(entry);
-  const entryTime = new Intl.DateTimeFormat("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).format(entry);
-
-  if (!exit) {
-    return `${entryDate} ${entryTime} → --`;
-  }
-
-  const sameDay = entry.toDateString() === exit.toDateString();
-  const exitLabel = sameDay
-    ? new Intl.DateTimeFormat("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false
-      }).format(exit)
-    : new Intl.DateTimeFormat("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false
-      }).format(exit);
-
-  return `${entryDate} ${entryTime} → ${exitLabel}`;
-}
-
-function formatCompactTradeDate(trade) {
-  const tradeDate = parseTradeEntryDate(trade.date);
-  if (tradeDate) {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric"
-    }).format(tradeDate);
-  }
-
-  const date = parseIsoDate(trade.createdAt || trade.closedAt || trade.updatedAt);
-  if (!date) {
-    return trade.date || "—";
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).format(date);
-}
-
-function formatRecentTradeStatus(trade) {
-  if (trade.status === "open") {
-    return formatLivePercentLabel(getOpenTradePnlPercent(trade), "OPEN");
-  }
-  return formatCurrency(trade.netPnl);
-}
-
-function getClosedTradeResolution(trade) {
-  const exitPrice = Number(trade.exitPrice);
-  const takeProfit = Number(trade.takeProfit);
-  const stopLoss = Number(trade.stopLoss);
-
-  if (!Number.isFinite(exitPrice)) {
-    return null;
-  }
-
-  const tolerance = Math.max(Math.abs(exitPrice) * 0.0005, 0.01);
-
-  if (Number.isFinite(takeProfit) && Math.abs(exitPrice - takeProfit) <= tolerance) {
-    return {
-      type: "tp",
-      label: "TP Hit",
-      className: "recent-trade-status recent-trade-status-positive"
-    };
-  }
-
-  if (Number.isFinite(stopLoss) && Math.abs(exitPrice - stopLoss) <= tolerance) {
-    return {
-      type: "sl",
-      label: "SL Hit",
-      className: "recent-trade-status recent-trade-status-negative"
-    };
-  }
-
-  return {
-    type: "ts",
-    label: "TS",
-    className: "recent-trade-status recent-trade-status-trail"
-  };
-}
-
-function parseTradeEntryDate(value) {
-  const raw = String(value || "").trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-    return null;
-  }
-
-  const [yearText, monthText, dayText] = raw.split("-");
-  const year = Number(yearText);
-  const month = Number(monthText);
-  const day = Number(dayText);
-  const date = new Date(year, month - 1, day, 12, 0, 0, 0);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function formatSignedPips(value) {
-  if (!Number.isFinite(value)) {
-    return "—";
-  }
-
-  const sign = value > 0 ? "+" : value < 0 ? "-" : "±";
-  return `${sign}${Math.abs(value).toFixed(2)} pips`;
-}
-
-function getRecentTradeRowSortValue(trade) {
-  const tradeDate = String(trade?.date || "").trim();
-  if (tradeDate) {
-    return `${tradeDate}T${String(trade?.createdAt || trade?.updatedAt || "").slice(11, 19) || "00:00:00"}`;
-  }
-
-  return String(trade?.createdAt || trade?.updatedAt || "");
-}
-
-function sortRecentTradeRowsDesc(a, b) {
-  return getRecentTradeRowSortValue(b).localeCompare(getRecentTradeRowSortValue(a));
-}
-
-function sortRecentTradeRowsAsc(a, b) {
-  return getRecentTradeRowSortValue(a).localeCompare(getRecentTradeRowSortValue(b));
-}
-
-function getClosedTradeToneClass(trade, resolution = getClosedTradeResolution(trade)) {
-  if (resolution?.type === "tp") {
-    return "recent-trade-row-public-positive";
-  }
-
-  if (resolution?.type === "sl") {
-    return "recent-trade-row-public-negative";
-  }
-
-  if (Number(trade.netPnl) > 0 || String(trade.result || "").toLowerCase() === "win") {
-    return "recent-trade-row-public-positive";
-  }
-
-  if (Number(trade.netPnl) < 0 || String(trade.result || "").toLowerCase() === "loss") {
-    return "recent-trade-row-public-negative";
-  }
-
-  return "recent-trade-row-public-neutral";
-}
-
-function getRecentTradeStatusClass(trade) {
-  if (trade.status !== "open") {
-    return trade.netPnl > 0
-      ? "recent-trade-status recent-trade-status-positive"
-      : trade.netPnl < 0
-        ? "recent-trade-status recent-trade-status-negative"
-        : "recent-trade-status recent-trade-status-flat";
-  }
-
-  const livePercent = getOpenTradePnlPercent(trade);
-  if (!Number.isFinite(livePercent)) {
-    return "recent-trade-status recent-trade-status-open";
-  }
-
-  const toneClass = getLiveToneClass(livePercent);
-  if (toneClass) {
-    return `recent-trade-status ${toneClass === "pnl-positive" ? "recent-trade-status-positive" : "recent-trade-status-negative"}`;
-  }
-
-  return "recent-trade-status recent-trade-status-flat";
-}
-
-function getLivePriceForSymbol(symbol) {
-  const normalized = normalizeMarketSymbol(symbol);
-  if (!normalized) {
-    return null;
-  }
-
-  const price = state.marketData.currentPrices[normalized];
-  return Number.isFinite(price) && price > 0 ? price : null;
-}
-
-function getOpenTradePnlPercent(trade) {
-  return getOpenTradeLiveSnapshot(trade)?.livePercent ?? null;
-}
-
-function getOpenTradePriceMove(trade) {
-  return getOpenTradeLiveSnapshot(trade)?.priceMove ?? null;
-}
-
-function getOpenTradeLiveSnapshot(trade) {
-  if (!trade || trade.status !== "open") {
-    return null;
-  }
-
-  const currentPrice = getLivePriceForSymbol(trade.asset);
-  const entryPrice = Number(trade.entryPrice);
-  if (!Number.isFinite(currentPrice) || !Number.isFinite(entryPrice) || entryPrice <= 0) {
-    return null;
-  }
-
-  const isSell = String(trade.direction || "").toLowerCase() === "sell";
-  const livePercent = round(
-    isSell
-      ? ((entryPrice - currentPrice) / entryPrice) * 100
-      : ((currentPrice - entryPrice) / entryPrice) * 100
-  );
-  const priceMove = round(currentPrice - entryPrice);
-  const metrics = calculateTradeMetrics({
-    ...trade,
-    exitPrice: currentPrice
-  });
-
-  return {
-    currentPrice,
-    livePercent,
-    priceMove,
-    dollarPnl: Number.isFinite(metrics.netPnl) ? metrics.netPnl : null,
-    pips: Number.isFinite(metrics.pips) ? metrics.pips : null,
-    toneClass: getLiveToneClass(livePercent)
-  };
-}
-
-function getLiveToneClass(value) {
-  if (!Number.isFinite(value) || value === 0) {
-    return "";
-  }
-
-  return value > 0 ? "pnl-positive" : "pnl-negative";
-}
-
-function formatSignedPercent(value) {
-  if (!Number.isFinite(value)) {
-    return "—";
-  }
-
-  const sign = value > 0 ? "+" : value < 0 ? "-" : "±";
-  return `${sign}${Math.abs(value).toFixed(2)}%`;
-}
-
-function formatPriceMove(value) {
-  if (!Number.isFinite(value)) {
-    return "—";
-  }
-
-  const sign = value > 0 ? "+" : value < 0 ? "-" : "±";
-  return `${sign}${formatProgressTradePrice(Math.abs(value))}`;
-}
-
-function formatSignedCurrency(value) {
-  if (!Number.isFinite(value)) {
-    return "—";
-  }
-
-  const sign = value > 0 ? "+" : value < 0 ? "-" : "±";
-  return `${sign}${formatCurrency(Math.abs(value))}`;
-}
-
-function formatLivePercentLabel(value, fallback = "OPEN") {
-  return Number.isFinite(value) ? formatSignedPercent(value) : fallback;
-}
-
-function parseIsoDate(value) {
-  const date = new Date(String(value || ""));
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
 async function loadRecentTrades(options = {}) {
   const { silent = false } = options;
 
@@ -5015,52 +4012,6 @@ async function loadPublicRecentTrades(options = {}) {
   }
 }
 
-function normalizeRecentTrades(input) {
-  if (!Array.isArray(input)) {
-    return [];
-  }
-
-  return input
-    .filter((item) => item && typeof item === "object")
-    .map((item) => {
-      const trade = {
-        id: String(item.id || ""),
-        asset: String(item.symbol || item.asset || "UNKNOWN"),
-        date: String(item.date || ""),
-        direction: String(item.direction || "Buy"),
-        entryPrice: ensurePositiveNumber(item.entry_price ?? item.entryPrice, 0),
-        stopLoss: ensurePositiveNumber(item.stop_loss ?? item.stopLoss, 0),
-        takeProfit: ensurePositiveNumber(item.take_profit ?? item.takeProfit, 0),
-        exitPrice: ensurePositiveNumber(item.exit_price ?? item.exitPrice, 0),
-        status: item.status === "open" ? "open" : "closed",
-        netPnl: ensureNumber(item.profit_loss ?? item.profitLoss, 0),
-        pips: ensureNumber(item.pips, 0),
-        createdAt: String(item.created_at || item.createdAt || ""),
-        closedAt: String(item.closed_at || item.closedAt || ""),
-        updatedAt: String(item.closed_at || item.closedAt || item.created_at || item.createdAt || "")
-      };
-      return trade;
-    })
-    .sort(sortRecentTradeRowsDesc);
-}
-
-function normalizeMarketSymbol(symbol) {
-  const raw = String(symbol || "").trim().toUpperCase();
-  if (!raw) {
-    return "";
-  }
-
-  let normalized = raw
-    .replace(/[:/\s_-]+/g, "")
-    .replace(/[^A-Z0-9.]/g, "");
-
-  normalized = normalized.replace(/\.(P|M|PRO|RAW|CASH)$/i, "");
-  normalized = normalized.replace(/(USDT|USDC|USD|BTC|ETH)(PERP|FUT|SWAP|SPOT)$/i, "$1");
-  normalized = normalized.replace(/(USDT|USDC|USD|BTC|ETH)(M|PRO)$/i, "$1");
-
-  return normalized;
-}
-
 function startLivePriceLoop() {
   if (state.marketData.timerId) {
     clearInterval(state.marketData.timerId);
@@ -5114,70 +4065,6 @@ async function refreshLivePrices(options = {}) {
   }
 }
 
-async function fetchLivePricesFromBackend(symbols) {
-  if (!Array.isArray(symbols) || symbols.length === 0) {
-    return {};
-  }
-
-  try {
-    const query = encodeURIComponent(symbols.join(","));
-    const response = await fetch(`trade_handler.php?action=live_prices&symbols=${query}`, {
-      method: "GET",
-      credentials: "same-origin",
-      cache: "no-store"
-    });
-    const body = await response.json();
-    if (!response.ok || !body?.ok || !body.prices || typeof body.prices !== "object") {
-      return {};
-    }
-
-    const updates = {};
-    Object.entries(body.prices).forEach(([symbol, price]) => {
-      const normalized = normalizeMarketSymbol(symbol);
-      const nextPrice = Number(price);
-      if (normalized && Number.isFinite(nextPrice) && nextPrice > 0) {
-        updates[normalized] = nextPrice;
-      }
-    });
-
-    return updates;
-  } catch (error) {
-    return {};
-  }
-}
-
-async function fetchLivePricesDirect(requests) {
-  const updates = {};
-
-  await Promise.all(
-    requests.map(async (request) => {
-      try {
-        const response = await fetch(request.url, {
-          method: "GET",
-          cache: "no-store"
-        });
-        if (!response.ok) {
-          throw new Error(`${request.key} price request failed`);
-        }
-
-        const body = await response.json();
-        const nextPrice = request.readPrice(body);
-        if (!Number.isFinite(nextPrice) || nextPrice <= 0) {
-          return;
-        }
-
-        request.aliases.forEach((alias) => {
-          updates[alias] = nextPrice;
-        });
-      } catch (error) {
-        // Keep the last known price if a source fails temporarily.
-      }
-    })
-  );
-
-  return updates;
-}
-
 function collectTrackedSymbols() {
   const symbols = new Set();
   const trades = canAccessApp()
@@ -5196,214 +4083,3 @@ function collectTrackedSymbols() {
   return Array.from(symbols);
 }
 
-function buildLivePriceRequests(symbols) {
-  const requests = new Map();
-
-  symbols.forEach((symbol) => {
-    const source = resolveLivePriceSource(symbol);
-    if (!source) {
-      return;
-    }
-
-    if (!requests.has(source.key)) {
-      requests.set(source.key, { ...source, aliases: new Set() });
-    }
-
-    requests.get(source.key).aliases.add(symbol);
-  });
-
-  return Array.from(requests.values()).map((request) => ({
-    ...request,
-    aliases: Array.from(request.aliases)
-  }));
-}
-
-function resolveLivePriceSource(symbol) {
-  const normalized = normalizeMarketSymbol(symbol);
-  if (!normalized) {
-    return null;
-  }
-
-  const cryptoMap = {
-    BTCUSD: "BTCUSDT",
-    BTCUSDT: "BTCUSDT",
-    ETHUSD: "ETHUSDT",
-    ETHUSDT: "ETHUSDT",
-    ETCUSD: "ETCUSDT",
-    ETCUSDT: "ETCUSDT",
-    SOLUSD: "SOLUSDT",
-    SOLUSDT: "SOLUSDT",
-    XRPUSD: "XRPUSDT",
-    XRPUSDT: "XRPUSDT",
-    ADAUSD: "ADAUSDT",
-    ADAUSDT: "ADAUSDT",
-    DOGEUSD: "DOGEUSDT",
-    DOGEUSDT: "DOGEUSDT",
-    BNBUSD: "BNBUSDT",
-    BNBUSDT: "BNBUSDT",
-    LTCUSD: "LTCUSDT",
-    LTCUSDT: "LTCUSDT",
-    BCHUSD: "BCHUSDT",
-    BCHUSDT: "BCHUSDT",
-    AVAXUSD: "AVAXUSDT",
-    AVAXUSDT: "AVAXUSDT",
-    LINKUSD: "LINKUSDT",
-    LINKUSDT: "LINKUSDT",
-    DOTUSD: "DOTUSDT",
-    DOTUSDT: "DOTUSDT",
-    TRXUSD: "TRXUSDT",
-    TRXUSDT: "TRXUSDT",
-    MATICUSD: "MATICUSDT",
-    MATICUSDT: "MATICUSDT",
-    SUIUSD: "SUIUSDT",
-    SUIUSDT: "SUIUSDT",
-    TONUSD: "TONUSDT",
-    TONUSDT: "TONUSDT",
-    SHIBUSD: "SHIBUSDT",
-    SHIBUSDT: "SHIBUSDT"
-  };
-
-  if (cryptoMap[normalized]) {
-    const marketSymbol = cryptoMap[normalized];
-    return {
-      key: `binance:${marketSymbol}`,
-      url: `https://api.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(marketSymbol)}`,
-      readPrice: (body) => {
-        const price = Number(body?.price);
-        return Number.isFinite(price) && price > 0 ? price : NaN;
-      }
-    };
-  }
-
-  if (normalized === "XAUUSD" || normalized === "XAGUSD") {
-    const metal = normalized.startsWith("XAG") ? "XAG" : "XAU";
-    return {
-      key: `metal:${metal}`,
-      url: `https://api.gold-api.com/price/${metal}`,
-      readPrice: (body) => {
-        const price = Number(body?.price);
-        return Number.isFinite(price) && price > 0 ? price : NaN;
-      }
-    };
-  }
-
-  return null;
-}
-
-async function persistLivePrices(priceMap) {
-  const prices = Object.entries(priceMap).map(([symbol, price]) => ({
-    symbol,
-    price
-  }));
-
-  if (!prices.length) {
-    return;
-  }
-
-  try {
-    await fetch("trade_handler.php?action=update_prices", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({ prices })
-    });
-  } catch (error) {
-    // Best-effort cache only.
-  }
-}
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2
-  }).format(value || 0);
-}
-
-function formatCompactCurrency(value) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    notation: "compact",
-    maximumFractionDigits: 1
-  }).format(value || 0);
-}
-
-function formatChartDateLabel(value) {
-  const text = String(value || "").trim();
-  if (!text) {
-    return "";
-  }
-
-  const parsed = new Date(`${text}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) {
-    return text;
-  }
-
-  return parsed.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric"
-  });
-}
-
-function escapeCsvValue(value) {
-  const stringValue = String(value).replace(/"/g, '""');
-  return `"${stringValue}"`;
-}
-
-function triggerDownload(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
-
-function setMessage(node, text, kind) {
-  node.textContent = text;
-  node.classList.remove("success", "error");
-  if (kind) {
-    node.classList.add(kind);
-  }
-}
-
-function round(value) {
-  return Math.round(value * 100) / 100;
-}
-
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function getWeekKey(dateString) {
-  const date = new Date(`${dateString}T00:00:00Z`);
-  if (Number.isNaN(date.getTime())) {
-    return "unknown-week";
-  }
-
-  const day = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  const week = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
-  return `${date.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
-}
-
-function debounce(fn, delay) {
-  let timer = null;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delay);
-  };
-}
