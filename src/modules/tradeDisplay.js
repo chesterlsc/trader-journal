@@ -1,10 +1,18 @@
-import { round } from "../lib/core.js";
+import { round, escapeHtml } from "../lib/core.js";
 import { formatCurrency } from "../lib/format.js";
 import { normalizeMarketSymbol } from "./livePrices.js";
 
 const DASH = "\u2014";
+
 const PLUS_MINUS = "\u00B1";
 const ARROW = "\u2192";
+
+// Tags a rendered node as a live-price target so the poll path can patch its
+// textContent/tone in place (no innerHTML rebuild). Fields are resolved by
+// the LIVE_FIELD_SPECS table in app.js.
+export function liveCellAttrs(trade, field) {
+  return `data-live-trade="${escapeHtml(String(trade?.id || ""))}" data-live-field="${escapeHtml(field)}"`;
+}
 
 export function createTradeDisplayHelpers({ state, calculateTradeMetrics }) {
   function formatHeroPrice(value) {

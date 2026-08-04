@@ -1,4 +1,5 @@
 import { ensureNumber, ensurePositiveNumber, escapeHtml, sortTradesDesc } from "../lib/core.js";
+import { liveCellAttrs } from "./tradeDisplay.js";
 
 const DASH = "\u2014";
 const PLUS_MINUS = "\u00B1";
@@ -203,7 +204,7 @@ export function createRecentTradesView(deps) {
         : "recent-trade-price-cell";
 
     return `
-      <button class="recent-trade-row recent-trade-row-public ${rowToneClass}" type="button" data-trade-id="${escapeHtml(trade.id)}" style="--trade-row-order:${Number(cardOrder)};">
+      <button class="recent-trade-row recent-trade-row-public ${rowToneClass}" type="button" data-trade-id="${escapeHtml(trade.id)}" ${liveCellAttrs(trade, "heroRowTone")} style="--trade-row-order:${Number(cardOrder)};">
         <div class="recent-trade-main">
           <div class="recent-trade-top">
             <strong class="recent-trade-symbol">${escapeHtml(trade.asset)}</strong>
@@ -215,11 +216,11 @@ export function createRecentTradesView(deps) {
             <span class="recent-trade-price-cell"><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
             <span class="recent-trade-price-cell"><em>SL</em><strong>${formatProgressTradePrice(trade.stopLoss)}</strong></span>
             <span class="recent-trade-price-cell"><em>TP</em><strong>${formatProgressTradePrice(trade.takeProfit)}</strong></span>
-            <span class="${currentCellClass}"><em>Current</em><strong>${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : DASH}</strong></span>
+            <span class="${currentCellClass}" ${liveCellAttrs(trade, "heroCurrentTone")}><em>Current</em><strong class="live-cell" ${liveCellAttrs(trade, "heroCurrentPrice")}>${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : DASH}</strong></span>
           </div>
           <div class="recent-trade-foot">
             <div class="recent-trade-time">${escapeHtml(formatCompactTradeDate(trade))}</div>
-            <div class="recent-trade-pips ${pipsTone}">${escapeHtml(pipsText)}</div>
+            <div class="recent-trade-pips ${pipsTone} live-cell" ${liveCellAttrs(trade, "heroPips")}>${escapeHtml(pipsText)}</div>
           </div>
         </div>
       </button>

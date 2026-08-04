@@ -372,16 +372,10 @@ body.is-preview .auth-shell {
   max-width: 920px;
   font: 700 clamp(2rem, 5vw, 3.5rem)/1.12 "Sora", "Manrope", sans-serif;
   letter-spacing: -0.012em;
-  transition: transform 220ms ease, text-shadow 220ms ease;
 }
 
 .hero-line {
   display: block;
-}
-
-.auth-hero-copy:hover h2 {
-  transform: translateY(-2px);
-  text-shadow: 0 8px 24px rgba(87, 161, 255, 0.14);
 }
 
 .auth-hero-text {
@@ -587,7 +581,6 @@ body.is-preview .auth-shell {
 }
 
 .recent-trade-row:hover {
-  transform: translateY(-1px);
   border-color: rgba(87, 161, 255, 0.34);
   background: rgba(12, 20, 38, 0.8);
 }
@@ -832,13 +825,10 @@ body.is-preview .auth-shell {
   gap: 0.34rem;
   font: 700 clamp(1.45rem, 3vw, 2rem)/0.98 "Sora", "Manrope", sans-serif;
   letter-spacing: -0.05em;
-  animation: brandSettle 720ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .brand-word-accent {
   color: var(--blue);
-  text-shadow: 0 0 18px rgba(87, 161, 255, 0.16);
-  animation: brandAccentPulse 5.4s ease-in-out infinite;
 }
 
 .brand-word-primary {
@@ -929,11 +919,10 @@ h1 {
   text-align: left;
   cursor: pointer;
   font: 600 0.95rem/1.2 "Sora", "Manrope", sans-serif;
-  transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
 }
 
 .nav-btn:hover {
-  transform: translateX(2px);
   border-color: var(--cyan);
 }
 
@@ -1142,10 +1131,6 @@ body.is-authenticated .auth-panel {
   white-space: nowrap;
 }
 
-.nav-btn-top:hover {
-  transform: translateY(-1px);
-}
-
 .desktop-brand-block {
   display: grid;
   justify-items: center;
@@ -1183,11 +1168,11 @@ body.is-authenticated .auth-panel {
 .view {
   display: none;
   gap: 14px;
-  animation: fadeUp 260ms ease;
 }
 
 .view.is-active {
   display: grid;
+  animation: viewEnter var(--dur-base) var(--ease-out);
 }
 
 .view-head {
@@ -1343,12 +1328,11 @@ body.is-authenticated .auth-panel {
   color: var(--text-soft);
   font: 600 0.78rem/1 "JetBrains Mono", "Consolas", monospace;
   cursor: pointer;
-  transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
 .strategy-toggle-btn:hover {
   color: #e7f0ff;
-  transform: translateY(-1px);
 }
 
 .strategy-toggle-btn.is-active {
@@ -1991,12 +1975,15 @@ input:-webkit-autofill:focus {
   color: var(--text);
   cursor: pointer;
   font-weight: 600;
-  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
 }
 
 .btn:hover {
-  transform: translateY(-1px);
   border-color: var(--cyan);
+}
+
+.btn:active {
+  transform: translateY(1px);
 }
 
 .btn.primary {
@@ -3409,33 +3396,69 @@ body.is-preview .trust-row {
   }
 }
 
-@keyframes brandSettle {
+/* View enter — 4px rise + fade on activation; no exit animation. */
+@keyframes viewEnter {
   from {
     opacity: 0;
     transform: translateY(4px);
-    letter-spacing: -0.075em;
   }
   to {
     opacity: 1;
-    transform: translateY(0);
-    letter-spacing: -0.05em;
+    transform: none;
   }
 }
 
-@keyframes brandAccentPulse {
+/* pnl-tick — directional flash on live value change. Applied by app.js on
+   the poll patch path; removed on animationend so each change replays. */
+@keyframes tickUp {
+  from {
+    background-color: var(--pnl-pos-soft);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+@keyframes tickDown {
+  from {
+    background-color: var(--pnl-neg-soft);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.tick-up {
+  animation: tickUp var(--dur-tick) var(--ease-out);
+}
+
+.tick-down {
+  animation: tickDown var(--dur-tick) var(--ease-out);
+}
+
+/* Skeleton pulse — body.is-journal-loading is set while the server journal
+   loads (auth restore / manual load); metric values and journal rows become
+   pulsing blocks. Under reduced motion the zeroed tokens leave a static
+   block. */
+@keyframes skeletonPulse {
   0%,
   100% {
-    text-shadow: 0 0 14px rgba(87, 161, 255, 0.14);
-    color: var(--blue);
+    opacity: 1;
   }
   50% {
-    text-shadow: 0 0 24px rgba(87, 161, 255, 0.28);
-    color: #72b6ff;
+    opacity: 0.45;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .recent-trades-board {
-    animation: none;
-  }
+body.is-journal-loading .metric-value,
+body.is-journal-loading #tradesBody td {
+  color: transparent !important;
+  background: var(--surface-3);
+  border-radius: var(--radius-sm);
+  animation: skeletonPulse 1.2s var(--ease-in-out) infinite;
+}
+
+body.is-journal-loading .metric-value *,
+body.is-journal-loading #tradesBody td * {
+  visibility: hidden;
 }

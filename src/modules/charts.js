@@ -2,11 +2,18 @@ import { clamp } from "../lib/core.js";
 import { formatCurrency, formatCompactCurrency, formatChartDateLabel } from "../lib/format.js";
 
 const ELLIPSIS = "\u2026";
+const DRAW_DURATION_MS = 640;
+const BAR_STAGGER_MS = 24;
 
-export function createChartsModule({ ui, state }) {
+export function createChartsModule({ ui, state, prefersReducedMotion }) {
   // Palette is read from CSS custom properties so canvas follows the theme.
   // Cached per render pass; invalidated (and charts repainted) on 'themechange'.
   let palette = null;
+
+  // Draw-in replays only when the dataset hash changes (or on themechange),
+  // never on the no-change renders from the poll/render loop.
+  let lastChartHash = "";
+  let drawFrame = 0;
 
   function getPalette() {
     if (palette) {
@@ -38,34 +45,67 @@ export function createChartsModule({ ui, state }) {
 
   window.addEventListener("themechange", () => {
     palette = null;
-    renderCharts(state.analytics);
+    renderCharts(state.analytics, { force: true });
   });
 
-  function renderCharts(analytics) {
+  function computeChartHash(analytics) {
+    return JSON.stringify([
+      analytics.equity,
+      analytics.drawdowns,
+      analytics.strategyPerformance,
+      analytics.traderScore?.metrics,
+      state.dashboard.performanceDimension,
+      state.dashboard.performanceMetric
+    ]);
+  }
+
+  function renderCharts(analytics, options = {}) {
     if (!analytics) {
       return;
     }
 
+    const hash = computeChartHash(analytics);
+    const changed = hash !== lastChartHash || options.force === true;
+    lastChartHash = hash;
+    cancelAnimationFrame(drawFrame);
+
+    if (!changed || (typeof prefersReducedMotion === "function" && prefersReducedMotion())) {
+      drawAllCharts(analytics, 1);
+      return;
+    }
+
+    const startTime = performance.now();
+    const step = (now) => {
+      const t = Math.min((now - startTime) / DRAW_DURATION_MS, 1);
+      drawAllCharts(analytics, 1 - Math.pow(1 - t, 3));
+      if (t < 1) {
+        drawFrame = requestAnimationFrame(step);
+      }
+    };
+    drawFrame = requestAnimationFrame(step);
+  }
+
+  function drawAllCharts(analytics, progress) {
     const colors = getPalette();
     drawLineChart(ui.equityChart, analytics.equity, {
       lineColor: colors.line,
       fillColor: colors.fill,
       labels: analytics.equityDates,
       emptyLabel: "No equity data yet"
-    });
+    }, progress);
 
     drawLineChart(ui.drawdownChart, analytics.drawdowns, {
       lineColor: colors.neg,
       fillColor: colors.negSoft,
       labels: analytics.drawdownDates,
       emptyLabel: "No drawdown data yet"
-    });
+    }, progress);
 
-    renderStrategyPerformanceChart(analytics);
-    drawRadarChart(ui.traderScoreChart, analytics.traderScore);
+    renderStrategyPerformanceChart(analytics, progress);
+    drawRadarChart(ui.traderScoreChart, analytics.traderScore, progress);
   }
 
-  function drawLineChart(canvas, data, options) {
+  function drawLineChart(canvas, data, options, progress = 1) {
     const ctxData = getCanvasContext(canvas);
     if (!ctxData) {
       return;
@@ -99,6 +139,16 @@ export function createChartsModule({ ui, state }) {
       return { x, y };
     });
 
+    const colors = getPalette();
+
+    // Draw-in: clip-reveal left to right while progress < 1.
+    if (progress < 1) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, padX + (width - padX * 2) * progress + 6, height);
+      ctx.clip();
+    }
+
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
     for (let i = 1; i < points.length; i += 1) {
@@ -115,12 +165,6 @@ export function createChartsModule({ ui, state }) {
     ctx.fillStyle = options.fillColor;
     ctx.fill();
 
-    const colors = getPalette();
-    const last = data[data.length - 1];
-    ctx.fillStyle = colors.text;
-    ctx.font = colors.font(600, 12);
-    ctx.fillText(`Last: ${formatCurrency(last)}`, padX, padTop - 10);
-
     ctx.fillStyle = options.lineColor;
     points.forEach((point, index) => {
       const radius = index === 0 || index === points.length - 1 ? 4.5 : 2.5;
@@ -131,6 +175,15 @@ export function createChartsModule({ ui, state }) {
       ctx.lineWidth = 1.5;
       ctx.stroke();
     });
+
+    if (progress < 1) {
+      ctx.restore();
+    }
+
+    const last = data[data.length - 1];
+    ctx.fillStyle = colors.text;
+    ctx.font = colors.font(600, 12);
+    ctx.fillText(`Last: ${formatCurrency(last)}`, padX, padTop - 10);
 
     drawLineChartDateLabels(ctx, points, options.labels, height, padBottom);
   }
@@ -165,7 +218,7 @@ export function createChartsModule({ ui, state }) {
     ctx.textAlign = "left";
   }
 
-  function renderStrategyPerformanceChart(analytics) {
+  function renderStrategyPerformanceChart(analytics, progress = 1) {
     const dimension = state.dashboard.performanceDimension;
     const metric = state.dashboard.performanceMetric;
     const entries = Array.isArray(analytics?.strategyPerformance?.[dimension])
@@ -183,7 +236,7 @@ export function createChartsModule({ ui, state }) {
     drawStrategyPerformanceChart(ui.strategyPerformanceChart, sortedEntries, {
       metric,
       emptyLabel: `No ${dimension} performance data yet`
-    });
+    }, progress);
   }
 
   function getStrategyPerformanceRows(entries, options = {}) {
@@ -201,7 +254,7 @@ export function createChartsModule({ ui, state }) {
     return rows.sort((a, b) => b.pnl - a.pnl || b.count - a.count).slice(0, 8);
   }
 
-  function drawStrategyPerformanceChart(canvas, entries, options) {
+  function drawStrategyPerformanceChart(canvas, entries, options, progress = 1) {
     const ctxData = getCanvasContext(canvas);
     if (!ctxData) {
       return;
@@ -214,6 +267,11 @@ export function createChartsModule({ ui, state }) {
       drawCenteredText(ctx, width, height, options.emptyLabel || "No strategy data");
       return;
     }
+
+    // Bars scale from the baseline with a small per-row stagger.
+    const barDuration = Math.max(DRAW_DURATION_MS - BAR_STAGGER_MS * (entries.length - 1), 200);
+    const barProgress = (index) =>
+      clamp((progress * DRAW_DURATION_MS - BAR_STAGGER_MS * index) / barDuration, 0, 1);
 
     const metric = options.metric === "count" ? "count" : "pnl";
     const padLeft = width < 460 ? 112 : 142;
@@ -252,7 +310,7 @@ export function createChartsModule({ ui, state }) {
 
       entries.forEach((entry, index) => {
         const centerY = padTop + rowGap * index + rowGap / 2;
-        const length = (entry.count / maxValue) * usableWidth;
+        const length = (entry.count / maxValue) * usableWidth * barProgress(index);
         const labelX = padLeft - 12;
         ctx.fillStyle = labelColor;
         ctx.textAlign = "right";
@@ -288,7 +346,7 @@ export function createChartsModule({ ui, state }) {
       const centerY = padTop + rowGap * index + rowGap / 2;
       const labelX = padLeft - 12;
       const amount = entry.pnl;
-      const length = (Math.abs(amount) / maxAbs) * barWidth;
+      const length = (Math.abs(amount) / maxAbs) * barWidth * barProgress(index);
       const barX = amount >= 0 ? zeroX : zeroX - length;
       const barColor = amount >= 0 ? colors.pos : colors.neg;
 
@@ -403,7 +461,7 @@ export function createChartsModule({ ui, state }) {
     ctx.fill();
   }
 
-  function drawRadarChart(canvas, scoreData) {
+  function drawRadarChart(canvas, scoreData, progress = 1) {
     const ctxData = getCanvasContext(canvas);
     if (!ctxData) {
       return;
@@ -467,7 +525,7 @@ export function createChartsModule({ ui, state }) {
     ctx.beginPath();
     metrics.forEach((metric, index) => {
       const angle = -Math.PI / 2 + index * angleStep;
-      const pointRadius = radius * (clamp(metric.value, 0, 100) / 100);
+      const pointRadius = radius * (clamp(metric.value, 0, 100) / 100) * progress;
       const x = centerX + Math.cos(angle) * pointRadius;
       const y = centerY + Math.sin(angle) * pointRadius;
       if (index === 0) {
@@ -485,7 +543,7 @@ export function createChartsModule({ ui, state }) {
 
     metrics.forEach((metric, index) => {
       const angle = -Math.PI / 2 + index * angleStep;
-      const pointRadius = radius * (clamp(metric.value, 0, 100) / 100);
+      const pointRadius = radius * (clamp(metric.value, 0, 100) / 100) * progress;
       const x = centerX + Math.cos(angle) * pointRadius;
       const y = centerY + Math.sin(angle) * pointRadius;
       ctx.beginPath();

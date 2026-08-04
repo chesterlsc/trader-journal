@@ -21,12 +21,9 @@
 import { formatCurrency } from "./src/lib/format.js";
 import {
   normalizeMarketSymbol,
-  fetchLivePricesFromBackend,
-  fetchLivePricesDirect,
-  buildLivePriceRequests,
-  persistLivePrices
+  fetchLivePricesFromBackend
 } from "./src/modules/livePrices.js";
-import { createTradeDisplayHelpers } from "./src/modules/tradeDisplay.js";
+import { createTradeDisplayHelpers, liveCellAttrs } from "./src/modules/tradeDisplay.js";
 import { createRecentTradesView } from "./src/modules/recentTradesView.js";
 import { createChartsModule } from "./src/modules/charts.js";
 
@@ -49,10 +46,23 @@ const DEFAULT_SETTINGS = {
 };
 
 const SERVER_AUTOSAVE_DEBOUNCE_MS = 900;
-const LIVE_PRICE_REFRESH_MS = 2000;
+const LIVE_PRICE_REFRESH_MS = 5000;
 const LOCAL_PREVIEW_STORAGE_KEY = "axiom_local_preview";
 const THEME_STORAGE_KEY = "axiom_journal_theme_v1";
 const THEME_CROSSFADE_MS = 300;
+const COUNT_UP_DURATION_MS = 600;
+// Active count-up rAF handles, keyed by node (init() runs at module
+// evaluation, so this must be declared before the init() call below).
+const countUpFrames = new WeakMap();
+
+// Single reduced-motion source for every JS-driven animation (count-up,
+// pnl ticks, chart draw-in, theme crossfade). CSS motion is handled by the
+// zeroed duration tokens + global kill block in styles.css.
+const REDUCED_MOTION_QUERY = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+function prefersReducedMotion() {
+  return REDUCED_MOTION_QUERY.matches;
+}
 
 // CSRF token issued by the server session action; sent on every POST.
 let csrfToken = "";
@@ -312,7 +322,7 @@ const {
   normalizeRecentTrades
 } = recentTradesView;
 
-const { renderCharts } = createChartsModule({ ui, state });
+const { renderCharts } = createChartsModule({ ui, state, prefersReducedMotion });
 
 init();
 
@@ -398,8 +408,7 @@ function toggleTheme() {
   } catch (error) {
     // Private mode: theme still flips for this session.
   }
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reducedMotion) {
+  if (prefersReducedMotion()) {
     applyTheme(next);
     return;
   }
@@ -575,6 +584,13 @@ function bindEvents() {
   ui.reviewMonth.addEventListener("change", renderMonthlyReview);
   ui.dashboardCalendarMonth.addEventListener("change", renderCalendarView);
   ui.saveReplayBtn.addEventListener("click", saveReplayNotes);
+
+  // Clear pnl-tick classes once the flash finishes so the next change replays.
+  document.addEventListener("animationend", (event) => {
+    if (event.animationName === "tickUp" || event.animationName === "tickDown") {
+      event.target.classList.remove("tick-up", "tick-down");
+    }
+  });
 
   window.addEventListener("resize", debounce(() => {
     if (!isCompactAuthViewport()) {
@@ -2628,6 +2644,9 @@ async function loadFromPhpStorage(options = {}) {
     return false;
   }
 
+  // Skeleton pulse on metric values + journal rows while the server journal
+  // loads (auth restore or manual load). Cleared in finally.
+  document.body.classList.add("is-journal-loading");
   try {
     const localSnapshot = {
       settings: { ...state.settings },
@@ -2701,6 +2720,8 @@ async function loadFromPhpStorage(options = {}) {
       );
     }
     return false;
+  } finally {
+    document.body.classList.remove("is-journal-loading");
   }
 }
 
@@ -3025,12 +3046,12 @@ function renderProgressTradeSummary() {
               <span class="recent-trade-direction ${directionClass}">${escapeHtml(trade.direction || "Buy")}</span>
               <span class="progress-trade-badge">OPEN</span>
             </div>
-            <span class="progress-trade-live-inline ${pnlToneClass}">${escapeHtml(formatLivePercentLabel(livePercent, "OPEN"))}</span>
+            <span class="progress-trade-live-inline ${pnlToneClass} live-cell" ${liveCellAttrs(trade, "livePercent")}>${escapeHtml(formatLivePercentLabel(livePercent, "OPEN"))}</span>
           </div>
           <div class="progress-trade-card-prices">
-            <span class="progress-trade-price-chip"><em>Move</em><strong class="${pnlToneClass}">${formatPriceMove(priceMove)}</strong></span>
+            <span class="progress-trade-price-chip"><em>Move</em><strong class="${pnlToneClass} live-cell" ${liveCellAttrs(trade, "priceMove")}>${formatPriceMove(priceMove)}</strong></span>
             <span class="progress-trade-price-chip"><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
-            <span class="progress-trade-price-chip progress-trade-price-chip-live"><em>Current Price</em><strong class="${pnlToneClass}">${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : "â€”"}</strong></span>
+            <span class="progress-trade-price-chip progress-trade-price-chip-live"><em>Current Price</em><strong class="${pnlToneClass} live-cell" ${liveCellAttrs(trade, "currentPrice")}>${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : "â€”"}</strong></span>
             <button class="progress-trade-price-chip progress-trade-price-chip-toggle" type="button" data-progress-details-toggle aria-expanded="false">
               <strong>Show</strong>
             </button>
@@ -3038,7 +3059,7 @@ function renderProgressTradeSummary() {
           <div class="progress-trade-card-meta progress-trade-card-meta-hidden">
               <span class="progress-trade-stat"><em>SL</em><strong>${formatProgressTradePrice(trade.stopLoss)}</strong></span>
               <span class="progress-trade-stat"><em>TP</em><strong>${formatProgressTradePrice(trade.takeProfit)}</strong></span>
-              <span class="progress-trade-stat"><em>$ Move</em><strong class="${pnlToneClass}">${formatSignedCurrency(dollarMove)}</strong></span>
+              <span class="progress-trade-stat"><em>$ Move</em><strong class="${pnlToneClass} live-cell" ${liveCellAttrs(trade, "dollarPnl")}>${formatSignedCurrency(dollarMove)}</strong></span>
           </div>
         </article>
       `;
@@ -3426,6 +3447,50 @@ function sortDayPerformance(entries) {
   });
 }
 
+// Count-up: tween old->new with rAF ease-out cubic. The dataset-hash guard
+// skips renders whose formatted value did not change, so the tween replays
+// only on real dataset changes (or on first arrival, counting up from 0).
+function setCountUpValue(node, text, tween) {
+  if (node.dataset.countHash === text) {
+    return;
+  }
+
+  const fromValue = node.dataset.countHash === undefined ? 0 : Number(node.dataset.countValue);
+  node.dataset.countHash = text;
+  node.dataset.countValue = tween && Number.isFinite(tween.value) ? String(tween.value) : "";
+
+  const previousFrame = countUpFrames.get(node);
+  if (previousFrame) {
+    cancelAnimationFrame(previousFrame);
+    countUpFrames.delete(node);
+  }
+
+  if (
+    prefersReducedMotion() ||
+    !tween ||
+    !Number.isFinite(tween.value) ||
+    !Number.isFinite(fromValue) ||
+    fromValue === tween.value
+  ) {
+    node.textContent = text;
+    return;
+  }
+
+  const startTime = performance.now();
+  const step = (now) => {
+    const t = Math.min((now - startTime) / COUNT_UP_DURATION_MS, 1);
+    if (t >= 1) {
+      node.textContent = text;
+      countUpFrames.delete(node);
+      return;
+    }
+    const eased = 1 - Math.pow(1 - t, 3);
+    node.textContent = tween.format(fromValue + (tween.value - fromValue) * eased);
+    countUpFrames.set(node, requestAnimationFrame(step));
+  };
+  countUpFrames.set(node, requestAnimationFrame(step));
+}
+
 function renderDashboardMetrics(analytics) {
   const values = {
     accountBalance: formatCurrency(analytics.accountBalance),
@@ -3442,10 +3507,27 @@ function renderDashboardMetrics(analytics) {
     losingStreak: String(analytics.maxLossStreak)
   };
 
+  const wholeNumber = (value) => String(Math.round(value));
+  const tweens = {
+    accountBalance: { value: analytics.accountBalance, format: formatCurrency },
+    totalTrades: { value: analytics.totalTrades, format: wholeNumber },
+    winRate: { value: analytics.winRate, format: (value) => `${value.toFixed(1)}%` },
+    avgRR: { value: analytics.avgRR, format: (value) => value.toFixed(2) },
+    profitFactor:
+      analytics.profitFactor >= 999
+        ? null
+        : { value: analytics.profitFactor, format: (value) => value.toFixed(2) },
+    currentDrawdown: { value: analytics.currentDrawdown, format: formatCurrency },
+    maxDrawdown: { value: analytics.maxDrawdown, format: formatCurrency },
+    expectancy: { value: analytics.expectancy, format: formatCurrency },
+    winningStreak: { value: analytics.maxWinStreak, format: wholeNumber },
+    losingStreak: { value: analytics.maxLossStreak, format: wholeNumber }
+  };
+
   ui.metricNodes.forEach((node) => {
     const key = node.dataset.metric;
     if (key in values) {
-      node.textContent = values[key];
+      setCountUpValue(node, values[key], tweens[key] || null);
 
       if (key === "accountBalance") {
         toneBySign(node, analytics.accountBalance);
@@ -3467,7 +3549,10 @@ function renderDashboardMetrics(analytics) {
   ui.dailyTradingScore.textContent = String(analytics.dailyTradingScore);
   ui.goalProgress.textContent = `${clamp(Math.round(analytics.goalProgress), 0, 300)}%`;
   if (ui.traderScoreValue) {
-    ui.traderScoreValue.textContent = analytics.traderScore.score.toFixed(1);
+    setCountUpValue(ui.traderScoreValue, analytics.traderScore.score.toFixed(1), {
+      value: analytics.traderScore.score,
+      format: (value) => value.toFixed(1)
+    });
   }
   if (ui.traderScoreCaption) {
     ui.traderScoreCaption.textContent = analytics.traderScore.caption;
@@ -3689,7 +3774,7 @@ function renderJournalTable() {
           <td data-label="Timeframe">${escapeHtml(trade.timeframe)}</td>
           <td data-label="Result"><span class="${resultClass}">${escapeHtml(trade.result)}</span></td>
           <td data-label="Pips" class="${pipClass}">${isOpen ? "â€”" : Number.isFinite(trade.pips) ? trade.pips.toFixed(2) : "0.00"}</td>
-          <td data-label="Net P&L" class="${pnlClass}">${isOpen ? escapeHtml(formatLivePercentLabel(livePercent, "OPEN")) : formatCurrency(trade.netPnl)}</td>
+          <td data-label="Net P&L" class="${pnlClass}${isOpen ? " live-cell" : ""}"${isOpen ? ` ${liveCellAttrs(trade, "livePercent")}` : ""}>${isOpen ? escapeHtml(formatLivePercentLabel(livePercent, "OPEN")) : formatCurrency(trade.netPnl)}</td>
           <td data-label="R-Multiple">${isOpen ? "â€”" : Number.isFinite(trade.rMultiple) ? trade.rMultiple.toFixed(2) : "0.00"}R</td>
           <td data-label="Psychology">${escapeHtml(trade.psychology)}</td>
           <td data-label="Execution">${escapeHtml(trade.executionQuality)}</td>
@@ -4125,18 +4210,13 @@ async function refreshLivePrices(options = {}) {
   }
 
   const symbols = collectTrackedSymbols();
-  const requests = buildLivePriceRequests(symbols);
-  if (!symbols.length && !requests.length) {
+  if (!symbols.length) {
     return;
   }
 
   state.marketData.inFlight = true;
   try {
-    let updates = await fetchLivePricesFromBackend(symbols);
-    if (Object.keys(updates).length === 0 && requests.length) {
-      updates = await fetchLivePricesDirect(requests);
-    }
-
+    const updates = await fetchLivePricesFromBackend(symbols);
     if (Object.keys(updates).length === 0) {
       return;
     }
@@ -4146,15 +4226,157 @@ async function refreshLivePrices(options = {}) {
       ...updates
     };
 
-    renderHeroRecentTrades();
-    renderProgressTradeSummary();
-    renderJournalTable();
-    if (state.auth.isAuthenticated) {
-      persistLivePrices(updates, csrfToken);
-    }
+    // Poll path: patch tagged nodes in place. No innerHTML rebuild here, so
+    // scroll position, focus, and text selection survive every tick.
+    // renderAll still owns real state mutations.
+    patchLiveNodes();
   } finally {
     state.marketData.inFlight = false;
   }
+}
+
+// Live-field registry: how each tagged node ("data-live-field") derives its
+// text, numeric value (for tick direction), and tone from an open trade's
+// live snapshot. Tone groups swap mutually exclusive classes in place.
+const LIVE_TONE_GROUPS = {
+  pnl: {
+    classes: ["pnl-positive", "pnl-negative"],
+    map: (tone) => tone
+  },
+  heroCell: {
+    classes: ["recent-trade-price-cell-positive", "recent-trade-price-cell-negative"],
+    map: (tone) =>
+      tone === "pnl-positive"
+        ? "recent-trade-price-cell-positive"
+        : tone === "pnl-negative"
+          ? "recent-trade-price-cell-negative"
+          : ""
+  },
+  heroRow: {
+    classes: [
+      "recent-trade-row-public-positive",
+      "recent-trade-row-public-negative",
+      "recent-trade-row-public-neutral"
+    ],
+    map: (tone) =>
+      tone === "pnl-positive"
+        ? "recent-trade-row-public-positive"
+        : tone === "pnl-negative"
+          ? "recent-trade-row-public-negative"
+          : "recent-trade-row-public-neutral"
+  }
+};
+
+const LIVE_FIELD_SPECS = {
+  livePercent: {
+    value: (s) => s?.livePercent,
+    text: (s) => formatLivePercentLabel(s?.livePercent, "OPEN"),
+    tone: (s) => getLiveToneClass(s?.livePercent),
+    toneGroup: "pnl"
+  },
+  priceMove: {
+    value: (s) => s?.priceMove,
+    text: (s) => formatPriceMove(s?.priceMove ?? NaN),
+    tone: (s) => getLiveToneClass(s?.livePercent),
+    toneGroup: "pnl"
+  },
+  currentPrice: {
+    value: (s) => s?.currentPrice,
+    text: (s) => (Number.isFinite(s?.currentPrice) ? formatProgressTradePrice(s.currentPrice) : "—"),
+    tone: (s) => getLiveToneClass(s?.livePercent),
+    toneGroup: "pnl"
+  },
+  dollarPnl: {
+    value: (s) => s?.dollarPnl,
+    text: (s) => formatSignedCurrency(s?.dollarPnl ?? NaN),
+    tone: (s) => getLiveToneClass(s?.livePercent),
+    toneGroup: "pnl"
+  },
+  heroCurrentPrice: {
+    value: (s) => s?.currentPrice,
+    text: (s) => (Number.isFinite(s?.currentPrice) ? formatProgressTradePrice(s.currentPrice) : "—")
+  },
+  heroPips: {
+    value: (s) => s?.pips,
+    text: (s) => (Number.isFinite(s?.pips) ? formatSignedPips(s.pips) : "OPEN"),
+    tone: (s) => getLiveToneClass(s?.pips),
+    toneGroup: "pnl"
+  },
+  heroCurrentTone: {
+    tone: (s) => getLiveToneClass(s?.pips),
+    toneGroup: "heroCell"
+  },
+  heroRowTone: {
+    tone: (s) => getLiveToneClass(s?.pips),
+    toneGroup: "heroRow"
+  }
+};
+
+function patchLiveNodes() {
+  const nodes = document.querySelectorAll("[data-live-field]");
+  if (!nodes.length) {
+    return;
+  }
+
+  const tradesById = new Map();
+  [state.trades, state.publicRecentTrades, state.recentTrades].forEach((list) => {
+    (Array.isArray(list) ? list : []).forEach((trade) => {
+      const id = String(trade?.id || "");
+      if (id && !tradesById.has(id)) {
+        tradesById.set(id, trade);
+      }
+    });
+  });
+
+  const snapshots = new Map();
+  nodes.forEach((node) => {
+    const spec = LIVE_FIELD_SPECS[node.dataset.liveField];
+    const tradeId = String(node.dataset.liveTrade || "");
+    const trade = tradesById.get(tradeId);
+    if (!spec || !trade) {
+      return;
+    }
+
+    if (!snapshots.has(tradeId)) {
+      snapshots.set(tradeId, getOpenTradeLiveSnapshot(trade));
+    }
+    const snapshot = snapshots.get(tradeId);
+
+    if (spec.toneGroup) {
+      const group = LIVE_TONE_GROUPS[spec.toneGroup];
+      const nextTone = group.map(spec.tone(snapshot));
+      group.classes.forEach((cls) => node.classList.toggle(cls, cls === nextTone));
+    }
+
+    if (!spec.text) {
+      return;
+    }
+
+    const nextText = spec.text(snapshot);
+    const nextValue = Number(spec.value(snapshot));
+    const previousValue = Number(node.dataset.liveValue);
+    node.dataset.liveValue = Number.isFinite(nextValue) ? String(nextValue) : "NaN";
+    if (node.textContent !== nextText) {
+      node.textContent = nextText;
+      flashPnlTick(
+        node,
+        Number.isFinite(nextValue) && Number.isFinite(previousValue) ? nextValue - previousValue : 0
+      );
+    }
+  });
+}
+
+// pnl-tick: directional background flash on value change; the class is
+// removed on animationend (delegated listener in bindEvents).
+function flashPnlTick(node, delta) {
+  if (!delta || prefersReducedMotion()) {
+    return;
+  }
+
+  node.classList.remove("tick-up", "tick-down");
+  // Force reflow so re-adding the class restarts the animation.
+  void node.offsetWidth;
+  node.classList.add(delta > 0 ? "tick-up" : "tick-down");
 }
 
 function collectTrackedSymbols() {
