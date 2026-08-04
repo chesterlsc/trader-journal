@@ -159,3 +159,14 @@ follows in both themes). Result: 0 failures at 4.5:1 body / 3:1 large.
 app.js + all 6 src files OK; curl 127.0.0.1:8000 serves the new markers
 (adminPanelsMount, copy-btn ×2, reflections cap copy) and 0 admin panel ids;
 served styles.css contains .is-pending and 0 legacy alias references.
+
+## Verification session — 2026-08-05
+
+Full browser verification on `php -S 127.0.0.1:8000` (local preview mode, no DB), desktop 1440/1280 + mobile 375, both themes.
+
+**Bugs found and fixed (commit 53d4172):**
+- `getClosedTrades` was called at three sites (`calculateAnalytics`, monthly review, edge table) but never defined — a runtime `ReferenceError` aborted the first `renderAll()` on every page load, leaving static-HTML defaults on the dashboard and suppressing the empty state. Defined once next to `calculateAnalytics` with a `state.trades` default so all three call sites resolve.
+- `METRIC_DELTA_SPECS` was declared after the top-level `init()` call, so the first render hit it in the temporal dead zone. Hoisted above `init()` with a comment explaining the constraint.
+- Both were invisible to `node --check` (parse-clean) and to the console-message tool (load-time errors predate attach); caught with a temporary `window.__errs` error trap injected into the head during verification, removed afterward.
+
+**Verified working end to end:** empty state + CTA; trade save → metrics/delta chips/hairlines/risk strips; all 7 canvas charts painted in both themes (pixel-sampled); theme toggle + FOUC guard; hash router incl. back/forward; journal sort (aria-sort both directions); calendar day → filtered journal click-through; close-at-market guard path (no live price locally → friendly error); form-shake + validation on invalid submit; bulk import preview honesty ("—" flags, open rows), import, and batch undo (confirm-gated); score formula popover; donation copy buttons; landing hero + terminal tape + auth modal (mobile + desktop); zero mojibake / `blur(` / hover-lift / gradient regressions; static undefined-reference sweep over all seven JS files clean.

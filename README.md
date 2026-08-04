@@ -1,15 +1,19 @@
 # Trader Journal
 
-Trading journal web app with:
+Professional trading journal web app ("Institutional Terminal" design, dark + light themes) with:
 
-- Performance, drawdown, psychology, and consistency analytics
-- Login, registration, password reset, and per-user cloud save
+- Performance, drawdown, psychology, session, and R-multiple analytics with vs-previous-period deltas
+- Calendar P&L with day click-through to the filtered journal; sortable journal table; hash-routed views
+- Live prices with targeted DOM ticks; close-at-market on open trades; daily/weekly loss-budget strips
+- Login, registration, password reset, and per-user cloud save (CSRF-protected, rate-limited)
 - Local autosave plus PostgreSQL sync
-- Bulk import from Vantage, Binance, and Google Sheets CSV/TSV
+- Bulk import from Vantage, Binance, and Google Sheets CSV/TSV — missing values flagged, open rows supported, one-click undo per import batch
+
+See `MVP.md` for the full scope and roadmap, and `docs/renovation/` for the design blueprint and build log.
 
 ## Stack
 
-- Frontend: `index.html`, `styles.css`, `app.js`
+- Frontend: `index.html`, `styles.css`, `app.js` + `src/` modules (vanilla, no build step)
 - Backend: `trade_handler.php`
 - Storage: PostgreSQL
 
@@ -36,7 +40,7 @@ App behavior:
 - `APP_DEBUG=true` to expose detailed backend errors and reset URLs in development only
 - `ADMIN_USERNAMES=your_username,another_admin` for explicit admin access
 - `ADMIN_USERNAME=your_username` as a single-admin alternative
-- If no admin env var is set, the first registered user becomes the bootstrap admin
+- `ALLOW_BOOTSTRAP_ADMIN=1` to let the first registered user become admin when no admin env var is set (off by default; enable only for the first deploy, then set `ADMIN_USERNAMES` and remove it)
 - `PUBLIC_RECENT_TRADES_USERNAME=your_username` or `PUBLIC_RECENT_TRADES_USER_ID=123` to power the landing-page public trade feed
 
 Password reset email:
@@ -81,10 +85,18 @@ The handler also creates missing tables on first request.
 ## Run Locally
 
 ```bash
-php -S localhost:8000
+php -S 127.0.0.1:8000
 ```
 
-Then open `http://localhost:8000`.
+Then open `http://127.0.0.1:8000`. Plain-HTTP localhost skips auth and runs on local storage only (no DB needed) — the local preview mode. On any other origin, append `?preview=1` once to opt into preview mode for that tab session; server endpoints always require a real session regardless.
+
+## Security model
+
+- Every session POST requires an `X-CSRF-Token` header (token issued by the `session`/`login`/`register` responses)
+- Session cookies are `SameSite=Lax` + `httponly` (+ `secure` on HTTPS); session id rotates on login
+- Login/register/forgot-password/reset are rate limited (6 failures per 10 minutes → HTTP 429), backed by the `login_info` table
+- `update_prices` requires auth; `public_recent_trades` returns only symbol/date/direction/status/result, capped at 20 rows
+- `.dockerignore` keeps `db/`, `scripts/`, `docs/`, and legacy `data/` out of the deployed image
 
 ## Railway Deploy
 
