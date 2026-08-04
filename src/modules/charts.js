@@ -4,21 +4,59 @@ import { formatCurrency, formatCompactCurrency, formatChartDateLabel } from "../
 const ELLIPSIS = "\u2026";
 
 export function createChartsModule({ ui, state }) {
+  // Palette is read from CSS custom properties so canvas follows the theme.
+  // Cached per render pass; invalidated (and charts repainted) on 'themechange'.
+  let palette = null;
+
+  function getPalette() {
+    if (palette) {
+      return palette;
+    }
+    const styles = getComputedStyle(document.documentElement);
+    const read = (name) => styles.getPropertyValue(name).trim();
+    const fontSize = Number(read("--chart-font-size")) || 11;
+    const fontFamily = read("--chart-font-family") || '"JetBrains Mono", ui-monospace, monospace';
+    palette = {
+      grid: read("--chart-grid"),
+      axis: read("--chart-axis"),
+      line: read("--chart-line"),
+      fill: read("--chart-fill"),
+      pos: read("--chart-pos"),
+      neg: read("--chart-neg"),
+      negSoft: read("--pnl-neg-soft"),
+      radar: read("--chart-radar"),
+      radarFill: read("--info-soft"),
+      text: read("--text"),
+      textSoft: read("--text-soft"),
+      surface: read("--surface-1"),
+      lineStrong: read("--line-strong"),
+      fontSize,
+      font: (weight, size) => `${weight} ${size || fontSize}px ${fontFamily}`
+    };
+    return palette;
+  }
+
+  window.addEventListener("themechange", () => {
+    palette = null;
+    renderCharts(state.analytics);
+  });
+
   function renderCharts(analytics) {
     if (!analytics) {
       return;
     }
 
+    const colors = getPalette();
     drawLineChart(ui.equityChart, analytics.equity, {
-      lineColor: "#39d3ff",
-      fillColor: "rgba(57, 211, 255, 0.15)",
+      lineColor: colors.line,
+      fillColor: colors.fill,
       labels: analytics.equityDates,
       emptyLabel: "No equity data yet"
     });
 
     drawLineChart(ui.drawdownChart, analytics.drawdowns, {
-      lineColor: "#ff5a7e",
-      fillColor: "rgba(255, 90, 126, 0.16)",
+      lineColor: colors.neg,
+      fillColor: colors.negSoft,
       labels: analytics.drawdownDates,
       emptyLabel: "No drawdown data yet"
     });
@@ -77,9 +115,10 @@ export function createChartsModule({ ui, state }) {
     ctx.fillStyle = options.fillColor;
     ctx.fill();
 
+    const colors = getPalette();
     const last = data[data.length - 1];
-    ctx.fillStyle = "#d3e6ff";
-    ctx.font = "600 12px JetBrains Mono, Consolas, monospace";
+    ctx.fillStyle = colors.text;
+    ctx.font = colors.font(600, 12);
     ctx.fillText(`Last: ${formatCurrency(last)}`, padX, padTop - 10);
 
     ctx.fillStyle = options.lineColor;
@@ -88,7 +127,7 @@ export function createChartsModule({ ui, state }) {
       ctx.beginPath();
       ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = "rgba(8, 12, 24, 0.92)";
+      ctx.strokeStyle = colors.surface;
       ctx.lineWidth = 1.5;
       ctx.stroke();
     });
@@ -101,9 +140,10 @@ export function createChartsModule({ ui, state }) {
       return;
     }
 
+    const colors = getPalette();
     const indices = Array.from(new Set([0, Math.floor((points.length - 1) / 2), points.length - 1]));
-    ctx.fillStyle = "rgba(182, 198, 228, 0.76)";
-    ctx.font = "500 10px JetBrains Mono, Consolas, monospace";
+    ctx.fillStyle = colors.axis;
+    ctx.font = colors.font(500, 10);
     ctx.textBaseline = "top";
 
     indices.forEach((index, labelIndex) => {
@@ -181,10 +221,11 @@ export function createChartsModule({ ui, state }) {
     const padTop = 16;
     const padBottom = 26;
     const chartHeight = height - padTop - padBottom;
+    const colors = getPalette();
     const rowGap = chartHeight / entries.length;
     const barHeight = Math.min(24, rowGap * 0.56);
-    const labelColor = "#dbe8ff";
-    ctx.strokeStyle = "rgba(132, 156, 214, 0.1)";
+    const labelColor = colors.text;
+    ctx.strokeStyle = colors.grid;
     ctx.lineWidth = 1;
 
     entries.forEach((_, index) => {
@@ -195,7 +236,7 @@ export function createChartsModule({ ui, state }) {
       ctx.stroke();
     });
 
-    ctx.font = width < 460 ? '500 11px "JetBrains Mono", "Consolas", monospace' : '500 12px "JetBrains Mono", "Consolas", monospace';
+    ctx.font = colors.font(500, width < 460 ? 11 : 12);
     ctx.textBaseline = "middle";
 
     if (metric === "count") {
@@ -203,7 +244,7 @@ export function createChartsModule({ ui, state }) {
       const zeroX = padLeft;
       const usableWidth = width - padLeft - padRight;
 
-      ctx.strokeStyle = "rgba(87, 161, 255, 0.24)";
+      ctx.strokeStyle = colors.lineStrong;
       ctx.beginPath();
       ctx.moveTo(zeroX, padTop - 2);
       ctx.lineTo(zeroX, height - padBottom + 2);
@@ -217,8 +258,8 @@ export function createChartsModule({ ui, state }) {
         ctx.textAlign = "right";
         drawPerformanceCanvasLabel(ctx, entry.label, labelX, centerY, width);
 
-        fillRoundedRect(ctx, zeroX, centerY - barHeight / 2, length, barHeight, 8, "rgba(87, 161, 255, 0.86)");
-        ctx.fillStyle = "#eaf2ff";
+        fillRoundedRect(ctx, zeroX, centerY - barHeight / 2, length, barHeight, 8, colors.line);
+        ctx.fillStyle = colors.text;
         ctx.textAlign = "left";
         ctx.fillText(String(entry.count), Math.min(zeroX + length + 8, width - padRight - 14), centerY);
       });
@@ -237,7 +278,7 @@ export function createChartsModule({ ui, state }) {
     const zeroX = padLeft + (width - padLeft - padRight) / 2;
     const barWidth = (width - padLeft - padRight) / 2 - 8;
 
-    ctx.strokeStyle = "rgba(132, 156, 214, 0.24)";
+    ctx.strokeStyle = colors.lineStrong;
     ctx.beginPath();
     ctx.moveTo(zeroX, padTop - 2);
     ctx.lineTo(zeroX, height - padBottom + 2);
@@ -249,7 +290,7 @@ export function createChartsModule({ ui, state }) {
       const amount = entry.pnl;
       const length = (Math.abs(amount) / maxAbs) * barWidth;
       const barX = amount >= 0 ? zeroX : zeroX - length;
-      const barColor = amount >= 0 ? "rgba(42, 212, 143, 0.88)" : "rgba(255, 90, 126, 0.9)";
+      const barColor = amount >= 0 ? colors.pos : colors.neg;
 
       ctx.fillStyle = labelColor;
       ctx.textAlign = "right";
@@ -268,10 +309,11 @@ export function createChartsModule({ ui, state }) {
   }
 
   function drawStrategyAxisLabels(ctx, options) {
+    const colors = getPalette();
     const { left, right, bottom, values, formatter } = options;
     const steps = Math.max(values.length - 1, 1);
-    ctx.fillStyle = "rgba(168, 188, 226, 0.72)";
-    ctx.font = '500 10px "JetBrains Mono", "Consolas", monospace';
+    ctx.fillStyle = colors.axis;
+    ctx.font = colors.font(500, 10);
     ctx.textBaseline = "top";
 
     values.forEach((value, index) => {
@@ -376,13 +418,14 @@ export function createChartsModule({ ui, state }) {
       return;
     }
 
+    const colors = getPalette();
     const centerX = width / 2;
     const centerY = height / 2 - 6;
     const radius = Math.min(width * 0.24, height * 0.3);
     const steps = 5;
     const angleStep = (Math.PI * 2) / metrics.length;
 
-    ctx.strokeStyle = "rgba(132, 156, 214, 0.2)";
+    ctx.strokeStyle = colors.grid;
     ctx.lineWidth = 1;
     for (let ring = 1; ring <= steps; ring += 1) {
       const ringRadius = (radius / steps) * ring;
@@ -406,7 +449,7 @@ export function createChartsModule({ ui, state }) {
       const outerX = centerX + Math.cos(angle) * radius;
       const outerY = centerY + Math.sin(angle) * radius;
 
-      ctx.strokeStyle = "rgba(132, 156, 214, 0.26)";
+      ctx.strokeStyle = colors.grid;
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
       ctx.lineTo(outerX, outerY);
@@ -414,8 +457,8 @@ export function createChartsModule({ ui, state }) {
 
       const labelX = centerX + Math.cos(angle) * (radius + 24);
       const labelY = centerY + Math.sin(angle) * (radius + 22);
-      ctx.fillStyle = "#cbdcff";
-      ctx.font = "500 12px Sora, Manrope, sans-serif";
+      ctx.fillStyle = colors.textSoft;
+      ctx.font = colors.font(500, 12);
       ctx.textAlign = labelX >= centerX + 6 ? "left" : labelX <= centerX - 6 ? "right" : "center";
       ctx.textBaseline = labelY >= centerY ? "top" : "bottom";
       ctx.fillText(metric.label, labelX, labelY);
@@ -434,8 +477,8 @@ export function createChartsModule({ ui, state }) {
       }
     });
     ctx.closePath();
-    ctx.fillStyle = "rgba(89, 113, 255, 0.32)";
-    ctx.strokeStyle = "#8b8cff";
+    ctx.fillStyle = colors.radarFill;
+    ctx.strokeStyle = colors.radar;
     ctx.lineWidth = 2;
     ctx.fill();
     ctx.stroke();
@@ -446,7 +489,7 @@ export function createChartsModule({ ui, state }) {
       const x = centerX + Math.cos(angle) * pointRadius;
       const y = centerY + Math.sin(angle) * pointRadius;
       ctx.beginPath();
-      ctx.fillStyle = "#c5ccff";
+      ctx.fillStyle = colors.radar;
       ctx.arc(x, y, 3.5, 0, Math.PI * 2);
       ctx.fill();
     });
@@ -478,7 +521,8 @@ export function createChartsModule({ ui, state }) {
   }
 
   function drawGrid(ctx, width, height, padX, padTop = padX, padBottom = padTop) {
-    ctx.strokeStyle = "rgba(130, 157, 210, 0.2)";
+    const colors = getPalette();
+    ctx.strokeStyle = colors.grid;
     ctx.lineWidth = 1;
     const chartHeight = height - padTop - padBottom;
 
@@ -490,7 +534,7 @@ export function createChartsModule({ ui, state }) {
       ctx.stroke();
     }
 
-    ctx.strokeStyle = "rgba(130, 157, 210, 0.35)";
+    ctx.strokeStyle = colors.lineStrong;
     ctx.beginPath();
     ctx.moveTo(padX, height - padBottom);
     ctx.lineTo(width - padX, height - padBottom);
@@ -498,8 +542,9 @@ export function createChartsModule({ ui, state }) {
   }
 
   function drawCenteredText(ctx, width, height, text) {
-    ctx.fillStyle = "#9db0d8";
-    ctx.font = "500 12px JetBrains Mono, Consolas, monospace";
+    const colors = getPalette();
+    ctx.fillStyle = colors.textSoft;
+    ctx.font = colors.font(500, 12);
     const textWidth = ctx.measureText(text).width;
     ctx.fillText(text, (width - textWidth) / 2, height / 2);
   }

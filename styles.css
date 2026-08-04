@@ -1,23 +1,211 @@
+/* ==========================================================================
+   Trader Journal — Institutional Terminal tokens (FINAL)
+   Dark is default (:root, no attribute). Light via <html data-theme="light">.
+   Charts read tokens via getComputedStyle(document.documentElement);
+   re-read on 'themechange'. Legacy aliases keep existing rules resolving
+   during the literal sweep — delete the alias block when the sweep is done.
+   CONTRACT NOTES:
+   - Accent (--accent) means interaction only: active nav, focus, primary CTA,
+     chart line. Nothing else.
+   - --pnl-* means money only. Never decoration.
+   - Text-entry surfaces always use --surface-inset (opaque). Never
+     translucency behind text being typed.
+   ========================================================================== */
+
 :root {
-  --bg: #05080f;
-  --bg-alt: #0a101f;
-  --panel: rgba(11, 18, 33, 0.9);
-  --panel-strong: #101a31;
-  --panel-muted: #151f39;
-  --line: rgba(132, 156, 214, 0.2);
-  --line-strong: rgba(132, 156, 214, 0.35);
-  --text: #f2f6ff;
-  --text-soft: #9db0d8;
-  --green: #2ad48f;
-  --red: #ff5a7e;
-  --blue: #57a1ff;
-  --cyan: #39d3ff;
-  --amber: #ffbe4f;
-  --violet: #8b8cff;
-  --shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
-  --radius-xl: 18px;
-  --radius-lg: 14px;
-  --radius-md: 10px;
+  color-scheme: dark;
+
+  /* Surfaces — neutral graphite ramp, no blue cast */
+  --surface-0: #08090b;        /* page */
+  --surface-1: #0e1014;        /* panels, cards */
+  --surface-2: #13161c;        /* nav, modal, raised */
+  --surface-3: #1a1e26;        /* hover / active fill */
+  --surface-inset: #0a0c0f;    /* inputs, table heads, wells — ALWAYS OPAQUE */
+
+  /* Hairlines */
+  --line: #21252e;
+  --line-strong: #2f3542;
+  --line-accent: rgba(91, 141, 239, 0.45);
+
+  /* Text */
+  --text: #e9ecf2;
+  --text-soft: #9aa2b4;
+  --text-faint: #6b7386;       /* labels only, never below 11px / weight 600 */
+  --text-inverse: #0b0d10;
+
+  /* Accent — one hue, interaction only */
+  --accent: #5b8def;
+  --accent-strong: #7da5f5;
+  --accent-muted: rgba(91, 141, 239, 0.12);
+
+  /* P&L — money colors, used for nothing else */
+  --pnl-pos: #2fd18c;
+  --pnl-pos-soft: rgba(47, 209, 140, 0.12);
+  --pnl-pos-line: rgba(47, 209, 140, 0.38);
+  --pnl-neg: #f5537a;
+  --pnl-neg-soft: rgba(245, 83, 122, 0.12);
+  --pnl-neg-line: rgba(245, 83, 122, 0.38);
+  --pnl-flat: var(--text-soft);
+
+  /* P&L intensity — JS sets clamp(|dayPnl| / dailyLossLimit, 0, 1) on the
+     balance card; drives signed-hairline width/opacity, never a glow */
+  --pl-intensity: 0;
+
+  /* Status */
+  --warn: #f0b34e;
+  --warn-soft: rgba(240, 179, 78, 0.12);
+  --info: #4cc3e8;
+  --info-soft: rgba(76, 195, 232, 0.12);
+
+  /* Charts — canvas reads these; nothing hard-coded in charts.js */
+  --chart-grid: #1b1f27;
+  --chart-axis: #6b7386;
+  --chart-line: var(--accent);
+  --chart-fill: rgba(91, 141, 239, 0.10);
+  --chart-pos: var(--pnl-pos);
+  --chart-neg: var(--pnl-neg);
+  --chart-radar: var(--info);
+  --chart-font-size: 11;       /* px, unitless for canvas */
+  --chart-font-family: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Type */
+  --font-ui: "Sora", "Manrope", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  --fs-micro: 11px;            /* badges, kickers — the floor */
+  --fs-label: 12px;
+  --fs-data: 13px;             /* table numerals */
+  --fs-body: 13.5px;
+  --fs-md: 15px;
+  --fs-lg: 18px;
+  --fs-h2: 22px;
+  --fs-metric: 26px;
+  --fs-hero: clamp(2rem, 4.5vw, 3.25rem);
+
+  /* Spacing — 4px base */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px;
+  --space-4: 16px; --space-5: 20px; --space-6: 24px;
+  --space-8: 32px; --space-10: 40px; --space-12: 48px;
+
+  /* Radius — terminal, not bubble */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-pill: 999px;
+
+  /* Elevation — hairline first, shadow second */
+  --shadow: 0 1px 0 rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.55);
+  --edge-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --focus-ring: 0 0 0 2px var(--surface-0), 0 0 0 4px var(--accent);
+
+  /* Z-index */
+  --z-nav: 100;
+  --z-dropdown: 200;
+  --z-overlay: 900;
+  --z-modal: 1000;
+  --z-toast: 1100;
+
+  /* Motion */
+  --dur-instant: 90ms;
+  --dur-fast: 140ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+  --dur-tick: 480ms;
+  --dur-draw: 640ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.15, 1);
+  --ease-snap: cubic-bezier(0.3, 1.1, 0.3, 1);
+
+  /* Legacy aliases — existing rules keep resolving during the sweep.
+     DELETE THIS BLOCK when the literal sweep completes. */
+  --bg: var(--surface-0);
+  --bg-alt: var(--surface-1);
+  --panel: var(--surface-1);
+  --panel-strong: var(--surface-2);
+  --panel-muted: var(--surface-3);
+  --green: var(--pnl-pos);
+  --red: var(--pnl-neg);
+  --blue: var(--accent);
+  --cyan: var(--info);
+  --amber: var(--warn);
+  --violet: var(--accent);     /* retired hue */
+  --text-main: var(--text);    /* fixes undefined var, styles.css:1359,1633 */
+}
+
+/* Light theme — only raw values override; every var()-referencing token
+   (aliases, --chart-pos, --chart-line…) follows automatically.
+   All values below are pre-checked: 4.5:1 body / 3:1 large numerals. */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --surface-0: #f4f5f7;
+  --surface-1: #ffffff;
+  --surface-2: #ffffff;
+  --surface-3: #edf0f4;
+  --surface-inset: #eceef2;
+
+  --line: #dcdfe6;
+  --line-strong: #c2c8d3;
+  --line-accent: rgba(38, 88, 199, 0.5);
+
+  --text: #171a21;
+  --text-soft: #4c5567;
+  --text-faint: #737b8c;
+  --text-inverse: #ffffff;
+
+  --accent: #2658c7;
+  --accent-strong: #1c47a8;
+  --accent-muted: rgba(38, 88, 199, 0.09);
+
+  --pnl-pos: #0c8a58;
+  --pnl-pos-soft: rgba(12, 138, 88, 0.10);
+  --pnl-pos-line: rgba(12, 138, 88, 0.35);
+  --pnl-neg: #cf2f58;
+  --pnl-neg-soft: rgba(207, 47, 88, 0.09);
+  --pnl-neg-line: rgba(207, 47, 88, 0.35);
+
+  --warn: #a86e0e;
+  --warn-soft: rgba(168, 110, 14, 0.10);
+  --info: #0d7395;
+  --info-soft: rgba(13, 115, 149, 0.10);
+
+  --chart-grid: #e4e7ed;
+  --chart-axis: #737b8c;
+  --chart-fill: rgba(38, 88, 199, 0.08);
+
+  --shadow: 0 1px 2px rgba(23, 26, 33, 0.06), 0 8px 24px rgba(23, 26, 33, 0.07);
+  --shadow-modal: 0 24px 64px rgba(23, 26, 33, 0.18);
+  --edge-highlight: none;
+  --focus-ring: 0 0 0 2px var(--surface-1), 0 0 0 4px var(--accent);
+}
+
+/* Theme crossfade (graft) — JS adds .theme-switching before flipping
+   data-theme, removes it ~300ms after. Skipped when reduced motion. */
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: background-color var(--dur-base) var(--ease-in-out),
+              color var(--dur-base) var(--ease-in-out),
+              border-color var(--dur-base) var(--ease-in-out) !important;
+}
+
+/* Reduced motion — belt AND suspenders (graft: zeroed duration tokens make
+   future motion compliant by construction; global block catches strays).
+   JS mirrors with matchMedia('(prefers-reduced-motion: reduce)') for
+   count-up / draw-in / ticks / crossfade. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-instant: 0.01ms; --dur-fast: 0.01ms; --dur-base: 0.01ms;
+    --dur-slow: 0.01ms; --dur-tick: 0.01ms; --dur-draw: 0.01ms;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 * {

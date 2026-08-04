@@ -51,6 +51,8 @@ const DEFAULT_SETTINGS = {
 const SERVER_AUTOSAVE_DEBOUNCE_MS = 900;
 const LIVE_PRICE_REFRESH_MS = 2000;
 const LOCAL_PREVIEW_STORAGE_KEY = "axiom_local_preview";
+const THEME_STORAGE_KEY = "axiom_journal_theme_v1";
+const THEME_CROSSFADE_MS = 300;
 
 // CSRF token issued by the server session action; sent on every POST.
 let csrfToken = "";
@@ -145,6 +147,7 @@ const ui = {
   cancelResetBtn: document.getElementById("cancelResetBtn"),
   desktopLogoutBtn: document.getElementById("desktopLogoutBtn"),
   mobileLogoutBtn: document.getElementById("mobileLogoutBtn"),
+  themeToggles: Array.from(document.querySelectorAll("[data-theme-toggle]")),
   metricNodes: Array.from(document.querySelectorAll("[data-metric]")),
   riskForm: document.getElementById("riskForm"),
   riskFormMessage: document.getElementById("riskFormMessage"),
@@ -327,6 +330,7 @@ function init() {
     state.auth.checked = true;
     state.auth.mobileAuthVisible = false;
   }
+  applyTheme(getStoredTheme());
   collapseAdminPanels();
   loadState();
   applyInitialDates();
@@ -364,6 +368,48 @@ function init() {
   checkAuthSession();
 }
 
+function getStoredTheme() {
+  try {
+    return localStorage.getItem(THEME_STORAGE_KEY) === "light" ? "light" : "dark";
+  } catch (error) {
+    return "dark";
+  }
+}
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === "light") {
+    root.setAttribute("data-theme", "light");
+  } else {
+    root.removeAttribute("data-theme");
+  }
+  ui.themeToggles.forEach((button) => {
+    const next = theme === "light" ? "dark" : "light";
+    button.textContent = next === "light" ? "Light" : "Dark";
+    button.setAttribute("aria-label", `Switch to ${next} theme`);
+  });
+  window.dispatchEvent(new CustomEvent("themechange", { detail: { theme } }));
+}
+
+function toggleTheme() {
+  const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, next);
+  } catch (error) {
+    // Private mode: theme still flips for this session.
+  }
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reducedMotion) {
+    applyTheme(next);
+    return;
+  }
+  document.documentElement.classList.add("theme-switching");
+  applyTheme(next);
+  window.setTimeout(() => {
+    document.documentElement.classList.remove("theme-switching");
+  }, THEME_CROSSFADE_MS);
+}
+
 function collapseAdminPanels() {
   if (ui.loginLogsPanel) {
     ui.loginLogsPanel.open = false;
@@ -388,6 +434,9 @@ function bindEvents() {
   if (ui.mobileLogoutBtn) {
     ui.mobileLogoutBtn.addEventListener("click", handleLogout);
   }
+  ui.themeToggles.forEach((button) => {
+    button.addEventListener("click", toggleTheme);
+  });
 
   if (ui.authPassword) {
     ui.authPassword.addEventListener("keydown", (event) => {
