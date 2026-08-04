@@ -343,6 +343,27 @@ const {
 
 const { renderCharts } = createChartsModule({ ui, state, prefersReducedMotion });
 
+// Declared before init() so first-render code can reach it (module-level
+// consts below init() are in the temporal dead zone during the first render).
+const METRIC_DELTA_SPECS = {
+  accountBalance: { read: (a) => a.totalPnl, format: formatCurrency },
+  totalTrades: { read: (a) => a.totalTrades, format: (v) => String(Math.round(v)), neutral: true },
+  winRate: { read: (a) => a.winRate, format: (v) => `${v.toFixed(1)}%` },
+  avgRR: { read: (a) => a.avgRR, format: (v) => v.toFixed(2) },
+  profitFactor: {
+    read: (a) => a.profitFactor,
+    format: (v) => v.toFixed(2),
+    skip: (current, previous) => current.profitFactor >= 999 || previous.profitFactor >= 999
+  },
+  currentDrawdown: { read: (a) => a.currentDrawdown, format: formatCurrency, invert: true },
+  maxDrawdown: { read: (a) => a.maxDrawdown, format: formatCurrency, invert: true },
+  bestDay: { read: (a) => a.bestDay.pnl, format: formatCurrency },
+  worstDay: { read: (a) => a.worstDay.pnl, format: formatCurrency },
+  expectancy: { read: (a) => a.expectancy, format: formatCurrency },
+  winningStreak: { read: (a) => a.maxWinStreak, format: (v) => String(Math.round(v)) },
+  losingStreak: { read: (a) => a.maxLossStreak, format: (v) => String(Math.round(v)), invert: true }
+};
+
 init();
 
 function init() {
@@ -3543,6 +3564,10 @@ function handleProgressTradeDetailsToggle(event) {
   }
 }
 
+function getClosedTrades(trades = state.trades) {
+  return trades.filter((trade) => trade.status !== "open");
+}
+
 function calculateAnalytics(trades, settings, reflections) {
   const ordered = getClosedTrades(trades).sort(sortTradesAsc);
   const equity = [settings.startingBalance];
@@ -4003,25 +4028,6 @@ function setCountUpValue(node, text, tween) {
 // previous one. With a full date filter set in the journal, the previous
 // period is the same-length window immediately before it; otherwise the
 // comparison is current calendar month vs previous calendar month.
-const METRIC_DELTA_SPECS = {
-  accountBalance: { read: (a) => a.totalPnl, format: formatCurrency },
-  totalTrades: { read: (a) => a.totalTrades, format: (v) => String(Math.round(v)), neutral: true },
-  winRate: { read: (a) => a.winRate, format: (v) => `${v.toFixed(1)}%` },
-  avgRR: { read: (a) => a.avgRR, format: (v) => v.toFixed(2) },
-  profitFactor: {
-    read: (a) => a.profitFactor,
-    format: (v) => v.toFixed(2),
-    skip: (current, previous) => current.profitFactor >= 999 || previous.profitFactor >= 999
-  },
-  currentDrawdown: { read: (a) => a.currentDrawdown, format: formatCurrency, invert: true },
-  maxDrawdown: { read: (a) => a.maxDrawdown, format: formatCurrency, invert: true },
-  bestDay: { read: (a) => a.bestDay.pnl, format: formatCurrency },
-  worstDay: { read: (a) => a.worstDay.pnl, format: formatCurrency },
-  expectancy: { read: (a) => a.expectancy, format: formatCurrency },
-  winningStreak: { read: (a) => a.maxWinStreak, format: (v) => String(Math.round(v)) },
-  losingStreak: { read: (a) => a.maxLossStreak, format: (v) => String(Math.round(v)), invert: true }
-};
-
 function shiftDateString(dateString, days) {
   const parsed = new Date(`${dateString}T00:00:00`);
   parsed.setDate(parsed.getDate() + days);
