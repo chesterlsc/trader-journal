@@ -57,3 +57,17 @@
 **Why.** Blueprint §7 Phase 4 / ship-now #2 core: the two views users judge the product by move fully onto the Institutional Terminal system.
 
 **Verification.** `node --check` clean on app.js; styles.css braces balanced (556/556); curl on the running dev server serves the new markup/CSS/JS markers (`dashboardEmptyState`, `metric-card-balance`, `aria-current`, underline/left-rail shadows, `metric-delta`, dead-zone media query, `∞`); grep confirms zero gradients/ambient/font literals left in swept components (remaining literals are Phase 5 surfaces: landing, auth, trade-entry sections, calendar, reflections, footer). trade_handler.php untouched.
+
+## Phase 5 — Visual sweep: remaining views + calendar + forms + landing
+
+**What.**
+- Landing: `body::before` graph-paper replaced with the §4 24px dot grid (edge-masked, GPU-cheap); monochrome hero — new mono-uppercase preheadline with the 6px `--pnl-pos` live-pulse dot (the product's only infinite animation; frozen static under reduced motion), hero h2/CTAs tokenized so accent appears exactly once above the fold; trust row + footer + donation `code` chips on tokens; OG meta tags added; cache-busters bumped to `?v=20260805-phase5`.
+- Public trades board → terminal tape (recentTradesView.js): rows are now symbol | Long/Short tag | Win/Loss/Flat/Open badge | date, consuming the Phase-1 whitelisted feed shape (`result` field now normalized); the price-cell grid that rendered dashes since Phase 1 is gone; "Verified Vantage Trades" pill deleted, replaced by an honest "Live Feed · Delayed" tag; open rows carry the live-pulse dot.
+- Auth modal: §4 treatment (flat 0.65 overlay — no blur, light-theme override, `--surface-2` panel, `--shadow-modal`, scale 0.98→1 enter on tokens, `--z-overlay`/`--z-modal`), focus trap on Tab, Escape close (pre-existing) + return-focus-to-trigger; modal sits over the still-pulsing board.
+- Trade entry: Long/Short segmented control (progressive enhancement — buttons drive the hidden native `#direction` select, so read/edit/reset paths are untouched); form-shake (240ms, offending field only) + `.is-invalid` border flash (the reduced-motion fallback); `readTradeForm` errors now name the offending field; trade sections are opaque `--surface-inset` wells with token kickers; status toggle, screenshot preview, tag-set chips tokenized.
+- Calendar: hairline grid (1px gaps on `--line`), traded days are real `<button data-date>`s that set journal dateFrom/dateTo and switch views; 4-step `--day-intensity` `color-mix` ramp with static soft-tint fallback lines; today ring via inset accent shadow; ≤760px agenda list of traded days only (+ empty-month note); summary cards on the panel recipe with mono metric values.
+- Cleanup: deleted now-orphaned hero live-field specs/tone groups in app.js (heroCurrentPrice/heroPips/heroCurrentTone/heroRowTone), unused tape deps, and all remaining rgba/gradient/font literals — zero legacy-alias consumers remain in styles.css (Phase 7 can delete the alias block).
+
+**Why.** Blueprint §7 Phase 5 / §4 treatments for forms, modals, calendar, landing; grafts 2, 3, 7, 8, 13, 14.
+
+**Verification.** `node --check` clean on app.js and recentTradesView.js; styles.css braces balanced (549/549); zero rgba/gradient literals outside the token block, mask, and the §4-specified overlay colors; zero `var(--green/--red/--blue/--cyan/--amber/--text-main)` consumers left; curl on the dev server serves `direction-toggle`, `live-pulse-dot`, `og:title`, `--day-intensity`, `formShake`, `recent-trades-live-tag`. trade_handler.php untouched.

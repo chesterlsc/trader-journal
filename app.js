@@ -66,6 +66,8 @@ function prefersReducedMotion() {
 
 // CSRF token issued by the server session action; sent on every POST.
 let csrfToken = "";
+// Element that opened the landing auth modal; focus returns to it on close.
+let authModalTrigger = null;
 const PRESET_SETUP_TYPES = new Set(["Breakout", "Liquidity Grab", "Trend Continuation", "Reversal", "Scalp", "Custom"]);
 const PRODUCT_BRAND_TEXT = "Trader Journal";
 const PRODUCT_BRAND_MARKUP =
@@ -237,6 +239,7 @@ const ui = {
     screenshotPreview: document.getElementById("screenshotPreview"),
     tradeNotes: document.getElementById("tradeNotes")
   },
+  directionButtons: Array.from(document.querySelectorAll(".direction-btn")),
 
   tradesBody: document.getElementById("tradesBody"),
   journalMessage: document.getElementById("journalMessage"),
@@ -312,13 +315,7 @@ const recentTradesView = createRecentTradesView({
   setAuthIntent,
   syncLandingExpandedLayout,
   isMobileViewport,
-  getClosedTradeResolution,
-  getClosedTradeToneClass,
-  getOpenTradeLiveSnapshot,
-  getLiveToneClass,
-  formatProgressTradePrice,
   formatCompactTradeDate,
-  formatSignedPips,
   sortRecentTradeRowsDesc
 });
 const {
@@ -492,6 +489,31 @@ function bindEvents() {
       closeLandingAuthModal();
     }
   });
+  // Focus trap (§4 modals): while the landing auth modal is open, Tab cycles
+  // inside the panel; Escape (above) closes and returns focus to the trigger.
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Tab" || !ui.authPanel || !document.body.classList.contains("modal-open")) {
+      return;
+    }
+
+    const focusables = Array.from(
+      ui.authPanel.querySelectorAll("button, [href], input, select, textarea")
+    ).filter((node) => !node.hidden && !node.disabled && node.offsetParent !== null);
+    if (!focusables.length) {
+      return;
+    }
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || !ui.authPanel.contains(active))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (active === last || !ui.authPanel.contains(active))) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
   window.addEventListener("scroll", handleLandingPreviewAutoExpand, { passive: true });
   if (ui.heroRegisterBtn) {
     ui.heroRegisterBtn.addEventListener("click", () => {
@@ -525,6 +547,17 @@ function bindEvents() {
   ui.riskForm.addEventListener("submit", handleRiskSubmit);
   ui.tradeForm.addEventListener("submit", handleTradeSubmit);
   ui.tradeResetBtn.addEventListener("click", () => resetTradeForm(false));
+  // Segmented Long/Short control drives the hidden native select, so every
+  // existing read/write of ui.tradeFields.direction keeps working.
+  ui.directionButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      if (ui.tradeFields.direction) {
+        ui.tradeFields.direction.value = button.dataset.direction || "Buy";
+      }
+      syncDirectionToggle();
+    });
+  });
+  syncDirectionToggle();
   ui.tradeFields.setupType.addEventListener("change", syncSetupTypeCustomField);
   ui.tradeFields.tradeInProgress.addEventListener("change", syncTradeProgressState);
   ui.tradeFields.screenshot.addEventListener("change", handleScreenshotUpload);
@@ -589,12 +622,18 @@ function bindEvents() {
   ui.reflectionForm.addEventListener("submit", handleReflectionSubmit);
   ui.reviewMonth.addEventListener("change", renderMonthlyReview);
   ui.dashboardCalendarMonth.addEventListener("change", renderCalendarView);
+  if (ui.calendarGrid) {
+    ui.calendarGrid.addEventListener("click", handleCalendarDayClick);
+  }
   ui.saveReplayBtn.addEventListener("click", saveReplayNotes);
 
   // Clear pnl-tick classes once the flash finishes so the next change replays.
   document.addEventListener("animationend", (event) => {
     if (event.animationName === "tickUp" || event.animationName === "tickDown") {
       event.target.classList.remove("tick-up", "tick-down");
+    }
+    if (event.animationName === "formShake") {
+      event.target.classList.remove("form-shake");
     }
   });
 
@@ -758,6 +797,11 @@ function setAuthIntent(intent, options = {}) {
     return;
   }
 
+  // Remember the opener so closing the modal can return focus to it (§4).
+  if (!state.auth.mobileAuthVisible && document.activeElement instanceof HTMLElement) {
+    authModalTrigger = document.activeElement;
+  }
+
   state.auth.intent = intent;
   state.auth.mobileAuthVisible = true;
   setMessage(ui.authMessage, "", "");
@@ -775,9 +819,15 @@ function closeLandingAuthModal() {
     return;
   }
 
+  const wasVisible = state.auth.mobileAuthVisible;
   state.auth.mobileAuthVisible = false;
   updateAuthUi();
   setMessage(ui.authMessage, "", "");
+
+  if (wasVisible && authModalTrigger?.isConnected) {
+    authModalTrigger.focus();
+  }
+  authModalTrigger = null;
 }
 
 function toggleLandingTradePreview(forceExpanded) {
@@ -1453,6 +1503,7 @@ function handleTradeSubmit(event) {
   const payload = readTradeForm();
   if (!payload.ok) {
     setMessage(ui.tradeFormMessage, payload.error, "error");
+    flagInvalidField(payload.field);
     return;
   }
 
@@ -1475,6 +1526,35 @@ function handleTradeSubmit(event) {
   renderAll();
   resetTradeForm(true);
   setMessage(ui.tradeFormMessage, existingId ? "Trade updated." : "Trade saved.", "success");
+}
+
+// Form-shake (graft): 4px shake on the offending field only; under reduced
+// motion the shake is skipped and the .is-invalid border flash carries the
+// feedback. The shake class is cleared on animationend.
+function flagInvalidField(field) {
+  if (!field) {
+    return;
+  }
+
+  field.classList.remove("form-shake");
+  if (!prefersReducedMotion()) {
+    void field.offsetWidth;
+    field.classList.add("form-shake");
+  }
+  field.classList.add("is-invalid");
+  window.setTimeout(() => {
+    field.classList.remove("is-invalid");
+  }, 1200);
+  field.focus();
+}
+
+function syncDirectionToggle() {
+  const value = ui.tradeFields.direction?.value || "Buy";
+  ui.directionButtons.forEach((button) => {
+    const isActive = button.dataset.direction === value;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
 }
 
 function syncSetupTypeCustomField() {
@@ -1555,37 +1635,57 @@ function readTradeForm() {
   };
 
   if (!value.date || !value.asset) {
-    return { ok: false, error: "Date and Asset are required." };
+    return {
+      ok: false,
+      error: "Date and Asset are required.",
+      field: !value.date ? ui.tradeFields.tradeDate : ui.tradeFields.asset
+    };
   }
 
   if (!value.setupType) {
-    return { ok: false, error: "Enter a custom setup name or choose a preset setup." };
+    return {
+      ok: false,
+      error: "Enter a custom setup name or choose a preset setup.",
+      field: ui.tradeFields.customSetupType
+    };
   }
 
   const numericFields = [
-    ["Entry Price", value.entryPrice],
-    ["Stop Loss", value.stopLoss],
-    ["Take Profit", value.takeProfit],
-    ["Risk %", value.riskPercent],
-    ["Position Size", value.positionSize]
+    ["Entry Price", value.entryPrice, ui.tradeFields.entryPrice],
+    ["Stop Loss", value.stopLoss, ui.tradeFields.stopLoss],
+    ["Take Profit", value.takeProfit, ui.tradeFields.takeProfit],
+    ["Risk %", value.riskPercent, ui.tradeFields.riskPercent],
+    ["Position Size", value.positionSize, ui.tradeFields.positionSize]
   ];
 
-  for (const [label, amount] of numericFields) {
+  for (const [label, amount, field] of numericFields) {
     if (!Number.isFinite(amount) || amount <= 0) {
-      return { ok: false, error: `${label} must be greater than zero.` };
+      return { ok: false, error: `${label} must be greater than zero.`, field };
     }
   }
 
   if (value.status === "closed" && (!Number.isFinite(value.exitPrice) || value.exitPrice <= 0)) {
-    return { ok: false, error: "Exit Price must be greater than zero for closed trades." };
+    return {
+      ok: false,
+      error: "Exit Price must be greater than zero for closed trades.",
+      field: ui.tradeFields.exitPrice
+    };
   }
 
   if (value.direction === "Buy" && value.stopLoss >= value.entryPrice) {
-    return { ok: false, error: "For Buy trades, stop loss should be below entry price." };
+    return {
+      ok: false,
+      error: "For Buy trades, stop loss should be below entry price.",
+      field: ui.tradeFields.stopLoss
+    };
   }
 
   if (value.direction === "Sell" && value.stopLoss <= value.entryPrice) {
-    return { ok: false, error: "For Sell trades, stop loss should be above entry price." };
+    return {
+      ok: false,
+      error: "For Sell trades, stop loss should be above entry price.",
+      field: ui.tradeFields.stopLoss
+    };
   }
 
   return { ok: true, value };
@@ -2318,6 +2418,7 @@ function resetTradeForm(keepDate) {
   clearScreenshotPreview();
   ui.tradeSubmitBtn.textContent = "Save Trade";
   setTradeAdvancedDetailsOpen(false);
+  syncDirectionToggle();
   syncSetupTypeCustomField();
   syncTradeProgressState();
 
@@ -2441,6 +2542,7 @@ function loadTradeIntoForm(id) {
   ui.tradeFields.screenshotLabel.textContent = trade.screenshotName || "No screenshot selected";
   ui.tradeSubmitBtn.textContent = "Update Trade";
   setTradeAdvancedDetailsOpen(true);
+  syncDirectionToggle();
   syncSetupTypeCustomField();
   syncTradeProgressState();
 
@@ -3739,22 +3841,63 @@ function renderCalendarView() {
     cells.push('<div class="calendar-cell calendar-cell-empty" aria-hidden="true"></div>');
   }
 
+  // Intensity ramp (graft): each traded day gets --day-intensity 0-1 in four
+  // clamped steps, relative to the month's largest daily swing.
+  let monthMaxAbsPnl = 0;
+  dayStats.forEach((stats) => {
+    monthMaxAbsPnl = Math.max(monthMaxAbsPnl, Math.abs(stats.pnl));
+  });
+
+  const todayIso = toDateInputValue(new Date());
+
   for (let day = 1; day <= daysInMonth; day += 1) {
     const isoDate = `${monthValue}-${String(day).padStart(2, "0")}`;
     const stats = dayStats.get(isoDate) || { pnl: 0, trades: 0, topAsset: "-", winRate: 0 };
+    const hasTrades = stats.trades > 0;
     const pnlClass = stats.pnl > 0 ? "pnl-positive" : stats.pnl < 0 ? "pnl-negative" : "";
     const toneClass = stats.pnl > 0 ? "calendar-cell-positive" : stats.pnl < 0 ? "calendar-cell-negative" : "calendar-cell-flat";
-    cells.push(`
-      <article class="calendar-cell ${toneClass} ${pnlClass}">
-        <div class="calendar-cell-day">${day}</div>
-        <div class="calendar-cell-pnl ${pnlClass}">${stats.trades ? formatCurrency(stats.pnl) : "-"}</div>
-        <div class="calendar-cell-meta">${stats.trades} trade${stats.trades === 1 ? "" : "s"} | ${stats.winRate.toFixed(0)}% win</div>
-        <div class="calendar-cell-meta">${escapeHtml(stats.topAsset)}</div>
-      </article>
-    `);
+    const intensity = hasTrades && monthMaxAbsPnl > 0
+      ? Math.ceil(clamp(Math.abs(stats.pnl) / monthMaxAbsPnl, 0, 1) * 4) / 4
+      : 0;
+    const cellClasses = [
+      "calendar-cell",
+      toneClass,
+      pnlClass,
+      isoDate === todayIso ? "calendar-cell-today" : "",
+      hasTrades ? "calendar-cell-has-trades" : ""
+    ].filter(Boolean).join(" ");
+    const cellBody = `
+        <span class="calendar-cell-day">${day}</span>
+        <span class="calendar-cell-pnl ${pnlClass}">${hasTrades ? formatCurrency(stats.pnl) : "-"}</span>
+        <span class="calendar-cell-meta">${stats.trades} trade${stats.trades === 1 ? "" : "s"} | ${stats.winRate.toFixed(0)}% win</span>
+        <span class="calendar-cell-meta">${escapeHtml(stats.topAsset)}</span>
+    `;
+
+    // Traded days are real buttons (graft): click filters the journal to that day.
+    cells.push(hasTrades
+      ? `<button type="button" class="${cellClasses}" data-date="${isoDate}" style="--day-intensity:${intensity};" aria-label="Review trades from ${isoDate} in the journal">${cellBody}</button>`
+      : `<div class="${cellClasses}">${cellBody}</div>`);
+  }
+
+  if (!dayStats.size) {
+    // Visible only in the <=760px agenda layout, which hides untraded days.
+    cells.push('<div class="calendar-agenda-note">No trading days this month.</div>');
   }
 
   ui.calendarGrid.innerHTML = cells.join("");
+}
+
+function handleCalendarDayClick(event) {
+  const cell = event.target.closest("[data-date]");
+  if (!cell || !ui.calendarGrid.contains(cell)) {
+    return;
+  }
+
+  const date = cell.dataset.date;
+  ui.filters.dateFrom.value = date;
+  ui.filters.dateTo.value = date;
+  handleFilterChange();
+  switchView("journal");
 }
 
 function buildCalendarDayStats(monthValue) {
@@ -4371,28 +4514,6 @@ const LIVE_TONE_GROUPS = {
   pnl: {
     classes: ["pnl-positive", "pnl-negative"],
     map: (tone) => tone
-  },
-  heroCell: {
-    classes: ["recent-trade-price-cell-positive", "recent-trade-price-cell-negative"],
-    map: (tone) =>
-      tone === "pnl-positive"
-        ? "recent-trade-price-cell-positive"
-        : tone === "pnl-negative"
-          ? "recent-trade-price-cell-negative"
-          : ""
-  },
-  heroRow: {
-    classes: [
-      "recent-trade-row-public-positive",
-      "recent-trade-row-public-negative",
-      "recent-trade-row-public-neutral"
-    ],
-    map: (tone) =>
-      tone === "pnl-positive"
-        ? "recent-trade-row-public-positive"
-        : tone === "pnl-negative"
-          ? "recent-trade-row-public-negative"
-          : "recent-trade-row-public-neutral"
   }
 };
 
@@ -4421,24 +4542,6 @@ const LIVE_FIELD_SPECS = {
     tone: (s) => getLiveToneClass(s?.livePercent),
     toneGroup: "pnl"
   },
-  heroCurrentPrice: {
-    value: (s) => s?.currentPrice,
-    text: (s) => (Number.isFinite(s?.currentPrice) ? formatProgressTradePrice(s.currentPrice) : "—")
-  },
-  heroPips: {
-    value: (s) => s?.pips,
-    text: (s) => (Number.isFinite(s?.pips) ? formatSignedPips(s.pips) : "OPEN"),
-    tone: (s) => getLiveToneClass(s?.pips),
-    toneGroup: "pnl"
-  },
-  heroCurrentTone: {
-    tone: (s) => getLiveToneClass(s?.pips),
-    toneGroup: "heroCell"
-  },
-  heroRowTone: {
-    tone: (s) => getLiveToneClass(s?.pips),
-    toneGroup: "heroRow"
-  }
 };
 
 function patchLiveNodes() {

@@ -10,6 +10,12 @@
     />
     <meta name="theme-color" content="#08090b" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)" />
+    <meta property="og:title" content="Trader Journal | Trading Analytics" />
+    <meta
+      property="og:description"
+      content="Log trades fast, review screenshots, track psychology, and measure your edge with execution analytics and risk control."
+    />
+    <meta property="og:type" content="website" />
     <script>
       // FOUC guard: set the theme attribute before first paint. Dark is the
       // default (:root, no attribute); light is opt-in via data-theme.
@@ -31,7 +37,7 @@
       href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260805-phase4" />
+    <link rel="stylesheet" href="styles.css?v=20260805-phase5" />
   </head>
   <body>
     <section class="auth-shell" id="authShell" aria-label="Login">
@@ -48,6 +54,7 @@
 
       <div class="auth-hero">
         <section class="auth-hero-copy">
+          <p class="hero-preheadline"><span class="live-pulse-dot" aria-hidden="true"></span>Live desk &middot; execution journal</p>
           <h2>
             <span class="hero-line">Journal your trades,</span>
             <span class="hero-line">mistakes, and emotions</span>
@@ -624,13 +631,17 @@
                         required
                       />
                     </label>
-                    <label class="field-span-2">
-                      Direction
-                      <select id="direction" name="direction" required>
+                    <div class="field-span-2 direction-field">
+                      <span class="direction-field-label" id="directionLabel">Direction</span>
+                      <div class="direction-toggle" role="group" aria-labelledby="directionLabel">
+                        <button type="button" class="direction-btn is-active" data-direction="Buy" aria-pressed="true">Long</button>
+                        <button type="button" class="direction-btn" data-direction="Sell" aria-pressed="false">Short</button>
+                      </div>
+                      <select id="direction" name="direction" class="direction-native" required aria-hidden="true" tabindex="-1">
                         <option>Buy</option>
                         <option>Sell</option>
                       </select>
-                    </label>
+                    </div>
                   </div>
                 </section>
 
@@ -1130,6 +1141,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260805-phase4"></script>
+    <script type="module" src="app.js?v=20260805-phase5"></script>
   </body>
 </html>
