@@ -32,7 +32,8 @@ const STORAGE_KEYS = {
   settings: "axiom_journal_settings_v1",
   reflections: "axiom_journal_reflections_v1",
   replay: "axiom_journal_replay_v1",
-  lastSaved: "axiom_journal_last_saved_v1"
+  lastSaved: "axiom_journal_last_saved_v1",
+  adminPanels: "axiom_journal_admin_panels_v1"
 };
 
 const DEFAULT_SETTINGS = {
@@ -216,14 +217,17 @@ const ui = {
   bulkPreviewWrap: document.getElementById("bulkPreviewWrap"),
   bulkPreviewBody: document.getElementById("bulkPreviewBody"),
   tradeAdvancedDetails: document.getElementById("tradeAdvancedDetails"),
-  loginLogsPanel: document.getElementById("loginLogsPanel"),
-  refreshLoginLogsBtn: document.getElementById("refreshLoginLogsBtn"),
-  loginLogsMessage: document.getElementById("loginLogsMessage"),
-  loginLogsBody: document.getElementById("loginLogsBody"),
-  adminUsersPanel: document.getElementById("adminUsersPanel"),
-  refreshAdminUsersBtn: document.getElementById("refreshAdminUsersBtn"),
-  adminUsersMessage: document.getElementById("adminUsersMessage"),
-  adminUsersBody: document.getElementById("adminUsersBody"),
+  // Admin panel markup is JS-injected into this mount only when the session
+  // is an admin (ship-now #12); the handles below are bound at injection time.
+  adminPanelsMount: document.getElementById("adminPanelsMount"),
+  loginLogsPanel: null,
+  refreshLoginLogsBtn: null,
+  loginLogsMessage: null,
+  loginLogsBody: null,
+  adminUsersPanel: null,
+  refreshAdminUsersBtn: null,
+  adminUsersMessage: null,
+  adminUsersBody: null,
   tradeFields: {
     tradeId: document.getElementById("tradeId"),
     tradeDate: document.getElementById("tradeDate"),
@@ -356,7 +360,6 @@ function init() {
     state.auth.mobileAuthVisible = false;
   }
   applyTheme(getStoredTheme());
-  collapseAdminPanels();
   loadState();
   applyInitialDates();
   hydrateRiskForm();
@@ -442,17 +445,6 @@ function toggleTheme() {
   }, THEME_CROSSFADE_MS);
 }
 
-function collapseAdminPanels() {
-  if (ui.loginLogsPanel) {
-    ui.loginLogsPanel.open = false;
-    ui.loginLogsPanel.removeAttribute("open");
-  }
-  if (ui.adminUsersPanel) {
-    ui.adminUsersPanel.open = false;
-    ui.adminUsersPanel.removeAttribute("open");
-  }
-}
-
 function bindEvents() {
   if (ui.loginBtn) {
     ui.loginBtn.addEventListener("click", handleLogin);
@@ -535,7 +527,6 @@ function bindEvents() {
       first.focus();
     }
   });
-  window.addEventListener("scroll", handleLandingPreviewAutoExpand, { passive: true });
   if (ui.heroRegisterBtn) {
     ui.heroRegisterBtn.addEventListener("click", () => {
       setAuthIntent("register", { focus: true });
@@ -632,7 +623,18 @@ function bindEvents() {
     ui.bulkPreviewBtn.addEventListener("click", handleBulkPreview);
   }
   if (ui.bulkImportBtn) {
-    ui.bulkImportBtn.addEventListener("click", handleBulkImport);
+    // Pending flash before the synchronous parse so large pastes show
+    // feedback; the timeout lets the label paint first.
+    ui.bulkImportBtn.addEventListener("click", () => {
+      setPendingState(ui.bulkImportBtn, true, "Importing…");
+      window.setTimeout(() => {
+        try {
+          handleBulkImport();
+        } finally {
+          setPendingState(ui.bulkImportBtn, false);
+        }
+      }, 0);
+    });
   }
   if (ui.bulkClearBtn) {
     ui.bulkClearBtn.addEventListener("click", clearBulkImport);
@@ -640,16 +642,22 @@ function bindEvents() {
   if (ui.bulkUndoBtn) {
     ui.bulkUndoBtn.addEventListener("click", undoLastImport);
   }
-  if (ui.refreshLoginLogsBtn) {
-    ui.refreshLoginLogsBtn.addEventListener("click", () => {
-      loadLoginLogs({ silent: false });
+  // Admin refresh buttons are bound inside ensureAdminPanels() at injection.
+
+  document.querySelectorAll(".copy-btn").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const original = "Copy";
+      try {
+        await navigator.clipboard.writeText(button.dataset.copy || "");
+        button.textContent = "Copied";
+      } catch (error) {
+        button.textContent = "Copy failed";
+      }
+      window.setTimeout(() => {
+        button.textContent = original;
+      }, 1500);
     });
-  }
-  if (ui.refreshAdminUsersBtn) {
-    ui.refreshAdminUsersBtn.addEventListener("click", () => {
-      loadAdminUsers({ silent: false });
-    });
-  }
+  });
 
   Object.values(ui.filters).forEach((input) => {
     input.addEventListener("input", handleFilterChange);
@@ -666,8 +674,22 @@ function bindEvents() {
   ui.importJsonBtn.addEventListener("click", () => ui.jsonImportInput.click());
   ui.jsonImportInput.addEventListener("change", importBackupJson);
 
-  ui.savePhpBtn.addEventListener("click", saveToPhpStorage);
-  ui.loadPhpBtn.addEventListener("click", loadFromPhpStorage);
+  ui.savePhpBtn.addEventListener("click", async () => {
+    setPendingState(ui.savePhpBtn, true, "Saving…");
+    try {
+      await saveToPhpStorage();
+    } finally {
+      setPendingState(ui.savePhpBtn, false);
+    }
+  });
+  ui.loadPhpBtn.addEventListener("click", async () => {
+    setPendingState(ui.loadPhpBtn, true, "Loading…");
+    try {
+      await loadFromPhpStorage();
+    } finally {
+      setPendingState(ui.loadPhpBtn, false);
+    }
+  });
 
   ui.strategyDimensionButtons.forEach((button) => {
     button.addEventListener("click", () => {
@@ -942,10 +964,6 @@ function syncLandingExpandedLayout() {
   ui.authShell.classList.toggle("is-trades-expanded", Boolean(layoutExpanded));
 }
 
-function handleLandingPreviewAutoExpand() {
-  return;
-}
-
 function getResetTokenFromUrl() {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -1117,7 +1135,6 @@ async function checkAuthSession() {
   updateAuthUi();
 
   if (state.auth.isAuthenticated) {
-    collapseAdminPanels();
     const loaded = await loadFromPhpStorage({ silent: true, source: "session", preferLocalIfServerEmpty: true });
     await loadRecentTrades({ silent: true });
     if (loaded) {
@@ -1139,6 +1156,29 @@ async function checkAuthSession() {
   }
 }
 
+// Async buttons (§4): dim + inert + swapped label while the request runs.
+// Kills auth double-submit; label restored from dataset on completion.
+function setPendingState(button, pending, label = "Working…") {
+  if (!button) {
+    return;
+  }
+  if (pending) {
+    button.dataset.restoreLabel = button.textContent;
+    button.textContent = label;
+    button.classList.add("is-pending");
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+  } else {
+    if (button.dataset.restoreLabel !== undefined) {
+      button.textContent = button.dataset.restoreLabel;
+      delete button.dataset.restoreLabel;
+    }
+    button.classList.remove("is-pending");
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+  }
+}
+
 async function handleLogin() {
   setAuthIntent("login");
   const credentials = readAuthForm(false);
@@ -1147,7 +1187,12 @@ async function handleLogin() {
     return;
   }
 
-  await submitAuth("login", credentials.password, "Logged in.", credentials.identifier);
+  setPendingState(ui.loginBtn, true, "Signing in…");
+  try {
+    await submitAuth("login", credentials.password, "Logged in.", credentials.identifier);
+  } finally {
+    setPendingState(ui.loginBtn, false);
+  }
 }
 
 async function handleRegister() {
@@ -1158,7 +1203,12 @@ async function handleRegister() {
     return;
   }
 
-  await submitAuth("register", credentials.password, "Account created and logged in.", credentials.identifier);
+  setPendingState(ui.registerBtn, true, "Creating…");
+  try {
+    await submitAuth("register", credentials.password, "Account created and logged in.", credentials.identifier);
+  } finally {
+    setPendingState(ui.registerBtn, false);
+  }
 }
 
 async function handleLogout() {
@@ -1191,7 +1241,6 @@ async function handleLogout() {
   renderLoginLogs();
   renderAdminUsers();
   cancelServerAutosave();
-  collapseAdminPanels();
   updateAuthUi();
   setMessage(ui.authMessage, "", "");
   await loadPublicRecentTrades({ silent: true });
@@ -1246,7 +1295,6 @@ async function submitAuth(action, password, successMessage, identifier = "") {
     await loadLoginLogs({ silent: true });
     await loadAdminUsers({ silent: true });
     refreshLivePrices({ immediate: true });
-    collapseAdminPanels();
     switchView("dashboard");
   } catch (error) {
     const errorMessage = error.message || `${action} failed`;
@@ -1458,6 +1506,7 @@ async function handlePasswordReset() {
     return;
   }
 
+  setPendingState(ui.resetPasswordBtn, true, "Resetting…");
   try {
     const response = await fetch("trade_handler.php?action=reset_password", {
       method: "POST",
@@ -1477,6 +1526,8 @@ async function handlePasswordReset() {
     setMessage(ui.authMessage, body.message || "Password reset complete. You can log in now.", "success");
   } catch (error) {
     setMessage(ui.authMessage, error.message || "Password reset failed.", "error");
+  } finally {
+    setPendingState(ui.resetPasswordBtn, false);
   }
 }
 
@@ -3053,26 +3104,151 @@ async function loadLoginLogs(options = {}) {
   }
 }
 
-function renderLoginLogs() {
-  if (!ui.loginLogsBody || !ui.loginLogsPanel) {
-    return;
+// Admin panels ship out of the public HTML (ship-now #12): the markup lives
+// only in this template and is injected when the session is an admin.
+const ADMIN_PANELS_TEMPLATE = `
+  <details class="panel panel-collapsible" id="loginLogsPanel">
+    <summary class="panel-collapse-summary">
+      <div class="panel-head">
+        <h3>Admin Login Activity</h3>
+        <p>Latest login, register, and logout events across all accounts.</p>
+      </div>
+      <span class="panel-collapse-toggle"><span class="toggle-label-open">Minimize</span><span class="toggle-label-closed">Show more</span></span>
+    </summary>
+    <div class="panel-collapsible-body">
+      <div class="form-actions">
+        <button id="refreshLoginLogsBtn" class="btn" type="button">Refresh Login Logs</button>
+      </div>
+      <p id="loginLogsMessage" class="form-message" aria-live="polite"></p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Username</th>
+              <th>Event</th>
+              <th>Status</th>
+              <th>IP</th>
+              <th>Device</th>
+            </tr>
+          </thead>
+          <tbody id="loginLogsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+
+  <details class="panel panel-collapsible" id="adminUsersPanel">
+    <summary class="panel-collapse-summary">
+      <div class="panel-head">
+        <h3>Admin Users View</h3>
+        <p>Read-only view of registered users and account activity.</p>
+      </div>
+      <span class="panel-collapse-toggle"><span class="toggle-label-open">Minimize</span><span class="toggle-label-closed">Show more</span></span>
+    </summary>
+    <div class="panel-collapsible-body">
+      <div class="form-actions">
+        <button id="refreshAdminUsersBtn" class="btn" type="button">Refresh Users</button>
+      </div>
+      <p id="adminUsersMessage" class="form-message" aria-live="polite"></p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>User ID</th>
+              <th>Username</th>
+              <th>Password Status</th>
+              <th>Created</th>
+              <th>Last Event</th>
+              <th>Last Event Time</th>
+              <th>Device</th>
+              <th>Trades</th>
+              <th>Reflections</th>
+            </tr>
+          </thead>
+          <tbody id="adminUsersBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+`;
+
+function readAdminPanelsOpenState() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.adminPanels)) || {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function persistAdminPanelsOpenState() {
+  try {
+    localStorage.setItem(STORAGE_KEYS.adminPanels, JSON.stringify({
+      loginLogs: Boolean(ui.loginLogsPanel?.open),
+      users: Boolean(ui.adminUsersPanel?.open)
+    }));
+  } catch (error) {
+    /* private mode — open state just won't persist */
+  }
+}
+
+// Injects (or removes) the admin panels and rebinds the ui handles.
+// Returns true when the panels exist and may be rendered into.
+function ensureAdminPanels() {
+  if (!ui.adminPanelsMount) {
+    return false;
   }
 
   if (!state.auth.isAuthenticated || !state.auth.isAdmin) {
-    ui.loginLogsPanel.hidden = true;
-    ui.loginLogsPanel.open = false;
-    ui.loginLogsPanel.removeAttribute("open");
-    ui.loginLogsBody.innerHTML = `
-      <tr class="empty-row">
-        <td colspan="6">Admin login required.</td>
-      </tr>
-    `;
-    return;
+    if (ui.adminPanelsMount.childElementCount) {
+      ui.adminPanelsMount.innerHTML = "";
+      ui.loginLogsPanel = null;
+      ui.refreshLoginLogsBtn = null;
+      ui.loginLogsMessage = null;
+      ui.loginLogsBody = null;
+      ui.adminUsersPanel = null;
+      ui.refreshAdminUsersBtn = null;
+      ui.adminUsersMessage = null;
+      ui.adminUsersBody = null;
+    }
+    return false;
   }
 
-  ui.loginLogsPanel.hidden = false;
-  ui.loginLogsPanel.open = false;
-  ui.loginLogsPanel.removeAttribute("open");
+  if (ui.adminPanelsMount.childElementCount) {
+    return true;
+  }
+
+  ui.adminPanelsMount.innerHTML = ADMIN_PANELS_TEMPLATE;
+  ui.loginLogsPanel = document.getElementById("loginLogsPanel");
+  ui.refreshLoginLogsBtn = document.getElementById("refreshLoginLogsBtn");
+  ui.loginLogsMessage = document.getElementById("loginLogsMessage");
+  ui.loginLogsBody = document.getElementById("loginLogsBody");
+  ui.adminUsersPanel = document.getElementById("adminUsersPanel");
+  ui.refreshAdminUsersBtn = document.getElementById("refreshAdminUsersBtn");
+  ui.adminUsersMessage = document.getElementById("adminUsersMessage");
+  ui.adminUsersBody = document.getElementById("adminUsersBody");
+
+  // Persist <details> open state across refreshes (ship-now #11).
+  const openState = readAdminPanelsOpenState();
+  ui.loginLogsPanel.open = Boolean(openState.loginLogs);
+  ui.adminUsersPanel.open = Boolean(openState.users);
+  ui.loginLogsPanel.addEventListener("toggle", persistAdminPanelsOpenState);
+  ui.adminUsersPanel.addEventListener("toggle", persistAdminPanelsOpenState);
+
+  ui.refreshLoginLogsBtn.addEventListener("click", () => {
+    loadLoginLogs({ silent: false });
+  });
+  ui.refreshAdminUsersBtn.addEventListener("click", () => {
+    loadAdminUsers({ silent: false });
+  });
+
+  return true;
+}
+
+function renderLoginLogs() {
+  if (!ensureAdminPanels()) {
+    return;
+  }
 
   if (!state.loginLogs.length) {
     ui.loginLogsBody.innerHTML = `
@@ -3170,25 +3346,9 @@ async function loadAdminUsers(options = {}) {
 }
 
 function renderAdminUsers() {
-  if (!ui.adminUsersPanel || !ui.adminUsersBody) {
+  if (!ensureAdminPanels()) {
     return;
   }
-
-  if (!state.auth.isAuthenticated || !state.auth.isAdmin) {
-    ui.adminUsersPanel.hidden = true;
-    ui.adminUsersPanel.open = false;
-    ui.adminUsersPanel.removeAttribute("open");
-    ui.adminUsersBody.innerHTML = `
-      <tr class="empty-row">
-        <td colspan="9">Admin login required.</td>
-      </tr>
-    `;
-    return;
-  }
-
-  ui.adminUsersPanel.hidden = false;
-  ui.adminUsersPanel.open = false;
-  ui.adminUsersPanel.removeAttribute("open");
 
   if (!state.adminUsers.length) {
     ui.adminUsersBody.innerHTML = `

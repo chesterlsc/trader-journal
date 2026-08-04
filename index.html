@@ -37,7 +37,7 @@
       href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260805-phase6" />
+    <link rel="stylesheet" href="styles.css?v=20260805-phase7" />
   </head>
   <body>
     <section class="auth-shell" id="authShell" aria-label="Login">
@@ -541,78 +541,9 @@
             <p id="riskFormMessage" class="form-message" aria-live="polite"></p>
           </section>
 
-          <details class="panel panel-collapsible" id="loginLogsPanel" hidden>
-            <summary class="panel-collapse-summary">
-              <div class="panel-head">
-                <h3>Admin Login Activity</h3>
-                <p>Latest login, register, and logout events across all accounts.</p>
-              </div>
-              <span class="panel-collapse-toggle"><span class="toggle-label-open">Minimize</span><span class="toggle-label-closed">Show more</span></span>
-            </summary>
-            <div class="panel-collapsible-body">
-              <div class="form-actions">
-                <button id="refreshLoginLogsBtn" class="btn" type="button">Refresh Login Logs</button>
-              </div>
-              <p id="loginLogsMessage" class="form-message" aria-live="polite"></p>
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Username</th>
-                      <th>Event</th>
-                      <th>Status</th>
-                      <th>IP</th>
-                      <th>Device</th>
-                    </tr>
-                  </thead>
-                  <tbody id="loginLogsBody">
-                    <tr class="empty-row">
-                      <td colspan="6">Admin login required.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </details>
-
-          <details class="panel panel-collapsible" id="adminUsersPanel" hidden>
-            <summary class="panel-collapse-summary">
-              <div class="panel-head">
-                <h3>Admin Users View</h3>
-                <p>Read-only view of registered users and account activity.</p>
-              </div>
-              <span class="panel-collapse-toggle"><span class="toggle-label-open">Minimize</span><span class="toggle-label-closed">Show more</span></span>
-            </summary>
-            <div class="panel-collapsible-body">
-              <div class="form-actions">
-                <button id="refreshAdminUsersBtn" class="btn" type="button">Refresh Users</button>
-              </div>
-              <p id="adminUsersMessage" class="form-message" aria-live="polite"></p>
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>User ID</th>
-                      <th>Username</th>
-                      <th>Password Status</th>
-                      <th>Created</th>
-                      <th>Last Event</th>
-                      <th>Last Event Time</th>
-                      <th>Device</th>
-                      <th>Trades</th>
-                      <th>Reflections</th>
-                    </tr>
-                  </thead>
-                  <tbody id="adminUsersBody">
-                    <tr class="empty-row">
-                      <td colspan="9">Admin login required.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </details>
+          <!-- Admin panels are injected here by app.js only when the session
+               is an admin (ship-now #12) — the markup never ships publicly. -->
+          <div id="adminPanelsMount"></div>
 
         </section>
 
@@ -1129,7 +1060,7 @@
             <article class="panel">
               <div class="panel-head">
                 <h3>Reflection History</h3>
-                <p>Recent daily reviews and behavior tags.</p>
+                <p>Latest 40 shown here; the journal keeps your most recent 180 reflections.</p>
               </div>
               <ul id="reflectionsList" class="reflection-list">
                 <li class="muted">No reflections yet.</li>
@@ -1227,16 +1158,18 @@
           <p class="footer-donation">
             BTC:
             <code>bc1q423n8fhh40mcetfuac5fdmx6jlq6lyx695dx8d</code>
+            <button class="mini-btn copy-btn" type="button" data-copy="bc1q423n8fhh40mcetfuac5fdmx6jlq6lyx695dx8d">Copy</button>
           </p>
           <p class="footer-donation">
             USDT (ERC20):
             <code>0x4E70bdDF0047cd0b375C612836338BeeEFC65495</code>
+            <button class="mini-btn copy-btn" type="button" data-copy="0x4E70bdDF0047cd0b375C612836338BeeEFC65495">Copy</button>
           </p>
         </div>
       </details>
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260805-phase6"></script>
+    <script type="module" src="app.js?v=20260805-phase7"></script>
   </body>
 </html>

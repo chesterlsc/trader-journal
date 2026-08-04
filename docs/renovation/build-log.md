@@ -111,3 +111,51 @@ the new markup (riskStrip, scoreInfoDialog, rMultipleChart, bulkUndoBtn,
 data-sort headers, balanceOverrideNote), CSS, and app.js markers are served.
 Mojibake grep ('â€', 'âˆ') across app.js/src/index.html: zero matches
 (Phase 4 fixed all sites). trade_handler.php untouched.
+
+## Phase 7 — Accessibility, polish, QA gate
+
+**What.** Ship-now #11/#12 remainder + the AA sign-off gate. Async buttons get
+real pending states via setPendingState (login "Signing in…", register
+"Creating…", reset "Resetting…", server save/load "Saving…/Loading…", bulk
+import "Importing…" with a paint-first setTimeout) — .is-pending dims + inerts
+and aria-busy is set. Donation addresses get mini-btn Copy buttons
+(navigator.clipboard, "Copied"/"Copy failed" feedback). Admin panels
+(login-activity + users) moved out of public HTML into an app.js template
+injected into #adminPanelsMount only when the session is admin; their
+<details> open state persists in localStorage (axiom_journal_admin_panels_v1)
+instead of snapping shut on every render — collapseAdminPanels deleted. Dead
+handleLandingPreviewAutoExpand + its scroll listener deleted. Reflections cap
+surfaced in the history panel copy ("Latest 40 shown; …most recent 180").
+summary:focus-visible added to the shared focus-ring rule. Legacy alias block
+(--bg/--panel/--green/--red/--blue/--cyan/--amber/--violet/--text-main…)
+deleted from :root — grep confirms zero consumers and zero unresolved var()
+references (only --day-intensity, which JS stamps inline by design).
+
+**Contrast pass (scratchpad node script, WCAG relative-luminance).** 54
+pairings checked across both themes (text/soft/faint on every surface, accent,
+inverse-on-accent, pnl pos/neg at 13px and 26px, chips on soft bgs, warn/info,
+accent-muted). Fixes: dark --text-faint #6b7386→#7d8598 (was 3.81–4.12 on
+surfaces, now 4.52–5.30); light --text-faint #737b8c→#646c7d; light --pnl-pos
+#0c8a58→#0c7b4e; light --pnl-neg #cf2f58→#cb2e56; light --warn
+#a86e0e→#96620e (soft/line rgba components updated to match; --chart-axis
+follows in both themes). Result: 0 failures at 4.5:1 body / 3:1 large.
+
+**AA sign-off checklist.**
+- [x] Every --text/--text-soft/--text-faint pairing ≥4.5:1 on every surface, both themes (script-verified)
+- [x] .is-pos/.is-neg P&L text ≥4.5:1 at 13px and ≥3:1 at 26px, both themes (script-verified)
+- [x] Delta chips / soft-bg text ≥4.5:1 over composited backgrounds, both themes (script-verified)
+- [x] :focus-visible ring on every interactive element (buttons, nav, inputs, summaries, sortable th, calendar cells, info-btn, direction toggle) — grep inventory
+- [x] Auth modal focus trap + Escape + return-focus (Phase 5 code re-verified) ; score dialog is a native <dialog>
+- [x] Pending states kill auth/save/import double-submit (disabled + pointer-events none + aria-busy)
+- [x] Reduced motion: zeroed duration tokens + global kill block + prefersReducedMotion() JS guard (Phases 2/3, re-verified present)
+- [x] No ::after UI copy remains (only decorative content:"" and aria-sort arrow glyphs)
+- [x] No mojibake ('â€', 'âˆ') anywhere — grep zero matches
+- [x] No blur() in styles.css; no translateY(- hover lifts — grep zero matches
+- [x] Legacy alias block deleted; zero alias consumers; zero unresolved var()
+- [x] Admin markup absent from the served public HTML (curl grep: 0 hits)
+- [ ] Manual browser pass (keyboard-only walk, 375/768/900-980/1280 in both themes) — requires a human + DB-backed login; all static proxies above pass
+
+**Verification.** php -l trade_handler.php OK (untouched); node --check on
+app.js + all 6 src files OK; curl 127.0.0.1:8000 serves the new markers
+(adminPanelsMount, copy-btn ×2, reflections cap copy) and 0 admin panel ids;
+served styles.css contains .is-pending and 0 legacy alias references.
