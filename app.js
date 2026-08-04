@@ -50,6 +50,10 @@ const DEFAULT_SETTINGS = {
 
 const SERVER_AUTOSAVE_DEBOUNCE_MS = 900;
 const LIVE_PRICE_REFRESH_MS = 2000;
+const LOCAL_PREVIEW_STORAGE_KEY = "axiom_local_preview";
+
+// CSRF token issued by the server session action; sent on every POST.
+let csrfToken = "";
 const PRESET_SETUP_TYPES = new Set(["Breakout", "Liquidity Grab", "Trend Continuation", "Reversal", "Scalp", "Custom"]);
 const PRODUCT_BRAND_TEXT = "Trader Journal";
 const PRODUCT_BRAND_MARKUP =
@@ -637,8 +641,25 @@ function syncMobileNavState() {
 }
 
 function isLocalPreviewMode() {
+  // Auth bypass is dev-only: plain-http localhost (how the app is previewed
+  // without a DB) or an explicit ?preview=1 opt-in persisted for the tab session.
   const { protocol, hostname } = window.location;
-  return protocol === "file:" || hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0" || hostname === "::1";
+  const isLocalHostname =
+    hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0" || hostname === "::1";
+  if (protocol === "file:" || (isLocalHostname && protocol === "http:")) {
+    return true;
+  }
+
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const requested = String(params.get("preview") || "").trim().toLowerCase();
+    if (requested === "1" || requested === "true" || requested === "yes") {
+      window.sessionStorage.setItem(LOCAL_PREVIEW_STORAGE_KEY, "1");
+    }
+    return window.sessionStorage.getItem(LOCAL_PREVIEW_STORAGE_KEY) === "1";
+  } catch (error) {
+    return false;
+  }
 }
 
 function isLocalLandingPreviewRequested() {
@@ -846,6 +867,10 @@ async function checkAuthSession() {
     });
     const body = await response.json();
 
+    if (body && body.csrfToken) {
+      csrfToken = String(body.csrfToken);
+    }
+
     if (checkVersion !== state.auth.sessionCheckVersion) {
       return;
     }
@@ -930,6 +955,7 @@ async function handleLogout() {
   try {
     const response = await fetch("trade_handler.php?action=logout", {
       method: "POST",
+      headers: { "X-CSRF-Token": csrfToken },
       credentials: "same-origin"
     });
     const body = await response.json();
@@ -973,6 +999,10 @@ async function submitAuth(action, password, successMessage, identifier = "") {
     const body = await response.json();
     if (!response.ok || !body.ok) {
       throw new Error(body.error || `${action} failed`);
+    }
+
+    if (body.csrfToken) {
+      csrfToken = String(body.csrfToken);
     }
 
     state.auth.checked = true;
@@ -2510,7 +2540,7 @@ async function saveToPhpStorage(options = {}) {
     state.serverSync.inFlight = true;
     const response = await fetch("trade_handler.php?action=save", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
       credentials: "same-origin",
       body: JSON.stringify(payload)
     });
@@ -4070,7 +4100,9 @@ async function refreshLivePrices(options = {}) {
     renderHeroRecentTrades();
     renderProgressTradeSummary();
     renderJournalTable();
-    persistLivePrices(updates);
+    if (state.auth.isAuthenticated) {
+      persistLivePrices(updates, csrfToken);
+    }
   } finally {
     state.marketData.inFlight = false;
   }

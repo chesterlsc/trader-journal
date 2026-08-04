@@ -1,6 +1,14 @@
 <?php
 declare(strict_types=1);
 
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'domain' => '',
+    'secure' => isHttpsRequest(),
+    'httponly' => true,
+    'samesite' => 'Lax',
+]);
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 
@@ -28,6 +36,13 @@ try {
     respond(500, ['ok' => false, 'error' => debugMessage('Database initialization failed. Check DATABASE_URL and table schema.', $error)]);
 }
 
+// CSRF: every POST needs a valid X-CSRF-Token, except pre-session actions,
+// which are protected by the DB-backed rate limit instead.
+$csrfExemptActions = ['login', 'register', 'forgot_password', 'reset_password'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !in_array($action, $csrfExemptActions, true)) {
+    requireCsrfToken();
+}
+
 try {
     if ($action === 'session') {
         $username = currentUsername();
@@ -37,12 +52,14 @@ try {
             'authenticated' => $username !== null,
             'username' => $username,
             'isAdmin' => $isAdmin,
+            'csrfToken' => issueCsrfToken(),
         ]);
     }
 
     if ($action === 'register') {
         requireMethod('POST');
         [$identifier, $password, $email] = readCredentials(true);
+        assertNotRateLimited($pdo, 'register');
         $username = resolveRegistrationUsername($pdo, $identifier, $email);
 
         $hash = password_hash($password, PASSWORD_DEFAULT);
@@ -74,23 +91,31 @@ try {
             }
 
             if (isUniqueViolation($error)) {
+                logLoginEvent($pdo, null, $username, 'register', false);
                 respond(409, ['ok' => false, 'error' => 'Account already exists for that username or email.']);
             }
 
             throw $error;
         }
 
+        session_regenerate_id(true);
         $_SESSION['username'] = $username;
         $_SESSION['user_id'] = $userId;
         logLoginEvent($pdo, $userId, $username, 'register', true);
 
-        respond(200, ['ok' => true, 'username' => $username, 'isAdmin' => isAdminUsername($pdo, $username)]);
+        respond(200, [
+            'ok' => true,
+            'username' => $username,
+            'isAdmin' => isAdminUsername($pdo, $username),
+            'csrfToken' => issueCsrfToken(),
+        ]);
     }
 
     if ($action === 'login') {
         requireMethod('POST');
         [$identifier, $password] = readCredentials(false);
         $username = $identifier;
+        assertNotRateLimited($pdo, 'login', $username);
 
         $user = findUserByIdentifier($pdo, $username);
         if ($user === null || !password_verify($password, $user['passwordHash'])) {
@@ -98,13 +123,19 @@ try {
             respond(401, ['ok' => false, 'error' => 'Invalid username or password.']);
         }
 
+        session_regenerate_id(true);
         $_SESSION['username'] = $user['username'];
         $_SESSION['user_id'] = $user['id'];
 
         ensureJournalDataRow($pdo, $user['id'], $defaults);
         logLoginEvent($pdo, $user['id'], $user['username'], 'login', true);
 
-        respond(200, ['ok' => true, 'username' => $user['username'], 'isAdmin' => isAdminUsername($pdo, $user['username'])]);
+        respond(200, [
+            'ok' => true,
+            'username' => $user['username'],
+            'isAdmin' => isAdminUsername($pdo, $user['username']),
+            'csrfToken' => issueCsrfToken(),
+        ]);
     }
 
     if ($action === 'forgot_password') {
@@ -115,13 +146,12 @@ try {
             respond(422, ['ok' => false, 'error' => 'Enter a valid email address.']);
         }
 
-        $resetUrl = ensurePasswordResetRequest($pdo, $email);
-        $message = 'If the email exists, a reset link has been sent.';
-        $payload = ['ok' => true, 'message' => $message];
-        if ($resetUrl !== null && shouldExposeResetUrl()) {
-            $payload['resetUrl'] = $resetUrl;
-        }
-        respond(200, $payload);
+        assertNotRateLimited($pdo, 'forgot', $email);
+        // Every request counts against the limit (success = false is the counter).
+        logLoginEvent($pdo, null, $email, 'forgot', false);
+
+        ensurePasswordResetRequest($pdo, $email);
+        respond(200, ['ok' => true, 'message' => 'If the email exists, a reset link has been sent.']);
     }
 
     if ($action === 'validate_reset_token') {
@@ -130,8 +160,10 @@ try {
             respond(422, ['ok' => false, 'error' => 'Reset token is required.']);
         }
 
+        assertNotRateLimited($pdo, 'reset');
         $request = findActivePasswordResetRequest($pdo, $token);
         if ($request === null) {
+            logLoginEvent($pdo, null, 'reset-token', 'reset', false);
             respond(422, ['ok' => false, 'error' => 'Reset link is invalid or expired.']);
         }
 
@@ -151,6 +183,7 @@ try {
             respond(422, ['ok' => false, 'error' => 'Password must be at least 8 characters.']);
         }
 
+        assertNotRateLimited($pdo, 'reset');
         resetPasswordWithToken($pdo, $token, $password);
         respond(200, ['ok' => true, 'message' => 'Password updated. You can log in now.']);
     }
@@ -201,6 +234,24 @@ try {
     if ($action === 'public_recent_trades') {
         $publicUserId = resolvePublicRecentTradesUserId($pdo);
         $trades = $publicUserId !== null ? listRecentTrades($pdo, $publicUserId) : [];
+        // Public feed: whitelisted fields only (no prices, sizes, or P&L), capped.
+        $trades = array_map(
+            static function (array $trade): array {
+                $result = '';
+                if ($trade['status'] === 'closed') {
+                    $result = $trade['profit_loss'] > 0 ? 'win' : ($trade['profit_loss'] < 0 ? 'loss' : 'flat');
+                }
+
+                return [
+                    'symbol' => $trade['symbol'],
+                    'date' => $trade['date'],
+                    'direction' => $trade['direction'],
+                    'status' => $trade['status'],
+                    'result' => $result,
+                ];
+            },
+            array_slice($trades, 0, 20)
+        );
         respond(200, ['ok' => true, 'trades' => $trades]);
     }
 
@@ -213,6 +264,7 @@ try {
 
     if ($action === 'update_prices') {
         requireMethod('POST');
+        requireAuth($pdo);
         $decoded = readJsonBody();
         $prices = isset($decoded['prices']) && is_array($decoded['prices']) ? $decoded['prices'] : [];
         $updated = upsertSymbolPrices($pdo, $prices);
@@ -753,6 +805,7 @@ function resetPasswordWithToken(PDO $pdo, string $token, string $password): void
 {
     $row = findActivePasswordResetRequest($pdo, $token);
     if ($row === null) {
+        logLoginEvent($pdo, null, 'reset-token', 'reset', false);
         respond(422, ['ok' => false, 'error' => 'Reset link is invalid or expired.']);
     }
 
@@ -964,10 +1017,66 @@ function postJsonRequest(string $url, array $payload, array $headers = []): int
     return 0;
 }
 
-function shouldExposeResetUrl(): bool
+function isHttpsRequest(): bool
 {
-    $debug = strtolower(trim((string) getenv('APP_DEBUG')));
-    return in_array($debug, ['1', 'true', 'yes'], true);
+    $https = $_SERVER['HTTPS'] ?? '';
+    if (is_string($https) && $https !== '' && strtolower($https) !== 'off') {
+        return true;
+    }
+
+    $forwardedProto = $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '';
+    return is_string($forwardedProto) && strtolower(trim(explode(',', $forwardedProto)[0])) === 'https';
+}
+
+function issueCsrfToken(): string
+{
+    $token = $_SESSION['csrf_token'] ?? '';
+    if (!is_string($token) || $token === '') {
+        $token = bin2hex(random_bytes(32));
+        $_SESSION['csrf_token'] = $token;
+    }
+
+    return $token;
+}
+
+function requireCsrfToken(): void
+{
+    $expected = $_SESSION['csrf_token'] ?? '';
+    $provided = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!is_string($expected) || $expected === ''
+        || !is_string($provided) || $provided === ''
+        || !hash_equals($expected, $provided)) {
+        respond(403, ['ok' => false, 'error' => 'Invalid or missing CSRF token. Reload the page and try again.']);
+    }
+}
+
+function assertNotRateLimited(PDO $pdo, string $eventType, string $username = ''): void
+{
+    // ponytail: reuses login_info as the rate-limit store; move to a dedicated
+    // counter table if login volume ever makes this COUNT(*) hot.
+    $params = [
+        ':event_type' => $eventType,
+        ':ip' => clientIpAddress(),
+    ];
+    $sql = <<<SQL
+        SELECT COUNT(*)
+        FROM login_info
+        WHERE event_type = :event_type
+          AND success = FALSE
+          AND created_at > NOW() - INTERVAL '10 minutes'
+          AND ip_address IS NOT DISTINCT FROM CAST(:ip AS inet)
+        SQL;
+
+    if ($username !== '') {
+        $sql .= ' AND username = :username';
+        $params[':username'] = substr(strtolower(trim($username)), 0, 32);
+    }
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    if ((int) $stmt->fetchColumn() >= 6) {
+        respond(429, ['ok' => false, 'error' => 'Too many attempts. Please wait 10 minutes and try again.']);
+    }
 }
 
 function isAdminUsername(PDO $pdo, string $username): bool
@@ -992,6 +1101,12 @@ function isAdminUsername(PDO $pdo, string $username): bool
         )));
 
         return in_array($candidate, $admins, true);
+    }
+
+    // Bootstrap fallback (first registered user is admin) is opt-in only.
+    $allowBootstrap = strtolower(trim((string) getenv('ALLOW_BOOTSTRAP_ADMIN')));
+    if (!in_array($allowBootstrap, ['1', 'true', 'yes'], true)) {
+        return false;
     }
 
     $bootstrapAdmin = findBootstrapAdminUsername($pdo);
@@ -2065,11 +2180,8 @@ function isUniqueViolation(Throwable $error): bool
 
 function debugMessage(string $baseMessage, Throwable $error): string
 {
-    $debug = strtolower(trim((string) getenv('APP_DEBUG')));
-    if ($debug === '1' || $debug === 'true' || $debug === 'yes') {
-        return $baseMessage . ' ' . $error->getMessage();
-    }
-
+    // Details go to the server log only — never into the response.
+    error_log(sprintf('%s %s: %s', $baseMessage, get_class($error), $error->getMessage()));
     return $baseMessage;
 }
 

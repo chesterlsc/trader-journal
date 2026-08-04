@@ -173,7 +173,7 @@ export function resolveLivePriceSource(symbol) {
   return null;
 }
 
-export async function persistLivePrices(priceMap) {
+export async function persistLivePrices(priceMap, csrfToken = "") {
   const prices = Object.entries(priceMap).map(([symbol, price]) => ({
     symbol,
     price
@@ -186,7 +186,7 @@ export async function persistLivePrices(priceMap) {
   try {
     await fetch("trade_handler.php?action=update_prices", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
       credentials: "same-origin",
       body: JSON.stringify({ prices })
     });

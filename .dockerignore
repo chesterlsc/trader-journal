@@ -1,7 +1,9 @@
 .git
 .gitignore
-data
-*.log
+.claude
 .DS_Store
-ssh-keygen -t ed25519 -C "your_email@example.com"
-ssh-keygen -t ed25519 -C "your_email@example.com".pub
+*.log
+db
+docs
+scripts
+data
