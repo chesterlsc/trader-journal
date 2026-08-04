@@ -155,9 +155,11 @@ export function createTradeDisplayHelpers({ state, calculateTradeMetrics }) {
       };
     }
 
+    // No TP/SL match: report the honest close reason instead of guessing a
+    // trailing stop from price tolerance.
     return {
       type: "ts",
-      label: "TS",
+      label: "Manual",
       className: "recent-trade-status recent-trade-status-trail"
     };
   }
@@ -220,23 +222,29 @@ export function createTradeDisplayHelpers({ state, calculateTradeMetrics }) {
       return null;
     }
 
-    const isSell = String(trade.direction || "").toLowerCase() === "sell";
-    const livePercent = round(
-      isSell
-        ? ((entryPrice - currentPrice) / entryPrice) * 100
-        : ((currentPrice - entryPrice) / entryPrice) * 100
-    );
     const priceMove = round(currentPrice - entryPrice);
     const metrics = calculateTradeMetrics({
       ...trade,
       exitPrice: currentPrice
     });
+    const dollarPnl = Number.isFinite(metrics.netPnl) ? metrics.netPnl : null;
+
+    // Live % is the leveraged P&L of the position (dollar P&L from
+    // positionSize) relative to the account balance — not the raw price move.
+    const balance = Number(state.analytics?.accountBalance) > 0
+      ? Number(state.analytics.accountBalance)
+      : Number(state.settings?.balanceOverride) > 0
+        ? Number(state.settings.balanceOverride)
+        : Number(state.settings?.startingBalance);
+    const livePercent = Number.isFinite(dollarPnl) && Number.isFinite(balance) && balance > 0
+      ? round((dollarPnl / balance) * 100)
+      : null;
 
     return {
       currentPrice,
       livePercent,
       priceMove,
-      dollarPnl: Number.isFinite(metrics.netPnl) ? metrics.netPnl : null,
+      dollarPnl,
       pips: Number.isFinite(metrics.pips) ? metrics.pips : null,
       toneClass: getLiveToneClass(livePercent)
     };

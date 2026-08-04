@@ -37,7 +37,7 @@
       href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260805-phase5" />
+    <link rel="stylesheet" href="styles.css?v=20260805-phase6" />
   </head>
   <body>
     <section class="auth-shell" id="authShell" aria-label="Login">
@@ -244,11 +244,31 @@
             <p>Track equity growth, drawdown pressure, and edge quality at a glance.</p>
           </header>
 
+          <section class="risk-strip" id="riskStrip" hidden aria-label="Risk budget">
+            <div class="risk-strip-item" data-risk-strip="day">
+              <span class="risk-strip-label">Daily loss budget</span>
+              <div class="risk-strip-track" aria-hidden="true"><span class="risk-strip-fill"></span></div>
+              <span class="risk-strip-value">$0.00 today / $0.00 limit</span>
+            </div>
+            <div class="risk-strip-item" data-risk-strip="week">
+              <span class="risk-strip-label">Weekly loss budget</span>
+              <div class="risk-strip-track" aria-hidden="true"><span class="risk-strip-fill"></span></div>
+              <span class="risk-strip-value">$0.00 this week / $0.00 limit</span>
+            </div>
+          </section>
+
           <section class="metric-grid" id="dashboardMetricGrid" aria-label="Performance metrics">
             <article class="metric-card metric-card-balance">
               <p class="metric-label">Account Balance (Custom)</p>
               <p class="metric-value" data-metric="accountBalance">$0.00</p>
               <span class="metric-delta" data-metric-delta="accountBalance" hidden></span>
+              <span
+                class="metric-note"
+                id="balanceOverrideNote"
+                title="This balance is set manually in Risk Controls and may differ from the computed equity curve."
+                hidden
+                >Manual override active</span
+              >
             </article>
             <article class="metric-card">
               <p class="metric-label">Total Trades</p>
@@ -369,9 +389,12 @@
               ></canvas>
             </article>
             <article class="panel panel-chart panel-trader-score">
-              <div class="panel-head">
-                <h3>Trader Score</h3>
-                <p>Composite read on win quality, recovery, and consistency.</p>
+              <div class="panel-head panel-head-inline">
+                <div>
+                  <h3>Trader Score</h3>
+                  <p>Composite read on win quality, recovery, and consistency.</p>
+                </div>
+                <button class="info-btn" type="button" data-score-info aria-label="How the scores are calculated">&#9432;</button>
               </div>
               <canvas id="traderScoreChart" width="900" height="320" data-height="300" aria-label="Trader score radar chart"></canvas>
               <div class="trader-score-foot">
@@ -382,12 +405,54 @@
                 <p id="traderScoreCaption" class="trader-score-caption">Add more trade data to build the score.</p>
               </div>
             </article>
+            <article class="panel panel-chart">
+              <div class="panel-head">
+                <h3>Psychology Report</h3>
+                <p>P&amp;L and win rate by psychology rating.</p>
+              </div>
+              <canvas
+                id="psychologyChart"
+                width="900"
+                height="280"
+                data-height="240"
+                aria-label="P&L and win rate by psychology rating chart"
+              ></canvas>
+            </article>
+            <article class="panel panel-chart">
+              <div class="panel-head">
+                <h3>Session Report</h3>
+                <p>P&amp;L by trading session.</p>
+              </div>
+              <canvas
+                id="sessionChart"
+                width="900"
+                height="280"
+                data-height="240"
+                aria-label="P&L by trading session chart"
+              ></canvas>
+            </article>
+            <article class="panel panel-chart">
+              <div class="panel-head">
+                <h3>R-Multiple Distribution</h3>
+                <p>How closed trades spread across R outcomes.</p>
+              </div>
+              <canvas
+                id="rMultipleChart"
+                width="900"
+                height="280"
+                data-height="240"
+                aria-label="R-multiple distribution histogram"
+              ></canvas>
+            </article>
           </section>
 
           <section class="panel">
-            <div class="panel-head">
-              <h3>Discipline Monitor</h3>
-              <p>Rule breaks and psychology pressure points</p>
+            <div class="panel-head panel-head-inline">
+              <div>
+                <h3>Discipline Monitor</h3>
+                <p>Rule breaks and psychology pressure points</p>
+              </div>
+              <button class="info-btn" type="button" data-score-info aria-label="How the scores are calculated">&#9432;</button>
             </div>
             <div class="score-stack">
               <div class="score-item">
@@ -861,6 +926,7 @@
               <button id="bulkPreviewBtn" class="btn" type="button">Preview</button>
               <button id="bulkImportBtn" class="btn primary" type="button">Import Trades</button>
               <button id="bulkClearBtn" class="btn" type="button">Clear</button>
+              <button id="bulkUndoBtn" class="btn" type="button" hidden>Undo Last Import</button>
             </div>
             <p id="bulkMessage" class="form-message" aria-live="polite"></p>
 
@@ -872,16 +938,17 @@
                     <th>Asset</th>
                     <th>Market</th>
                     <th>Direction</th>
-                    <th>Entry</th>
-                    <th>Stop</th>
-                    <th>Take</th>
-                    <th>Exit</th>
-                    <th>Size</th>
+                    <th class="num">Entry</th>
+                    <th class="num">Stop</th>
+                    <th class="num">Take</th>
+                    <th class="num">Exit</th>
+                    <th class="num">Size</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody id="bulkPreviewBody">
                   <tr class="empty-row">
-                    <td colspan="9">No preview rows.</td>
+                    <td colspan="10">No preview rows.</td>
                   </tr>
                 </tbody>
               </table>
@@ -984,18 +1051,18 @@
               <table>
                 <thead>
                   <tr>
-                    <th>Date</th>
-                    <th>Asset</th>
-                    <th>Market</th>
-                    <th>Dir</th>
-                    <th>Setup</th>
-                    <th>TF</th>
-                    <th>Result</th>
-                    <th class="num">Pips</th>
-                    <th class="num">Net P&amp;L</th>
-                    <th class="num">R-Multiple</th>
-                    <th>Psychology</th>
-                    <th>Execution</th>
+                    <th data-sort="date" tabindex="0">Date</th>
+                    <th data-sort="asset" tabindex="0">Asset</th>
+                    <th data-sort="market" tabindex="0">Market</th>
+                    <th data-sort="direction" tabindex="0">Dir</th>
+                    <th data-sort="setupType" tabindex="0">Setup</th>
+                    <th data-sort="timeframe" tabindex="0">TF</th>
+                    <th data-sort="result" tabindex="0">Result</th>
+                    <th class="num" data-sort="pips" tabindex="0">Pips</th>
+                    <th class="num" data-sort="netPnl" tabindex="0">Net P&amp;L</th>
+                    <th class="num" data-sort="rMultiple" tabindex="0">R-Multiple</th>
+                    <th data-sort="psychology" tabindex="0">Psychology</th>
+                    <th data-sort="executionQuality" tabindex="0">Execution</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -1118,6 +1185,35 @@
       </main>
     </div>
 
+    <dialog id="scoreInfoDialog" class="score-info-dialog" aria-labelledby="scoreInfoTitle">
+      <div class="score-info-head">
+        <h3 id="scoreInfoTitle">How the scores are calculated</h3>
+        <button class="btn" type="button" data-score-info-close>Close</button>
+      </div>
+      <dl class="score-info-list">
+        <dt>Discipline Score</dt>
+        <dd>
+          Starts at 100. Deductions: &minus;10 per risk-per-trade breach, &minus;8 per daily-loss breach,
+          &minus;10 per weekly-loss breach, &minus;5 per Emotional or Revenge trade, &minus;4 per C/F execution
+          grade, &minus;6 per &ldquo;No&rdquo; and &minus;3 per &ldquo;Partially&rdquo; rules reflection. +2 per
+          A+ execution or Perfect Execution trade. Clamped to 0&ndash;100.
+        </dd>
+        <dt>Daily Trading Score</dt>
+        <dd>
+          Scores your most recent trading day from a base of 50: +20 for a profitable day or &minus;10 for a
+          losing one, +15 for staying inside the daily loss limit or &minus;15 for breaching it, &minus;10 per
+          Emotional/Revenge trade, +5 per A/A+ execution, and +15 / +5 / &minus;10 for a Yes / Partially / No
+          rules reflection. Clamped to 0&ndash;100.
+        </dd>
+        <dt>Trader Score</dt>
+        <dd>
+          The average of six 0&ndash;100 readings: win rate, profit factor (3.0 scores 100), average
+          win/loss ratio (2.5 scores 100), recovery factor (4.0 scores 100), max drawdown as a share of
+          starting balance (12% scores 0, inverted), and consistency (share of profitable trading days).
+        </dd>
+      </dl>
+    </dialog>
+
     <section class="trust-row" aria-label="Trust highlights">
       <article class="trust-item">private by default</article>
       <article class="trust-item">export your journal anytime</article>
@@ -1141,6 +1237,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260805-phase5"></script>
+    <script type="module" src="app.js?v=20260805-phase6"></script>
   </body>
 </html>

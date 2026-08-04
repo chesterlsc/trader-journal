@@ -54,6 +54,9 @@ export function createChartsModule({ ui, state, prefersReducedMotion }) {
       analytics.drawdowns,
       analytics.strategyPerformance,
       analytics.traderScore?.metrics,
+      analytics.psychologyReport,
+      analytics.sessionReport,
+      analytics.rMultipleReport,
       state.dashboard.performanceDimension,
       state.dashboard.performanceMetric
     ]);
@@ -103,6 +106,24 @@ export function createChartsModule({ ui, state, prefersReducedMotion }) {
 
     renderStrategyPerformanceChart(analytics, progress);
     drawRadarChart(ui.traderScoreChart, analytics.traderScore, progress);
+
+    // §6 reports: same horizontal-bar pattern, pre-sorted arrays from
+    // calculateAnalytics drawn as-is.
+    drawStrategyPerformanceChart(ui.psychologyChart, analytics.psychologyReport || [], {
+      metric: "pnl",
+      emptyLabel: "No psychology data yet",
+      annotate: (entry) => `${Math.round(entry.winRate)}% win`
+    }, progress);
+
+    drawStrategyPerformanceChart(ui.sessionChart, analytics.sessionReport || [], {
+      metric: "pnl",
+      emptyLabel: "No session data yet"
+    }, progress);
+
+    drawStrategyPerformanceChart(ui.rMultipleChart, analytics.rMultipleReport || [], {
+      metric: "count",
+      emptyLabel: "No R-multiple data yet"
+    }, progress);
   }
 
   function drawLineChart(canvas, data, options, progress = 1) {
@@ -316,7 +337,10 @@ export function createChartsModule({ ui, state, prefersReducedMotion }) {
         ctx.textAlign = "right";
         drawPerformanceCanvasLabel(ctx, entry.label, labelX, centerY, width);
 
-        fillRoundedRect(ctx, zeroX, centerY - barHeight / 2, length, barHeight, 8, colors.line);
+        // Optional per-entry tone (R-multiple buckets): money colors on the
+        // loss/win side of the distribution, neutral otherwise.
+        const barColor = entry.tone === "neg" ? colors.neg : entry.tone === "pos" ? colors.pos : colors.line;
+        fillRoundedRect(ctx, zeroX, centerY - barHeight / 2, length, barHeight, 8, barColor);
         ctx.fillStyle = colors.text;
         ctx.textAlign = "left";
         ctx.fillText(String(entry.count), Math.min(zeroX + length + 8, width - padRight - 14), centerY);
@@ -355,6 +379,16 @@ export function createChartsModule({ ui, state, prefersReducedMotion }) {
       drawPerformanceCanvasLabel(ctx, entry.label, labelX, centerY, width);
 
       fillRoundedRect(ctx, barX, centerY - barHeight / 2, Math.max(length, 2), barHeight, 8, barColor);
+
+      // Optional per-row annotation (e.g. win rate), right-aligned at the
+      // chart edge in the soft text color.
+      if (typeof options.annotate === "function") {
+        ctx.fillStyle = colors.textSoft;
+        ctx.textAlign = "right";
+        ctx.font = colors.font(500, 10);
+        ctx.fillText(String(options.annotate(entry)), width - padRight - 2, centerY);
+        ctx.font = colors.font(500, width < 460 ? 11 : 12);
+      }
     });
 
     drawStrategyAxisLabels(ctx, {

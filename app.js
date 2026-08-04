@@ -123,6 +123,10 @@ const state = {
     performanceDimension: "setup",
     performanceMetric: "pnl"
   },
+  journalSort: {
+    key: "",
+    dir: 1
+  },
   analytics: null
 };
 
@@ -164,6 +168,10 @@ const ui = {
   metricDeltaNodes: Array.from(document.querySelectorAll("[data-metric-delta]")),
   metricGrid: document.getElementById("dashboardMetricGrid"),
   balanceCard: document.querySelector(".metric-card-balance"),
+  balanceOverrideNote: document.getElementById("balanceOverrideNote"),
+  riskStrip: document.getElementById("riskStrip"),
+  scoreInfoDialog: document.getElementById("scoreInfoDialog"),
+  scoreInfoButtons: Array.from(document.querySelectorAll("[data-score-info]")),
   dashboardEmptyState: document.getElementById("dashboardEmptyState"),
   dashboardEmptyCta: document.getElementById("dashboardEmptyCta"),
   riskForm: document.getElementById("riskForm"),
@@ -184,6 +192,9 @@ const ui = {
   edgeRows: document.getElementById("edgeRows"),
   equityChart: document.getElementById("equityChart"),
   drawdownChart: document.getElementById("drawdownChart"),
+  psychologyChart: document.getElementById("psychologyChart"),
+  sessionChart: document.getElementById("sessionChart"),
+  rMultipleChart: document.getElementById("rMultipleChart"),
   strategyPerformanceChart: document.getElementById("strategyPerformanceChart"),
   strategyDimensionButtons: Array.from(document.querySelectorAll("[data-performance-dimension]")),
   strategyMetricButtons: Array.from(document.querySelectorAll("[data-performance-metric]")),
@@ -200,6 +211,7 @@ const ui = {
   bulkPreviewBtn: document.getElementById("bulkPreviewBtn"),
   bulkImportBtn: document.getElementById("bulkImportBtn"),
   bulkClearBtn: document.getElementById("bulkClearBtn"),
+  bulkUndoBtn: document.getElementById("bulkUndoBtn"),
   bulkMessage: document.getElementById("bulkMessage"),
   bulkPreviewWrap: document.getElementById("bulkPreviewWrap"),
   bulkPreviewBody: document.getElementById("bulkPreviewBody"),
@@ -254,6 +266,7 @@ const ui = {
     search: document.getElementById("filterSearch")
   },
   clearFiltersBtn: document.getElementById("clearFiltersBtn"),
+  journalSortHeaders: Array.from(document.querySelectorAll("#journal th[data-sort]")),
   journalNewTradeBtn: document.getElementById("journalNewTradeBtn"),
   exportCsvBtn: document.getElementById("exportCsvBtn"),
   progressTradeSummary: document.getElementById("progressTradeSummary"),
@@ -361,6 +374,14 @@ function init() {
   renderAll();
   renderLastSaved();
   startLivePriceLoop();
+  // Hash router: restore the deep-linked view for preview sessions; the
+  // authenticated flow restores in checkAuthSession once the gate opens.
+  if (canAccessApp()) {
+    const initialView = getViewFromHash();
+    if (initialView && initialView !== "dashboard") {
+      switchView(initialView);
+    }
+  }
   if (state.auth.previewMode) {
     state.recentTrades = normalizeRecentTrades(state.trades);
     renderHeroRecentTrades();
@@ -544,6 +565,46 @@ function bindEvents() {
     });
   });
 
+  // Hash router: back/forward and hand-edited hashes route through switchView
+  // so is-active/aria-current stay in sync. An empty hash means dashboard.
+  window.addEventListener("hashchange", () => {
+    if (!canAccessApp()) {
+      return;
+    }
+    const id = getViewFromHash() || (window.location.hash ? "" : "dashboard");
+    if (id && !isViewActive(id)) {
+      switchView(id);
+    }
+  });
+
+  // Click-to-sort journal headers (Enter/Space for keyboard).
+  ui.journalSortHeaders.forEach((th) => {
+    th.addEventListener("click", () => handleJournalSort(th.dataset.sort));
+    th.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        handleJournalSort(th.dataset.sort);
+      }
+    });
+  });
+
+  // Score-formula info popover: native <dialog>, Escape closes for free.
+  ui.scoreInfoButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      ui.scoreInfoDialog?.showModal();
+    });
+  });
+  if (ui.scoreInfoDialog) {
+    ui.scoreInfoDialog.querySelector("[data-score-info-close]")?.addEventListener("click", () => {
+      ui.scoreInfoDialog.close();
+    });
+    ui.scoreInfoDialog.addEventListener("click", (event) => {
+      if (event.target === ui.scoreInfoDialog) {
+        ui.scoreInfoDialog.close();
+      }
+    });
+  }
+
   ui.riskForm.addEventListener("submit", handleRiskSubmit);
   ui.tradeForm.addEventListener("submit", handleTradeSubmit);
   ui.tradeResetBtn.addEventListener("click", () => resetTradeForm(false));
@@ -575,6 +636,9 @@ function bindEvents() {
   }
   if (ui.bulkClearBtn) {
     ui.bulkClearBtn.addEventListener("click", clearBulkImport);
+  }
+  if (ui.bulkUndoBtn) {
+    ui.bulkUndoBtn.addEventListener("click", undoLastImport);
   }
   if (ui.refreshLoginLogsBtn) {
     ui.refreshLoginLogsBtn.addEventListener("click", () => {
@@ -719,9 +783,29 @@ function switchView(id) {
     view.classList.toggle("is-active", view.id === id);
   });
 
+  // Hash router: keep location.hash in sync so refresh/back/forward restore
+  // the view. The first programmatic set uses replaceState so page load does
+  // not burn a history entry; later switches push normally.
+  if (window.location.hash !== `#${id}`) {
+    if (window.location.hash) {
+      window.location.hash = id;
+    } else {
+      try {
+        window.history.replaceState(null, "", `#${id}`);
+      } catch (error) {
+        window.location.hash = id;
+      }
+    }
+  }
+
   if (isMobileViewport()) {
     toggleMobileNav(false);
   }
+}
+
+function getViewFromHash() {
+  const id = window.location.hash.replace(/^#/, "");
+  return id && ui.views.some((view) => view.id === id) ? id : "";
 }
 
 function isMobileViewport() {
@@ -1042,7 +1126,7 @@ async function checkAuthSession() {
     await loadLoginLogs({ silent: true });
     await loadAdminUsers({ silent: true });
     refreshLivePrices({ immediate: true });
-    switchView("dashboard");
+    switchView(getViewFromHash() || "dashboard");
   } else {
     state.recentTrades = [];
     renderHeroRecentTrades();
@@ -1767,6 +1851,9 @@ function handleBulkImport() {
 
   let imported = 0;
   let duplicates = 0;
+  // Every imported row carries the same batch id so Undo Last Import can
+  // remove exactly this batch later.
+  const importBatchId = createId();
 
   parsed.trades.forEach((tradeInput) => {
     if (isLikelyDuplicateTrade(tradeInput)) {
@@ -1774,7 +1861,7 @@ function handleBulkImport() {
       return;
     }
 
-    state.trades.push(buildTradeRecord(tradeInput));
+    state.trades.push({ ...buildTradeRecord(tradeInput), importBatchId });
     imported += 1;
   });
 
@@ -1798,6 +1885,54 @@ function handleBulkImport() {
   setMessage(ui.tradeFormMessage, message, "success");
 }
 
+function getLastImportBatch() {
+  let latest = null;
+  state.trades.forEach((trade) => {
+    if (!trade.importBatchId) {
+      return;
+    }
+    if (!latest || String(trade.createdAt) > String(latest.createdAt)) {
+      latest = trade;
+    }
+  });
+
+  if (!latest) {
+    return null;
+  }
+
+  const count = state.trades.filter((trade) => trade.importBatchId === latest.importBatchId).length;
+  return { id: latest.importBatchId, count };
+}
+
+function syncBulkUndoButton() {
+  if (!ui.bulkUndoBtn) {
+    return;
+  }
+
+  const batch = getLastImportBatch();
+  ui.bulkUndoBtn.hidden = !batch;
+  if (batch) {
+    ui.bulkUndoBtn.textContent = `Undo Last Import (${batch.count})`;
+  }
+}
+
+function undoLastImport() {
+  const batch = getLastImportBatch();
+  if (!batch) {
+    return;
+  }
+
+  const confirmed = window.confirm(`Remove the ${batch.count} trade(s) added by the last import?`);
+  if (!confirmed) {
+    return;
+  }
+
+  state.trades = state.trades.filter((trade) => trade.importBatchId !== batch.id);
+  persistState();
+  renderAll();
+  setMessage(ui.bulkMessage, `Removed ${batch.count} imported trade(s).`, "success");
+}
+
 function clearBulkImport(keepMessage = false) {
   if (ui.bulkInput) {
     ui.bulkInput.value = "";
@@ -1818,11 +1953,18 @@ function renderBulkPreview(trades) {
     ui.bulkPreviewWrap.hidden = true;
     ui.bulkPreviewBody.innerHTML = `
       <tr class="empty-row">
-        <td colspan="9">No preview rows.</td>
+        <td colspan="10">No preview rows.</td>
       </tr>
     `;
     return;
   }
+
+  // Missing stop/TP/exit values are flagged with an em dash instead of being
+  // fabricated; rows without an exit import as open positions.
+  const priceCell = (label, value) =>
+    Number.isFinite(value) && value > 0
+      ? `<td data-label="${label}" class="num">${escapeHtml(String(value))}</td>`
+      : `<td data-label="${label}" class="num bulk-missing" title="Not provided in the pasted data">—</td>`;
 
   ui.bulkPreviewWrap.hidden = false;
   ui.bulkPreviewBody.innerHTML = trades
@@ -1833,11 +1975,12 @@ function renderBulkPreview(trades) {
         <td data-label="Asset">${escapeHtml(trade.asset)}</td>
         <td data-label="Market">${escapeHtml(trade.market)}</td>
         <td data-label="Direction">${escapeHtml(trade.direction)}</td>
-        <td data-label="Entry">${escapeHtml(String(trade.entryPrice))}</td>
-        <td data-label="Stop">${escapeHtml(String(trade.stopLoss))}</td>
-        <td data-label="Take">${escapeHtml(String(trade.takeProfit))}</td>
-        <td data-label="Exit">${escapeHtml(String(trade.exitPrice))}</td>
-        <td data-label="Size">${escapeHtml(String(trade.positionSize))}</td>
+        <td data-label="Entry" class="num">${escapeHtml(String(trade.entryPrice))}</td>
+        ${priceCell("Stop", trade.stopLoss)}
+        ${priceCell("Take", trade.takeProfit)}
+        ${priceCell("Exit", trade.exitPrice)}
+        <td data-label="Size" class="num">${escapeHtml(String(trade.positionSize))}</td>
+        <td data-label="Status">${trade.status === "open" ? '<span class="pill">Open</span>' : "Closed"}</td>
       </tr>
     `)
     .join("");
@@ -1921,33 +2064,15 @@ function mapBulkRowToTrade(row, source, rowNumber) {
     return { ok: false, error: `Row ${rowNumber}: invalid entry price.` };
   }
 
-  let stopLoss = parseImportNumber(getBulkValue(row, ["stop", "stop_loss", "sl", "stoploss"]));
-  let takeProfit = parseImportNumber(getBulkValue(row, ["take", "take_profit", "tp", "target"]));
-  let exitPrice = parseImportNumber(getBulkValue(row, ["exit", "exit_price", "close", "close_price"]));
-
-  const isBuy = direction === "Buy";
-  if (!Number.isFinite(stopLoss) || stopLoss <= 0) {
-    stopLoss = entryPrice * (isBuy ? 0.99 : 1.01);
-  }
-  if (!Number.isFinite(takeProfit) || takeProfit <= 0) {
-    takeProfit = entryPrice * (isBuy ? 1.01 : 0.99);
-  }
-  if (!Number.isFinite(exitPrice) || exitPrice <= 0) {
-    exitPrice = takeProfit;
-  }
-
-  if (isBuy && stopLoss >= entryPrice) {
-    stopLoss = entryPrice * 0.99;
-  }
-  if (!isBuy && stopLoss <= entryPrice) {
-    stopLoss = entryPrice * 1.01;
-  }
-  if (isBuy && takeProfit <= entryPrice) {
-    takeProfit = entryPrice * 1.01;
-  }
-  if (!isBuy && takeProfit >= entryPrice) {
-    takeProfit = entryPrice * 0.99;
-  }
+  // Never fabricate prices: missing stop/TP/exit stays 0 (flagged in the
+  // preview) and a missing exit imports the row as an open position.
+  const stopLossRaw = parseImportNumber(getBulkValue(row, ["stop", "stop_loss", "sl", "stoploss"]));
+  const takeProfitRaw = parseImportNumber(getBulkValue(row, ["take", "take_profit", "tp", "target"]));
+  const exitPriceRaw = parseImportNumber(getBulkValue(row, ["exit", "exit_price", "close", "close_price"]));
+  const stopLoss = Number.isFinite(stopLossRaw) && stopLossRaw > 0 ? stopLossRaw : 0;
+  const takeProfit = Number.isFinite(takeProfitRaw) && takeProfitRaw > 0 ? takeProfitRaw : 0;
+  const exitPrice = Number.isFinite(exitPriceRaw) && exitPriceRaw > 0 ? exitPriceRaw : 0;
+  const status = exitPrice > 0 ? "closed" : "open";
 
   const riskPercentRaw = parseImportNumber(getBulkValue(row, ["risk_percent", "risk", "risk_pct", "risk_"]));
   const riskPercent = Number.isFinite(riskPercentRaw) && riskPercentRaw > 0 ? riskPercentRaw : state.settings.riskPerTrade;
@@ -1983,8 +2108,8 @@ function mapBulkRowToTrade(row, source, rowNumber) {
       exitPrice,
       riskPercent,
       positionSize,
-      tradeResult,
-      status: "closed",
+      tradeResult: status === "open" ? "Auto" : tradeResult,
+      status,
       setupType,
       timeframe,
       psychology,
@@ -2214,11 +2339,15 @@ function isLikelyDuplicateTrade(tradeInput) {
 function calculateTradeMetrics(trade) {
   const directionFactor = trade.direction === "Buy" ? 1 : -1;
   const pipSpec = getPipSpec(trade);
+  // Imported rows may legitimately lack a stop or target (no fabrication):
+  // without a stop the risk falls back to the settings risk %, and RR is 0.
+  const hasStop = Number.isFinite(trade.stopLoss) && trade.stopLoss > 0;
+  const hasTarget = Number.isFinite(trade.takeProfit) && trade.takeProfit > 0;
   const directedMoveToExit = (trade.exitPrice - trade.entryPrice) * directionFactor;
   const rawPips = pipSpec.pipSize > 0 ? directedMoveToExit / pipSpec.pipSize : 0;
   const pips = round(rawPips);
 
-  const pipDistanceToStop = pipSpec.pipSize > 0
+  const pipDistanceToStop = hasStop && pipSpec.pipSize > 0
     ? Math.abs((trade.entryPrice - trade.stopLoss) / pipSpec.pipSize)
     : 0;
 
@@ -2232,7 +2361,9 @@ function calculateTradeMetrics(trade) {
     riskFromStructure = round(pipDistanceToStop * dollarPerPip);
   } else {
     netPnl = round(directedMoveToExit * trade.positionSize);
-    riskFromStructure = round(Math.abs(trade.entryPrice - trade.stopLoss) * trade.positionSize);
+    riskFromStructure = hasStop
+      ? round(Math.abs(trade.entryPrice - trade.stopLoss) * trade.positionSize)
+      : 0;
     dollarPerPip = round(pipSpec.pipSize * trade.positionSize);
   }
 
@@ -2240,9 +2371,9 @@ function calculateTradeMetrics(trade) {
   const riskAmount = round(riskFromStructure > 0 ? riskFromStructure : fallbackRisk);
   const rMultiple = riskAmount > 0 ? round(netPnl / riskAmount) : 0;
 
-  const rrDenominator = Math.abs(trade.entryPrice - trade.stopLoss);
-  const rrNumerator = Math.abs(trade.takeProfit - trade.entryPrice);
-  const rrRatio = rrDenominator > 0 ? round(rrNumerator / rrDenominator) : 0;
+  const rrDenominator = hasStop ? Math.abs(trade.entryPrice - trade.stopLoss) : 0;
+  const rrNumerator = hasTarget ? Math.abs(trade.takeProfit - trade.entryPrice) : 0;
+  const rrRatio = rrDenominator > 0 && rrNumerator > 0 ? round(rrNumerator / rrDenominator) : 0;
 
   let autoResult = "Break Even";
   if (netPnl > 0) {
@@ -2476,9 +2607,49 @@ function handleTradeTableClick(event) {
     return;
   }
 
+  if (button.dataset.action === "close") {
+    closeTradeAtMarket(id);
+    return;
+  }
+
   if (button.dataset.action === "edit") {
     loadTradeIntoForm(id);
   }
+}
+
+// Close-at-market: confirm against the cached live price, then close the
+// trade through the existing buildTradeRecord/persistState/autosave path.
+function closeTradeAtMarket(id) {
+  const trade = getExistingTrade(id);
+  if (!trade || trade.status !== "open") {
+    return;
+  }
+
+  const price = getOpenTradeLiveSnapshot(trade)?.currentPrice;
+  if (!Number.isFinite(price) || price <= 0) {
+    setMessage(ui.journalMessage, `No live price for ${trade.asset} yet. Try again in a few seconds or close it manually via Edit.`, "error");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Close ${trade.asset} ${trade.direction === "Sell" ? "Short" : "Long"} at the last live price (${price})?`
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  // Strip identity/audit fields so buildTradeRecord re-stamps them; the rest
+  // of the record (including importBatchId) rides through the spread.
+  const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, closedAt: _closedAt, ...tradeInput } = trade;
+  const closedTrade = buildTradeRecord(
+    { ...tradeInput, exitPrice: price, status: "closed" },
+    { id: trade.id, createdAt: trade.createdAt, existingTrade: trade }
+  );
+
+  state.trades = state.trades.map((item) => (item.id === id ? closedTrade : item));
+  persistState();
+  renderAll();
+  setMessage(ui.journalMessage, `Closed ${trade.asset} at ${price} (${formatCurrency(closedTrade.netPnl)}).`, "success");
 }
 
 function deleteTrade(id) {
@@ -3111,6 +3282,8 @@ function renderAll() {
   renderHeroRecentTrades();
   renderProgressTradeSummary();
   renderDashboardMetrics(state.analytics);
+  renderRiskStrip(state.analytics);
+  syncBulkUndoButton();
   renderRiskViolations(state.analytics);
   renderEdgeTable(state.analytics);
   renderCharts(state.analytics);
@@ -3169,6 +3342,9 @@ function renderProgressTradeSummary() {
             <button class="progress-trade-price-chip progress-trade-price-chip-toggle" type="button" data-progress-details-toggle aria-expanded="false">
               <strong>Show</strong>
             </button>
+            <button class="progress-trade-price-chip progress-trade-price-chip-close" type="button" data-close-trade="${escapeHtml(String(trade.id || ""))}" aria-label="Close ${escapeHtml(trade.asset || "")} at market price">
+              <strong>Close</strong>
+            </button>
           </div>
           <div class="progress-trade-card-meta progress-trade-card-meta-hidden">
               <span class="progress-trade-stat"><em>SL</em><strong>${formatProgressTradePrice(trade.stopLoss)}</strong></span>
@@ -3183,6 +3359,12 @@ function renderProgressTradeSummary() {
 }
 
 function handleProgressTradeDetailsToggle(event) {
+  const closeButton = event.target.closest("[data-close-trade]");
+  if (closeButton) {
+    closeTradeAtMarket(closeButton.dataset.closeTrade);
+    return;
+  }
+
   const toggle = event.target.closest("[data-progress-details-toggle]");
   if (!toggle) {
     return;
@@ -3234,6 +3416,8 @@ function calculateAnalytics(trades, settings, reflections) {
   const setupPerformance = new Map();
   const assetPerformance = new Map();
   const dayPerformance = new Map();
+  const psychologyStats = new Map();
+  const sessionPerformance = new Map();
 
   for (const trade of ordered) {
     totalPnl += trade.netPnl;
@@ -3292,6 +3476,16 @@ function calculateAnalytics(trades, settings, reflections) {
     accumulatePerformanceEntry(setupPerformance, setupKey, trade);
     accumulatePerformanceEntry(assetPerformance, trade.asset || "Unknown", trade);
     accumulatePerformanceEntry(dayPerformance, getTradeDayLabel(trade.date), trade);
+    accumulatePerformanceEntry(sessionPerformance, trade.session || "Unknown", trade);
+
+    const psychKey = trade.psychology || "Unknown";
+    const psychBucket = psychologyStats.get(psychKey) || { label: psychKey, pnl: 0, count: 0, wins: 0 };
+    psychBucket.pnl = round(psychBucket.pnl + trade.netPnl);
+    psychBucket.count += 1;
+    if (trade.netPnl > 0) {
+      psychBucket.wins += 1;
+    }
+    psychologyStats.set(psychKey, psychBucket);
 
     const setupBucket = setupStats.get(setupKey) || {
       setup: setupKey,
@@ -3330,6 +3524,7 @@ function calculateAnalytics(trades, settings, reflections) {
   const bestDay = getExtremeDay(dailyPnl, "max");
   const worstDay = getExtremeDay(dailyPnl, "min");
   const todayPnl = dailyPnl.get(toDateInputValue(new Date())) || 0;
+  const weekPnl = weeklyPnl.get(getWeekKey(toDateInputValue(new Date()))) || 0;
 
   const dailyViolations = Array.from(dailyPnl.entries())
     .filter(([, pnl]) => pnl < -settings.dailyMaxLoss)
@@ -3384,6 +3579,7 @@ function calculateAnalytics(trades, settings, reflections) {
     bestDay,
     worstDay,
     todayPnl,
+    weekPnl,
     maxWinStreak,
     maxLossStreak,
     dailyViolations,
@@ -3399,11 +3595,47 @@ function calculateAnalytics(trades, settings, reflections) {
       asset: Array.from(assetPerformance.values()),
       day: sortDayPerformance(Array.from(dayPerformance.values()))
     },
+    psychologyReport: Array.from(psychologyStats.values())
+      .map((entry) => ({
+        ...entry,
+        winRate: entry.count > 0 ? (entry.wins / entry.count) * 100 : 0
+      }))
+      .sort((a, b) => b.pnl - a.pnl),
+    sessionReport: Array.from(sessionPerformance.values()).sort((a, b) => b.pnl - a.pnl),
+    rMultipleReport: buildRMultipleHistogram(ordered),
     disciplineScore,
     dailyTradingScore,
     goalProgress,
     traderScore
   };
+}
+
+// R-multiple distribution over closed trades, in fixed 1R buckets. Empty
+// array when there are no trades so the chart shows its empty label.
+function buildRMultipleHistogram(trades) {
+  if (!trades.length) {
+    return [];
+  }
+
+  const buckets = [
+    { label: "< -2R", min: -Infinity, max: -2, tone: "neg" },
+    { label: "-2R to -1R", min: -2, max: -1, tone: "neg" },
+    { label: "-1R to 0R", min: -1, max: 0, tone: "neg" },
+    { label: "0R to 1R", min: 0, max: 1, tone: "pos" },
+    { label: "1R to 2R", min: 1, max: 2, tone: "pos" },
+    { label: "> 2R", min: 2, max: Infinity, tone: "pos" }
+  ].map((bucket) => ({ ...bucket, count: 0 }));
+
+  trades.forEach((trade) => {
+    const r = Number(trade.rMultiple);
+    if (!Number.isFinite(r)) {
+      return;
+    }
+    const bucket = buckets.find((item) => r >= item.min && r < item.max) || buckets[buckets.length - 1];
+    bucket.count += 1;
+  });
+
+  return buckets;
 }
 
 function computeTraderScore({ winRate, profitFactor, avgWin, avgLoss, totalPnl, maxDrawdown, dailyPnl, startingBalance }) {
@@ -3776,6 +4008,12 @@ function renderDashboardMetrics(analytics) {
 
   renderMetricDeltas();
 
+  // Reconcile balanceOverride vs the equity curve: when the override is set,
+  // the balance card says so instead of silently contradicting the chart.
+  if (ui.balanceOverrideNote) {
+    ui.balanceOverrideNote.hidden = !(state.settings.balanceOverride > 0);
+  }
+
   ui.disciplineScore.textContent = String(analytics.disciplineScore);
   ui.dailyTradingScore.textContent = String(analytics.dailyTradingScore);
   ui.goalProgress.textContent = `${clamp(Math.round(analytics.goalProgress), 0, 300)}%`;
@@ -3788,6 +4026,53 @@ function renderDashboardMetrics(analytics) {
   if (ui.traderScoreCaption) {
     ui.traderScoreCaption.textContent = analytics.traderScore.caption;
   }
+}
+
+// Daily/weekly risk-budget strip: how much of the configured loss limits
+// today and this week have consumed. Breach logic mirrors the violations
+// filters in calculateAnalytics (pnl < -limit).
+function renderRiskStrip(analytics) {
+  if (!ui.riskStrip) {
+    return;
+  }
+
+  const entries = [
+    { key: "day", pnl: analytics.todayPnl, limit: state.settings.dailyMaxLoss, period: "today" },
+    { key: "week", pnl: analytics.weekPnl, limit: state.settings.weeklyMaxLoss, period: "this week" }
+  ];
+
+  const visible = state.trades.length > 0 && entries.some((entry) => entry.limit > 0);
+  ui.riskStrip.hidden = !visible;
+  if (!visible) {
+    return;
+  }
+
+  entries.forEach((entry) => {
+    const item = ui.riskStrip.querySelector(`[data-risk-strip="${entry.key}"]`);
+    if (!item) {
+      return;
+    }
+
+    item.hidden = !(entry.limit > 0);
+    if (item.hidden) {
+      return;
+    }
+
+    const used = Math.max(-entry.pnl, 0);
+    const ratio = clamp(used / entry.limit, 0, 1);
+    const breached = entry.pnl < -entry.limit;
+    item.classList.toggle("is-breach", breached);
+    item.classList.toggle("is-warn", !breached && ratio >= 0.6);
+
+    const fill = item.querySelector(".risk-strip-fill");
+    if (fill) {
+      fill.style.width = `${Math.round(ratio * 100)}%`;
+    }
+    const value = item.querySelector(".risk-strip-value");
+    if (value) {
+      value.textContent = `${formatCurrency(entry.pnl)} ${entry.period} / ${formatCurrency(entry.limit)} limit`;
+    }
+  });
 }
 
 function renderCalendarView() {
@@ -4008,7 +4293,43 @@ function renderEdgeTable(analytics) {
     .join("");
 }
 
+function handleJournalSort(key) {
+  if (!key) {
+    return;
+  }
+
+  if (state.journalSort.key === key) {
+    state.journalSort.dir = -state.journalSort.dir;
+  } else {
+    state.journalSort = { key, dir: 1 };
+  }
+  renderJournalTable();
+}
+
+function compareTradeField(a, b, key) {
+  const rawA = a[key];
+  const rawB = b[key];
+  const numA = Number(rawA);
+  const numB = Number(rawB);
+  if (rawA !== "" && rawB !== "" && Number.isFinite(numA) && Number.isFinite(numB)) {
+    return numA - numB;
+  }
+  return String(rawA ?? "").localeCompare(String(rawB ?? ""));
+}
+
+function syncJournalSortIndicators() {
+  ui.journalSortHeaders.forEach((th) => {
+    const isActive = th.dataset.sort === state.journalSort.key;
+    if (isActive) {
+      th.setAttribute("aria-sort", state.journalSort.dir > 0 ? "ascending" : "descending");
+    } else {
+      th.removeAttribute("aria-sort");
+    }
+  });
+}
+
 function renderJournalTable() {
+  syncJournalSortIndicators();
   const filtered = getFilteredTrades();
 
   if (!filtered.length) {
@@ -4016,7 +4337,12 @@ function renderJournalTable() {
     return;
   }
 
-  const sorted = filtered.sort(sortTradesDesc);
+  // Header sort applies to the filtered array; the default order stays the
+  // existing newest-first sequence.
+  const { key: sortKey, dir: sortDir } = state.journalSort;
+  const sorted = sortKey
+    ? [...filtered].sort((a, b) => compareTradeField(a, b, sortKey) * sortDir || sortTradesDesc(a, b))
+    : filtered.sort(sortTradesDesc);
 
   ui.tradesBody.innerHTML = sorted
     .map((trade) => {
@@ -4051,6 +4377,7 @@ function renderJournalTable() {
           <td data-label="Psychology">${escapeHtml(trade.psychology)}</td>
           <td data-label="Execution">${escapeHtml(trade.executionQuality)}</td>
           <td class="row-actions">
+            ${isOpen ? `<button class="mini-btn mini-btn-close" data-action="close" data-id="${trade.id}" type="button">Close</button>` : ""}
             <button class="mini-btn" data-action="edit" data-id="${trade.id}" type="button">Edit</button>
             <button class="mini-btn danger" data-action="delete" data-id="${trade.id}" type="button">Delete</button>
           </td>
@@ -4308,6 +4635,7 @@ function normalizeTrades(input) {
         executionQuality: String(item.executionQuality || "B"),
         screenshotName: String(item.screenshotName || ""),
         screenshotData: String(item.screenshotData || ""),
+        importBatchId: String(item.importBatchId || ""),
         notes: String(item.notes || "")
       };
 

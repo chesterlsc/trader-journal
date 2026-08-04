@@ -71,3 +71,43 @@
 **Why.** Blueprint §7 Phase 5 / §4 treatments for forms, modals, calendar, landing; grafts 2, 3, 7, 8, 13, 14.
 
 **Verification.** `node --check` clean on app.js and recentTradesView.js; styles.css braces balanced (549/549); zero rgba/gradient literals outside the token block, mask, and the §4-specified overlay colors; zero `var(--green/--red/--blue/--cyan/--amber/--text-main)` consumers left; curl on the dev server serves `direction-toggle`, `live-pulse-dot`, `og:title`, `--day-intensity`, `formShake`, `recent-trades-live-tag`. trade_handler.php untouched.
+
+## Phase 6 — Feature adds
+
+**What.** Ship-now #4/#6/#7/#9/#10. Trust sweep: live % on open trades is now
+the leveraged dollar P&L (from positionSize via calculateTradeMetrics)
+relative to the account balance, not the raw price move; the "TS" close-reason
+guess renders "Manual"; bulk import no longer fabricates stop/TP/exit (missing
+values stay 0, flagged "—" in a 10-column preview with a Status column; rows
+without an exit import as open positions), every import stamps an
+importBatchId and an "Undo Last Import (N)" button in the bulk panel removes
+the last batch; a ⓘ dialog (native <dialog>) documents the discipline/daily/
+trader score formulas; the balance card shows a "Manual override active" warn
+chip when balanceOverride is set. calculateTradeMetrics now treats a missing
+stop/target honestly (risk falls back to the settings risk %, RR = 0).
+Analytics: psychologyReport (P&L + win rate), sessionReport, and
+rMultipleReport (fixed 1R buckets, toned bars) computed in calculateAnalytics
+and drawn on three new dashboard canvases through the existing
+drawStrategyPerformanceChart pattern (new annotate + per-entry tone options),
+hash-guarded like the other charts. Close-at-market: Close buttons on open
+journal rows and progress cards confirm against the cached live price and
+close through buildTradeRecord + persistState (debounced CSRF autosave).
+Risk-budget strip on the dashboard tracks today vs dailyMaxLoss and week vs
+weeklyMaxLoss (breach logic mirrors the violation filters; warn at >=60%,
+--pnl-neg on breach). Journal headers click/Enter-sort the filtered array with
+aria-sort + mono arrow indicators. A hash router keeps location.hash <->
+switchView in sync (replaceState for the first programmatic set, push after),
+restores the view on refresh for both auth-restore and preview sessions, and
+handles back/forward via hashchange; aria-current continues to flow through
+switchView.
+
+**Why.** Blueprint §7 Phase 6; §6 ship-now items 4, 6, 7, 9, 10.
+
+**Verification.** node --check on app.js, charts.js, tradeDisplay.js; a node
+self-check drove the real tradeDisplay module (leveraged % = +1% on a $100
+gain over a $10k account for 0.1 lot XAUUSD, null-balance fallback to "OPEN",
+"Manual" resolution label); curl against the running php -S server confirmed
+the new markup (riskStrip, scoreInfoDialog, rMultipleChart, bulkUndoBtn,
+data-sort headers, balanceOverrideNote), CSS, and app.js markers are served.
+Mojibake grep ('â€', 'âˆ') across app.js/src/index.html: zero matches
+(Phase 4 fixed all sites). trade_handler.php untouched.
