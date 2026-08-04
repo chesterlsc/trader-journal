@@ -159,6 +159,11 @@ const ui = {
   mobileLogoutBtn: document.getElementById("mobileLogoutBtn"),
   themeToggles: Array.from(document.querySelectorAll("[data-theme-toggle]")),
   metricNodes: Array.from(document.querySelectorAll("[data-metric]")),
+  metricDeltaNodes: Array.from(document.querySelectorAll("[data-metric-delta]")),
+  metricGrid: document.getElementById("dashboardMetricGrid"),
+  balanceCard: document.querySelector(".metric-card-balance"),
+  dashboardEmptyState: document.getElementById("dashboardEmptyState"),
+  dashboardEmptyCta: document.getElementById("dashboardEmptyCta"),
   riskForm: document.getElementById("riskForm"),
   riskFormMessage: document.getElementById("riskFormMessage"),
   riskInputs: {
@@ -558,6 +563,7 @@ function bindEvents() {
   ui.tradesBody.addEventListener("click", handleTradeTableClick);
 
   ui.journalNewTradeBtn.addEventListener("click", openFreshTradeEntry);
+  ui.dashboardEmptyCta?.addEventListener("click", openFreshTradeEntry);
   ui.exportCsvBtn.addEventListener("click", exportTradesCsv);
   ui.backupJsonBtn.addEventListener("click", exportBackupJson);
   ui.importJsonBtn.addEventListener("click", () => ui.jsonImportInput.click());
@@ -661,7 +667,13 @@ function switchView(id) {
   }
 
   ui.navButtons.forEach((btn) => {
-    btn.classList.toggle("is-active", btn.dataset.target === id);
+    const isActive = btn.dataset.target === id;
+    btn.classList.toggle("is-active", isActive);
+    if (isActive) {
+      btn.setAttribute("aria-current", "page");
+    } else {
+      btn.removeAttribute("aria-current");
+    }
   });
 
   ui.views.forEach((view) => {
@@ -3042,7 +3054,7 @@ function renderProgressTradeSummary() {
         <article class="progress-trade-card">
           <div class="progress-trade-card-top">
             <div class="progress-trade-card-top-main">
-              <strong class="progress-trade-card-symbol">${escapeHtml(trade.asset || "â€”")}</strong>
+              <strong class="progress-trade-card-symbol">${escapeHtml(trade.asset || "—")}</strong>
               <span class="recent-trade-direction ${directionClass}">${escapeHtml(trade.direction || "Buy")}</span>
               <span class="progress-trade-badge">OPEN</span>
             </div>
@@ -3051,7 +3063,7 @@ function renderProgressTradeSummary() {
           <div class="progress-trade-card-prices">
             <span class="progress-trade-price-chip"><em>Move</em><strong class="${pnlToneClass} live-cell" ${liveCellAttrs(trade, "priceMove")}>${formatPriceMove(priceMove)}</strong></span>
             <span class="progress-trade-price-chip"><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
-            <span class="progress-trade-price-chip progress-trade-price-chip-live"><em>Current Price</em><strong class="${pnlToneClass} live-cell" ${liveCellAttrs(trade, "currentPrice")}>${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : "â€”"}</strong></span>
+            <span class="progress-trade-price-chip progress-trade-price-chip-live"><em>Current Price</em><strong class="${pnlToneClass} live-cell" ${liveCellAttrs(trade, "currentPrice")}>${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : "—"}</strong></span>
             <button class="progress-trade-price-chip progress-trade-price-chip-toggle" type="button" data-progress-details-toggle aria-expanded="false">
               <strong>Show</strong>
             </button>
@@ -3215,6 +3227,7 @@ function calculateAnalytics(trades, settings, reflections) {
 
   const bestDay = getExtremeDay(dailyPnl, "max");
   const worstDay = getExtremeDay(dailyPnl, "min");
+  const todayPnl = dailyPnl.get(toDateInputValue(new Date())) || 0;
 
   const dailyViolations = Array.from(dailyPnl.entries())
     .filter(([, pnl]) => pnl < -settings.dailyMaxLoss)
@@ -3268,6 +3281,7 @@ function calculateAnalytics(trades, settings, reflections) {
     averageDrawdown,
     bestDay,
     worstDay,
+    todayPnl,
     maxWinStreak,
     maxLossStreak,
     dailyViolations,
@@ -3491,13 +3505,107 @@ function setCountUpValue(node, text, tween) {
   countUpFrames.set(node, requestAnimationFrame(step));
 }
 
+// Delta chips (§4 graft): each metric compares the current period against the
+// previous one. With a full date filter set in the journal, the previous
+// period is the same-length window immediately before it; otherwise the
+// comparison is current calendar month vs previous calendar month.
+const METRIC_DELTA_SPECS = {
+  accountBalance: { read: (a) => a.totalPnl, format: formatCurrency },
+  totalTrades: { read: (a) => a.totalTrades, format: (v) => String(Math.round(v)), neutral: true },
+  winRate: { read: (a) => a.winRate, format: (v) => `${v.toFixed(1)}%` },
+  avgRR: { read: (a) => a.avgRR, format: (v) => v.toFixed(2) },
+  profitFactor: {
+    read: (a) => a.profitFactor,
+    format: (v) => v.toFixed(2),
+    skip: (current, previous) => current.profitFactor >= 999 || previous.profitFactor >= 999
+  },
+  currentDrawdown: { read: (a) => a.currentDrawdown, format: formatCurrency, invert: true },
+  maxDrawdown: { read: (a) => a.maxDrawdown, format: formatCurrency, invert: true },
+  bestDay: { read: (a) => a.bestDay.pnl, format: formatCurrency },
+  worstDay: { read: (a) => a.worstDay.pnl, format: formatCurrency },
+  expectancy: { read: (a) => a.expectancy, format: formatCurrency },
+  winningStreak: { read: (a) => a.maxWinStreak, format: (v) => String(Math.round(v)) },
+  losingStreak: { read: (a) => a.maxLossStreak, format: (v) => String(Math.round(v)), invert: true }
+};
+
+function shiftDateString(dateString, days) {
+  const parsed = new Date(`${dateString}T00:00:00`);
+  parsed.setDate(parsed.getDate() + days);
+  return toDateInputValue(parsed);
+}
+
+function getMetricDeltaWindows() {
+  const { dateFrom, dateTo } = state.filters;
+  if (dateFrom && dateTo && dateFrom <= dateTo) {
+    const dayMs = 86400000;
+    const lengthDays =
+      Math.round((new Date(`${dateTo}T00:00:00`) - new Date(`${dateFrom}T00:00:00`)) / dayMs) + 1;
+    return {
+      label: "vs prev period",
+      currentFrom: dateFrom,
+      currentTo: dateTo,
+      previousFrom: shiftDateString(dateFrom, -lengthDays),
+      previousTo: shiftDateString(dateFrom, -1)
+    };
+  }
+
+  const now = new Date();
+  const currentMonth = toDateInputValue(now).slice(0, 7);
+  const previousMonth = toDateInputValue(new Date(now.getFullYear(), now.getMonth() - 1, 1)).slice(0, 7);
+  return {
+    label: "vs prev month",
+    currentFrom: `${currentMonth}-01`,
+    currentTo: `${currentMonth}-31`,
+    previousFrom: `${previousMonth}-01`,
+    previousTo: `${previousMonth}-31`
+  };
+}
+
+function renderMetricDeltas() {
+  if (!ui.metricDeltaNodes.length) {
+    return;
+  }
+
+  const windows = getMetricDeltaWindows();
+  const inWindow = (from, to) => state.trades.filter((trade) => trade.date >= from && trade.date <= to);
+  const previousTrades = inWindow(windows.previousFrom, windows.previousTo);
+  const hasComparison = previousTrades.some((trade) => trade.status !== "open");
+  const current = hasComparison
+    ? calculateAnalytics(inWindow(windows.currentFrom, windows.currentTo), state.settings, state.reflections)
+    : null;
+  const previous = hasComparison
+    ? calculateAnalytics(previousTrades, state.settings, state.reflections)
+    : null;
+
+  ui.metricDeltaNodes.forEach((node) => {
+    const spec = METRIC_DELTA_SPECS[node.dataset.metricDelta];
+    if (!spec || !hasComparison || (spec.skip && spec.skip(current, previous))) {
+      node.hidden = true;
+      return;
+    }
+
+    const delta = spec.read(current) - spec.read(previous);
+    const tone = spec.neutral ? 0 : spec.invert ? -delta : delta;
+    node.textContent = `${delta > 0 ? "+" : ""}${spec.format(delta)} ${windows.label}`;
+    node.classList.toggle("is-pos", tone > 0);
+    node.classList.toggle("is-neg", tone < 0);
+    node.hidden = false;
+  });
+}
+
 function renderDashboardMetrics(analytics) {
+  const hasTrades = state.trades.length > 0;
+  if (ui.metricGrid && ui.dashboardEmptyState) {
+    ui.metricGrid.hidden = !hasTrades;
+    ui.dashboardEmptyState.hidden = hasTrades;
+  }
+
   const values = {
     accountBalance: formatCurrency(analytics.accountBalance),
     totalTrades: String(analytics.totalTrades),
     winRate: `${analytics.winRate.toFixed(1)}%`,
     avgRR: analytics.avgRR.toFixed(2),
-    profitFactor: analytics.profitFactor >= 999 ? "âˆž" : analytics.profitFactor.toFixed(2),
+    profitFactor: analytics.profitFactor >= 999 ? "∞" : analytics.profitFactor.toFixed(2),
     currentDrawdown: formatCurrency(analytics.currentDrawdown),
     maxDrawdown: formatCurrency(analytics.maxDrawdown),
     bestDay: analytics.bestDay.day === "-" ? "-" : `${formatCurrency(analytics.bestDay.pnl)} (${analytics.bestDay.day})`,
@@ -3524,26 +3632,47 @@ function renderDashboardMetrics(analytics) {
     losingStreak: { value: analytics.maxLossStreak, format: wholeNumber }
   };
 
+  // Money metrics only: value tone + a signed left hairline on the card.
+  const toneValues = {
+    accountBalance: analytics.accountBalance,
+    expectancy: analytics.expectancy,
+    bestDay: analytics.bestDay.pnl,
+    worstDay: analytics.worstDay.pnl,
+    currentDrawdown: analytics.currentDrawdown > 0 ? -analytics.currentDrawdown : 0,
+    maxDrawdown: analytics.maxDrawdown > 0 ? -analytics.maxDrawdown : 0
+  };
+
   ui.metricNodes.forEach((node) => {
     const key = node.dataset.metric;
     if (key in values) {
       setCountUpValue(node, values[key], tweens[key] || null);
 
-      if (key === "accountBalance") {
-        toneBySign(node, analytics.accountBalance);
-      } else if (key === "expectancy") {
-        toneBySign(node, analytics.expectancy);
-      } else if (key === "bestDay") {
-        toneBySign(node, analytics.bestDay.pnl);
-      } else if (key === "worstDay") {
-        toneBySign(node, analytics.worstDay.pnl);
-      } else if (key === "currentDrawdown" || key === "maxDrawdown") {
-        toneBySign(node, analytics[key] > 0 ? -analytics[key] : 0);
+      if (key in toneValues) {
+        toneBySign(node, toneValues[key]);
+        // The balance card hairline reads today's P&L sign, not the balance sign.
+        const cardTone = key === "accountBalance" ? analytics.todayPnl : toneValues[key];
+        const card = node.closest(".metric-card");
+        if (card) {
+          card.classList.toggle("is-pos", cardTone > 0);
+          card.classList.toggle("is-neg", cardTone < 0);
+        }
       } else {
         node.classList.remove("pnl-positive", "pnl-negative");
       }
     }
   });
+
+  // --pl-intensity: clamp(|todayPnl| / dailyMaxLoss, 0, 1) drives the balance
+  // card's signed hairline width/opacity — sign-at-a-glance, never a glow.
+  if (ui.balanceCard) {
+    const lossLimit = Math.max(state.settings.dailyMaxLoss, 1);
+    ui.balanceCard.style.setProperty(
+      "--pl-intensity",
+      String(clamp(Math.abs(analytics.todayPnl) / lossLimit, 0, 1))
+    );
+  }
+
+  renderMetricDeltas();
 
   ui.disciplineScore.textContent = String(analytics.disciplineScore);
   ui.dailyTradingScore.textContent = String(analytics.dailyTradingScore);
@@ -3725,11 +3854,11 @@ function renderEdgeTable(analytics) {
       return `
         <tr>
           <td data-label="Setup">${escapeHtml(row.setup)}</td>
-          <td data-label="Trades">${row.trades}</td>
-          <td data-label="Win Rate">${row.winRate.toFixed(1)}%</td>
-          <td data-label="Net P&L" class="${netClass}">${formatCurrency(row.netPnl)}</td>
-          <td data-label="Avg R">${row.avgR.toFixed(2)}R</td>
-          <td data-label="Expectancy" class="${expClass}">${formatCurrency(row.expectancy)}</td>
+          <td data-label="Trades" class="num">${row.trades}</td>
+          <td data-label="Win Rate" class="num">${row.winRate.toFixed(1)}%</td>
+          <td data-label="Net P&L" class="num ${netClass}">${formatCurrency(row.netPnl)}</td>
+          <td data-label="Avg R" class="num">${row.avgR.toFixed(2)}R</td>
+          <td data-label="Expectancy" class="num ${expClass}">${formatCurrency(row.expectancy)}</td>
         </tr>
       `;
     })
@@ -3773,9 +3902,9 @@ function renderJournalTable() {
           <td data-label="Setup">${escapeHtml(trade.setupType)}</td>
           <td data-label="Timeframe">${escapeHtml(trade.timeframe)}</td>
           <td data-label="Result"><span class="${resultClass}">${escapeHtml(trade.result)}</span></td>
-          <td data-label="Pips" class="${pipClass}">${isOpen ? "â€”" : Number.isFinite(trade.pips) ? trade.pips.toFixed(2) : "0.00"}</td>
-          <td data-label="Net P&L" class="${pnlClass}${isOpen ? " live-cell" : ""}"${isOpen ? ` ${liveCellAttrs(trade, "livePercent")}` : ""}>${isOpen ? escapeHtml(formatLivePercentLabel(livePercent, "OPEN")) : formatCurrency(trade.netPnl)}</td>
-          <td data-label="R-Multiple">${isOpen ? "â€”" : Number.isFinite(trade.rMultiple) ? trade.rMultiple.toFixed(2) : "0.00"}R</td>
+          <td data-label="Pips" class="num ${pipClass}">${isOpen ? "—" : Number.isFinite(trade.pips) ? trade.pips.toFixed(2) : "0.00"}</td>
+          <td data-label="Net P&L" class="num ${pnlClass}${isOpen ? " live-cell" : ""}"${isOpen ? ` ${liveCellAttrs(trade, "livePercent")}` : ""}>${isOpen ? escapeHtml(formatLivePercentLabel(livePercent, "OPEN")) : formatCurrency(trade.netPnl)}</td>
+          <td data-label="R-Multiple" class="num">${isOpen ? "—" : Number.isFinite(trade.rMultiple) ? trade.rMultiple.toFixed(2) : "0.00"}R</td>
           <td data-label="Psychology">${escapeHtml(trade.psychology)}</td>
           <td data-label="Execution">${escapeHtml(trade.executionQuality)}</td>
           <td class="row-actions">

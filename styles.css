@@ -223,11 +223,10 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  font-family: "Sora", "Manrope", "Trebuchet MS", sans-serif;
+  font-family: var(--font-ui);
   color: var(--text);
-  background: linear-gradient(145deg, #04060c 0%, #0a0f1d 50%, #060a14 100%);
-  background-attachment: fixed;
-  background-color: #05080f;
+  background: var(--surface-0);
+  font-variant-numeric: tabular-nums;
   line-height: 1.4;
   position: relative;
 }
@@ -242,37 +241,22 @@ body::before {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.68;
+  opacity: 0.35;
   background-image:
-    linear-gradient(rgba(118, 148, 214, 0.17) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(118, 148, 214, 0.17) 1px, transparent 1px);
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
   background-size: 54px 54px;
   mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.92), rgba(0, 0, 0, 0.52) 66%, transparent 100%);
 }
 
-.ambient {
-  position: fixed;
-  border-radius: 999px;
-  filter: blur(60px);
-  opacity: 0.35;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.ambient-one {
-  width: 260px;
-  height: 260px;
-  top: -100px;
-  left: -80px;
-  background: #31d8ff;
-}
-
-.ambient-two {
-  width: 320px;
-  height: 320px;
-  top: -120px;
-  right: -110px;
-  background: #6d8dff;
+/* Signature rule (§3): numerals never jitter — tabular figures everywhere a
+   number can tick. */
+.metric-value,
+td,
+.live-cell,
+.calendar-cell,
+.calendar-summary-value {
+  font-feature-settings: "tnum";
 }
 
 .app-layout {
@@ -795,15 +779,16 @@ body.is-preview .auth-shell {
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 18px;
+  gap: var(--space-4);
+  padding: var(--space-4);
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
-  background: linear-gradient(170deg, rgba(14, 24, 45, 0.95), rgba(9, 14, 28, 0.95));
-  box-shadow: var(--shadow);
+  background: var(--surface-2);
+  box-shadow: var(--edge-highlight);
   min-height: calc(100vh - 36px);
   position: sticky;
   top: 18px;
+  z-index: var(--z-nav);
 }
 
 .sidebar-header {
@@ -812,10 +797,10 @@ body.is-preview .auth-shell {
 
 .brand-kicker {
   margin: 0;
-  color: rgba(157, 176, 216, 0.78);
+  color: var(--text-faint);
   text-transform: uppercase;
   letter-spacing: 0.13em;
-  font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
 }
 
 .brand-mark {
@@ -823,12 +808,12 @@ body.is-preview .auth-shell {
   display: inline-flex;
   align-items: baseline;
   gap: 0.34rem;
-  font: 700 clamp(1.45rem, 3vw, 2rem)/0.98 "Sora", "Manrope", sans-serif;
+  font: 700 clamp(1.45rem, 3vw, 2rem)/0.98 var(--font-ui);
   letter-spacing: -0.05em;
 }
 
 .brand-word-accent {
-  color: var(--blue);
+  color: var(--accent);
 }
 
 .brand-word-primary {
@@ -842,8 +827,8 @@ body.is-preview .auth-shell {
 
 .brand-support {
   margin: 0;
-  color: #d8e8ff;
-  font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
+  color: var(--text-soft);
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -863,19 +848,21 @@ h1 {
 .nav-toggle {
   display: none;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   border: 1px solid var(--line-strong);
-  border-radius: 10px;
-  background: rgba(14, 24, 46, 0.9);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
   color: var(--text);
   padding: 8px 10px;
   cursor: pointer;
-  font: 600 0.82rem/1.2 "JetBrains Mono", "Consolas", monospace;
+  font: 600 var(--fs-label)/1.2 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .nav-toggle.is-open {
-  border-color: rgba(87, 161, 255, 0.85);
-  background: rgba(26, 40, 73, 0.95);
+  border-color: var(--accent);
+  background: var(--surface-3);
 }
 
 .nav-toggle-bars,
@@ -884,8 +871,8 @@ h1 {
   display: block;
   width: 14px;
   height: 2px;
-  background: var(--cyan);
-  border-radius: 999px;
+  background: var(--text-soft);
+  border-radius: var(--radius-pill);
   content: "";
 }
 
@@ -907,28 +894,40 @@ h1 {
 
 .main-nav {
   display: grid;
-  gap: 9px;
+  gap: var(--space-1);
 }
 
+/* Nav buttons (§4): mono uppercase, quiet by default; the active state is an
+   accent underline rail (desktop) or a 2px inset left rail (sidebar) — never
+   a filled pill. */
 .nav-btn {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(19, 29, 54, 0.7);
-  color: var(--text);
-  padding: 11px 12px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-soft);
+  padding: 8px 12px;
   text-align: left;
   cursor: pointer;
-  font: 600 0.95rem/1.2 "Sora", "Manrope", sans-serif;
-  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+  font: 600 var(--fs-label)/1.2 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
 }
 
 .nav-btn:hover {
-  border-color: var(--cyan);
+  background: var(--surface-3);
+  color: var(--text);
 }
 
 .nav-btn.is-active {
-  background: linear-gradient(120deg, rgba(57, 211, 255, 0.22), rgba(87, 161, 255, 0.24));
-  border-color: rgba(87, 161, 255, 0.8);
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 var(--accent);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.main-nav .nav-btn.is-active {
+  box-shadow: inset 2px 0 0 var(--accent);
+  border-radius: var(--radius-md);
 }
 
 .sidebar-foot {
@@ -939,7 +938,7 @@ h1 {
 
 .sidebar-foot p {
   margin: 0;
-  font: 500 12px/1.4 "JetBrains Mono", "Consolas", monospace;
+  font: 500 var(--fs-label)/1.4 var(--font-mono);
   color: var(--text-soft);
 }
 
@@ -1069,12 +1068,12 @@ h1 {
 }
 
 kbd {
-  background: rgba(47, 72, 128, 0.6);
-  border: 1px solid rgba(100, 146, 255, 0.4);
-  border-radius: 6px;
+  background: var(--surface-inset);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
   padding: 2px 6px;
-  font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
-  color: #e9f3ff;
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  color: var(--text);
 }
 
 .content {
@@ -1090,15 +1089,15 @@ body.is-authenticated .auth-panel {
 .desktop-nav {
   display: none;
   align-items: center;
-  gap: 16px;
-  padding: 12px 14px;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
-  background: linear-gradient(160deg, rgba(14, 24, 45, 0.94), rgba(9, 16, 30, 0.94));
-  box-shadow: var(--shadow);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  box-shadow: var(--edge-highlight);
   position: sticky;
   top: 18px;
-  z-index: 5;
+  z-index: var(--z-nav);
 }
 
 .desktop-nav-brand {
@@ -1176,31 +1175,29 @@ body.is-authenticated .auth-panel {
 }
 
 .view-head {
-  padding: 18px 20px;
+  padding: var(--space-4) var(--space-5);
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
-  background: linear-gradient(155deg, rgba(18, 31, 60, 0.9), rgba(9, 16, 30, 0.9));
-  box-shadow: var(--shadow);
-}
-
-.view-head-dashboard {
-  padding: 16px 20px;
+  background: var(--surface-1);
+  box-shadow: var(--edge-highlight);
 }
 
 .view-head h2 {
   margin: 0;
-  font-size: 1.45rem;
+  font: 700 var(--fs-h2)/1.2 var(--font-ui);
+  letter-spacing: -0.01em;
 }
 
 .view-head p {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   color: var(--text-soft);
+  font-size: var(--fs-body);
 }
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-3);
 }
 
 .metric-grid.compact {
@@ -1210,26 +1207,111 @@ body.is-authenticated .auth-panel {
 .metric-card {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  background: linear-gradient(160deg, rgba(17, 28, 52, 0.95), rgba(12, 18, 35, 0.95));
-  padding: 12px 13px;
+  background: var(--surface-1);
+  padding: var(--space-4);
   min-height: 88px;
   display: grid;
   align-content: center;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--edge-highlight);
+}
+
+/* Money metrics: signed left hairline stamped by JS (.is-pos/.is-neg). */
+.metric-card.is-pos {
+  border-left: 2px solid var(--pnl-pos-line);
+}
+
+.metric-card.is-neg {
+  border-left: 2px solid var(--pnl-neg-line);
+}
+
+/* Balance card only: --pl-intensity (|todayPnl| / dailyMaxLoss, clamped 0-1)
+   widens the hairline 2px -> 4px and deepens its opacity. Static token color
+   above is the non-color-mix fallback. */
+.metric-card-balance.is-pos,
+.metric-card-balance.is-neg {
+  border-left-width: calc(2px + var(--pl-intensity) * 2px);
+}
+
+.metric-card-balance.is-pos {
+  border-left-color: var(--pnl-pos-line);
+  border-left-color: color-mix(in srgb, var(--pnl-pos) calc(30% + var(--pl-intensity) * 55%), transparent);
+}
+
+.metric-card-balance.is-neg {
+  border-left-color: var(--pnl-neg-line);
+  border-left-color: color-mix(in srgb, var(--pnl-neg) calc(30% + var(--pl-intensity) * 55%), transparent);
 }
 
 .metric-label {
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
-  color: var(--text-soft);
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  color: var(--text-faint);
 }
 
 .metric-value {
   margin: 7px 0 0;
-  font-size: 1.34rem;
-  font-weight: 700;
+  font: 700 var(--fs-metric)/1.15 var(--font-mono);
+}
+
+.metric-delta {
+  justify-self: start;
+  margin-top: var(--space-2);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset);
+  color: var(--text-soft);
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.metric-delta.is-pos {
+  background: var(--pnl-pos-soft);
+  color: var(--pnl-pos);
+}
+
+.metric-delta.is-neg {
+  background: var(--pnl-neg-soft);
+  color: var(--pnl-neg);
+}
+
+/* display:grid on these would defeat the hidden attribute (author rules beat
+   the UA [hidden] rule) — JS toggles hidden on all three. */
+.metric-grid[hidden],
+.dashboard-empty[hidden],
+.progress-trade-summary[hidden] {
+  display: none;
+}
+
+/* Empty state (§4 graft): replaces the metric-card wall when zero trades. */
+.dashboard-empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-12) var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface-1);
+  text-align: center;
+}
+
+.dashboard-empty svg {
+  width: 48px;
+  height: 48px;
+  color: var(--text-faint);
+}
+
+.dashboard-empty h3 {
+  margin: 0;
+  font: 600 var(--fs-lg)/1.3 var(--font-ui);
+}
+
+.dashboard-empty p {
+  margin: 0;
+  max-width: 380px;
+  color: var(--text-soft);
+  font-size: var(--fs-body);
 }
 
 .panel-grid {
@@ -1246,27 +1328,28 @@ body.is-authenticated .auth-panel {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* Panels: one recipe — flat surface, hairline, token radius. */
 .panel {
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
-  background: linear-gradient(165deg, rgba(14, 24, 44, 0.94), rgba(10, 16, 30, 0.94));
-  padding: 16px;
-  box-shadow: var(--shadow);
+  background: var(--surface-1);
+  padding: var(--space-5);
+  box-shadow: var(--edge-highlight);
 }
 
 .panel-head {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .panel-head h3 {
   margin: 0;
-  font-size: 1.02rem;
+  font: 600 var(--fs-md)/1.3 var(--font-ui);
 }
 
 .panel-head p {
   margin: 4px 0 0;
   color: var(--text-soft);
-  font-size: 0.89rem;
+  font-size: var(--fs-body);
 }
 
 .panel-head-inline {
@@ -1284,8 +1367,8 @@ body.is-authenticated .auth-panel {
 }
 
 .calendar-month-control span {
-  color: var(--text-soft);
-  font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -1294,8 +1377,8 @@ body.is-authenticated .auth-panel {
   width: 100%;
   height: auto;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(99, 127, 192, 0.3);
-  background: radial-gradient(circle at 0% 0%, rgba(87, 161, 255, 0.1), rgba(8, 14, 28, 0.92));
+  border: 1px solid var(--line);
+  background: var(--surface-inset);
 }
 
 .panel-strategy-performance {
@@ -1312,32 +1395,32 @@ body.is-authenticated .auth-panel {
 .strategy-toggle-group {
   display: inline-grid;
   grid-auto-flow: column;
-  gap: 6px;
-  padding: 4px;
-  border: 1px solid rgba(99, 127, 192, 0.24);
-  border-radius: 999px;
-  background: rgba(7, 13, 27, 0.78);
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
 }
 
 .strategy-toggle-btn {
-  min-height: 34px;
+  min-height: 32px;
   padding: 0 12px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-soft);
-  font: 600 0.78rem/1 "JetBrains Mono", "Consolas", monospace;
+  font: 600 var(--fs-label)/1 var(--font-mono);
   cursor: pointer;
   transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
 .strategy-toggle-btn:hover {
-  color: #e7f0ff;
+  color: var(--text);
 }
 
 .strategy-toggle-btn.is-active {
-  background: linear-gradient(120deg, rgba(57, 211, 255, 0.24), rgba(87, 161, 255, 0.3));
-  color: #eff6ff;
+  background: var(--surface-3);
+  color: var(--text);
 }
 
 .panel-trader-score {
@@ -1348,11 +1431,11 @@ body.is-authenticated .auth-panel {
 .trader-score-foot {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 16px;
+  gap: var(--space-4);
   align-items: end;
-  margin-top: 8px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(132, 156, 214, 0.18);
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
 }
 
 .trader-score-value-wrap {
@@ -1362,14 +1445,15 @@ body.is-authenticated .auth-panel {
 
 .trader-score-value {
   margin: 0;
-  font: 700 2rem/1 "Sora", "Manrope", sans-serif;
-  color: #f3f7ff;
+  font: 700 var(--fs-metric)/1 var(--font-mono);
+  font-feature-settings: "tnum";
+  color: var(--text);
 }
 
 .trader-score-caption {
   margin: 0;
   color: var(--text-soft);
-  font-size: 0.88rem;
+  font-size: var(--fs-body);
   line-height: 1.45;
 }
 
@@ -1378,14 +1462,14 @@ label {
   gap: 6px;
   margin-bottom: 11px;
   color: var(--text-soft);
-  font: 600 0.82rem/1.25 "JetBrains Mono", "Consolas", monospace;
+  font: 600 var(--fs-label)/1.25 var(--font-mono);
 }
 
 input,
 select,
 textarea,
 button {
-  font-family: "Sora", "Manrope", "Trebuchet MS", sans-serif;
+  font-family: var(--font-mono);
 }
 
 button,
@@ -1396,16 +1480,19 @@ button,
   min-height: 42px;
 }
 
+/* Token contract: text-entry surfaces always sit on --surface-inset (opaque).
+   Focus feedback is instant — no transition. */
 input,
 select,
 textarea {
   width: 100%;
-  border: 1px solid rgba(107, 133, 191, 0.4);
+  border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: rgba(7, 13, 26, 0.95);
+  background: var(--surface-inset);
   color: var(--text);
-  padding: 10px 11px;
-  transition: border-color 130ms ease, box-shadow 130ms ease;
+  font-size: var(--fs-body);
+  font-weight: 400;
+  padding: 9px 11px;
 }
 
 textarea {
@@ -1416,27 +1503,8 @@ input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: var(--blue);
-  box-shadow: 0 0 0 3px rgba(87, 161, 255, 0.2);
-}
-
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus,
-input:-webkit-autofill:active {
-  -webkit-text-fill-color: var(--text);
-  caret-color: var(--text);
-  border: 1px solid rgba(107, 133, 191, 0.4);
-  box-shadow:
-    0 0 0 1000px rgba(7, 13, 26, 0.95) inset,
-    0 0 0 0 rgba(87, 161, 255, 0);
-  transition: background-color 9999s ease-out 0s;
-}
-
-input:-webkit-autofill:focus {
-  box-shadow:
-    0 0 0 1000px rgba(7, 13, 26, 0.95) inset,
-    0 0 0 3px rgba(87, 161, 255, 0.2);
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 .compact-form {
@@ -1453,8 +1521,8 @@ input:-webkit-autofill:focus {
 
 #bulkInput {
   min-height: 170px;
-  font-family: "JetBrains Mono", "Consolas", monospace;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
 }
 
 .compact-form .form-actions {
@@ -1539,24 +1607,23 @@ input:-webkit-autofill:focus {
 .trade-advanced-toggle {
   flex: 0 0 auto;
   border: 1px solid var(--line-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   padding: 8px 10px;
   color: var(--text-soft);
-  font: 600 11px/1 "JetBrains Mono", "Consolas", monospace;
+  font: 600 var(--fs-micro)/1 var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
 .trade-advanced-details[open] .trade-advanced-toggle {
-  color: var(--cyan);
+  color: var(--text);
 }
 
-.trade-advanced-details[open] .trade-advanced-toggle::after {
-  content: "Hide";
-}
-
-.trade-advanced-details:not([open]) .trade-advanced-toggle::after {
-  content: "Expand";
+/* Toggle copy lives in real spans (screen-reader visible); open state picks
+   which one shows. */
+.trade-advanced-details[open] .trade-advanced-toggle .toggle-label-closed,
+.trade-advanced-details:not([open]) .trade-advanced-toggle .toggle-label-open {
+  display: none;
 }
 
 .trade-advanced-body {
@@ -1721,19 +1788,19 @@ input:-webkit-autofill:focus {
   gap: 10px;
   flex: 1 1 420px;
   min-width: min(100%, 320px);
-  padding: 12px 14px;
-  border: 1px solid rgba(103, 130, 188, 0.18);
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(10, 17, 31, 0.72), rgba(10, 16, 28, 0.52));
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
   margin-left: auto;
 }
 
 .progress-trade-label {
   margin: 0;
-  color: var(--text-soft);
+  color: var(--text-faint);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font: 600 10px/1.2 "JetBrains Mono", "Consolas", monospace;
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
 }
 
 .progress-trade-main {
@@ -1747,13 +1814,14 @@ input:-webkit-autofill:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 5px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(132, 156, 214, 0.24);
-  background: rgba(20, 31, 56, 0.72);
-  color: #dbe8ff;
-  font: 600 10px/1 "JetBrains Mono", "Consolas", monospace;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-inset);
+  color: var(--text-soft);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
   letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .progress-trade-viewport {
@@ -1775,10 +1843,10 @@ input:-webkit-autofill:focus {
   flex: 0 0 100%;
   display: grid;
   gap: 7px;
-  padding: 8px 10px;
-  border: 1px solid rgba(103, 130, 188, 0.22);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(10, 17, 31, 0.95), rgba(8, 14, 25, 0.9));
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
 }
 
 .progress-trade-card-top {
@@ -1800,24 +1868,24 @@ input:-webkit-autofill:focus {
 }
 
 .progress-trade-card-symbol {
-  font: 700 1rem/1 "Sora", "Manrope", sans-serif;
+  font: 700 var(--fs-md)/1 var(--font-ui);
   letter-spacing: -0.04em;
-  color: var(--text-main);
+  color: var(--text);
 }
 
 .progress-trade-live-inline {
-  color: #dbe8ff;
-  font: 800 0.98rem/1 "Sora", "Manrope", sans-serif;
-  letter-spacing: -0.03em;
+  color: var(--text);
+  font: 700 var(--fs-md)/1 var(--font-mono);
+  font-feature-settings: "tnum";
   white-space: nowrap;
 }
 
 .progress-trade-live-inline.pnl-positive {
-  color: var(--green);
+  color: var(--pnl-pos);
 }
 
 .progress-trade-live-inline.pnl-negative {
-  color: var(--red);
+  color: var(--pnl-neg);
 }
 
 .progress-trade-card-prices {
@@ -1833,59 +1901,56 @@ input:-webkit-autofill:focus {
   gap: 2px;
   min-height: 34px;
   padding: 6px 8px;
-  border-radius: 12px;
-  background: rgba(15, 24, 43, 0.92);
-  border: 1px solid rgba(103, 130, 188, 0.16);
-  color: #c3d4f7;
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  color: var(--text-soft);
   text-align: center;
-  font-size: 0.72rem;
+  font-size: var(--fs-label);
   line-height: 1.15;
 }
 
 .progress-trade-price-chip em,
 .progress-trade-stat em {
   font-style: normal;
-  color: var(--text-soft);
-  font: 500 0.62rem/1.1 "JetBrains Mono", "Consolas", monospace;
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1.1 var(--font-mono);
   letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .progress-trade-price-chip strong {
-  color: #dbe8ff;
-  font-weight: 700;
-  font-size: 0.86rem;
+  color: var(--text);
+  font: 700 var(--fs-data)/1.2 var(--font-mono);
+  font-feature-settings: "tnum";
 }
 
 .progress-trade-price-chip .pnl-positive {
-  color: var(--green);
+  color: var(--pnl-pos);
 }
 
 .progress-trade-price-chip .pnl-negative {
-  color: var(--red);
+  color: var(--pnl-neg);
 }
 
 .progress-trade-price-chip-stop {
-  background: rgba(34, 16, 22, 0.84);
-  border-color: rgba(255, 90, 126, 0.18);
-  color: #ffcad5;
+  border-color: var(--pnl-neg-line);
 }
 
 .progress-trade-price-chip-live {
-  background: linear-gradient(180deg, rgba(23, 41, 75, 0.96), rgba(16, 29, 54, 0.94));
-  border-color: rgba(87, 161, 255, 0.26);
+  border-color: var(--line-strong);
 }
 
 .progress-trade-price-chip-live strong {
-  font-size: 0.92rem;
-  font-weight: 800;
+  font-size: var(--fs-md);
 }
 
 .progress-trade-price-chip-live .pnl-positive {
-  color: var(--green);
+  color: var(--pnl-pos);
 }
 
 .progress-trade-price-chip-live .pnl-negative {
-  color: var(--red);
+  color: var(--pnl-neg);
 }
 
 .progress-trade-card-meta {
@@ -1907,24 +1972,25 @@ input:-webkit-autofill:focus {
   display: grid;
   gap: 2px;
   padding: 5px 6px;
-  border-radius: 10px;
-  background: rgba(12, 20, 36, 0.72);
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset);
   color: var(--text-soft);
-  font: 500 0.67rem/1.16 "JetBrains Mono", "Consolas", monospace;
+  font: 500 var(--fs-micro)/1.16 var(--font-mono);
 }
 
 .progress-trade-stat strong {
-  color: #dbe8ff;
-  font-weight: 800;
-  font-size: 0.88rem;
+  color: var(--text);
+  font-weight: 700;
+  font-size: var(--fs-data);
+  font-feature-settings: "tnum";
 }
 
 .progress-trade-card-meta .pnl-positive {
-  color: var(--green);
+  color: var(--pnl-pos);
 }
 
 .progress-trade-card-meta .pnl-negative {
-  color: var(--red);
+  color: var(--pnl-neg);
 }
 
 .progress-trade-price-chip-toggle {
@@ -1932,7 +1998,7 @@ input:-webkit-autofill:focus {
   -webkit-appearance: none;
   cursor: pointer;
   border-style: dashed;
-  background: rgba(12, 20, 36, 0.52);
+  background: transparent;
   font: inherit;
   align-items: center;
 }
@@ -1944,10 +2010,6 @@ input:-webkit-autofill:focus {
   gap: 8px;
   min-height: 44px;
   white-space: nowrap;
-}
-
-.journal-action-btn-secondary {
-  background: rgba(12, 20, 38, 0.4);
 }
 
 .journal-action-icon {
@@ -1969,17 +2031,17 @@ input:-webkit-autofill:focus {
 
 .btn {
   border: 1px solid var(--line-strong);
-  border-radius: 10px;
-  padding: 9px 12px;
-  background: rgba(17, 29, 56, 0.85);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  background: var(--surface-2);
   color: var(--text);
   cursor: pointer;
-  font-weight: 600;
-  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  font: 600 12.5px/1.2 var(--font-mono);
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
 .btn:hover {
-  border-color: var(--cyan);
+  border-color: var(--accent);
 }
 
 .btn:active {
@@ -1987,23 +2049,37 @@ input:-webkit-autofill:focus {
 }
 
 .btn.primary {
-  background: linear-gradient(130deg, rgba(57, 211, 255, 0.28), rgba(87, 161, 255, 0.4));
-  border-color: rgba(108, 178, 255, 0.8);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-inverse);
+}
+
+.btn.primary:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+button:focus-visible,
+.btn:focus-visible,
+.mini-btn:focus-visible,
+.nav-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .form-message {
   margin: 10px 0 0;
   min-height: 1.2em;
-  font: 500 12px/1.3 "JetBrains Mono", "Consolas", monospace;
+  font: 500 var(--fs-label)/1.3 var(--font-mono);
   color: var(--text-soft);
 }
 
 .form-message.success {
-  color: var(--green);
+  color: var(--pnl-pos);
 }
 
 .form-message.error {
-  color: var(--red);
+  color: var(--pnl-neg);
 }
 
 .panel-collapsible {
@@ -2032,24 +2108,21 @@ input:-webkit-autofill:focus {
 .panel-collapse-toggle {
   flex: 0 0 auto;
   border: 1px solid var(--line-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   padding: 8px 10px;
   color: var(--text-soft);
-  font: 600 11px/1 "JetBrains Mono", "Consolas", monospace;
+  font: 600 var(--fs-micro)/1 var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
 .panel-collapsible[open] .panel-collapse-toggle {
-  color: var(--cyan);
+  color: var(--text);
 }
 
-.panel-collapsible[open] .panel-collapse-toggle::after {
-  content: "Minimize";
-}
-
-.panel-collapsible:not([open]) .panel-collapse-toggle::after {
-  content: "Show more";
+.panel-collapsible[open] .panel-collapse-toggle .toggle-label-closed,
+.panel-collapsible:not([open]) .panel-collapse-toggle .toggle-label-open {
+  display: none;
 }
 
 .panel-collapsible-body {
@@ -2177,21 +2250,39 @@ table {
 
 th,
 td {
-  padding: 9px 10px;
-  border-bottom: 1px solid rgba(112, 138, 197, 0.18);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
   text-align: left;
 }
 
-th {
-  background: rgba(12, 21, 39, 0.95);
-  color: #c4d6fb;
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-inset);
+  color: var(--text-faint);
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  border-bottom: 1px solid var(--line-strong);
 }
 
 td {
-  font-size: 0.89rem;
+  font: 500 var(--fs-data)/1.4 var(--font-mono);
+}
+
+/* Numeric columns: right-aligned, tabular. */
+th.num,
+td.num {
+  text-align: right;
+}
+
+tbody tr {
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+tbody tr:hover {
+  background: var(--surface-3);
 }
 
 .user-agent-cell {
@@ -2209,37 +2300,41 @@ td {
 
 .pill {
   display: inline-block;
-  border-radius: 999px;
-  padding: 4px 8px;
-  font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
-  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 3px 7px;
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--line-strong);
+  color: var(--text-soft);
 }
 
 .pill-win {
-  color: var(--green);
-  background: rgba(42, 212, 143, 0.1);
-  border-color: rgba(42, 212, 143, 0.35);
+  color: var(--pnl-pos);
+  background: var(--pnl-pos-soft);
+  border-color: var(--pnl-pos-line);
 }
 
 .pill-loss {
-  color: var(--red);
-  background: rgba(255, 90, 126, 0.1);
-  border-color: rgba(255, 90, 126, 0.35);
+  color: var(--pnl-neg);
+  background: var(--pnl-neg-soft);
+  border-color: var(--pnl-neg-line);
 }
 
 .pill-be {
-  color: var(--amber);
-  background: rgba(255, 190, 79, 0.12);
-  border-color: rgba(255, 190, 79, 0.35);
+  color: var(--warn);
+  background: var(--warn-soft);
+  border-color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 38%, transparent);
 }
 
 .pnl-positive {
-  color: var(--green);
+  color: var(--pnl-pos);
   font-weight: 700;
 }
 
 .pnl-negative {
-  color: var(--red);
+  color: var(--pnl-neg);
   font-weight: 700;
 }
 
@@ -2249,21 +2344,33 @@ td {
 
 .mini-btn {
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: rgba(19, 29, 55, 0.85);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
   color: var(--text);
   padding: 6px 8px;
   cursor: pointer;
-  font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+
+.mini-btn:hover {
+  border-color: var(--accent);
 }
 
 .mini-btn + .mini-btn {
   margin-left: 6px;
 }
 
+/* Destructive: transparent until hover. */
 .mini-btn.danger {
-  border-color: rgba(255, 90, 126, 0.38);
-  color: var(--red);
+  border-color: transparent;
+  background: transparent;
+  color: var(--pnl-neg);
+}
+
+.mini-btn.danger:hover {
+  background: var(--pnl-neg-soft);
+  border-color: transparent;
 }
 
 .score-stack {
@@ -2274,22 +2381,25 @@ td {
 }
 
 .score-item {
-  background: rgba(15, 23, 44, 0.86);
+  background: var(--surface-inset);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  padding: 9px;
+  padding: var(--space-3);
 }
 
 .score-item p {
   margin: 0;
-  color: var(--text-soft);
-  font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .score-item strong {
   display: block;
   margin-top: 7px;
-  font-size: 1.2rem;
+  font: 700 var(--fs-lg)/1.2 var(--font-mono);
+  font-feature-settings: "tnum";
 }
 
 .warning-list {
@@ -2300,11 +2410,11 @@ td {
 }
 
 .warning-list li {
-  color: #ffbbc9;
+  color: var(--pnl-neg);
 }
 
 .warning-list li.ok {
-  color: var(--green);
+  color: var(--pnl-pos);
 }
 
 .tag-set {
@@ -2362,7 +2472,7 @@ td {
 .reflection-list li {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: rgba(12, 19, 36, 0.85);
+  background: var(--surface-inset);
   padding: 10px;
 }
 
@@ -2683,11 +2793,11 @@ body.is-preview .trust-row {
 
   .metric-card {
     min-height: 76px;
-    padding: 10px 11px;
+    padding: var(--space-3);
   }
 
   .metric-value {
-    font-size: 1.18rem;
+    font-size: var(--fs-lg);
   }
 
   #trade-entry .form-grid {
@@ -2763,6 +2873,16 @@ body.is-preview .trust-row {
   }
 }
 
+@media (max-width: 980px) and (min-width: 901px) {
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  table {
+    min-width: 900px;
+  }
+}
+
 @media (max-width: 900px) {
   .table-wrap {
     border: 0;
@@ -2788,9 +2908,13 @@ body.is-preview .trust-row {
   tbody tr {
     border: 1px solid var(--line);
     border-radius: var(--radius-md);
-    background: linear-gradient(165deg, rgba(14, 24, 44, 0.94), rgba(10, 16, 30, 0.94));
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    background: var(--surface-1);
+    box-shadow: var(--edge-highlight);
     padding: 8px 10px;
+  }
+
+  tbody tr:hover {
+    background: var(--surface-1);
   }
 
   td {
@@ -2798,15 +2922,16 @@ body.is-preview .trust-row {
     grid-template-columns: minmax(96px, 42%) minmax(0, 1fr);
     gap: 10px;
     padding: 7px 0;
-    border-bottom: 1px dashed rgba(120, 147, 205, 0.24);
+    border-bottom: 1px dashed var(--line);
   }
 
   td::before {
     content: attr(data-label);
-    color: var(--text-soft);
-    font: 600 11px/1.2 "JetBrains Mono", "Consolas", monospace;
+    color: var(--text-faint);
+    font: 600 var(--fs-micro)/1.2 var(--font-mono);
     letter-spacing: 0.04em;
     text-transform: uppercase;
+    text-align: left;
   }
 
   td:last-child {
@@ -3169,12 +3294,8 @@ body.is-preview .trust-row {
     padding: 10px;
   }
 
-  .metric-label {
-    font-size: 10px;
-  }
-
   .metric-value {
-    font-size: 1.05rem;
+    font-size: var(--fs-lg);
   }
 
   .calendar-grid {
@@ -3321,10 +3442,6 @@ body.is-preview .trust-row {
     font-size: 16px;
   }
 
-  .ambient {
-    display: none;
-  }
-
   .site-footer {
     font-size: 11px;
   }
@@ -3376,7 +3493,7 @@ body.is-preview .trust-row {
   }
 
   .nav-btn-top {
-    font-size: 0.86rem;
+    font-size: var(--fs-micro);
     padding: 9px 6px;
   }
 

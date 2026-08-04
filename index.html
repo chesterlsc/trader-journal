@@ -31,12 +31,9 @@
       href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260403-launch-readiness" />
+    <link rel="stylesheet" href="styles.css?v=20260805-phase4" />
   </head>
   <body>
-    <div class="ambient ambient-one" aria-hidden="true"></div>
-    <div class="ambient ambient-two" aria-hidden="true"></div>
-
     <section class="auth-shell" id="authShell" aria-label="Login">
       <header class="auth-shell-topbar">
         <div class="auth-shell-brand">
@@ -163,7 +160,7 @@
         </div>
 
         <nav class="main-nav" id="mainNav" aria-label="Main sections">
-          <button class="nav-btn is-active" type="button" data-target="dashboard">Dashboard</button>
+          <button class="nav-btn is-active" type="button" data-target="dashboard" aria-current="page">Dashboard</button>
           <button class="nav-btn" type="button" data-target="trade-entry">Trade Entry</button>
           <button class="nav-btn" type="button" data-target="journal">Trade Review</button>
           <button class="nav-btn" type="button" data-target="reflections">Reflections</button>
@@ -193,7 +190,7 @@
             </div>
           </div>
           <div class="desktop-nav-links">
-            <button class="nav-btn nav-btn-top is-active" type="button" data-target="dashboard">Dashboard</button>
+            <button class="nav-btn nav-btn-top is-active" type="button" data-target="dashboard" aria-current="page">Dashboard</button>
             <button class="nav-btn nav-btn-top" type="button" data-target="trade-entry">Trade Entry</button>
             <button class="nav-btn nav-btn-top" type="button" data-target="journal">Trade Review</button>
             <button class="nav-btn nav-btn-top" type="button" data-target="reflections">Reflections</button>
@@ -240,55 +237,79 @@
             <p>Track equity growth, drawdown pressure, and edge quality at a glance.</p>
           </header>
 
-          <section class="metric-grid" aria-label="Performance metrics">
-            <article class="metric-card">
+          <section class="metric-grid" id="dashboardMetricGrid" aria-label="Performance metrics">
+            <article class="metric-card metric-card-balance">
               <p class="metric-label">Account Balance (Custom)</p>
               <p class="metric-value" data-metric="accountBalance">$0.00</p>
+              <span class="metric-delta" data-metric-delta="accountBalance" hidden></span>
             </article>
             <article class="metric-card">
               <p class="metric-label">Total Trades</p>
               <p class="metric-value" data-metric="totalTrades">0</p>
+              <span class="metric-delta" data-metric-delta="totalTrades" hidden></span>
             </article>
             <article class="metric-card">
               <p class="metric-label">Win Rate</p>
               <p class="metric-value" data-metric="winRate">0%</p>
+              <span class="metric-delta" data-metric-delta="winRate" hidden></span>
             </article>
             <article class="metric-card">
               <p class="metric-label">Average R:R</p>
               <p class="metric-value" data-metric="avgRR">0.00</p>
+              <span class="metric-delta" data-metric-delta="avgRR" hidden></span>
             </article>
             <article class="metric-card">
               <p class="metric-label">Profit Factor</p>
               <p class="metric-value" data-metric="profitFactor">0.00</p>
+              <span class="metric-delta" data-metric-delta="profitFactor" hidden></span>
             </article>
             <article class="metric-card">
               <p class="metric-label">Current Drawdown</p>
               <p class="metric-value" data-metric="currentDrawdown">$0.00</p>
+              <span class="metric-delta" data-metric-delta="currentDrawdown" hidden></span>
             </article>
             <article class="metric-card">
               <p class="metric-label">Max Drawdown</p>
               <p class="metric-value" data-metric="maxDrawdown">$0.00</p>
+              <span class="metric-delta" data-metric-delta="maxDrawdown" hidden></span>
             </article>
             <article class="metric-card">
               <p class="metric-label">Best Day</p>
               <p class="metric-value" data-metric="bestDay">$0.00</p>
+              <span class="metric-delta" data-metric-delta="bestDay" hidden></span>
             </article>
             <article class="metric-card">
               <p class="metric-label">Worst Day</p>
               <p class="metric-value" data-metric="worstDay">$0.00</p>
+              <span class="metric-delta" data-metric-delta="worstDay" hidden></span>
             </article>
             <article class="metric-card">
               <p class="metric-label">Expectancy</p>
               <p class="metric-value" data-metric="expectancy">$0.00</p>
+              <span class="metric-delta" data-metric-delta="expectancy" hidden></span>
             </article>
             <article class="metric-card">
               <p class="metric-label">Winning Streak</p>
               <p class="metric-value" data-metric="winningStreak">0</p>
+              <span class="metric-delta" data-metric-delta="winningStreak" hidden></span>
             </article>
             <article class="metric-card">
               <p class="metric-label">Losing Streak</p>
               <p class="metric-value" data-metric="losingStreak">0</p>
+              <span class="metric-delta" data-metric-delta="losingStreak" hidden></span>
             </article>
+          </section>
+
+          <section class="dashboard-empty" id="dashboardEmptyState" hidden aria-label="No trades yet">
+            <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 6v36h36" />
+              <path d="M12 32l9-10 7 6 10-13" />
+              <circle cx="21" cy="22" r="1.6" />
+              <circle cx="28" cy="28" r="1.6" />
+            </svg>
+            <h3>No trades yet</h3>
+            <p>Log your first trade to unlock your equity curve, edge metrics, and discipline scores.</p>
+            <button id="dashboardEmptyCta" class="btn primary" type="button">Log your first trade</button>
           </section>
 
           <section class="panel-grid panel-grid-analytics">
@@ -390,11 +411,11 @@
                 <thead>
                   <tr>
                     <th>Setup</th>
-                    <th>Trades</th>
-                    <th>Win Rate</th>
-                    <th>Net P&amp;L</th>
-                    <th>Avg R</th>
-                    <th>Expectancy</th>
+                    <th class="num">Trades</th>
+                    <th class="num">Win Rate</th>
+                    <th class="num">Net P&amp;L</th>
+                    <th class="num">Avg R</th>
+                    <th class="num">Expectancy</th>
                   </tr>
                 </thead>
                 <tbody id="edgeRows">
@@ -454,7 +475,7 @@
                 <h3>Admin Login Activity</h3>
                 <p>Latest login, register, and logout events across all accounts.</p>
               </div>
-              <span class="panel-collapse-toggle" aria-hidden="true"></span>
+              <span class="panel-collapse-toggle"><span class="toggle-label-open">Minimize</span><span class="toggle-label-closed">Show more</span></span>
             </summary>
             <div class="panel-collapsible-body">
               <div class="form-actions">
@@ -489,7 +510,7 @@
                 <h3>Admin Users View</h3>
                 <p>Read-only view of registered users and account activity.</p>
               </div>
-              <span class="panel-collapse-toggle" aria-hidden="true"></span>
+              <span class="panel-collapse-toggle"><span class="toggle-label-open">Minimize</span><span class="toggle-label-closed">Show more</span></span>
             </summary>
             <div class="panel-collapsible-body">
               <div class="form-actions">
@@ -707,7 +728,7 @@
                       <strong>Advanced Details</strong>
                       <small>Psychology, execution grading, screenshots, and notes</small>
                     </span>
-                    <span class="trade-advanced-toggle" aria-hidden="true"></span>
+                    <span class="trade-advanced-toggle"><span class="toggle-label-open">Hide</span><span class="toggle-label-closed">Expand</span></span>
                   </summary>
 
                   <div class="trade-advanced-body">
@@ -959,9 +980,9 @@
                     <th>Setup</th>
                     <th>TF</th>
                     <th>Result</th>
-                    <th>Pips</th>
-                    <th>Net P&amp;L</th>
-                    <th>R-Multiple</th>
+                    <th class="num">Pips</th>
+                    <th class="num">Net P&amp;L</th>
+                    <th class="num">R-Multiple</th>
                     <th>Psychology</th>
                     <th>Execution</th>
                     <th>Actions</th>
@@ -1109,6 +1130,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260403-launch-readiness"></script>
+    <script type="module" src="app.js?v=20260805-phase4"></script>
   </body>
 </html>
