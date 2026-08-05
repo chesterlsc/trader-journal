@@ -1993,3 +1993,30 @@ because reusing that record is what let the digest ship with no new save path,
 no new storage key and no migration. They fit a week well enough. If a future
 phase wants a genuinely week-shaped record, the field names are the change and
 `weekOf` is already there to branch on.
+
+## Verification pass — prop tracker + 1f #04-07 (2026-08-12)
+
+The prop-accounts agent reported it could not run a browser boot check (browser tools were withheld from that phase, and the local server is static so curl proves nothing about JS execution). That is the exact failure mode that has shipped four times, so it was verified here directly.
+
+**Boot: clean.** Injected the `window.__boot` error trap into `<head>`, loaded the app, and got zero errors. All seven of the phase's new module-level bindings sit above the top-level `init()` call, and `tests/bootOrder.check.mjs` now mechanically enforces that for future work.
+
+**Trailing drawdown verified against the rule that actually busts accounts.** Drove `evaluateProp` with a Topstep 50K config (start 50,000 / drawdown 2,000 / trailing / stop-at 50,000):
+
+| state | equity | MLL floor | room |
+|---|---|---|---|
+| start | 50,000 | 48,000 | 2,000 |
+| +1,000 | 51,000 | 49,000 (trails) | 2,000 |
+| +2,500 | 52,500 | 50,000 (**capped**) | 2,500 |
+| −2,600 | 49,900 | 50,000 (never recedes) | −100 → breached |
+
+The floor trails up, stops at the starting balance, and never moves back down. That is the correct Topstep behaviour and the single most important number in the feature.
+
+**Sunday digest is genuinely computed, not narrated.** Sample output: *"Week of Aug 03 – Aug 09: 1 closed trade, -$180.00 net across 1 trading day. 0 wins, 1 loss — a 0.0% win rate. Expectancy ran -$180.00 per trade. The week before was 4 trades for +$2,300.00 — down $2,480.00 on that. 0 of the 1 carry a journal note."* Every clause is a real number including the week-over-week delta, and it ends with an actionable line rather than filler.
+
+**All four 1f features present and wired:** `#playbook`, `#equityScrub`, `#journalVoiceBtn`, `#digestDraftBtn`.
+
+**24/24 test files green.**
+
+Two things the agent flagged that are worth carrying forward:
+1. It had to touch `api/_lib/sanitize.js` — and found a pre-existing data-loss bug doing so. `sanitizeSettings` was a strict 7-key whitelist, so it silently deleted every client-owned settings key on the first server round-trip; the pre-trade checklist and cooldown config had been evaporating on login-from-a-second-device since they shipped. Fixed by named passthrough with a 128KB cap.
+2. The tracker never says PASSED — only TARGET MET — because the app cannot see the firm's actual pass conditions (minimum trading days, consistency evaluation) and has no visibility into the account. It also states in the UI, not just in a report, that it only sees closed trades and therefore cannot detect an intraday limit touch that recovered.
