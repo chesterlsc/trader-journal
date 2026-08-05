@@ -5258,3 +5258,536 @@ body.auth-locked .topnav {
     width: 100%;
   }
 }
+
+/* ══ 12. THE THUMB SHEET (mobile nav, 2g) ══════════════════════════════════
+   The tab bar IS the navigation. This is the drawer under it.
+
+   The old drawer was ten ~96px full-width rows filling the whole screen —
+   six destinations of which FOUR (dashboard, journal, calendar, reflections)
+   are one tap away in .tabbar, plus a theme toggle, Export, a DEV chip and
+   Logout, under a header that was a brand mark, a MENU button and a large
+   dead gap. What is left here is what is genuinely orphaned: three
+   destinations the dock has no room for and three journal-level utilities.
+
+   The signature: the scrim stops 12px above the tab bar's top edge and the
+   sheet stops 8px above the FAB, so the dock stays LIT and TAPPABLE while
+   the menu is open. Opening the menu is not a commitment — you can bail into
+   Calendar or log a trade without dismissing anything. A menu that has to
+   hide the tab bar is a menu that thinks it is the navigation.
+
+   Scoped to <=1024px, where .topnav is display:none and .sidebar is the only
+   chrome. Desktop is untouched. */
+
+:root:not([data-theme="light"]) { --nav-scrim: rgba(10, 8, 7, 0.58); }
+[data-theme="light"] { --nav-scrim: rgba(36, 31, 26, 0.38); }
+
+@media (max-width: 1024px) {
+  /* ---- the rail: chrome, not a card ------------------------------------- */
+  /* ~88px of brand-and-gap down to a 44px sticky rail. The negative margins
+     cancel .app-layout's 8px top margin and 6px gutters so it is full-bleed
+     against the page ground and there is no seam where it sticks. */
+  .sidebar {
+    /* Dock clearance. There is no .tabbar above 899px, so the sheet sits at
+       the bottom edge there and only takes the dock offsets below. */
+    --rail-h: 52px;
+    --sheet-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    --scrim-bottom: 0px;
+    position: sticky;
+    top: 0;
+    z-index: var(--z-nav);
+    display: block;
+    min-height: var(--rail-h);
+    gap: 0;
+    margin: -8px -6px 4px;
+    padding: 8px 6px 0;
+    background: var(--surface-0);
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  :root:not([data-theme="light"]) .sidebar {
+    border: 0;
+  }
+
+  .sidebar-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+  }
+
+  .brand-block {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .brand-block .brand-mark {
+    margin: 0;
+    font-size: 15px;
+    letter-spacing: -0.04em;
+    gap: 0.24rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+  }
+
+  /* ---- rail column 2: account scope + the risk groove -------------------- */
+  .rail-live {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .account-switch-mobile {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    min-width: 0;
+  }
+
+  /* The label still reads out; on a 44px rail the word "ACCOUNT" next to the
+     account name is the same word twice. */
+  .account-switch-mobile .account-switch-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  /* Pressed, not raised: the account you are inside is a well you are
+     standing in, not a button you could press to go somewhere. */
+  .account-switch-mobile .account-switch-select {
+    width: auto;
+    max-width: 132px;
+    min-height: 44px;
+    padding: 0 10px;
+    border-radius: var(--radius-pill);
+    background: var(--surface-inset);
+    box-shadow: var(--clay-pressed);
+    font: 600 12px/1 var(--font-mono);
+    text-overflow: ellipsis;
+  }
+
+  /* The risk groove. A pressed well that fills as the budget is spent — a
+     debt gauge, not a progress bar, so a full one is never a reward. The 2px
+     hard leading edge is what holds 3:1 against --surface-inset (WCAG
+     1.4.11); the colour wash alone would not, and color-mix failing on a
+     stale WebView leaves the label and the dollar figure intact. */
+  .rail-groove {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    align-content: center;
+    justify-items: end;
+    gap: 1px;
+    min-height: 34px;
+    min-width: 76px;
+    padding: 0 9px;
+    border-radius: var(--radius-clay-sm);
+    background: var(--surface-inset);
+    box-shadow: var(--clay-pressed);
+  }
+
+  .rail-groove[hidden] {
+    display: none;
+  }
+
+  .rail-groove::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: calc(var(--risk-used, 0) * 100%);
+    background: color-mix(in srgb, var(--tone, var(--accent)) 22%, transparent);
+    box-shadow: inset -2px 0 0 var(--tone, var(--accent));
+  }
+
+  .rail-groove-label,
+  .rail-groove-value {
+    position: relative;
+    z-index: 1;
+    white-space: nowrap;
+  }
+
+  .rail-groove-label {
+    font: 600 11px/1 var(--font-mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .rail-groove-value {
+    font: 700 12px/1 var(--font-mono);
+    color: var(--text);
+  }
+
+  .rail-groove.is-warn { --tone: var(--warn); }
+  .rail-groove.is-warn .rail-groove-value { color: var(--warn); }
+  .rail-groove.is-breach { --tone: var(--pnl-neg); }
+  .rail-groove.is-breach .rail-groove-value { color: var(--pnl-neg); }
+
+  /* ---- rail column 3: the toggle ---------------------------------------- */
+  .nav-toggle {
+    min-width: 0;
+    min-height: 44px;
+    height: 44px;
+    padding: 0 14px;
+    gap: 8px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: var(--surface-2);
+    box-shadow: var(--clay-raised);
+    font: 600 12px/1 var(--font-mono);
+  }
+
+  /* The hamburger becomes a chevron with no markup change: the three bars
+     collapse to one rotated corner. Up = the sheet rises; down = it drops. */
+  .nav-toggle-bars {
+    width: 9px;
+    height: 9px;
+    margin-top: 3px;
+    background: none;
+    border-radius: 2px;
+    border-right: 2px solid var(--text-soft);
+    border-bottom: 2px solid var(--text-soft);
+    rotate: -135deg;
+    transition: rotate var(--dur-squish) var(--ease-squish),
+      margin-top var(--dur-squish) var(--ease-squish);
+  }
+
+  .nav-toggle-bars::before,
+  .nav-toggle-bars::after {
+    display: none;
+  }
+
+  .nav-toggle.is-open .nav-toggle-bars {
+    rotate: 45deg;
+    margin-top: -3px;
+  }
+
+  /* ---- the scrim -------------------------------------------------------- */
+  /* Starts below the rail (chrome stays legible and the toggle stays
+     tappable) and stops above the dock. No blur: the alpha does all the work
+     and a compositor layer on a full-viewport surface is the first thing to
+     stutter on a low-end phone. No new element — a pseudo on .sidebar, whose
+     events target .sidebar itself, which is what the outside-click handler
+     in app.js keys on. */
+  .sidebar::after {
+    content: "";
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: var(--rail-h);
+    bottom: var(--scrim-bottom);
+    background: var(--nav-scrim);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity var(--dur-fast) var(--ease-out),
+      visibility 0s linear var(--dur-fast);
+  }
+
+  .sidebar.nav-open::after {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity var(--dur-fast) var(--ease-out), visibility 0s;
+  }
+
+  /* ---- the sheet -------------------------------------------------------- */
+  .main-nav {
+    position: fixed;
+    z-index: 1;
+    left: max(10px, env(safe-area-inset-left, 0px));
+    right: max(10px, env(safe-area-inset-right, 0px));
+    bottom: var(--sheet-bottom);
+    display: grid;
+    gap: 14px;
+    justify-items: stretch;
+    grid-template-columns: 1fr;
+    max-height: min(64dvh, calc(100dvh - var(--rail-h) - 140px));
+    margin: 0;
+    padding: 10px 14px 16px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: var(--radius-clay-lg);
+    background: var(--surface-2);
+    box-shadow: var(--clay-float);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    translate: 0 10px;
+    scale: 0.985;
+    transform-origin: 50% 100%;
+    transition: translate var(--dur-base) var(--ease-out),
+      scale var(--dur-base) var(--ease-out),
+      opacity var(--dur-fast) var(--ease-out),
+      visibility 0s linear var(--dur-base);
+  }
+
+  .sidebar.nav-open .main-nav {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    translate: 0 0;
+    scale: 1;
+    transition: translate var(--dur-base) var(--ease-out),
+      scale var(--dur-base) var(--ease-out),
+      opacity var(--dur-fast) var(--ease-out),
+      visibility 0s;
+  }
+
+  :root:not([data-theme="light"]) .main-nav {
+    border: 1px solid var(--clay-edge-strong);
+  }
+
+  /* Carved, not a raised pill: under depth-as-data a raised chip claims to be
+     draggable. This is a machined slot in the sheet's top face, the same
+     groove language as the --deck-groove meter tracks. */
+  .main-nav::before {
+    content: "";
+    width: 40px;
+    height: 5px;
+    margin: 2px auto 0;
+    border-radius: var(--radius-pill);
+    background: var(--surface-inset);
+    box-shadow: inset 0 2px 4px -1px var(--deck-groove);
+  }
+
+  /* ---- groups ----------------------------------------------------------- */
+  .sheet-group {
+    display: grid;
+    gap: 8px;
+  }
+
+  .sheet-group-label {
+    margin: 0 0 0 4px;
+    font: 600 11px/1 var(--font-mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .sheet-grid,
+  .sheet-utils {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  /* ---- destination tiles ------------------------------------------------ */
+  /* Space Grotesk, sentence case. The base .nav-btn rule is mono/uppercase/
+     .06em and reads shouty at this size; mono is reserved for numerals and
+     kickers. `.tabbar .nav-btn` already overrides the same base rule the same
+     way — so the next person writing a mobile nav does not re-add the caps. */
+  .sheet-tile {
+    display: grid;
+    gap: 8px;
+    align-content: center;
+    justify-items: start;
+    min-height: 76px;
+    width: auto;
+    padding: 14px;
+    border-radius: var(--radius-clay-sm);
+    background: var(--surface-1);
+    box-shadow: var(--clay-raised);
+    color: var(--text);
+    text-align: left;
+    text-transform: none;
+    letter-spacing: -0.01em;
+    font: 600 13px/1.15 var(--font-ui);
+    transition: box-shadow var(--dur-fast) var(--ease-out),
+      translate var(--dur-squish) var(--ease-squish),
+      scale var(--dur-squish) var(--ease-squish);
+  }
+
+  .sheet-tile-icon {
+    display: block;
+    width: 22px;
+    height: 22px;
+    color: var(--accent);
+  }
+
+  .sheet-tile-icon svg {
+    display: block;
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .main-nav .sheet-tile:hover {
+    background: var(--surface-1);
+  }
+
+  .main-nav .sheet-tile:active {
+    translate: 0 1px;
+    scale: 0.985;
+    background: var(--surface-inset);
+    box-shadow: var(--clay-pressed);
+  }
+
+  /* Active: a ring that FOLLOWS the radius. The old rule was an inset spread
+     on a pill, which traced the corner and bled off the left edge as a violet
+     half-circle. :not(:focus-visible) is load-bearing — this selector would
+     otherwise outrank the global focus ring. */
+  .main-nav .sheet-tile.is-active:not(:focus-visible) {
+    background: var(--accent-muted);
+    color: var(--accent);
+    box-shadow: inset 0 0 0 1.5px var(--accent), var(--clay-raised);
+  }
+
+  /* ---- utility chips ---------------------------------------------------- */
+  .sheet-util {
+    display: inline-grid;
+    grid-auto-flow: column;
+    align-items: center;
+    justify-content: start;
+    gap: 9px;
+    width: 100%;
+    min-height: 48px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: var(--surface-1);
+    box-shadow: var(--clay-raised);
+    color: var(--text);
+    font: 600 12px/1 var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-align: left;
+    transition: box-shadow var(--dur-fast) var(--ease-out),
+      translate var(--dur-squish) var(--ease-squish);
+  }
+
+  .sheet-util[hidden] {
+    display: none;
+  }
+
+  .sheet-util:active {
+    translate: 0 1px;
+    box-shadow: var(--clay-pressed);
+  }
+
+  .sheet-util svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    color: var(--text-soft);
+  }
+
+  /* Theme icon swap, zero JS — the button carries both marks and
+     [data-theme-glyph] keeps applyTheme() from overwriting them with a word. */
+  .sheet-util-sun { display: none; }
+  [data-theme="light"] .sheet-util-sun { display: block; }
+  [data-theme="light"] .sheet-util-moon { display: none; }
+
+  /* Pressed, not raised — depth as data: you fall out of a session. */
+  .main-nav #mobileLogoutBtn {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin: 0;
+    background: var(--pnl-neg-soft);
+    color: var(--pnl-neg);
+    box-shadow: var(--clay-pressed);
+  }
+
+  /* ---- foot: a footnote, not two rows ----------------------------------- */
+  .sidebar-foot {
+    margin: 0;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+
+  .sidebar-foot #lastSaved {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font: 500 11px/1.3 var(--font-mono);
+    color: var(--text-faint);
+  }
+
+  .sidebar-foot #lastSaved::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-faint);
+  }
+
+  .nav-preview-landing {
+    min-height: 44px;
+    justify-self: start;
+  }
+}
+
+/* The dock offsets. 899 is deliberately the same literal as the .tabbar
+   visibility query in styles.css §1 and the duplicate-hiding rule below —
+   all three must move together. Gated on the same body classes the tab bar
+   is: with no dock on screen there is nothing to clear.
+     bar top edge = safe + 12 + 64 = safe + 76   -> scrim stops at safe + 88
+     FAB top      = safe + 46 + 60 = safe + 106  -> sheet stops at safe + 114 */
+@media (max-width: 899px) {
+  body.is-authenticated .sidebar,
+  body.is-preview .sidebar,
+  body.is-guest:not(.demo-signup) .sidebar {
+    --sheet-bottom: calc(env(safe-area-inset-bottom, 0px) + 114px);
+    --scrim-bottom: calc(env(safe-area-inset-bottom, 0px) + 88px);
+  }
+
+  /* The four the .tabbar already owns. They stay in the DOM with their
+     data-target so ui.navButtons, switchView(), the hash router, the
+     aria-current sync and the auth gate never see a change — and they come
+     back at 900-1024px, where there is no tab bar and the sheet is the only
+     navigation. If the .tabbar gate above ever moves off 899, this moves with
+     it or four destinations are stranded. */
+  .main-nav .sheet-tile-dock {
+    display: none;
+  }
+
+  /* Three orphans in a 2-column grid leaves a hole. The third spans instead. */
+  .main-nav .sheet-grid .sheet-tile:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Every animated state here is also a colour, shadow or position change, so
+     nothing loses information when the movement goes. */
+  .main-nav,
+  .sidebar.nav-open .main-nav {
+    translate: 0 0;
+    scale: 1;
+  }
+
+  .main-nav .sheet-tile:active {
+    translate: 0 0;
+    scale: 1;
+  }
+
+  .sheet-util:active {
+    translate: 0 0;
+  }
+
+  .nav-toggle-bars {
+    transition: none;
+  }
+}

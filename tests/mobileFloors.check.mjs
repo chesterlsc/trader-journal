@@ -138,6 +138,8 @@ const CONTROLS = [
   ".info-btn",
   ".trade-status-toggle", // wraps #tradeInProgress
   ".tag-set label", // wraps the five reflection checkboxes
+  ".sheet-tile", // 2g thumb sheet: destination tiles
+  ".sheet-util", // 2g thumb sheet: theme / export / logout chips
 ];
 
 for (const sel of CONTROLS) {

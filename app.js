@@ -235,6 +235,10 @@ const ui = {
   sidebar: document.getElementById("sidebar"),
   mainNav: document.getElementById("mainNav"),
   navToggleBtn: document.getElementById("navToggleBtn"),
+  appContent: document.querySelector(".content"),
+  navRiskGroove: document.getElementById("navRiskGroove"),
+  navRiskLabel: document.getElementById("navRiskLabel"),
+  navRiskValue: document.getElementById("navRiskValue"),
   authOverlay: document.getElementById("authOverlay"),
   authPanel: document.querySelector(".auth-panel"),
   brandTitle: document.getElementById("brandTitle"),
@@ -1616,7 +1620,11 @@ function bindEvents() {
       return;
     }
 
-    if (ui.sidebar.contains(event.target)) {
+    // The scrim is .sidebar::after, so its taps target .sidebar itself — that
+    // is an OUTSIDE tap even though contains() says otherwise. Everything else
+    // inside the rail or the sheet (both DOM descendants of #sidebar, fixed
+    // position or not) still counts as inside.
+    if (event.target !== ui.sidebar && ui.sidebar.contains(event.target)) {
       return;
     }
 
@@ -1746,9 +1754,27 @@ function toggleMobileNav(forceState) {
 
   const isOpen = ui.sidebar.classList.contains("nav-open");
   const nextState = typeof forceState === "boolean" ? forceState : !isOpen;
+  if (nextState === isOpen) {
+    return;
+  }
   ui.sidebar.classList.toggle("nav-open", nextState);
   ui.navToggleBtn.classList.toggle("is-open", nextState);
   ui.navToggleBtn.setAttribute("aria-expanded", String(nextState));
+
+  // The focus trap is the platform's own. With .content inert, Tab cycles
+  // exactly the chrome that is still live: the rail, the sheet, and the tab
+  // bar + FAB — which is the correct trap here precisely BECAUSE the dock
+  // stays tappable. A strict wrap-around trap that excluded the dock would
+  // contradict the whole design. Cleared again in syncMobileNavState(), so a
+  // rotate to desktop width can never strand the app inert.
+  if (ui.appContent) {
+    ui.appContent.inert = nextState;
+  }
+  if (nextState) {
+    ui.mainNav?.querySelector("button:not([hidden]):not(:disabled)")?.focus();
+  } else {
+    ui.navToggleBtn.focus();
+  }
 }
 
 function syncMobileNavState() {
@@ -1760,7 +1786,57 @@ function syncMobileNavState() {
     ui.sidebar.classList.remove("nav-open");
     ui.navToggleBtn.classList.remove("is-open");
     ui.navToggleBtn.setAttribute("aria-expanded", "false");
+    if (ui.appContent) {
+      ui.appContent.inert = false;
+    }
   }
+}
+
+// The rail's one live number. Tri-state, resolved in this order:
+//   1. a prop account with a drawdown limit  -> ROOM
+//   2. no prop, but a personal daily limit   -> DAY LEFT
+//   3. neither                               -> hidden, and the rail reclaims
+//      the width. It never invents a limit nobody entered, which is the rule
+//      renderPropTracker() already follows.
+// Never rendered to a visitor who is not in the app — a $0.00 on the chrome of
+// a logged-out page reads as broken, not as empty.
+function renderNavRisk() {
+  if (!ui.navRiskGroove) {
+    return;
+  }
+
+  const prop = canAccessApp() ? getActivePropEvaluation() : null;
+  let label = null;
+  let value = 0;
+  let used = 0;
+  let tone = "";
+
+  if (prop && prop.room !== null) {
+    const span = prop.rules.drawdown > 0 ? prop.rules.drawdown : 1;
+    label = prop.room <= 0 ? "Breached" : "Room";
+    value = prop.room;
+    used = clamp(1 - prop.room / span, 0, 1);
+    const pressure = mllPressure(prop, typicalLossSize());
+    tone = prop.room <= 0 ? "is-breach" : pressure.level === "warn" ? "is-warn" : "";
+  } else if (canAccessApp()) {
+    const left = getDailyBudgetLeft();
+    if (left !== null) {
+      const limit = state.settings.dailyMaxLoss;
+      label = "Day left";
+      value = left;
+      used = clamp(1 - left / limit, 0, 1);
+      tone = used >= 1 ? "is-breach" : used >= 0.75 ? "is-warn" : "";
+    }
+  }
+
+  ui.navRiskGroove.hidden = label === null;
+  if (label === null) {
+    return;
+  }
+  setText(ui.navRiskLabel, label);
+  setText(ui.navRiskValue, formatCurrency(value));
+  ui.navRiskGroove.style.setProperty("--risk-used", String(used));
+  ui.navRiskGroove.className = `rail-groove ${tone}`.trim();
 }
 
 function isLocalPreviewMode() {
@@ -6544,6 +6620,7 @@ function renderAll() {
   renderDashboardMetrics(state.analytics);
   renderRiskStrip(state.analytics);
   renderPropTracker();
+  renderNavRisk();
   renderGreeting();
   renderPlaybook(state.analytics);
   renderUnjournalled();

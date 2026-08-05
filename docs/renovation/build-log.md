@@ -2020,3 +2020,126 @@ The floor trails up, stops at the starting balance, and never moves back down. T
 Two things the agent flagged that are worth carrying forward:
 1. It had to touch `api/_lib/sanitize.js` — and found a pre-existing data-loss bug doing so. `sanitizeSettings` was a strict 7-key whitelist, so it silently deleted every client-owned settings key on the first server round-trip; the pre-trade checklist and cooldown config had been evaporating on login-from-a-second-device since they shipped. Fixed by named passthrough with a 128KB cap.
 2. The tracker never says PASSED — only TARGET MET — because the app cannot see the firm's actual pass conditions (minimum trading days, consistency evaluation) and has no visibility into the account. It also states in the UI, not just in a report, that it only sees closed trades and therefore cannot detect an intraday limit touch that recovered.
+
+## 2g — the mobile header and menu: the Thumb Sheet (2026-08-06)
+
+**What was wrong, measured.** The drawer was ten near-identical ~96px full-width
+rows filling the entire screen, and *four of its six destinations* — Dashboard,
+Trade Review, Calendar, Reflections — were already one tap away in `.tabbar`. A
+full-screen menu was being spent re-offering navigation the trader already had.
+Above it sat ~88px of brand mark, a MENU button and a large dead gap. The active
+row drew a violet half-circle bleeding off its left edge. It ended with
+"Autosave: waiting for first update" and a DEV chip. `1f-features.html` names
+exactly this — "the six-item top nav, which spends a full row on destinations
+you visit weekly" — as something to cut; this was its mobile expression.
+
+**The thesis.** The tab bar IS the navigation. The menu is the drawer under it.
+So the scrim now stops 12px above the tab bar's top edge and the sheet stops 8px
+above the FAB: the dock stays lit, coloured and *tappable* while the menu is
+open. Opening the menu is not a commitment — you can bail into Calendar or log a
+trade without dismissing anything. Every geometry number is derived from the
+dock's own, not estimated:
+
+```
+bar top edge = safe + 12 + 64  = safe + 76   -> scrim bottom: safe + 88
+FAB top      = safe + 46 + 60  = safe + 106  -> sheet bottom: safe + 114
+```
+
+Ten rows became five items. Every control lands 150–430px off the bottom edge,
+inside the arc of a one-handed thumb.
+
+**What shipped**
+
+- **The rail.** `.sidebar` at ≤1024px stops being a clay panel and becomes
+  chrome: `position: sticky`, full-bleed on the page ground, 44px. ~88px → 44px,
+  ~30px back to the dashboard above the fold. Three columns: wordmark (ellipsed,
+  no `:has()` feature detection), the account chip + risk groove, the toggle.
+- **The account switcher left the menu.** "Which account am I looking at" is not
+  a menu item on a trading product. Same `#accountSwitchNav`,
+  `[data-account-switch]`, same `renderAccountSwitcher()` — a pressed pill on the
+  rail, because the account you are inside is a well you stand in, not a button.
+- **The risk groove** (grafted from Account Cockpit, resized). A pressed well
+  that *fills as the day's budget is spent* — a debt gauge, not a progress bar,
+  so a full one is never a reward. `renderNavRisk()` is a tri-state ladder: prop
+  drawdown → ROOM, else `dailyMaxLoss` → DAY LEFT, else hidden and the rail
+  reclaims the width. It never invents a limit nobody entered, and it is gated on
+  the same body classes the tab bar uses so a logged-out visitor never sees
+  `$0.00` on the chrome. The 2px hard leading edge on the fill is what holds
+  WCAG 1.4.11 against `--surface-inset`; the 22% `color-mix` wash alone would
+  not, and on a stale WebView the label and the dollar figure still read.
+- **Four duplicates hidden, not deleted.** `.sheet-tile-dock` is `display:none`
+  at ≤899px — *deliberately the same literal* as the `.tabbar` gate. They keep
+  their `data-target` and `.nav-btn`, so `ui.navButtons`, `switchView()`, the
+  hash router, the `aria-current` sync and the auth gate see no change, and they
+  come back at 900–1024px where there is no tab bar and the sheet is the only
+  navigation.
+- **Setups — a found bug, not a feature.** `#playbook` has existed as a view
+  since 1f #04 and `switchView('playbook')` is called from Edge Detection, but it
+  has never had a nav entry on *any* breakpoint. It is now the third tile.
+- **The half-arc is fixed at the root.** `box-shadow: inset 3px 0 0` on a
+  `--radius-pill` element: a non-zero *offset* traces the border radius, so the
+  rail rendered as an arc. Inset rails and pill radii are incompatible. Replaced
+  by `inset 0 0 0 1.5px`, a ring that follows whatever radius the tile has, in
+  both stylesheets.
+- **Type.** Space Grotesk, sentence case, 13px on destinations. Mono uppercase is
+  reserved for group kickers, the toggle and numerals — with a comment naming
+  `.tabbar .nav-btn` as the precedent, so the next person writing a mobile nav
+  does not re-add the caps.
+- **The dev noise is a footnote.** `#lastSaved` and `#previewLandingBtnMobile`
+  keep their ids, handlers and `hidden` gating — they moved inside the sheet's
+  foot, below a hairline, instead of being the last two full-width rows of a
+  full-screen menu.
+- **Deleted, not layered over:** the `max-height: 0 → 460px` accordion on
+  `.main-nav` and the twin on `.sidebar-foot` (it animated a 4-layer clay shadow
+  every frame and `.sidebar-foot` now lives *inside* `#mainNav`, so a nested
+  reveal would have made the foot fade a beat late); the 92px MENU button; the
+  base `.main-nav .nav-btn.is-active` inset rail.
+
+**Focus and dismissal.** `inert` on `.content` is the trap — the platform's own,
+not a keydown loop. It is the correct trap here *precisely because* the dock
+stays live: Tab cycles the rail, the sheet, the tab bar and the FAB, which is
+the honest set of what is still interactive. Cleared in `toggleMobileNav()` and
+again defensively in `syncMobileNavState()`, so rotating to a desktop width can
+never strand the app inert. All dialogs live outside `.content`, so quick capture
+is unaffected. Escape and outside-click were already written (app.js ~1604 and
+~1611); the only change was one condition — the scrim is `.sidebar::after`, so
+its taps target `.sidebar` itself, which `contains()` would have called *inside*.
+
+**Deliberately not shipped**, from the judges' kill list: a `<dialog>` +
+`showModal()` rewrite (its `::backdrop` cannot be clipped above the tab bar, and
+a modal dialog makes the dock inert — which kills the thesis); `backdrop-filter`
+on the scrim (decoration that forces a compositor layer on the one surface that
+must not stutter); a second `pointerdown` listener (app.js:1611 already does it,
+and two handlers would fight over `aria-expanded`); `body { overflow: hidden }`
+(`overscroll-behavior: contain` already handles it, and it is a second way to
+strand the page next to `inert`); `--clay-raised-xs`/`--clay-pressed-xs` (two
+tokens to keep in sync across both theme blocks for one chip); a search box over
+six destinations; a mobile trade parser in the nav, which would reverse
+`openQuickCapture()`'s documented touch routing at app.js:4135; and a distinct
+layout for the 900–1024px band, which nobody is holding one-handed.
+
+**Verification.** `node --check` clean. **25/25 test files green**, including
+`tests/mobileFloors.check.mjs` with `.sheet-tile` and `.sheet-util` added to its
+`CONTROLS` list — the 44px floor on the new UI is enforced, not documented.
+
+New: `tests/mobileNav.check.mjs`. It re-derives both breakpoints from the parsed
+stylesheets and asserts they agree, so the day the `.tabbar` gate moves off 899
+and the duplicate-hiding rule does not, the build fails instead of stranding four
+destinations. It also asserts every `<section class="view">` is reachable *at
+both widths* (dock + sheet on a phone, sheet alone on a tablet), that no menu
+entry duplicates a dock destination without being marked hideable, that the
+autosave line and dev chip are out of the destination list, that the account
+switcher is on the rail and not duplicated, and that no offset inset rail comes
+back on a `.main-nav` active item. It then drives the real `renderNavRisk()`
+sliced out of app.js through all three branches — including a prop account whose
+drawdown is 0, which must fall *through* to the daily budget rather than divide
+by zero and paint a full groove at a flat P&L.
+
+**The honest reservation.** What survives in the sheet is thin: three orphaned
+destinations and three utilities. That is the correct amount of menu for this
+app, but it means the sheet's value is in the geometry and in the rail, not in
+its contents. The rail's groove is the part worth a second look on a real
+device — a trader with no prop account and no `dailyMaxLoss` set sees no number
+at all, which is honest but means the most-common new-account case gets a rail
+that is brand-and-toggle. That is still 44px against the old 88px, so it is not a
+regression; it just is not yet earning.
