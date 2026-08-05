@@ -45,10 +45,10 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260814-eqscrub" />
+    <link rel="stylesheet" href="styles.css?v=20260815-voicenote" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260814-eqscrub" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260815-voicenote" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -2012,6 +2012,34 @@
             <div class="jrn-note-actions">
               <button class="jrn-mini" type="button" id="journalPasteBtn" hidden>&#8984;V paste chart</button>
             </div>
+
+            <!-- 1f #06 VOICE NOTE — thirty seconds of talking beats a paragraph
+                 nobody types. Recording and playback only: there is no
+                 speech-to-text anywhere in this app, so nothing here implies a
+                 transcript. A clip is audio, is not searchable, is not in
+                 exports, and lives on this device only — all three said out
+                 loud in #journalVoiceQuota rather than left to be discovered. -->
+            <div class="jrn-voice">
+              <div class="jrn-voice-row">
+                <button
+                  class="jrn-voice-btn"
+                  type="button"
+                  id="journalVoiceBtn"
+                  aria-pressed="false"
+                  aria-describedby="journalVoiceState"
+                >Record</button>
+                <span class="jrn-voice-time" id="journalVoiceTime" hidden>0:00</span>
+                <span class="jrn-voice-meter" id="journalVoiceMeter" aria-hidden="true" hidden>
+                  <span class="jrn-voice-level" id="journalVoiceLevel"></span>
+                </span>
+              </div>
+              <p class="jrn-voice-state" id="journalVoiceState" role="status" aria-live="polite"></p>
+              <audio class="jrn-voice-player" id="journalVoicePlayer" controls hidden></audio>
+              <div class="jrn-voice-actions" id="journalVoiceActions" hidden>
+                <button class="jrn-mini" type="button" id="journalVoiceDeleteBtn">Delete clip</button>
+              </div>
+              <p class="jrn-voice-quota" id="journalVoiceQuota"></p>
+            </div>
           </div>
           <div class="jrn-block">
             <p class="jrn-label" id="journalChartLabel">Chart</p>
@@ -2261,6 +2289,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260814-eqscrub"></script>
+    <script type="module" src="app.js?v=20260815-voicenote"></script>
   </body>
 </html>

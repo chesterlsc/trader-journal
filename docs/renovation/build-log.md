@@ -1683,3 +1683,161 @@ the same behaviour, but two playheads on one dashboard is two things to clear
 and one question too many — and the drawdown curve's story is already the
 equity curve's story, told upside down. If it is ever wanted, the honest move
 is to *link* them to one shared index rather than give each its own.
+
+---
+
+## 1f #06 — Voice notes
+
+design-source/1f-features.html card 06: "Thirty seconds of talking beats a
+paragraph nobody types. Transcribe on save so it stays searchable next to the
+written notes."
+
+**The second sentence was not built, and nothing in the UI pretends it was.**
+There is no speech-to-text in this app — no API, no model, no library, and the
+rules of this build forbid adding one. So a clip is audio and only audio, and
+every user-facing string says so: the panel's small print reads *"Audio only —
+a clip is not searchable, is not in exports, and stays on this device (it is
+never synced)"*, and the playback row inside an expanded trade repeats the
+short form. `tests/voiceNotes.check.mjs` fails if the word "transcribe" ever
+appears in the markup or in a voice-facing string in `app.js`. That is a guard
+against a future phase quietly restoring the promise without the machinery.
+
+### The storage arithmetic, which is the whole design
+
+Audio is three orders of magnitude bigger than a trade record, and this app
+persists the journal as one JSON blob in Web Storage (~5MB for everything) and
+POSTs `allTrades()` to the server on every autosave. Putting a clip on the
+trade record would have meant every sync, forever, carrying every recording.
+
+So the clips live in their own key, `STORAGE_KEYS.voice`
+(`axiom_journal_voice_v1`), shaped `{ [tradeId]: { data, mime, seconds,
+createdAt } }`, written through the same `journalStore()` indirection as
+everything else — which means demo mode's clips go to sessionStorage and die
+with the tab, for free. `persistState()` does not touch it and
+`saveToPhpStorage()` cannot see it.
+
+**The price, stated in the UI rather than discovered later: clips are
+device-local. They do not sync, they are not in the JSON/CSV export, and they
+do not follow the trader to a second device.**
+
+The numbers:
+
+```
+16 kbit/s mono Opus   =  2 KB of audio per second
+60 s hard cap         =  120 KB  ->  160,000 base64 chars
+per-clip ceiling      =  204,800 chars   (headroom for container overhead)
+total budget          =  1,024,000 chars (~12 minutes across the journal)
+```
+
+16 kbit/s is a voice bitrate, not a music one. That is deliberate: this is
+somebody muttering "chased it after the first push" into a phone, not a
+podcast. `tests/voiceNotes.check.mjs` re-derives the top line from the real
+constants and fails if a full-length clip at the configured bitrate would not
+fit the per-clip ceiling — the failure mode that would otherwise be "talk for
+the whole minute, then be told it is too big".
+
+Both ceilings are checked **before** `setItem`, never after. A blown quota does
+not fail politely; it throws on whatever write happens to be next, which could
+just as easily be the trades key. Refusing a clip costs one recording. Letting
+the quota go costs the journal.
+
+Four gates, in order:
+
+1. **At the end of the take** — a clip over the per-clip ceiling is rejected
+   in `finishVoiceRecording()`, while the trader still has the thought and can
+   record a shorter one.
+2. **Hard auto-stop at 60s**, with a countdown in the status line from 45s.
+   Not a nudge — a forgotten recorder is exactly how a quota dies.
+3. **At save** — `commitVoiceClip()` re-checks both ceilings against the live
+   store, with the clip being *replaced* subtracted (so re-saving an unchanged
+   trade never fails just because the journal is full).
+4. **The `setItem` itself** is in a try/catch that returns a sentence rather
+   than a console line, and the sheet stays **open** on failure with the trade
+   already safely saved.
+
+When the store is full, the message names the oldest clip's trade
+("EURUSD on 2026-03-01") so there is somewhere to go, and the panel warns at
+80% of budget rather than only at the refusal.
+
+Orphans are pruned at **load**, not at delete — the 30s delete-undo window has
+to be able to bring a trade and its clip back together.
+
+### The panel
+
+Under the note textarea, because it is the same job: say what happened. Record
+button (raised = an offer, pressed + accent = recording), a monospace timer, a
+live level meter, `<audio controls>` for playback, Delete clip, and the small
+print. Depth is never alone: the label flips Record → Stop → Re-record, the
+dot changes colour, the timer appears, and `aria-pressed` carries it to a
+screen reader. The 45s warning is a colour *and* a sentence in the live region.
+
+The meter is a **reading**, not an animation — it is the only proof the
+microphone is hearing anything. Under `prefers-reduced-motion` the reading
+keeps updating and only the 80ms eased travel on `.jrn-voice-level` is
+removed. Dropping the meter there would take away information, not movement.
+
+Microphone permission is requested on the **press**, never earlier. Denial,
+"no microphone", "browser cannot record" and "produced something that is not
+audio" each get their own sentence. `releaseVoiceHardware()` stops every track,
+closes the AudioContext and cancels the rAF; a `close` listener on the
+`<dialog>` runs it, so Escape, the backdrop and the × all clear the browser's
+recording indicator.
+
+Editing an existing trade goes through the same sheet: Trade Review's row
+detail already has a **Journal** button for any closed trade, and it now also
+gets a **Play 0:24** button when a clip exists. That button builds the
+`<audio>` on click rather than inlining a data URL — every detail row is in
+the DOM whether expanded or not, so inlining would put every clip in the
+journal on the page at once. `voiceDurationIndex()` reads the store once per
+table render for the same reason.
+
+`voiceClipFor()` is the single trust boundary: it rejects anything that is not
+a `data:audio/` URL, and it is what all three `<audio src>` assignments route
+through.
+
+### Verified
+
+`node --check` on `app.js`; all 23 tests green including the new
+`tests/voiceNotes.check.mjs` (both ceilings, the replacement subtraction, the
+scheme check, orphan pruning, quota-error surfacing, the timestamp-preserving
+re-save, and the anti-transcription guards). A stub-DOM boot harness imported
+`app.js` for real with a fake `MediaRecorder`/`getUserMedia`/`AudioContext` and
+drove the whole flow:
+
+```
+boot: init() ran, no ReferenceError
+prune: keys after boot = seed-0          (the orphan is gone)
+rec:   bitrate = 16000 | mime = audio/webm;codecs=opus
+stop:  Clip ready — 0:01, 3 KB. It saves with the trade. | mic track stopped=true
+save:  voice key = seed-0 | trades key mentions audio = false
+del:   voice key = {}
+```
+
+That last pair is the load-bearing one: the clip is in its own key and the
+trades payload has no `data:audio` in it.
+
+`tests/mobileFloors.check.mjs` green — nothing under 11px, the record button
+and the `<audio>` element both hold 44px, and at ≤620px the meter drops to its
+own line rather than being squeezed beside the button. Every new rule is
+token-only, so dark is the same re-derivation.
+
+Static server returns the new markers on `index.html`, `clay-v2.css` and
+`app.js`; cache-busters bumped to `?v=20260815-voicenote`.
+
+**No `api/` change.** Clips never reach the server, so there is nothing to
+sanitize and `CLIENT_OWNED_SETTINGS` is untouched.
+
+**The honest reservation:** a voice note is a second-class citizen next to a
+written one. Search, the "not journalled" filter, the playbook pages and every
+export see the typed note and not the clip. A trader who talks instead of
+typing will have a journal that looks emptier than it is. Ship it clearly
+labelled — which is what the small print does — but the real fix is
+transcription, and until there is a way to do that offline and for free, the
+clip is a memento rather than data.
+
+**Not built, deliberately:** no clip on an *open* trade (the sheet is the
+post-trade surface); no clip on the trade-entry edit form (Trade Review's
+Journal button re-opens the same sheet for any closed trade, so there is one
+recorder, not two); no global "manage clips" screen — a clip is found the way
+its trade is found, and the full-storage message names the oldest one rather
+than asking the trader to hunt.

@@ -2428,6 +2428,133 @@ body.auth-locked .topnav {
   object-fit: cover;
 }
 
+/* --- 12d-bis. 1f #06 voice note ------------------------------------------
+   Sits under the note textarea, because it is the same job: say what happened.
+   Depth as data holds — the record button is RAISED (an offer) and goes
+   PRESSED while recording (a thing in progress) — and depth is never the only
+   signal: the label flips Record -> Stop, the dot turns accent, a timer
+   appears, and aria-pressed carries the state to a screen reader. */
+.jrn-voice {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 12px;
+  padding: 13px 14px;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+}
+
+.jrn-voice-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.jrn-voice-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 11px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: 600 12.5px/1 var(--font-ui);
+  cursor: pointer;
+  box-shadow: var(--clay-soft);
+}
+
+/* The dot is the only decorative half; the word beside it is the real one. */
+.jrn-voice-btn::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--pnl-neg);
+}
+
+.jrn-voice-btn.is-recording {
+  background: var(--accent-muted);
+  color: var(--accent-strong);
+  box-shadow: var(--clay-pressed);
+}
+
+.jrn-voice-btn.is-recording::before { background: var(--accent-strong); }
+
+.jrn-voice-btn[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.jrn-voice-time {
+  font: 600 13px/1 var(--font-mono, "JetBrains Mono", monospace);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Warning is a colour AND a word — tickVoiceTimer() writes "12s left" into the
+   status line at the same moment this turns, so colour is never alone. */
+.jrn-voice-time.is-warn { color: var(--warn); }
+.jrn-voice-time[hidden] { display: none; }
+
+.jrn-voice-meter {
+  flex: 1;
+  height: 8px;
+  min-width: 40px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.jrn-voice-meter[hidden] { display: none; }
+
+.jrn-voice-level {
+  display: block;
+  width: 0%;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 80ms linear;
+}
+
+.jrn-voice-state {
+  margin: 0;
+  font: 500 11.5px/1.5 var(--font-ui);
+  color: var(--text-soft);
+}
+
+.jrn-voice-state.is-error { color: var(--pnl-neg); }
+.jrn-voice-state.is-warn { color: var(--warn); }
+.jrn-voice-state.is-success { color: var(--accent-strong); }
+.jrn-voice-state.is-rec { color: var(--accent-strong); }
+
+.jrn-voice-player {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 999px;
+}
+
+.jrn-voice-player[hidden] { display: none; }
+
+.jrn-voice-actions {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.jrn-voice-actions[hidden] { display: none; }
+
+/* The honest small print: audio, not text; not searchable; not synced. It is
+   the size of a caption but never below the 11px floor. */
+.jrn-voice-quota {
+  margin: 0;
+  font: 400 11px/1.5 var(--font-ui);
+  color: var(--text-faint);
+}
+
 /* --- 12e. Actions --------------------------------------------------------- */
 .jrn-actions { align-items: center; }
 
@@ -2489,6 +2616,13 @@ body.auth-locked .topnav {
   .jrn-grade { min-height: 48px; }
   .jrn-actions { flex-direction: column; align-items: stretch; }
   .jrn-foot { max-width: none; text-align: center; }
+
+  /* 375px: the record button keeps its full 44px target and the meter drops to
+     its own line rather than being squeezed to a stub beside it. */
+  .jrn-voice-row { flex-wrap: wrap; }
+  .jrn-voice-btn { flex: 1 1 auto; justify-content: center; }
+  .jrn-voice-meter { flex: 1 1 100%; }
+  .rev-voice-hint { display: block; margin-left: 0; margin-top: 4px; }
 }
 
 /* --- 12g. Focus rings -----------------------------------------------------
@@ -2502,9 +2636,16 @@ body.auth-locked .topnav {
 .jrn-drop:focus-visible,
 .jrn-new-tag:focus-visible,
 .jrn-note:focus-visible,
+.jrn-voice-btn:focus-visible,
 .dash-unj-cta:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
+}
+
+/* The level meter is a READING, not an animation — under reduced motion the
+   number keeps updating, only the eased travel goes. */
+@media (prefers-reduced-motion: reduce) {
+  .jrn-voice-level { transition: none; }
 }
 
 /* ==========================================================================
@@ -2944,6 +3085,25 @@ body.auth-locked .topnav {
   font: 600 9.5px/1.2 var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+/* 1f #06: the playback row inside an expanded trade. The hint is not decoration
+   — a clip that cannot be searched has to say so where the clip is, not only
+   in the sheet that recorded it. */
+.rev-voice-hint {
+  display: inline-block;
+  margin-left: 10px;
+  color: var(--text-faint);
+  font: 400 11px/1.4 var(--font-ui);
+}
+
+.rev-voice-player {
+  display: block;
+  width: 100%;
+  max-width: 340px;
+  min-height: 44px;
+  margin-top: 3px;
+  border-radius: 999px;
 }
 
 .rev-detail-actions {

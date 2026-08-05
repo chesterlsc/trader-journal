@@ -45,7 +45,13 @@ const STORAGE_KEYS = {
   reflections: "axiom_journal_reflections_v1",
   replay: "axiom_journal_replay_v1",
   lastSaved: "axiom_journal_last_saved_v1",
-  adminPanels: "axiom_journal_admin_panels_v1"
+  adminPanels: "axiom_journal_admin_panels_v1",
+  // 1f #06 voice notes. A SEPARATE key on purpose: audio is orders of
+  // magnitude larger than a trade record, and the trades key is what gets
+  // POSTed to the server on every autosave. Keeping clips out of that object
+  // is what stops a 30-second ramble from riding on every sync. The price is
+  // that clips are device-local — see voiceStoreRead().
+  voice: "axiom_journal_voice_v1"
 };
 
 /* The pre-trade checklist a trader starts with. 1f #02 makes the list itself
@@ -483,6 +489,17 @@ const ui = {
   journalShotInput: document.getElementById("journalShotInput"),
   journalSheetMessage: document.getElementById("journalSheetMessage"),
   journalSaveBtn: document.getElementById("journalSaveBtn"),
+
+  // 1f #06 voice notes.
+  journalVoiceBtn: document.getElementById("journalVoiceBtn"),
+  journalVoiceState: document.getElementById("journalVoiceState"),
+  journalVoiceTime: document.getElementById("journalVoiceTime"),
+  journalVoiceMeter: document.getElementById("journalVoiceMeter"),
+  journalVoiceLevel: document.getElementById("journalVoiceLevel"),
+  journalVoicePlayer: document.getElementById("journalVoicePlayer"),
+  journalVoiceActions: document.getElementById("journalVoiceActions"),
+  journalVoiceDeleteBtn: document.getElementById("journalVoiceDeleteBtn"),
+  journalVoiceQuota: document.getElementById("journalVoiceQuota"),
   dashJournalCta: document.getElementById("dashJournalCta"),
   dashJournalCtaCount: document.getElementById("dashJournalCtaCount"),
 
@@ -725,6 +742,54 @@ const journalState = {
   screenshotData: ""
 };
 
+/* ── 1f #06 voice notes ────────────────────────────────────────────────────
+   Above init() like everything else in this block.
+
+   The arithmetic, because it is the whole design. Web Storage holds ~5MB for
+   the WHOLE journal, and a data URL is base64 — 4 stored characters for every
+   3 bytes of audio. So:
+
+     16 kbit/s mono Opus  =  2 KB of audio per second
+     60 s hard cap        =  120 KB  ->  ~160 KB of base64
+     1000 KB total budget =  ~12 minutes of talking across the journal
+
+   16 kbit/s is a voice bitrate, not a music one, and that is the point: this
+   is somebody muttering "chased it after the first push" into a phone.
+
+   Two ceilings, both enforced before the write, because a single blown
+   setItem takes the whole journal down with it:
+     * PER CLIP  — a browser that ignores audioBitsPerSecond gets rejected
+                   with a message instead of silently eating the quota;
+     * TOTAL     — the budget across every clip, checked with the clip being
+                   replaced already subtracted.
+
+   ponytail: chars, not bytes, is the honest unit here — it is what setItem
+   actually consumes. IndexedDB would store the Blob raw (no base64 tax, far
+   bigger quota) and is the upgrade path if 12 minutes ever stops being
+   enough; it costs an async storage layer this feature does not yet need. */
+const VOICE_MAX_SECONDS = 60;
+const VOICE_WARN_SECONDS = 45;
+const VOICE_BITS_PER_SECOND = 16000;
+const VOICE_MAX_CLIP_CHARS = 200 * 1024;
+const VOICE_TOTAL_CHARS = 1000 * 1024;
+
+// Everything the recorder needs while the sheet is open. `clip` is STAGED —
+// it is only written to storage when the sheet is submitted, exactly like the
+// note and the screenshot, so backing out of the sheet backs out of the clip.
+const voiceState = {
+  clip: null,          // { data, mime, seconds } | null
+  aborted: false,      // the sheet closed mid-take; throw the buffer away
+  recorder: null,
+  stream: null,
+  audioCtx: null,
+  analyser: null,
+  levels: null,
+  chunks: [],
+  startedAt: 0,
+  timerId: 0,
+  frame: 0
+};
+
 /* ── 1e review + calendar ──────────────────────────────────────────────────
    Above init() like everything else here — a module-level binding below that
    call is in the temporal dead zone during first render.
@@ -861,6 +926,11 @@ function init() {
   if (state.auth.guestMode && state.trades.length === 0) {
     seedDemoJournal();
   }
+  // 1f #06: clips whose trade no longer exists are unreachable through the UI
+  // and would sit in the storage budget forever. Pruned at LOAD, never at
+  // delete — the 30s delete-undo window has to be able to bring a trade and
+  // its clip back together.
+  pruneVoiceNotes();
   applyInitialDates();
   hydrateRiskForm();
   hydrateReviewMonth();
@@ -4454,6 +4524,7 @@ function openJournalSheet(id) {
   renderJournalHeader(trade);
   renderJournalChips();
   renderJournalChart();
+  resetVoicePanel(trade.id);
 
   setSheetStep(2);
   if (!ui.tradeSheet.open) {
@@ -4561,6 +4632,503 @@ async function acceptJournalImage(file) {
       : "Chart attached.",
     image.tooLarge ? "error" : "success"
   );
+}
+
+/* ── 1f #06 voice notes ────────────────────────────────────────────────────
+   design-source/1f-features.html #06: "Thirty seconds of talking beats a
+   paragraph nobody types."
+
+   What the design asked for and this does NOT do: transcription. There is no
+   speech-to-text in this app — no API, no model, nothing — so a clip is audio
+   and only audio. Every string below says that out loud rather than letting
+   the trader assume a recording is as findable as a written note. If it turns
+   out clips get recorded and never found again, that is the feature failing
+   honestly, which beats it failing quietly.
+
+   Where the audio lives, and why it is not with the trade: STORAGE_KEYS.voice
+   is a separate object, `{ [tradeId]: { data, mime, seconds, createdAt } }`,
+   written through the same journalStore() indirection as everything else (so
+   demo mode's clips die with the tab). It is deliberately NOT part of the
+   trade record, because the trade record is what persistState() POSTs to the
+   server on every autosave — a 150KB clip in there would ride on every sync
+   for the rest of the journal's life. The price of that call, stated plainly
+   in the UI: clips are device-local, are not synced, and are not in exports. */
+
+// The store, read defensively — a hand-edited or half-written key must degrade
+// to "no clips", never to a crash on the journal sheet.
+function voiceStoreRead() {
+  const raw = readStorageJson(journalKey(STORAGE_KEYS.voice), {}, journalStore());
+  return raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+}
+
+// Unlike writeStorageJson this REPORTS failure. A quota error here has to
+// reach the trader as a sentence; swallowing it into console.error is how a
+// clip silently fails to exist.
+function voiceStoreWrite(map) {
+  try {
+    journalStore().setItem(journalKey(STORAGE_KEYS.voice), JSON.stringify(map));
+    return true;
+  } catch (error) {
+    console.error("Voice note write failed:", error);
+    return false;
+  }
+}
+
+// The trust boundary. Everything this returns goes straight into an <audio
+// src>, so the scheme is checked here once rather than at each of the three
+// places that play a clip.
+function voiceClipFor(tradeId) {
+  const clip = voiceStoreRead()[String(tradeId || "")];
+  return clip && typeof clip.data === "string" && clip.data.startsWith("data:audio/") ? clip : null;
+}
+
+function voiceUsedChars(map, exceptTradeId) {
+  return Object.keys(map).reduce(
+    (sum, id) => (id === String(exceptTradeId) ? sum : sum + String(map[id]?.data || "").length),
+    0
+  );
+}
+
+// KB of STORED CHARACTERS — what the quota actually counts. Reporting the
+// decoded audio size instead would flatter every number here by a third.
+function formatVoiceSize(chars) {
+  const kb = Number(chars) / 1024;
+  return `${kb > 0 && kb < 1 ? kb.toFixed(1) : Math.round(kb)} KB`;
+}
+
+function formatVoiceDuration(seconds) {
+  const total = Math.max(0, Math.round(Number(seconds) || 0));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
+// Names the oldest clip so a "storage is full" message can point at something
+// the trader can actually go and delete, instead of telling them to guess.
+function oldestVoiceClipLabel() {
+  const map = voiceStoreRead();
+  const oldest = Object.keys(map)
+    .filter((id) => map[id] && map[id].data)
+    .sort((a, b) => String(map[a].createdAt || "").localeCompare(String(map[b].createdAt || "")))[0];
+  if (!oldest) {
+    return "";
+  }
+  const trade = allTrades().find((item) => String(item.id) === oldest);
+  return trade ? `${trade.asset} on ${formatIsoShort(trade.date)}` : "";
+}
+
+function pruneVoiceNotes() {
+  const map = voiceStoreRead();
+  const ids = new Set(allTrades().map((trade) => String(trade.id)));
+  const kept = {};
+  let dropped = 0;
+  Object.keys(map).forEach((id) => {
+    if (ids.has(id)) {
+      kept[id] = map[id];
+    } else {
+      dropped += 1;
+    }
+  });
+  if (dropped) {
+    voiceStoreWrite(kept);
+  }
+}
+
+/* The only write path. Returns "" on success, or the sentence to show.
+
+   Both ceilings are checked BEFORE setItem, because a blown quota does not
+   fail politely — it throws on the write that happens to be next, which could
+   just as easily be the trades key. Rejecting a clip costs the trader one
+   recording; letting the quota go costs them the journal. */
+function commitVoiceClip(tradeId, clip) {
+  const id = String(tradeId || "");
+  const map = voiceStoreRead();
+
+  if (!clip) {
+    if (!(id in map)) {
+      return "";
+    }
+    delete map[id];
+    return voiceStoreWrite(map) ? "" : "The browser refused to update voice storage.";
+  }
+
+  if (clip.data.length > VOICE_MAX_CLIP_CHARS) {
+    return `That clip is ${formatVoiceSize(clip.data.length)}, over the ${formatVoiceSize(
+      VOICE_MAX_CLIP_CHARS
+    )} per-clip ceiling. It was not saved — everything else on this trade was.`;
+  }
+
+  if (voiceUsedChars(map, id) + clip.data.length > VOICE_TOTAL_CHARS) {
+    const oldest = oldestVoiceClipLabel();
+    return `Voice storage is full at ${formatVoiceSize(VOICE_TOTAL_CHARS)}. The clip was not saved — everything else on this trade was.${
+      oldest ? ` The oldest clip is ${oldest}; open it from Trade Review and delete it to free space.` : ""
+    }`;
+  }
+
+  // An unchanged clip keeps its original timestamp, so re-saving a trade does
+  // not shuffle it to the back of the "oldest clip" queue.
+  const previous = map[id];
+  map[id] = {
+    data: clip.data,
+    mime: clip.mime || "",
+    seconds: clip.seconds,
+    createdAt: previous && previous.data === clip.data ? previous.createdAt : new Date().toISOString()
+  };
+  return voiceStoreWrite(map)
+    ? ""
+    : "The browser refused the clip — storage is full. Everything else on this trade was saved.";
+}
+
+// The first container this browser will record. Opus is the target; Safari
+// answers audio/mp4 (AAC) and that is fine — the clip is played back by the
+// same browser that wrote it, and the data URL carries its own type. Returns
+// "" to mean "let the browser choose", null to mean "cannot record at all".
+function voiceMimeType() {
+  if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") {
+    return typeof MediaRecorder === "undefined" ? null : "";
+  }
+  return (
+    ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4", "audio/webm"].find((type) =>
+      MediaRecorder.isTypeSupported(type)
+    ) || ""
+  );
+}
+
+function canRecordVoice() {
+  return voiceMimeType() !== null && typeof navigator.mediaDevices?.getUserMedia === "function";
+}
+
+function isVoiceRecording() {
+  return Boolean(voiceState.recorder) && voiceState.recorder.state === "recording";
+}
+
+function voiceElapsedSeconds() {
+  return voiceState.startedAt ? Math.floor((Date.now() - voiceState.startedAt) / 1000) : 0;
+}
+
+function setVoiceStatus(text, tone) {
+  if (!ui.journalVoiceState) {
+    return;
+  }
+  ui.journalVoiceState.textContent = text;
+  ui.journalVoiceState.className = `jrn-voice-state${tone ? ` is-${tone}` : ""}`;
+}
+
+// Real numbers only: what is actually stored, against the ceiling that is
+// actually enforced, with the staged clip counted the way it will be counted
+// on save.
+function voiceQuotaLine() {
+  const map = voiceStoreRead();
+  const others = Object.keys(map).filter(
+    (id) => map[id] && map[id].data && id !== String(journalState.tradeId)
+  );
+  const used = others.reduce((sum, id) => sum + map[id].data.length, 0);
+  const staged = voiceState.clip ? voiceState.clip.data.length : 0;
+  const count = others.length + (staged ? 1 : 0);
+  // The warning arrives while there is still room to act on it, not at the
+  // refusal. 80% of the budget is roughly two more full-length clips.
+  const near = used + staged >= VOICE_TOTAL_CHARS * 0.8;
+  const oldest = near ? oldestVoiceClipLabel() : "";
+  return (
+    `Audio only — a clip is not searchable, is not in exports, and stays on this device (it is never synced). ` +
+    `${formatVoiceSize(used + staged)} of ${formatVoiceSize(VOICE_TOTAL_CHARS)} used across ${count} ${
+      count === 1 ? "clip" : "clips"
+    }.` +
+    (near
+      ? ` Nearly full — new clips will be refused soon.${
+          oldest ? ` The oldest is ${oldest}; delete it from Trade Review to free space.` : ""
+        }`
+      : "")
+  );
+}
+
+function renderVoicePanel() {
+  if (!ui.journalVoiceBtn) {
+    return;
+  }
+
+  const recording = isVoiceRecording();
+  const hasClip = Boolean(voiceState.clip) && !recording;
+
+  ui.journalVoiceBtn.textContent = recording ? "Stop" : voiceState.clip ? "Re-record" : "Record";
+  ui.journalVoiceBtn.classList.toggle("is-recording", recording);
+  ui.journalVoiceBtn.setAttribute("aria-pressed", String(recording));
+
+  ui.journalVoiceTime.hidden = !recording;
+  ui.journalVoiceMeter.hidden = !recording;
+  if (recording) {
+    ui.journalVoiceTime.textContent = formatVoiceDuration(voiceElapsedSeconds());
+  } else {
+    ui.journalVoiceLevel.style.width = "0%";
+  }
+
+  ui.journalVoicePlayer.hidden = !hasClip;
+  ui.journalVoiceActions.hidden = !hasClip;
+  if (hasClip) {
+    if (ui.journalVoicePlayer.getAttribute("src") !== voiceState.clip.data) {
+      ui.journalVoicePlayer.src = voiceState.clip.data;
+    }
+  } else {
+    ui.journalVoicePlayer.pause?.();
+    ui.journalVoicePlayer.removeAttribute("src");
+  }
+
+  ui.journalVoiceQuota.textContent = voiceQuotaLine();
+}
+
+/* A live readout, not decoration: the meter is the only proof the microphone
+   is hearing anything at all. Reduced motion therefore keeps the READING and
+   drops the eased travel — the CSS transition on .jrn-voice-level is what the
+   media query removes, not this loop. Dropping the meter under reduced motion
+   would take away information, not movement. */
+function startVoiceMeter(stream) {
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) {
+    return;
+  }
+
+  try {
+    voiceState.audioCtx = new Ctx();
+    voiceState.analyser = voiceState.audioCtx.createAnalyser();
+    voiceState.analyser.fftSize = 512;
+    voiceState.levels = new Uint8Array(voiceState.analyser.frequencyBinCount);
+    voiceState.audioCtx.createMediaStreamSource(stream).connect(voiceState.analyser);
+  } catch (error) {
+    voiceState.analyser = null;
+    return;
+  }
+
+  const paint = () => {
+    if (!voiceState.analyser) {
+      return;
+    }
+    voiceState.analyser.getByteTimeDomainData(voiceState.levels);
+    let peak = 0;
+    for (let i = 0; i < voiceState.levels.length; i += 1) {
+      peak = Math.max(peak, Math.abs(voiceState.levels[i] - 128));
+    }
+    // 128 is full scale. Ordinary speech peaks well below it, so the ×2.4 is
+    // what makes a normal voice fill most of the bar instead of a sliver.
+    ui.journalVoiceLevel.style.width = `${Math.min(100, Math.round((peak / 128) * 240))}%`;
+    voiceState.frame = window.requestAnimationFrame(paint);
+  };
+  paint();
+}
+
+/* Stops the tracks. Not cosmetic and not optional: leaving them live keeps the
+   browser's "this site is recording" indicator burning after the sheet is
+   gone, which is the single most alarming thing a journal app can do. */
+function releaseVoiceHardware() {
+  if (voiceState.frame) {
+    window.cancelAnimationFrame(voiceState.frame);
+    voiceState.frame = 0;
+  }
+  if (voiceState.timerId) {
+    window.clearInterval(voiceState.timerId);
+    voiceState.timerId = 0;
+  }
+  voiceState.analyser = null;
+  voiceState.levels = null;
+  if (voiceState.audioCtx) {
+    voiceState.audioCtx.close().catch(() => {});
+    voiceState.audioCtx = null;
+  }
+  if (voiceState.stream) {
+    voiceState.stream.getTracks().forEach((track) => track.stop());
+    voiceState.stream = null;
+  }
+  voiceState.recorder = null;
+  voiceState.startedAt = 0;
+}
+
+function tickVoiceTimer() {
+  const seconds = voiceElapsedSeconds();
+  ui.journalVoiceTime.textContent = formatVoiceDuration(seconds);
+  ui.journalVoiceTime.classList.toggle("is-warn", seconds >= VOICE_WARN_SECONDS);
+  if (seconds >= VOICE_WARN_SECONDS && seconds < VOICE_MAX_SECONDS) {
+    setVoiceStatus(`${VOICE_MAX_SECONDS - seconds}s left — it stops on its own at ${formatVoiceDuration(VOICE_MAX_SECONDS)}.`, "warn");
+  }
+  // A hard stop, not a nudge. The per-clip ceiling is the only thing between a
+  // forgotten recorder and a blown storage quota.
+  if (seconds >= VOICE_MAX_SECONDS) {
+    stopVoiceRecording();
+  }
+}
+
+async function startVoiceRecording() {
+  if (!canRecordVoice()) {
+    setVoiceStatus("This browser cannot record audio. Type the note instead.", "error");
+    return;
+  }
+
+  setVoiceStatus("Waiting for the microphone…", "");
+  let stream;
+  try {
+    // Permission is asked HERE, on the press, and nowhere else in the app.
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (error) {
+    const denied = error?.name === "NotAllowedError" || error?.name === "SecurityError";
+    setVoiceStatus(
+      denied
+        ? "Microphone access was refused. Allow it for this site in the browser's settings, or type the note."
+        : "No microphone the browser could open. Type the note instead.",
+      "error"
+    );
+    return;
+  }
+
+  // The sheet may have been closed while the permission prompt was up.
+  if (!isJournalSheetOpen()) {
+    stream.getTracks().forEach((track) => track.stop());
+    return;
+  }
+
+  const mimeType = voiceMimeType();
+  const options = { audioBitsPerSecond: VOICE_BITS_PER_SECOND };
+  if (mimeType) {
+    options.mimeType = mimeType;
+  }
+
+  let recorder;
+  try {
+    recorder = new MediaRecorder(stream, options);
+  } catch (error) {
+    // A browser that rejects the bitrate hint still records; it just records
+    // fatter, which the per-clip ceiling catches at the end.
+    recorder = new MediaRecorder(stream);
+  }
+
+  voiceState.stream = stream;
+  voiceState.recorder = recorder;
+  voiceState.chunks = [];
+  voiceState.aborted = false;
+  recorder.addEventListener("dataavailable", (event) => {
+    if (event.data && event.data.size) {
+      voiceState.chunks.push(event.data);
+    }
+  });
+  recorder.addEventListener("stop", finishVoiceRecording);
+  recorder.start();
+  voiceState.startedAt = Date.now();
+  voiceState.timerId = window.setInterval(tickVoiceTimer, 200);
+  startVoiceMeter(stream);
+  renderVoicePanel();
+  setVoiceStatus(`Recording — it stops on its own at ${formatVoiceDuration(VOICE_MAX_SECONDS)}.`, "rec");
+}
+
+function stopVoiceRecording() {
+  if (voiceState.timerId) {
+    window.clearInterval(voiceState.timerId);
+    voiceState.timerId = 0;
+  }
+  if (voiceState.recorder && voiceState.recorder.state !== "inactive") {
+    voiceState.recorder.stop();
+    return;
+  }
+  releaseVoiceHardware();
+  renderVoicePanel();
+}
+
+// Closing the sheet mid-recording throws the take away rather than staging it.
+function abandonVoiceRecording() {
+  if (voiceState.recorder && voiceState.recorder.state !== "inactive") {
+    voiceState.aborted = true;
+    try {
+      voiceState.recorder.stop();
+    } catch (error) {
+      releaseVoiceHardware();
+    }
+    return;
+  }
+  releaseVoiceHardware();
+}
+
+function finishVoiceRecording() {
+  const seconds = Math.min(VOICE_MAX_SECONDS, Math.max(1, voiceElapsedSeconds()));
+  const mime = voiceState.recorder?.mimeType || voiceState.chunks[0]?.type || "audio/webm";
+  const chunks = voiceState.chunks;
+  const aborted = voiceState.aborted;
+  voiceState.chunks = [];
+  voiceState.aborted = false;
+  releaseVoiceHardware();
+  renderVoicePanel();
+
+  if (aborted || !chunks.length) {
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const data = String(reader.result || "");
+    if (!data.startsWith("data:audio/")) {
+      setVoiceStatus("The browser produced something that is not audio. Nothing was kept.", "error");
+      return;
+    }
+    // Rejected here rather than at save, so the answer is "record a shorter
+    // one" while the trader is still holding the thought.
+    if (data.length > VOICE_MAX_CLIP_CHARS) {
+      setVoiceStatus(
+        `That clip is ${formatVoiceSize(data.length)}, over the ${formatVoiceSize(
+          VOICE_MAX_CLIP_CHARS
+        )} per-clip ceiling. Record a shorter one.`,
+        "error"
+      );
+      return;
+    }
+    voiceState.clip = { data, mime, seconds };
+    renderVoicePanel();
+    setVoiceStatus(
+      `Clip ready — ${formatVoiceDuration(seconds)}, ${formatVoiceSize(data.length)}. It saves with the trade.`,
+      "success"
+    );
+  };
+  reader.onerror = () => setVoiceStatus("The browser could not read the recording.", "error");
+  reader.readAsDataURL(new Blob(chunks, { type: mime }));
+}
+
+function deleteStagedVoiceClip() {
+  voiceState.clip = null;
+  renderVoicePanel();
+  setVoiceStatus("Clip removed. It goes for good when you save this trade.", "warn");
+}
+
+// Called every time the sheet opens: adopt whatever is stored for this trade,
+// discard anything left over from the last one.
+function resetVoicePanel(tradeId) {
+  abandonVoiceRecording();
+  const stored = voiceClipFor(tradeId);
+  voiceState.clip = stored
+    ? { data: stored.data, mime: stored.mime || "", seconds: Number(stored.seconds) || 0 }
+    : null;
+  renderVoicePanel();
+
+  if (!canRecordVoice()) {
+    ui.journalVoiceBtn.disabled = true;
+    setVoiceStatus("This browser cannot record audio. Type the note instead.", "error");
+    return;
+  }
+  ui.journalVoiceBtn.disabled = false;
+  setVoiceStatus(
+    voiceState.clip
+      ? `Clip attached — ${formatVoiceDuration(voiceState.clip.seconds)}.`
+      : `Say it instead of typing it. ${VOICE_MAX_SECONDS} seconds max.`,
+    ""
+  );
+}
+
+function bindVoiceNote() {
+  if (!ui.journalVoiceBtn) {
+    return;
+  }
+  ui.journalVoiceBtn.addEventListener("click", () => {
+    if (isVoiceRecording()) {
+      stopVoiceRecording();
+    } else {
+      startVoiceRecording();
+    }
+  });
+  ui.journalVoiceDeleteBtn.addEventListener("click", deleteStagedVoiceClip);
+  // Escape, the backdrop and the × all end at the dialog's own close event, so
+  // this one listener is what guarantees the microphone is released.
+  ui.tradeSheet?.addEventListener("close", abandonVoiceRecording);
 }
 
 function isJournalSheetOpen() {
@@ -4689,6 +5257,19 @@ function handleJournalSubmit(event) {
   state.trades = state.trades.map((item) => (item.id === trade.id ? journalled : item));
   persistState();
   renderAll();
+
+  /* 1f #06: the clip is written to its own key, after the trade, and it is the
+     one part of this save that is allowed to fail. If it does, the sheet stays
+     OPEN with the reason — the trade is already safe, and the trader needs to
+     be able to delete the clip and save again rather than discover on some
+     later reload that the recording never existed. */
+  const voiceError = commitVoiceClip(trade.id, voiceState.clip);
+  if (voiceError) {
+    setVoiceStatus(voiceError, "error");
+    setMessage(ui.journalSheetMessage, "Trade saved. The voice clip was not — see below.", "error");
+    renderVoicePanel();
+    return;
+  }
   closeTradeSheet();
 
   const remaining = getUnjournalledTrades().length;
@@ -4755,6 +5336,7 @@ function bindJournalSheet() {
   document.addEventListener("paste", handleJournalPaste);
   ui.journalPasteBtn.hidden = typeof navigator.clipboard?.read !== "function";
   ui.journalPasteBtn.addEventListener("click", handleJournalPasteButton);
+  bindVoiceNote();
 }
 
 function bindQuickCapture() {
@@ -4852,6 +5434,24 @@ function handleTradeTableClick(event) {
 
   if (button.dataset.action === "delete") {
     deleteTrade(id);
+    return;
+  }
+
+  // 1f #06: swap the button for a real <audio controls>. voiceClipFor() is the
+  // scheme check, so nothing but a data:audio/ URL ever reaches src.
+  if (button.dataset.action === "voice") {
+    const clip = voiceClipFor(id);
+    if (!clip) {
+      button.textContent = "Clip is gone";
+      button.disabled = true;
+      return;
+    }
+    const audio = document.createElement("audio");
+    audio.className = "rev-voice-player";
+    audio.controls = true;
+    audio.autoplay = true;
+    audio.src = clip.data;
+    button.replaceWith(audio);
     return;
   }
 
@@ -9371,7 +9971,22 @@ function renderReviewHeader(shownCount) {
     : `${total} ${noun} · <strong>all time</strong>`;
 }
 
-function buildTradeDetailRow(trade, isOpen) {
+/* id -> seconds, read ONCE per table render. Calling voiceClipFor() per row
+   would JSON.parse the whole clip store — up to a megabyte of base64 — for
+   every visible trade, and the store is read on every filter keystroke. */
+function voiceDurationIndex() {
+  const map = voiceStoreRead();
+  const index = new Map();
+  Object.keys(map).forEach((id) => {
+    const data = map[id]?.data;
+    if (typeof data === "string" && data.startsWith("data:audio/")) {
+      index.set(id, Number(map[id].seconds) || 0);
+    }
+  });
+  return index;
+}
+
+function buildTradeDetailRow(trade, isOpen, voiceIndex = new Map()) {
   const id = escapeHtml(String(trade.id || ""));
   const resultClass = isOpen
     ? "pill"
@@ -9420,6 +10035,18 @@ function buildTradeDetailRow(trade, isOpen) {
   }
   if (trade.notes) {
     extras.push(`<p class="rev-detail-note"><span class="rev-detail-key">Note</span>${escapeHtml(trade.notes)}</p>`);
+  }
+  /* 1f #06: a button, not an <audio src>. Every detail row is in the DOM
+     whether expanded or not, so inlining the data URL would put every clip in
+     the journal on the page at once. The element is built on the click. */
+  if (voiceIndex.has(String(trade.id))) {
+    extras.push(
+      `<p class="rev-detail-note"><span class="rev-detail-key">Voice note</span>` +
+        `<button class="mini-btn" data-action="voice" data-id="${id}" type="button">Play ${escapeHtml(
+          formatVoiceDuration(voiceIndex.get(String(trade.id)))
+        )}</button>` +
+        `<span class="rev-voice-hint">audio only — not searchable, this device only</span></p>`
+    );
   }
 
   return `
@@ -9479,6 +10106,7 @@ function renderJournalTable() {
   // same four-step ramp the calendar tiles use, so a big loss is visibly
   // deeper than a scratch. Purely decorative: colour and sign carry the state.
   const peakAbsPnl = sorted.reduce((peak, trade) => Math.max(peak, Math.abs(trade.netPnl || 0)), 0);
+  const voiceIndex = voiceDurationIndex();
 
   ui.tradesBody.innerHTML = sorted
     .map((trade) => {
@@ -9533,7 +10161,7 @@ function renderJournalTable() {
             </button>
           </td>
         </tr>
-        ${buildTradeDetailRow(trade, isOpen)}
+        ${buildTradeDetailRow(trade, isOpen, voiceIndex)}
       `;
     })
     .join("");
