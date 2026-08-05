@@ -265,3 +265,73 @@ loop.
 Verified: `node --check` on app.js, `node tests/charts.smoke.mjs` green, CSS
 braces balanced, served output greps for `deck3d` + `PHASE C` + six `data-tilt`
 hooks. Cache busters bumped to `v=20260805-deck3d`.
+
+## Phase D1 — Claymorphic design system + shared components (2026-08-05)
+
+The hairline-and-flat aesthetic of the blueprint is deliberately replaced with
+clay. Token DISCIPLINE is unchanged: semantic names, both themes, no magic
+literals, every existing token name still resolves.
+
+**Token layer.** `--radius-clay-sm/md/lg/xl` (14/20/26/32) plus the legacy
+scale re-pointed at it (`--radius-sm` 4→8, `--radius-md` 6→12, `--radius-lg`
+→ clay-sm, `--radius-xl` → clay-lg), so 76 existing `border-radius` rules
+round up without being touched. Four shadow stacks per theme —
+`--clay-raised` (cards), `--clay-float` (interactive), `--clay-soft` (quiet
+containers, outer drop only), `--clay-pressed` (wells + active), plus
+`--clay-accent` for the primary button. Every outer shadow is hue-matched
+(245deg surfaces, 220deg accent), never neutral grey. Dark is re-derived, not
+inverted: the top inset is `hsl(245 25% 80% / 0.12-0.17)`, not white 0.9.
+`--shadow`, `--shadow-modal`, `--deck-shadow`, `--deck-shadow-lift` and
+`--edge-highlight` now alias the clay stacks, which converts every Phase C
+consumer (panels, metric cards, dash-risk/rail, ticker strip) in one move.
+New: `--clay-edge`/`--clay-edge-strong` (barely-there soft edge, load-bearing
+in dark), `--control-edge` (see below), `--ease-squish`/`--dur-squish`.
+
+**Surfaces.** Both ramps re-cut so surfaces are always LIGHTER than the page
+and the page is never `#000`/`#fff`: dark `#0b0c11` page / `#171a23` card,
+light `#ecedf5` page / `#fbfbff` card. The Phase C deck gradient drops to a
+whisper (clay volume comes from the insets; a strong plane gradient fights
+them). `--chart-grid`, `--chart-axis` and `--chart-canvas-*` follow the new
+ramp — charts still read everything through `getComputedStyle`, untouched.
+
+**Components (new PHASE D section).** Containers lose their border and take
+clay: `.panel` `.view-head` `.metric-card` `.dash-hero/-risk/-quad-card`
+`.sidebar` `.dashboard-empty`; `.dash-rail` takes `--clay-soft` only (seven
+read-only panes must not read as seven buttons). Buttons are pill-radius,
+puffy, `min-height: 44px`, and press by moving transform + shadow direction +
+fill together. Inputs/selects/textarea become opaque pressed wells
+(`--surface-inset` + `--clay-pressed`, 14px radius, 44px min-height). Tables,
+calendar cells and chart interiors stay deliberately FLAT — clay on a
+repeating row is the canonical way this style ruins a data product. Pills,
+delta chips and the today chip lose their borders for soft semantic fills.
+Modals go to 32px radius. Breathing room up one rung (`.panel` 20→24px, view
+and grid gaps 14→16px), stepping back down at 720/560px so a 375px screen
+still belongs to the numbers.
+
+**The money rail** moved from `border-left` (which tapers into a wedge against
+a 20px radius) to an inset shadow — except on `.dash-rail-item`, which keeps
+the original border because its separator shadows are rewritten by nth-child
+in two responsive blocks. Same trap Phase C flagged; not re-armed.
+
+**Contrast.** `scratchpad/clay-contrast.mjs` resolves both token blocks,
+composites alpha over its backdrop and checks 62 pairings per theme —
+every text colour on all five surfaces, on the deck gradient, on each semantic
+soft fill, and over the clay top-inset highlight and bottom shade (the
+lightest and darkest pixels a numeral can land on). Four rounds of fixes:
+`--text-faint` dark `#7d8598`→`#969eb2`, `--surface-3` pulled back, light
+`--surface-3`/`--surface-inset` lightened, and light `--pnl-pos/-neg/--warn/
+--info` darkened one step. **Worst surviving text pairing 4.57:1** (dark,
+`--accent` on `--accent-muted` over `--surface-1`); all body text ≥ 4.5:1 in
+both themes. Focus ring measured against BOTH the card and the page (5.4/6.1
+dark, 6.2/5.5 light) because `outline-offset` puts it on the page while the
+eye compares it to the card. A soft shadow edge measures ~1.4:1, so every
+CONTROL (button, input, select, chip, toggle) keeps one 1px `--control-edge`
+hairline at ≥3:1 against both card and page — WCAG 1.4.11. Reduced motion
+drops the press transform entirely; the fill and shadow flip carry the state.
+
+**Verification.** `node --check` on app.js; `node tests/charts.smoke.mjs`
+green (12,206 ops); CSS braces balanced (1049/1049) and zero undefined `var()`
+beyond the four inline-style-driven ones; `clay-contrast.mjs` exits 0; curl of
+the served page and stylesheet greps the new markers. Cache buster →
+`v=20260805-clay1`. Landing page deliberately untouched beyond what falls out
+of the token change — a later phase owns it, as does the bottom tab bar + FAB.

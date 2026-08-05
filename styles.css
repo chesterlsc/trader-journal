@@ -15,22 +15,27 @@
 :root {
   color-scheme: dark;
 
-  /* Surfaces — neutral graphite ramp, no blue cast */
-  --surface-0: #08090b;        /* page */
-  --surface-1: #0e1014;        /* panels, cards */
-  --surface-2: #13161c;        /* nav, modal, raised */
-  --surface-3: #1a1e26;        /* hover / active fill */
-  --surface-inset: #0a0c0f;    /* inputs, table heads, wells — ALWAYS OPAQUE */
+  /* Surfaces — soft clay ramp. Two rules from the clay recipe are structural,
+     not taste: the page is never pure black, and every surface is LIGHTER than
+     the page (depth reads as lift, not as an outline). The ramp carries a
+     faint 245deg cast so the hue-matched clay shadows below have something to
+     match. */
+  --surface-0: #0b0c11;        /* page */
+  --surface-1: #171a23;        /* panels, cards — +5% L over the page */
+  --surface-2: #1d202b;        /* nav, modal, raised */
+  --surface-3: #21242f;        /* hover / active fill */
+  --surface-inset: #101219;    /* inputs, table heads, wells — ALWAYS OPAQUE */
 
-  /* Hairlines */
-  --line: #21252e;
-  --line-strong: #2f3542;
+  /* Hairlines — kept in the vocabulary (tables and grids still need a rule),
+     but softened: on clay surfaces depth is carried by shadow, not by edges. */
+  --line: #262a36;
+  --line-strong: #343a4a;
   --line-accent: rgba(91, 141, 239, 0.45);
 
   /* Text */
   --text: #e9ecf2;
   --text-soft: #9aa2b4;
-  --text-faint: #7d8598;       /* labels only, never below 11px / weight 600; AA 4.5:1 on all surfaces */
+  --text-faint: #969eb2;       /* labels only, never below 11px / weight 600; AA 4.5:1 on all surfaces */
   --text-inverse: #0b0d10;
 
   /* Accent — one hue, interaction only */
@@ -58,8 +63,8 @@
   --info-soft: rgba(76, 195, 232, 0.12);
 
   /* Charts — canvas reads these; nothing hard-coded in charts.js */
-  --chart-grid: #1b1f27;
-  --chart-axis: #7d8598;
+  --chart-grid: #22262f;
+  --chart-axis: #969eb2;
   --chart-line: var(--accent);
   --chart-pos: var(--pnl-pos);
   --chart-neg: var(--pnl-neg);
@@ -91,17 +96,17 @@
   --chart-highlight-fade: rgba(255, 255, 255, 0);
   --chart-shade: rgba(0, 0, 0, 0.38);
   --chart-shade-fade: rgba(0, 0, 0, 0);
-  --chart-track: rgba(125, 133, 152, 0.10);
+  --chart-track: rgba(150, 158, 178, 0.10);
   --chart-crosshair: rgba(154, 162, 180, 0.55);
   --chart-tooltip-bg: rgba(19, 22, 28, 0.96);
   --chart-tooltip-line: #333a49;
   --chart-tooltip-shadow: rgba(0, 0, 0, 0.6);
-  --chart-ring-wash: rgba(125, 133, 152, 0.05);
+  --chart-ring-wash: rgba(150, 158, 178, 0.05);
   --chart-radar-core: rgba(76, 195, 232, 0.40);
   --chart-radar-edge: rgba(76, 195, 232, 0.04);
   --chart-radar-glow: rgba(76, 195, 232, 0.55);
-  --chart-canvas-top: #10131a;
-  --chart-canvas-bottom: #090b0f;
+  --chart-canvas-top: #14171f;
+  --chart-canvas-bottom: #0e1017;
   --chart-canvas-glow: rgba(91, 141, 239, 0.07);
   --chart-canvas-shadow: rgba(0, 0, 0, 0.55);
   /* Sparkline area fades — the alpha-0 twins of --pnl-pos/--pnl-neg. */
@@ -126,18 +131,81 @@
   --space-4: 16px; --space-5: 20px; --space-6: 24px;
   --space-8: 32px; --space-10: 40px; --space-12: 48px;
 
-  /* Radius — terminal, not bubble */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 10px;
+  /* ---- CLAY GEOMETRY -----------------------------------------------------
+     Radius is the first half of the clay read. Below ~14px a clay element
+     stops looking moulded and starts looking like a flat box with a shadow,
+     so the clay scale never dips under 14. Chips and inputs that sit INSIDE a
+     clay card use the legacy scale (8/12px) — nesting 26 inside 26 inflates
+     the card and eats horizontal room. */
+  --radius-clay-sm: 14px;      /* chart wells, nested cards */
+  --radius-clay-md: 20px;      /* metric cards, buttons, tab bar items */
+  --radius-clay-lg: 26px;      /* panels, view heads, sidebar */
+  --radius-clay-xl: 32px;      /* hero surfaces, modals */
+
+  /* Legacy scale — same names, clay-scaled values, so every existing rule
+     rounds up without being rewritten. */
+  --radius-sm: 8px;            /* pills, tags, delta chips */
+  --radius-md: 12px;           /* inputs, small buttons, nav items */
+  --radius-lg: var(--radius-clay-sm);
+  --radius-xl: var(--radius-clay-lg);
   --radius-pill: 999px;
 
-  /* Elevation — hairline first, shadow second */
-  --shadow: 0 1px 0 rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
-  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.55);
-  --edge-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  --focus-ring: 0 0 0 2px var(--surface-0), 0 0 0 4px var(--accent);
+  /* ---- CLAY ELEVATION ----------------------------------------------------
+     The signature is one box-shadow carrying three jobs: a soft hue-matched
+     outer drop, an inset dark shade on the BOTTOM, and an inset light
+     highlight on the TOP. One light source, top/top-left, everywhere.
+     Dark clay is re-derived, never inverted: the top inset is a low-alpha
+     hue-matched near-white (0.10-0.18). Push it past ~0.25 and the surface
+     reads as wet plastic; drop it under ~0.08 and the volume disappears.
+       --clay-raised  cards, panels — resting surfaces
+       --clay-float   genuinely interactive things — buttons, nav, modal
+       --clay-soft    quiet containers — outer drop only, so "puffy" keeps
+                      meaning "tappable" instead of leaking onto everything
+       --clay-pressed wells and active states — the surface sinks inward */
+  --clay-raised:
+    0 14px 28px -14px hsl(245 45% 2% / 0.80),
+    0 4px 10px -6px hsl(245 45% 2% / 0.55),
+    inset 0 -6px 12px -6px hsl(245 40% 2% / 0.55),
+    inset 0 7px 12px -6px hsl(245 25% 80% / 0.12);
+  --clay-float:
+    0 22px 40px -16px hsl(245 45% 2% / 0.85),
+    0 6px 14px -7px hsl(245 45% 2% / 0.60),
+    inset 0 -7px 14px -7px hsl(245 40% 2% / 0.60),
+    inset 0 8px 14px -7px hsl(245 25% 82% / 0.17);
+  --clay-soft: 0 12px 26px -18px hsl(245 45% 2% / 0.70);
+  /* Primary action. The shadow is derived from the ACCENT hue, not from the
+     surface — a neutral drop under a saturated button is the tell that kills
+     the moulded read. */
+  --clay-accent:
+    0 18px 32px -14px hsl(220 62% 16% / 0.90),
+    0 5px 12px -6px hsl(220 62% 13% / 0.62),
+    inset 0 -6px 12px -6px hsl(220 66% 12% / 0.50),
+    inset 0 7px 12px -6px hsl(0 0% 100% / 0.26);
+  --clay-pressed:
+    inset 0 3px 8px -2px hsl(245 45% 2% / 0.70),
+    inset 0 -2px 5px -3px hsl(245 25% 80% / 0.07);
+
+  /* Barely-there soft edge. In dark this is load-bearing: with the drop
+     shadow invisible against a dark page, the hairline is what separates
+     surface from background and what holds the 3:1 non-text bar. */
+  --clay-edge: hsl(245 25% 82% / 0.09);
+  --clay-edge-strong: hsl(245 25% 84% / 0.14);
+
+  /* Control boundary. Clay carries depth by shadow, but a soft shadow edge
+     measures ~1.4:1 — WCAG 1.4.11 wants 3:1 to identify a control. So every
+     CONTROL (button, input, select, toggle) keeps one hairline at this value
+     while every CONTAINER (panel, card, rail) drops its border entirely. */
+  --control-edge: #6b7385;
+
+  /* Elevation aliases — every existing rule keeps its token name. */
+  --shadow: var(--clay-raised);
+  --shadow-modal:
+    0 40px 80px -24px hsl(245 45% 2% / 0.88),
+    0 10px 24px -10px hsl(245 45% 2% / 0.62),
+    inset 0 -8px 16px -8px hsl(245 40% 2% / 0.55),
+    inset 0 9px 16px -8px hsl(245 25% 82% / 0.15);
+  --edge-highlight: inset 0 1px 0 var(--clay-edge);
+  --focus-ring: 0 0 0 3px var(--surface-0), 0 0 0 6px var(--accent);
 
   /* Z-index */
   --z-nav: 100;
@@ -156,6 +224,8 @@
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
   --ease-in-out: cubic-bezier(0.45, 0, 0.15, 1);
   --ease-snap: cubic-bezier(0.3, 1.1, 0.3, 1);
+  --ease-squish: cubic-bezier(0.34, 1.56, 0.64, 1);   /* clay press/release */
+  --dur-squish: 180ms;
 
   /* Landing depth kit — the marketing surface only. Every value here is a
      colour or a scalar so both themes stay authored in CSS; the gradients
@@ -185,16 +255,20 @@
 
   /* Deck depth kit (Phase C) — the dashboard's card surfaces. Same authoring
      rule as the landing kit: colours and scalars only, gradients composed at
-     the rule so both themes share one recipe. */
-  --deck-top: #171b24;              /* card gradient, lit edge */
-  --deck-bottom: #0b0d12;           /* card gradient, floor */
-  --deck-edge: rgba(255, 255, 255, 0.07);
-  --deck-sheen: rgba(255, 255, 255, 0.07);   /* pointer specular */
+     the rule so both themes share one recipe.
+     Clay pass: the card gradient drops to a whisper (clay volume comes from
+     the insets, and a strong plane gradient fights them), and the two shadow
+     tokens now resolve to the clay stacks so every Phase C consumer converts
+     without being rewritten. */
+  --deck-top: #1a1d27;              /* card gradient, lit edge */
+  --deck-bottom: #15181f;           /* card gradient, floor */
+  --deck-edge: var(--clay-edge);
+  --deck-sheen: rgba(255, 255, 255, 0.06);   /* pointer specular */
   --deck-sheen-fade: rgba(255, 255, 255, 0);
-  --deck-wash: rgba(91, 141, 239, 0.08);     /* accent inner glow at card top */
-  --deck-shadow: 0 18px 40px -26px rgba(0, 0, 0, 0.9), 0 2px 6px -3px rgba(0, 0, 0, 0.55);
-  --deck-shadow-lift: 0 32px 64px -28px rgba(0, 0, 0, 0.95), 0 5px 14px -6px rgba(0, 0, 0, 0.6);
-  --deck-groove: rgba(0, 0, 0, 0.55);        /* recessed meter track */
+  --deck-wash: rgba(91, 141, 239, 0.09);     /* accent inner glow at card top */
+  --deck-shadow: var(--clay-raised);
+  --deck-shadow-lift: var(--clay-float);
+  --deck-groove: hsl(245 45% 2% / 0.70);     /* recessed meter track */
   --stagger-dash: 58ms;
   --dur-reveal: 620ms;
 }
@@ -206,39 +280,41 @@
 [data-theme="light"] {
   color-scheme: light;
 
-  --surface-0: #f4f5f7;
-  --surface-1: #ffffff;
+  /* Clay ramp, light. The page is a pale tint — never #fff — so the cards
+     have something to be lighter than. */
+  --surface-0: #ecedf5;
+  --surface-1: #fbfbff;
   --surface-2: #ffffff;
-  --surface-3: #edf0f4;
-  --surface-inset: #eceef2;
+  --surface-3: #e8ebf5;
+  --surface-inset: #e7eaf4;
 
-  --line: #dcdfe6;
-  --line-strong: #c2c8d3;
+  --line: #dfe2ec;
+  --line-strong: #c6cbda;
   --line-accent: rgba(38, 88, 199, 0.5);
 
   --text: #171a21;
   --text-soft: #4c5567;
-  --text-faint: #646c7d;
+  --text-faint: #5c6476;
   --text-inverse: #ffffff;
 
   --accent: #2658c7;
   --accent-strong: #1c47a8;
   --accent-muted: rgba(38, 88, 199, 0.09);
 
-  --pnl-pos: #0c7b4e;
-  --pnl-pos-soft: rgba(12, 123, 78, 0.10);
-  --pnl-pos-line: rgba(12, 123, 78, 0.35);
-  --pnl-neg: #cb2e56;
-  --pnl-neg-soft: rgba(203, 46, 86, 0.09);
-  --pnl-neg-line: rgba(203, 46, 86, 0.35);
+  --pnl-pos: #0a6e46;
+  --pnl-pos-soft: rgba(10, 110, 70, 0.10);
+  --pnl-pos-line: rgba(10, 110, 70, 0.35);
+  --pnl-neg: #c02a4f;
+  --pnl-neg-soft: rgba(192, 42, 79, 0.09);
+  --pnl-neg-line: rgba(192, 42, 79, 0.35);
 
-  --warn: #96620e;
-  --warn-soft: rgba(150, 98, 14, 0.10);
-  --info: #0d7395;
-  --info-soft: rgba(13, 115, 149, 0.10);
+  --warn: #8a5a0c;
+  --warn-soft: rgba(138, 90, 12, 0.10);
+  --info: #0c6b8a;
+  --info-soft: rgba(12, 107, 138, 0.10);
 
-  --chart-grid: #e4e7ed;
-  --chart-axis: #646c7d;
+  --chart-grid: #e2e5ef;
+  --chart-axis: #5c6476;
 
   /* Depth pass, light theme. Glows are tighter and areas lighter: on white the
      same alphas that read as atmosphere on graphite read as smudge. */
@@ -271,16 +347,50 @@
   --chart-radar-edge: rgba(13, 115, 149, 0.03);
   --chart-radar-glow: rgba(13, 115, 149, 0.32);
   --chart-canvas-top: #ffffff;
-  --chart-canvas-bottom: #f6f7fa;
+  --chart-canvas-bottom: #f4f6fc;
   --chart-canvas-glow: rgba(38, 88, 199, 0.05);
   --chart-canvas-shadow: rgba(23, 26, 33, 0.10);
   --spark-pos-fade: rgba(12, 123, 78, 0);
   --spark-neg-fade: rgba(203, 46, 86, 0);
 
-  --shadow: 0 1px 2px rgba(23, 26, 33, 0.06), 0 8px 24px rgba(23, 26, 33, 0.07);
-  --shadow-modal: 0 24px 64px rgba(23, 26, 33, 0.18);
-  --edge-highlight: none;
-  --focus-ring: 0 0 0 2px var(--surface-1), 0 0 0 4px var(--accent);
+  /* Clay elevation, light. Re-derived from the light surface, not inverted:
+     the top inset is near-opaque white (that is what sells the moulded edge
+     on a pale surface) and every outer shadow is hue-matched 245deg, never
+     neutral grey — grey kills the moulded read instantly. Negative spread
+     keeps the drops tight so two cards 16px apart do not merge into one
+     smudge. */
+  --clay-raised:
+    0 10px 20px -10px hsl(245 30% 45% / 0.22),
+    0 3px 6px -4px hsl(245 30% 45% / 0.13),
+    inset 0 -5px 10px -4px hsl(245 30% 45% / 0.15),
+    inset 0 6px 10px -5px hsl(0 0% 100% / 0.95);
+  --clay-float:
+    0 18px 30px -12px hsl(245 32% 42% / 0.28),
+    0 6px 12px -6px hsl(245 32% 42% / 0.16),
+    inset 0 -6px 12px -5px hsl(245 32% 42% / 0.20),
+    inset 0 7px 12px -6px hsl(0 0% 100% / 1);
+  --clay-soft: 0 8px 18px -12px hsl(245 30% 45% / 0.22);
+  --clay-accent:
+    0 16px 28px -12px hsl(220 60% 40% / 0.42),
+    0 5px 10px -6px hsl(220 60% 40% / 0.26),
+    inset 0 -6px 12px -5px hsl(220 66% 24% / 0.32),
+    inset 0 7px 12px -6px hsl(0 0% 100% / 0.34);
+  --clay-pressed:
+    inset 0 3px 7px -2px hsl(245 30% 45% / 0.24),
+    inset 0 -2px 5px -3px hsl(0 0% 100% / 0.9);
+
+  --clay-edge: hsl(245 22% 30% / 0.07);
+  --clay-edge-strong: hsl(245 22% 30% / 0.12);
+  --control-edge: #82889a;
+
+  --shadow: var(--clay-raised);
+  --shadow-modal:
+    0 34px 64px -22px hsl(245 32% 42% / 0.32),
+    0 10px 22px -10px hsl(245 32% 42% / 0.18),
+    inset 0 -7px 14px -6px hsl(245 32% 42% / 0.16),
+    inset 0 8px 14px -7px hsl(0 0% 100% / 1);
+  --edge-highlight: inset 0 1px 0 hsl(0 0% 100% / 0.9);
+  --focus-ring: 0 0 0 3px var(--surface-1), 0 0 0 6px var(--accent);
 
   /* Landing depth kit, light. On white the same alphas that read as
      atmosphere on graphite read as dirt, so every wash is roughly halved
@@ -304,15 +414,15 @@
   /* Deck depth kit, light. On paper the card gradient is a whisper and the
      specular is white-on-white — anything stronger reads as a smudge over
      the numerals. */
-  --deck-top: #ffffff;
-  --deck-bottom: #f3f5f9;
-  --deck-edge: rgba(23, 26, 33, 0.05);
+  --deck-top: #fdfdff;
+  --deck-bottom: #f5f6fc;
+  --deck-edge: hsl(0 0% 100% / 0.9);
   --deck-sheen: rgba(255, 255, 255, 0.85);
   --deck-sheen-fade: rgba(255, 255, 255, 0);
-  --deck-wash: rgba(38, 88, 199, 0.05);
-  --deck-shadow: 0 16px 34px -24px rgba(23, 26, 33, 0.34), 0 1px 3px rgba(23, 26, 33, 0.07);
-  --deck-shadow-lift: 0 30px 58px -26px rgba(23, 26, 33, 0.4), 0 4px 10px -4px rgba(23, 26, 33, 0.1);
-  --deck-groove: rgba(23, 26, 33, 0.16);
+  --deck-wash: rgba(38, 88, 199, 0.055);
+  --deck-shadow: var(--clay-raised);
+  --deck-shadow-lift: var(--clay-float);
+  --deck-groove: hsl(245 30% 45% / 0.22);
 }
 
 /* Theme crossfade (graft) — JS adds .theme-switching before flipping
@@ -6310,5 +6420,595 @@ summary:focus-visible {
 @media (max-width: 1024px) {
   .desktop-nav-links::after {
     display: none;
+  }
+}
+
+/* ==========================================================================
+   PHASE D — CLAY SYSTEM: SHARED COMPONENTS
+   The token layer at the top of this file is now clay (soft ramp, hue-matched
+   three-shadow stacks, 14/20/26/32 radii). This section spends those tokens on
+   the shared recipes and takes the hairlines back out.
+
+   The split that keeps a trading journal readable — clay is CHROME, flat is
+   CONTENT:
+     clay        panels, cards, buttons, nav, modals, wells, chips
+     flat        table rows, calendar cells, chart interiors — anything that
+                 repeats more than ~6 times. A clay row costs ~28px of padding
+                 and turns a dense table into a bouncy castle.
+
+   Two rules are accessibility, not taste, and must survive any restyle:
+     1. CONTAINERS lose their border (depth is the shadow). CONTROLS keep one
+        1px --control-edge — a soft shadow edge measures ~1.4:1 and WCAG
+        1.4.11 wants 3:1 to identify a control.
+     2. No state is signalled by shadow alone. Every pressed/active state also
+        moves a colour or a fill, because shadow direction is invisible in
+        sunlight, on a dimmed screen, and to a screen reader.
+   ========================================================================== */
+
+/* --- 1. Containers: border out, clay in ---------------------------------- */
+.panel,
+.view-head,
+.dashboard-empty,
+.dash-risk,
+.dash-rail,
+.sidebar,
+.table-wrap,
+.tag-set,
+.reflection-list li {
+  border: 0;
+}
+
+.panel,
+.view-head,
+.dashboard-empty,
+.dash-risk,
+.dash-rail,
+.sidebar {
+  border-radius: var(--radius-clay-lg);
+  box-shadow: inset 0 1px 0 var(--clay-edge), var(--clay-raised);
+}
+
+/* The rail is a strip of seven read-only panes, not a thing you press. Full
+   three-shadow clay on it would say "tappable" seven times over, so it gets
+   the outer drop alone — this is the rule that stops clay leaking onto
+   everything. */
+.dash-rail {
+  box-shadow: var(--clay-soft);
+}
+
+/* Minimalism half of the brief: the cards got rounder, so they also get room.
+   16px was cramped at 26px radius — the corner ate the padding. */
+.panel {
+  padding: var(--space-6);
+}
+
+.view-head {
+  padding: var(--space-6);
+}
+
+.view {
+  gap: var(--space-4);
+}
+
+.metric-grid {
+  gap: var(--space-4);
+}
+
+.panel-grid {
+  gap: var(--space-4);
+}
+
+/* Metric cards are the second clay level and stop there — a clay card inside
+   a clay card inside a clay card is mush, so everything below this (chips,
+   inputs, meters) is either flat or pressed, never raised again. */
+.metric-card:not(.dash-rail-item) {
+  border: 0;
+  border-radius: var(--radius-clay-md);
+  padding: var(--space-5);
+  min-height: 96px;
+  box-shadow: inset 0 1px 0 var(--clay-edge), var(--clay-raised);
+}
+
+/* Money rail. The old 2px border-left tapers into a wedge against a 20px
+   radius; an inset shadow traces the rounded edge properly. --pl-intensity
+   still widens it on the balance card, exactly as before. */
+.metric-card {
+  --money-rail: transparent;
+  --money-rail-w: 0px;
+}
+
+/* :not(.dash-rail-item) again, for the same reason Phase C flagged: the rail's
+   cells are panes of one plane and their separator shadows are rewritten by
+   nth-child in two responsive blocks. Rail cells have radius 0, so the
+   original 2px border-left renders as a clean straight rail there and is left
+   exactly as it was. */
+.metric-card:not(.dash-rail-item).is-pos,
+.metric-card:not(.dash-rail-item).is-neg {
+  border-left: 0;
+}
+
+.metric-card.is-pos {
+  --money-rail: var(--pnl-pos-line);
+  --money-rail-w: 3px;
+}
+
+.metric-card.is-neg {
+  --money-rail: var(--pnl-neg-line);
+  --money-rail-w: 3px;
+}
+
+.metric-card-balance.is-pos,
+.metric-card-balance.is-neg {
+  --money-rail-w: calc(3px + var(--pl-intensity) * 3px);
+  border-left-width: 0;
+}
+
+.metric-card-balance.is-pos {
+  --money-rail: color-mix(in srgb, var(--pnl-pos) calc(35% + var(--pl-intensity) * 55%), transparent);
+}
+
+.metric-card-balance.is-neg {
+  --money-rail: color-mix(in srgb, var(--pnl-neg) calc(35% + var(--pl-intensity) * 55%), transparent);
+}
+
+.metric-card:not(.dash-rail-item).is-pos,
+.metric-card:not(.dash-rail-item).is-neg {
+  box-shadow: inset var(--money-rail-w) 0 0 var(--money-rail), inset 0 1px 0 var(--clay-edge), var(--clay-raised);
+}
+
+/* Bento geometry: the hero is the single biggest clay blob on the page. */
+.dash-hero {
+  border-radius: var(--radius-clay-xl);
+  padding: var(--space-6) var(--space-6) 0;
+}
+
+.dash-risk {
+  padding: var(--space-6);
+}
+
+.dash-quad-card {
+  border-radius: var(--radius-clay-md);
+  padding: var(--space-5);
+}
+
+/* Wells inside clay: pressed, never raised. */
+.dash-risk .risk-strip-item .risk-strip-track,
+.risk-strip-track {
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+  overflow: hidden;
+}
+
+.risk-strip-fill {
+  border-radius: var(--radius-pill);
+}
+
+.table-wrap {
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+}
+
+/* Chart wells drop to the small clay radius — nesting 26 inside 26 inflates
+   the panel and steals width from the plot. */
+.panel-chart canvas {
+  border: 0;
+  border-radius: var(--radius-clay-sm);
+  box-shadow: inset 0 1px 0 var(--chart-highlight), var(--clay-pressed);
+}
+
+.panel-chart:hover canvas {
+  box-shadow: inset 0 1px 0 var(--chart-highlight), var(--clay-pressed),
+    0 10px 24px -20px var(--chart-canvas-shadow);
+}
+
+.reflection-list li,
+.tag-set {
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+}
+
+/* --- 2. Buttons: puffy, pill, and they actually squish -------------------- */
+/* Press state moves THREE things at once — transform, shadow direction and
+   fill — so the state survives on a dimmed screen and for anyone who cannot
+   see the shadow flip at all. */
+.btn,
+.mini-btn,
+.nav-btn,
+.nav-toggle {
+  min-height: 44px;
+}
+
+.btn {
+  border: 1px solid var(--control-edge);
+  border-radius: var(--radius-pill);
+  padding: 12px 22px;
+  background: var(--surface-2);
+  background-image: none;
+  box-shadow: var(--clay-float);
+  transition: transform var(--dur-squish) var(--ease-squish),
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.btn:hover {
+  background: var(--surface-3);
+  border-color: var(--accent);
+}
+
+.btn.primary {
+  border-color: transparent;
+  background: var(--accent);
+  background-image: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 100%);
+  color: var(--text-inverse);
+  box-shadow: var(--clay-accent);
+}
+
+.btn.primary:hover {
+  background-image: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent-strong) 100%);
+  box-shadow: var(--clay-accent);
+}
+
+.btn.danger,
+.btn.destructive {
+  border-color: var(--pnl-neg-line);
+  color: var(--pnl-neg);
+  background: var(--pnl-neg-soft);
+}
+
+.btn.danger:hover,
+.btn.destructive:hover {
+  border-color: var(--pnl-neg);
+  background: var(--pnl-neg-soft);
+}
+
+.btn:active,
+.btn.primary:active,
+.journal-action-btn:active {
+  transform: translateY(2px) scale(0.985);
+  background: var(--surface-3);
+  background-image: none;
+  box-shadow: var(--clay-pressed);
+}
+
+.btn.primary:active {
+  background: var(--accent-strong);
+  color: var(--text-inverse);
+}
+
+.mini-btn {
+  border: 1px solid var(--control-edge);
+  border-radius: var(--radius-pill);
+  padding: 8px 14px;
+  min-height: 36px;
+  background: var(--surface-2);
+  box-shadow: var(--clay-raised);
+  transition: transform var(--dur-squish) var(--ease-squish),
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.mini-btn:hover {
+  background: var(--surface-3);
+  border-color: var(--accent);
+}
+
+.mini-btn:active {
+  transform: translateY(1px) scale(0.98);
+  background: var(--surface-3);
+  box-shadow: var(--clay-pressed);
+}
+
+/* Destructive stays quiet until touched, but it is a control, so it keeps a
+   boundary — a tinted one, so the row does not grow a grey ladder. */
+.mini-btn.danger {
+  border-color: var(--pnl-neg-line);
+  background: transparent;
+  color: var(--pnl-neg);
+  box-shadow: none;
+}
+
+.mini-btn.danger:hover {
+  border-color: var(--pnl-neg);
+  background: var(--pnl-neg-soft);
+  box-shadow: var(--clay-raised);
+}
+
+.mini-btn.danger:active {
+  box-shadow: var(--clay-pressed);
+}
+
+/* Row-action buttons sit inside a 40px table row: they may not grow it. */
+.row-actions .mini-btn {
+  min-height: 32px;
+  padding: 6px 12px;
+}
+
+/* --- 3. Form controls: pressed into the clay ----------------------------- */
+/* Text entry is the one place the surface should sink. Opaque --surface-inset
+   is the token contract (never translucency behind text being typed); the
+   inset stack is what makes it read as a well rather than a flat box. */
+input,
+select,
+textarea {
+  border: 1px solid var(--control-edge);
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-inset);
+  padding: 12px 14px;
+  min-height: 44px;
+  box-shadow: var(--clay-pressed);
+}
+
+textarea {
+  min-height: 88px;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  min-height: 0;
+  box-shadow: none;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed), var(--focus-ring);
+}
+
+/* Chips with a checkbox in them are controls: boundary, 44px target, pill. */
+.tag-set label {
+  border: 1px solid var(--control-edge);
+  border-radius: var(--radius-pill);
+  min-height: 44px;
+  padding: 8px 14px;
+  background: var(--surface-2);
+  box-shadow: var(--clay-raised);
+  transition: transform var(--dur-squish) var(--ease-squish),
+    border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+
+.tag-set label:hover {
+  border-color: var(--accent);
+  background: var(--surface-3);
+}
+
+.tag-set label:active {
+  transform: translateY(1px) scale(0.985);
+  box-shadow: var(--clay-pressed);
+}
+
+.tag-set:focus-within {
+  box-shadow: var(--clay-pressed), var(--focus-ring);
+}
+
+/* --- 4. Tables: flat content inside a pressed well ------------------------ */
+/* Deliberately NOT clay. Rows repeat, and clay on a repeating row is the
+   canonical way this style ruins a data product. */
+thead th {
+  background: var(--surface-inset);
+  border-bottom: 1px solid var(--line-strong);
+}
+
+th,
+td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+tbody tr:hover {
+  background: var(--surface-3);
+}
+
+/* --- 5. Badges and pills: soft tint, no ladder of borders ----------------- */
+.pill {
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  background: var(--surface-inset);
+  color: var(--text-soft);
+}
+
+.pill-win {
+  background: var(--pnl-pos-soft);
+  color: var(--pnl-pos);
+}
+
+.pill-loss {
+  background: var(--pnl-neg-soft);
+  color: var(--pnl-neg);
+}
+
+.pill-be {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.metric-delta,
+.dash-hero-today {
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+}
+
+.dash-hero-today.is-pos {
+  background: var(--pnl-pos-soft);
+}
+
+.dash-hero-today.is-neg {
+  background: var(--pnl-neg-soft);
+}
+
+/* --- 6. Nav ------------------------------------------------------------- */
+.nav-btn {
+  border-radius: var(--radius-pill);
+  padding: 10px 16px;
+}
+
+.nav-btn:hover {
+  background: var(--surface-3);
+}
+
+/* Active is never colour-only: fill + text weight + the rail Phase C slides. */
+.nav-btn.is-active {
+  background: var(--accent-muted);
+  color: var(--text);
+  border-radius: var(--radius-pill);
+  box-shadow: none;
+}
+
+.main-nav .nav-btn.is-active {
+  border-radius: var(--radius-pill);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.nav-toggle {
+  border: 1px solid var(--control-edge);
+  border-radius: var(--radius-pill);
+  padding: 10px 16px;
+  box-shadow: var(--clay-raised);
+  transition: transform var(--dur-squish) var(--ease-squish),
+    background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.nav-toggle:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: var(--clay-pressed);
+}
+
+.nav-toggle.is-open {
+  background: var(--accent-muted);
+  border-color: var(--accent);
+  box-shadow: var(--clay-pressed);
+}
+
+/* --- 7. Modals and dialogs ----------------------------------------------- */
+.auth-panel,
+.score-info-dialog {
+  border: 0;
+  border-radius: var(--radius-clay-xl);
+  padding: var(--space-6);
+  box-shadow: inset 0 1px 0 var(--clay-edge), var(--shadow-modal);
+}
+
+.auth-panel {
+  gap: var(--space-3);
+}
+
+/* --- 8. Focus: an explicit ring, always outside the clay blur ------------- */
+/* The inset highlight on a clay surface mimics a focus ring closely enough
+   that users cannot tell them apart — so the real one stays loud, sits 3px
+   clear of the edge, and was measured against BOTH the card and the page
+   (5.4:1 / 6.1:1 dark, 6.2:1 / 5.5:1 light). */
+button:focus-visible,
+.btn:focus-visible,
+.mini-btn:focus-visible,
+.nav-btn:focus-visible,
+.nav-toggle:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible,
+summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* --- 9. Dark-only soft edge ---------------------------------------------- */
+/* Dark is :root (no attribute), hence :not([data-theme="light"]). In dark the
+   drop shadow is nearly invisible against the page, so the barely-there top
+   edge is what separates surface from background — the one hairline clay is
+   not allowed to delete. */
+:root:not([data-theme="light"]) .panel,
+:root:not([data-theme="light"]) .view-head,
+:root:not([data-theme="light"]) .metric-card:not(.dash-rail-item),
+:root:not([data-theme="light"]) .dash-risk,
+:root:not([data-theme="light"]) .dash-rail,
+:root:not([data-theme="light"]) .dashboard-empty,
+:root:not([data-theme="light"]) .sidebar {
+  border: 1px solid var(--clay-edge);
+}
+
+/* Modals float over a dim overlay with no page behind them to lift off, so
+   they take the stronger edge. */
+:root:not([data-theme="light"]) .auth-panel,
+:root:not([data-theme="light"]) .score-info-dialog {
+  border: 1px solid var(--clay-edge-strong);
+}
+
+/* --- 10. Reduced motion --------------------------------------------------- */
+/* The global block at the top of this file zeroes durations and delays. The
+   squish is a transform, so it lands instantly in its final state — but the
+   press transform itself is decoration, so drop it and let the fill and the
+   shadow flip carry the state on their own. */
+@media (prefers-reduced-motion: reduce) {
+  .btn:active,
+  .mini-btn:active,
+  .nav-toggle:active,
+  .tag-set label:active,
+  .journal-action-btn:active {
+    transform: none;
+  }
+}
+
+/* --- 11. Mobile ---------------------------------------------------------- */
+/* Clay eats width: a 26px radius plus 24px padding leaves very little of a
+   375px screen for the numbers. Below 560px the radii step down one rung and
+   the padding follows. */
+@media (max-width: 720px) {
+  .panel,
+  .view-head,
+  .dash-risk {
+    padding: var(--space-5);
+  }
+
+  .dash-hero {
+    padding: var(--space-5) var(--space-5) 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .panel,
+  .view-head,
+  .dashboard-empty,
+  .dash-risk,
+  .dash-rail,
+  .sidebar {
+    border-radius: var(--radius-clay-md);
+  }
+
+  .dash-hero,
+  .auth-panel,
+  .score-info-dialog {
+    border-radius: var(--radius-clay-lg);
+  }
+
+  .panel,
+  .view-head,
+  .dash-risk,
+  .auth-panel,
+  .score-info-dialog {
+    padding: var(--space-4);
+  }
+
+  .dash-hero {
+    padding: var(--space-4) var(--space-4) 0;
+  }
+
+  .metric-card:not(.dash-rail-item) {
+    padding: var(--space-4);
+    border-radius: var(--radius-clay-sm);
+  }
+
+  th,
+  td {
+    padding: 10px 12px;
   }
 }
