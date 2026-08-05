@@ -27,6 +27,7 @@ import {
 import { createTradeDisplayHelpers, liveCellAttrs } from "./src/modules/tradeDisplay.js";
 import { createRecentTradesView } from "./src/modules/recentTradesView.js";
 import { createChartsModule, traceSmoothPath } from "./src/modules/charts.js";
+import { parseQuickTrade, resolveSymbol, inferMarket } from "./src/lib/tradeParse.js";
 
 const STORAGE_KEYS = {
   trades: "axiom_journal_trades_v1",
@@ -283,6 +284,30 @@ const ui = {
   traderScoreValue: document.getElementById("traderScoreValue"),
   traderScoreCaption: document.getElementById("traderScoreCaption"),
 
+  // 1b quick capture — route 1 (⌘K command bar) and routes 2/3 (the sheet).
+  captureBar: document.getElementById("captureBar"),
+  captureBarForm: document.getElementById("captureBarForm"),
+  captureInput: document.getElementById("captureInput"),
+  captureReadout: document.getElementById("captureReadout"),
+  captureToSheetBtn: document.getElementById("captureToSheetBtn"),
+  captureToast: document.getElementById("captureToast"),
+  tradeSheet: document.getElementById("tradeSheet"),
+  tradeSheetForm: document.getElementById("tradeSheetForm"),
+  tradeSheetCloseBtn: document.getElementById("tradeSheetCloseBtn"),
+  sheetSymbol: document.getElementById("sheetSymbol"),
+  sheetEntry: document.getElementById("sheetEntry"),
+  sheetStop: document.getElementById("sheetStop"),
+  sheetRiskCustom: document.getElementById("sheetRiskCustom"),
+  sheetDirectionButtons: Array.from(document.querySelectorAll("[data-sheet-direction]")),
+  sheetRiskButtons: Array.from(document.querySelectorAll("[data-sheet-risk]")),
+  sheetRulesList: document.getElementById("sheetRulesList"),
+  sheetSize: document.getElementById("sheetSize"),
+  sheetAtRisk: document.getElementById("sheetAtRisk"),
+  sheetBudgetAfter: document.getElementById("sheetBudgetAfter"),
+  sheetMessage: document.getElementById("sheetMessage"),
+  sheetSubmitBtn: document.getElementById("sheetSubmitBtn"),
+  sheetDetailBtn: document.getElementById("sheetDetailBtn"),
+
   tradeForm: document.getElementById("tradeForm"),
   tradeSubmitBtn: document.getElementById("tradeSubmitBtn"),
   tradeResetBtn: document.getElementById("tradeResetBtn"),
@@ -439,6 +464,29 @@ let dashSparkFrame = 0;
 // dead zone during the first render.
 const BALANCE_RANGE_DAYS = { "1m": 30, "3m": 90, all: 0 };
 const BALANCE_RANGE_LABELS = { "1m": "past 30 days", "3m": "past 90 days", all: "all time" };
+
+/* ── 1b quick capture ──────────────────────────────────────────────────────
+   Declared here, above the module-level init() call, like every other module
+   const — anything below it is in the temporal dead zone during first render.
+
+   The pre-trade checklist. Fixed ids because the ticked ones are STORED on
+   the trade (trade.preTradeRules), so renaming a label must never orphan the
+   history. Wording is the mockup's. */
+const PRE_TRADE_RULES = [
+  { id: "playbook", label: "Setup is in my playbook" },
+  { id: "structure-stop", label: "Stop is at structure, not at a round number" },
+  { id: "no-news", label: "No news inside 15 minutes" }
+];
+
+// Sheet state. Everything else is read straight off the inputs on demand —
+// only what has no field of its own lives here.
+const sheetState = {
+  riskChoice: "1",       // "0.5" | "1" | "2" | "custom"
+  direction: "Buy",
+  rules: new Set()
+};
+
+let captureToastTimer = 0;
 
 const METRIC_DELTA_SPECS = {
   accountBalance: { read: (a) => a.totalPnl, format: formatCurrency },
@@ -861,9 +909,14 @@ function bindEvents() {
   ui.clearFiltersBtn.addEventListener("click", clearFilters);
   ui.tradesBody.addEventListener("click", handleTradeTableClick);
 
-  ui.journalNewTradeBtn.addEventListener("click", openFreshTradeEntry);
-  ui.tabBarNewTradeBtn?.addEventListener("click", openFreshTradeEntry);
-  ui.dashboardEmptyCta?.addEventListener("click", openFreshTradeEntry);
+  // 1b: the primary path is capture, not the form. "Log a trade" advertises
+  // ⌘K, so it opens exactly what ⌘K opens; the FAB and the empty-state CTA go
+  // straight to the sheet (route 3 — the FAB expands in place, it no longer
+  // navigates). The full form stays reachable via Add detail / Edit / the nav.
+  ui.journalNewTradeBtn.addEventListener("click", openQuickCapture);
+  ui.tabBarNewTradeBtn?.addEventListener("click", () => openTradeSheet());
+  ui.dashboardEmptyCta?.addEventListener("click", () => openTradeSheet());
+  bindQuickCapture();
   ui.exportCsvBtn.addEventListener("click", exportTradesCsv);
   ui.exportCsvBtnMobile?.addEventListener("click", exportTradesCsv);
 
@@ -992,14 +1045,14 @@ function bindEvents() {
       }
     }
 
-    // Clay V2 §6: the New Trade button advertises ⌘K, so the shortcut has to
-    // exist — a keycap that does nothing is a worse affordance than none.
+    // 1b route 1: ⌘K is the command bar. On a touch viewport there is no
+    // keyboard to type a command line into, so it opens the sheet instead.
     if (mod && event.key.toLowerCase() === "k") {
       if (!canAccessApp()) {
         return;
       }
       event.preventDefault();
-      openFreshTradeEntry();
+      openQuickCapture();
     }
 
     if (!mod && event.key === "/") {
@@ -2465,6 +2518,14 @@ function buildTradeRecord(tradeInput, options = {}) {
     createdAt: existingId ? String(options.createdAt || now) : now,
     updatedAt: now,
     ...tradeInput,
+    // 1b: the pre-trade rules the trader ticked in the sheet. The full form
+    // does not ask for them, so an edit through it must CARRY them, not wipe
+    // them — an empty array from readTradeForm is absence, not a de-tick.
+    preTradeRules: Array.isArray(tradeInput.preTradeRules)
+      ? tradeInput.preTradeRules.map(String)
+      : Array.isArray(existingTrade?.preTradeRules)
+        ? existingTrade.preTradeRules.map(String)
+        : [],
     exitPrice: status === "open" ? 0 : tradeInput.exitPrice,
     status,
     closedAt,
@@ -3252,11 +3313,568 @@ function clearFilters() {
   handleFilterChange();
 }
 
-function openFreshTradeEntry() {
+/* ══ 1b QUICK CAPTURE ══════════════════════════════════════════════════════
+   design-source/1b-quick-capture.html. Three routes to logging a trade:
+     1. ⌘K command bar — one line, parsed live by src/lib/tradeParse.js.
+     2. The sheet — five fields, a live size/risk/budget readout and the
+        pre-trade checklist. Step 2 (Close & journal) is a later phase.
+     3. Thumb — the mobile FAB expands into the same sheet in place.
+   All three land in the SAME record builder, so a capture is indistinguishable
+   from a form entry once saved (and stays editable in the full form).
+
+   Nothing here is fabricated: size comes from the real stop distance and the
+   real account balance through the app's own pip model, and the budget line
+   comes from the configured daily loss limit and today's actual P&L. Where a
+   figure cannot be computed the readout says so instead of showing a number.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+function getAccountBalance() {
+  const fromAnalytics = state.analytics?.accountBalance;
+  if (Number.isFinite(fromAnalytics) && fromAnalytics > 0) {
+    return fromAnalytics;
+  }
+  return state.settings.balanceOverride > 0
+    ? state.settings.balanceOverride
+    : state.settings.startingBalance;
+}
+
+// Position size that puts exactly `riskAmount` at risk between entry and stop,
+// through the same pip model calculateTradeMetrics uses to price the trade —
+// so the size shown before the click is the size the journal prices after it.
+function computePositionSize({ asset, market, entryPrice, stopLoss, riskAmount }) {
+  const distance = Math.abs(entryPrice - stopLoss);
+  if (!(distance > 0) || !(riskAmount > 0)) {
+    return 0;
+  }
+
+  const spec = getPipSpec({ asset, market, entryPrice });
+  if (spec.mode === "pip-lot") {
+    const perLot = (distance / spec.pipSize) * spec.pipValuePerLot;
+    return perLot > 0 ? riskAmount / perLot : 0;
+  }
+  return riskAmount / distance;
+}
+
+// "0.28 BTC" / "0.42 lots". Pip-lot instruments are sized in lots; unit
+// instruments are sized in the base asset, so the suffix names it.
+function formatPositionSize(size, asset, market) {
+  if (!(size > 0)) {
+    return "—";
+  }
+
+  const spec = getPipSpec({ asset, market, entryPrice: 1 });
+  const rounded = size >= 100 ? size.toFixed(0) : size >= 1 ? size.toFixed(2) : size.toFixed(4);
+  const trimmed = rounded.includes(".") ? rounded.replace(/0+$/, "").replace(/\.$/, "") : rounded;
+  if (spec.mode === "pip-lot") {
+    return `${trimmed} ${size === 1 ? "lot" : "lots"}`;
+  }
+  const base = String(asset || "").toUpperCase().replace(/(USDT|USDC|USD)$/, "");
+  return base ? `${trimmed} ${base}` : trimmed;
+}
+
+// What is left of today's loss budget right now, from the configured limit and
+// today's realised P&L. Returns null when no daily limit is set — the readout
+// then says so rather than inventing a headroom figure.
+function getDailyBudgetLeft() {
+  const limit = state.settings.dailyMaxLoss;
+  if (!(limit > 0)) {
+    return null;
+  }
+  const todayPnl = state.analytics?.todayPnl || 0;
+  return Math.max(limit - Math.max(-todayPnl, 0), 0);
+}
+
+// Context the five-field sheet does not ask for. Structural only: the session
+// from the real clock, the market from the symbol, the setup and timeframe
+// carried over from the last trade. Psychology and execution quality are
+// deliberately NOT carried over — those are post-trade judgements and belong
+// to step 2, so they keep the schema defaults until the trader grades them.
+function inferTradeContext(symbol) {
+  const last = state.trades.slice().sort(sortTradesDesc)[0] || null;
+  const upcoming = getNextSessionOpen(new Date());
+  return {
+    date: toDateInputValue(new Date()),
+    session: upcoming?.name || last?.session || "Custom",
+    market: inferMarket(symbol) === "Other" ? last?.market || "Other" : inferMarket(symbol),
+    setupType: last?.setupType || "Breakout",
+    timeframe: last?.timeframe || "M15",
+    psychology: "Focused",
+    executionQuality: "B"
+  };
+}
+
+// The one place all three capture routes build a record. Always an OPEN trade:
+// exits, result and the journal note are step 2's job.
+function saveCapturedTrade(value, preTradeRules) {
+  const context = inferTradeContext(value.symbol);
+  const trade = buildTradeRecord({
+    ...context,
+    asset: value.symbol,
+    direction: value.direction,
+    entryPrice: value.entryPrice,
+    stopLoss: value.stopLoss,
+    takeProfit: value.takeProfit || 0,
+    exitPrice: 0,
+    riskPercent: value.riskPercent,
+    positionSize: value.positionSize,
+    tradeResult: "Auto",
+    status: "open",
+    screenshotName: "",
+    screenshotData: "",
+    notes: "",
+    preTradeRules: Array.from(preTradeRules || [])
+  });
+
+  state.trades.push(trade);
+  persistState();
+  renderAll();
+  refreshLivePrices({ immediate: true });
+  return trade;
+}
+
+function showCaptureToast(text, tone = "success") {
+  if (!ui.captureToast) {
+    return;
+  }
+  ui.captureToast.textContent = text;
+  ui.captureToast.dataset.tone = tone;
+  ui.captureToast.hidden = false;
+  window.clearTimeout(captureToastTimer);
+  captureToastTimer = window.setTimeout(() => {
+    ui.captureToast.hidden = true;
+  }, 5000);
+}
+
+// Route split. A command line needs a keyboard; a touch viewport gets the
+// sheet, which is the same five fields with thumbs instead of syntax.
+function openQuickCapture() {
+  if (!canAccessApp()) {
+    return;
+  }
+  if (isMobileViewport() || window.matchMedia("(pointer: coarse)").matches) {
+    openTradeSheet();
+    return;
+  }
+  openCaptureBar();
+}
+
+/* ── Route 1: the ⌘K command bar ─────────────────────────────────────────── */
+
+function openCaptureBar() {
+  if (!ui.captureBar || ui.captureBar.open) {
+    return;
+  }
+  ui.captureInput.value = "";
+  renderCaptureReadout();
+  ui.captureBar.showModal();
+  ui.captureInput.focus();
+}
+
+function closeCaptureBar() {
+  if (ui.captureBar?.open) {
+    ui.captureBar.close();
+  }
+}
+
+const CAPTURE_CHIP_TONES = { symbol: "accent", long: "pos", short: "neg", warn: "warn", error: "neg" };
+
+function captureChip(text, tone) {
+  const cls = CAPTURE_CHIP_TONES[tone] ? ` cmdk-chip-${CAPTURE_CHIP_TONES[tone]}` : "";
+  return `<span class="cmdk-chip${cls}">${escapeHtml(text)}</span>`;
+}
+
+function renderCaptureReadout() {
+  if (!ui.captureReadout) {
+    return;
+  }
+
+  const raw = ui.captureInput.value;
+  if (!raw.trim()) {
+    ui.captureReadout.innerHTML =
+      '<p class="cmdk-empty">Symbol, direction, entry, stop, and the risk you are taking. Anything else is optional.</p>';
+    return;
+  }
+
+  const parsed = parseQuickTrade(raw);
+  const value = parsed.value;
+  const chips = [];
+
+  if (value.symbol) chips.push(captureChip(value.symbol, "symbol"));
+  if (value.direction) {
+    chips.push(captureChip(value.direction === "Buy" ? "LONG" : "SHORT", value.direction === "Buy" ? "long" : "short"));
+  }
+  if (value.entryPrice > 0) chips.push(captureChip(`entry ${formatCapturePrice(value.entryPrice)}`));
+  if (value.stopLoss > 0) chips.push(captureChip(`stop ${formatCapturePrice(value.stopLoss)}`));
+
+  // Risk %, converted to cash against the REAL account balance.
+  const balance = getAccountBalance();
+  let riskAmount = 0;
+  if (value.riskCash > 0) {
+    riskAmount = value.riskCash;
+    const percent = balance > 0 ? (riskAmount / balance) * 100 : 0;
+    value.riskPercent = round(percent);
+    chips.push(captureChip(`risk ${formatCurrency(riskAmount)} = ${value.riskPercent}%`));
+  } else {
+    const percent = value.riskPercent > 0 ? value.riskPercent : state.settings.riskPerTrade;
+    value.riskPercent = percent;
+    riskAmount = (balance * percent) / 100;
+    const tail = value.riskPercent > 0 ? "" : " (your default)";
+    chips.push(captureChip(`risk ${round(percent)}% = ${formatCurrency(riskAmount)}${tail}`));
+  }
+
+  if (!value.positionSize && parsed.ok) {
+    value.positionSize = computePositionSize({
+      asset: value.symbol,
+      market: value.market,
+      entryPrice: value.entryPrice,
+      stopLoss: value.stopLoss,
+      riskAmount
+    });
+  }
+  if (value.positionSize > 0) {
+    chips.push(captureChip(`size ${formatPositionSize(value.positionSize, value.symbol, value.market)}`));
+  }
+
+  if (value.takeProfit > 0 && value.stopLoss > 0 && value.entryPrice > 0) {
+    const rr = Math.abs(value.takeProfit - value.entryPrice) / Math.abs(value.entryPrice - value.stopLoss);
+    chips.push(captureChip(`target ${formatCapturePrice(value.takeProfit)} · R:R ${rr.toFixed(2)}`));
+  } else if (parsed.ok) {
+    chips.push(captureChip("no target — R:R unknown", "warn"));
+  }
+
+  const status = parsed.ok
+    ? '<p class="cmdk-status is-ok">Enter opens this position.</p>'
+    : `<p class="cmdk-status is-error">${escapeHtml(parsed.error)}</p>`;
+
+  ui.captureReadout.innerHTML = `<div class="cmdk-chips">${chips.join("")}</div>${status}`;
+  ui.captureBar?.classList.toggle("is-invalid", !parsed.ok);
+}
+
+// Prices span 1.0855 to 118,400 — keep the significant digits without padding
+// a five-figure index price with decimals it does not have.
+function formatCapturePrice(price) {
+  if (!Number.isFinite(price)) {
+    return "—";
+  }
+  const decimals = price >= 1000 ? 0 : price >= 10 ? 2 : price >= 1 ? 4 : 6;
+  return price.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: decimals });
+}
+
+function handleCaptureSubmit(event) {
+  event.preventDefault();
+  const parsed = parseQuickTrade(ui.captureInput.value);
+  if (!parsed.ok) {
+    // Unparseable input SAYS so rather than saving something wrong.
+    renderCaptureReadout();
+    flagInvalidField(ui.captureInput);
+    return;
+  }
+
+  const value = parsed.value;
+  const balance = getAccountBalance();
+  if (value.riskCash > 0) {
+    value.riskPercent = balance > 0 ? round((value.riskCash / balance) * 100) : 0;
+  } else if (!(value.riskPercent > 0)) {
+    value.riskPercent = state.settings.riskPerTrade;
+  }
+  const riskAmount = value.riskCash > 0 ? value.riskCash : (balance * value.riskPercent) / 100;
+
+  if (!(value.positionSize > 0)) {
+    value.positionSize = computePositionSize({
+      asset: value.symbol,
+      market: value.market,
+      entryPrice: value.entryPrice,
+      stopLoss: value.stopLoss,
+      riskAmount
+    });
+  }
+  if (!(value.positionSize > 0)) {
+    ui.captureReadout.innerHTML =
+      '<p class="cmdk-status is-error">Cannot size this trade — set a risk % or a size.</p>';
+    return;
+  }
+
+  // Command-bar capture ticks no rules: an empty list is honest, a full one
+  // would be a lie about a checklist nobody read.
+  saveCapturedTrade(value, []);
+  closeCaptureBar();
+  showCaptureToast(
+    state.auth.guestMode
+      ? `${value.symbol} ${value.direction === "Buy" ? "long" : "short"} opened in the demo — nothing here is saved.`
+      : `${value.symbol} ${value.direction === "Buy" ? "long" : "short"} opened · ${formatPositionSize(value.positionSize, value.symbol, value.market)} at risk ${formatCurrency(riskAmount)}`
+  );
+}
+
+/* ── Routes 2 & 3: the sheet ─────────────────────────────────────────────── */
+
+function openTradeSheet(prefill = null) {
+  if (!ui.tradeSheet || !canAccessApp() || ui.tradeSheet.open) {
+    return;
+  }
+
+  ui.sheetSymbol.value = prefill?.symbol || "";
+  ui.sheetEntry.value = prefill?.entryPrice ? String(prefill.entryPrice) : "";
+  ui.sheetStop.value = prefill?.stopLoss ? String(prefill.stopLoss) : "";
+  sheetState.direction = prefill?.direction === "Sell" ? "Sell" : "Buy";
+  sheetState.rules.clear();
+
+  // Default risk chip = the trader's configured risk-per-trade when it is one
+  // of the presets, otherwise Custom pre-filled with it.
+  const configured = round(state.settings.riskPerTrade);
+  if (["0.5", "1", "2"].includes(String(configured))) {
+    sheetState.riskChoice = String(configured);
+    ui.sheetRiskCustom.value = "";
+  } else {
+    sheetState.riskChoice = "custom";
+    ui.sheetRiskCustom.value = configured > 0 ? String(configured) : "";
+  }
+
+  renderSheetRules();
+  syncSheetControls();
+  renderSheetReadout();
+  setMessage(ui.sheetMessage, "", "");
+  ui.tradeSheet.showModal();
+  ui.sheetSymbol.focus();
+}
+
+function closeTradeSheet() {
+  if (ui.tradeSheet?.open) {
+    ui.tradeSheet.close();
+  }
+}
+
+function renderSheetRules() {
+  if (!ui.sheetRulesList) {
+    return;
+  }
+  ui.sheetRulesList.innerHTML = PRE_TRADE_RULES.map(
+    (rule) => `
+      <label class="sheet-rule">
+        <input type="checkbox" class="sheet-rule-box" value="${escapeHtml(rule.id)}" />
+        <span class="sheet-rule-mark" aria-hidden="true"></span>
+        <span class="sheet-rule-text">${escapeHtml(rule.label)}</span>
+      </label>`
+  ).join("");
+}
+
+function getSheetRiskPercent() {
+  if (sheetState.riskChoice === "custom") {
+    const custom = parseNumber(ui.sheetRiskCustom.value);
+    return Number.isFinite(custom) && custom > 0 ? custom : 0;
+  }
+  return Number(sheetState.riskChoice) || 0;
+}
+
+function syncSheetControls() {
+  ui.sheetDirectionButtons.forEach((button) => {
+    const isActive = button.dataset.sheetDirection === sheetState.direction;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+  ui.sheetRiskButtons.forEach((button) => {
+    const isActive = button.dataset.sheetRisk === sheetState.riskChoice;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+  ui.sheetRiskCustom.hidden = sheetState.riskChoice !== "custom";
+}
+
+function readSheetValues() {
+  const symbol = resolveSymbol(ui.sheetSymbol.value);
+  return {
+    symbol,
+    market: symbol ? inferMarket(symbol) : "",
+    direction: sheetState.direction,
+    entryPrice: parseNumber(ui.sheetEntry.value),
+    stopLoss: parseNumber(ui.sheetStop.value),
+    takeProfit: 0,
+    riskPercent: getSheetRiskPercent(),
+    positionSize: 0
+  };
+}
+
+function renderSheetReadout() {
+  const value = readSheetValues();
+  const balance = getAccountBalance();
+  const riskAmount = value.riskPercent > 0 ? (balance * value.riskPercent) / 100 : 0;
+  const size = computePositionSize({
+    asset: value.symbol,
+    market: value.market,
+    entryPrice: value.entryPrice,
+    stopLoss: value.stopLoss,
+    riskAmount
+  });
+
+  ui.sheetSize.textContent = size > 0 ? formatPositionSize(size, value.symbol, value.market) : "—";
+  ui.sheetAtRisk.textContent = riskAmount > 0 ? formatCurrency(riskAmount) : "—";
+
+  const budgetLeft = getDailyBudgetLeft();
+  if (budgetLeft === null) {
+    ui.sheetBudgetAfter.textContent = "no limit set";
+    ui.sheetBudgetAfter.className = "sheet-readout-val is-muted";
+  } else if (!(riskAmount > 0)) {
+    ui.sheetBudgetAfter.textContent = `${formatCurrency(budgetLeft)} left`;
+    ui.sheetBudgetAfter.className = "sheet-readout-val";
+  } else {
+    const after = budgetLeft - riskAmount;
+    ui.sheetBudgetAfter.textContent =
+      after >= 0 ? `${formatCurrency(after)} left` : `${formatCurrency(Math.abs(after))} over`;
+    ui.sheetBudgetAfter.className = `sheet-readout-val ${after >= 0 ? "is-pos" : "is-neg"}`;
+  }
+}
+
+function validateSheet() {
+  const value = readSheetValues();
+  if (!value.symbol) {
+    return { ok: false, error: "Which instrument?", field: ui.sheetSymbol };
+  }
+  if (!(value.entryPrice > 0)) {
+    return { ok: false, error: "Entry must be greater than zero.", field: ui.sheetEntry };
+  }
+  if (!(value.stopLoss > 0)) {
+    return { ok: false, error: "A stop is what makes the size real. Add one.", field: ui.sheetStop };
+  }
+  if (value.direction === "Buy" && value.stopLoss >= value.entryPrice) {
+    return { ok: false, error: "Long: the stop must sit below entry.", field: ui.sheetStop };
+  }
+  if (value.direction === "Sell" && value.stopLoss <= value.entryPrice) {
+    return { ok: false, error: "Short: the stop must sit above entry.", field: ui.sheetStop };
+  }
+  if (!(value.riskPercent > 0)) {
+    return { ok: false, error: "Pick a risk, or type a custom one.", field: ui.sheetRiskCustom };
+  }
+
+  const riskAmount = (getAccountBalance() * value.riskPercent) / 100;
+  value.positionSize = computePositionSize({
+    asset: value.symbol,
+    market: value.market,
+    entryPrice: value.entryPrice,
+    stopLoss: value.stopLoss,
+    riskAmount
+  });
+  if (!(value.positionSize > 0)) {
+    return { ok: false, error: "Cannot size this trade from those numbers.", field: ui.sheetEntry };
+  }
+
+  return { ok: true, value, riskAmount };
+}
+
+function handleSheetSubmit(event) {
+  event.preventDefault();
+  const check = validateSheet();
+  if (!check.ok) {
+    setMessage(ui.sheetMessage, check.error, "error");
+    flagInvalidField(check.field);
+    return;
+  }
+
+  saveCapturedTrade(check.value, sheetState.rules);
+  closeTradeSheet();
+  showCaptureToast(
+    state.auth.guestMode
+      ? `${check.value.symbol} ${check.value.direction === "Buy" ? "long" : "short"} opened in the demo — nothing here is saved.`
+      : `${check.value.symbol} ${check.value.direction === "Buy" ? "long" : "short"} opened · ${formatPositionSize(check.value.positionSize, check.value.symbol, check.value.market)} at risk ${formatCurrency(check.riskAmount)}`
+  );
+}
+
+// "Add detail": hand the five fields to the full form for anyone who wants
+// every field. Nothing is saved here — the form's own Save Trade does that.
+function handleSheetAddDetail() {
+  const value = readSheetValues();
+  const context = inferTradeContext(value.symbol);
+  closeTradeSheet();
   resetTradeForm(false);
+
+  if (value.symbol) {
+    ui.tradeFields.asset.value = value.symbol;
+    ui.tradeFields.market.value = context.market;
+  }
+  ui.tradeFields.session.value = context.session;
+  ui.tradeFields.direction.value = value.direction;
+  if (value.entryPrice > 0) ui.tradeFields.entryPrice.value = String(value.entryPrice);
+  if (value.stopLoss > 0) ui.tradeFields.stopLoss.value = String(value.stopLoss);
+  if (value.riskPercent > 0) ui.tradeFields.riskPercent.value = String(value.riskPercent);
+
+  const riskAmount = (getAccountBalance() * value.riskPercent) / 100;
+  const size = computePositionSize({
+    asset: value.symbol,
+    market: value.market,
+    entryPrice: value.entryPrice,
+    stopLoss: value.stopLoss,
+    riskAmount
+  });
+  if (size > 0) {
+    // round() in core.js is 2dp; sub-cent lot sizes need four.
+    ui.tradeFields.positionSize.value = String(Math.round(size * 10000) / 10000);
+  }
+
+  ui.tradeFields.tradeInProgress.checked = true;
+  syncDirectionToggle();
+  syncTradeProgressState();
+  setTradeAdvancedDetailsOpen(true);
   switchView("trade-entry");
-  ui.tradeFields.asset.focus();
-  setMessage(ui.tradeFormMessage, "Ready for a new trade entry.", "success");
+  ui.tradeFields.takeProfit.focus();
+  setMessage(ui.tradeFormMessage, "Carried over from the sheet. Fill the rest and save.", "success");
+}
+
+function bindQuickCapture() {
+  if (ui.captureBarForm) {
+    ui.captureBarForm.addEventListener("submit", handleCaptureSubmit);
+    ui.captureInput.addEventListener("input", renderCaptureReadout);
+    ui.captureToSheetBtn.addEventListener("click", () => {
+      const parsed = parseQuickTrade(ui.captureInput.value);
+      closeCaptureBar();
+      openTradeSheet(parsed.value);
+    });
+    // Clicking the backdrop closes; <dialog> reports the click on itself.
+    ui.captureBar.addEventListener("click", (event) => {
+      if (event.target === ui.captureBar) {
+        closeCaptureBar();
+      }
+    });
+  }
+
+  if (ui.tradeSheetForm) {
+    ui.tradeSheetForm.addEventListener("submit", handleSheetSubmit);
+    ui.tradeSheetCloseBtn.addEventListener("click", closeTradeSheet);
+    ui.sheetDetailBtn.addEventListener("click", handleSheetAddDetail);
+    ui.tradeSheet.addEventListener("click", (event) => {
+      if (event.target === ui.tradeSheet) {
+        closeTradeSheet();
+      }
+    });
+    [ui.sheetSymbol, ui.sheetEntry, ui.sheetStop, ui.sheetRiskCustom].forEach((input) => {
+      input.addEventListener("input", renderSheetReadout);
+    });
+    ui.sheetDirectionButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        sheetState.direction = button.dataset.sheetDirection === "Sell" ? "Sell" : "Buy";
+        syncSheetControls();
+        renderSheetReadout();
+      });
+    });
+    ui.sheetRiskButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        sheetState.riskChoice = button.dataset.sheetRisk || "1";
+        syncSheetControls();
+        if (sheetState.riskChoice === "custom") {
+          ui.sheetRiskCustom.focus();
+        }
+        renderSheetReadout();
+      });
+    });
+    ui.sheetRulesList.addEventListener("change", (event) => {
+      const box = event.target.closest(".sheet-rule-box");
+      if (!box) {
+        return;
+      }
+      if (box.checked) {
+        sheetState.rules.add(box.value);
+      } else {
+        sheetState.rules.delete(box.value);
+      }
+    });
+  }
 }
 
 function handleTradeTableClick(event) {
@@ -6351,6 +6969,10 @@ function normalizeTrades(input) {
         screenshotName: String(item.screenshotName || ""),
         screenshotData: String(item.screenshotData || ""),
         importBatchId: String(item.importBatchId || ""),
+        // 1b pre-trade checklist. Absent on every trade logged before this
+        // ships and on every imported row — an empty array is "not asked",
+        // not "ticked nothing", and nothing scores off it yet.
+        preTradeRules: Array.isArray(item.preTradeRules) ? item.preTradeRules.map(String) : [],
         notes: String(item.notes || "")
       };
 

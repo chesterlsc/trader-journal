@@ -45,10 +45,10 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260807-dash1a" />
+    <link rel="stylesheet" href="styles.css?v=20260807-capture1b" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260807-dash1a" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260807-capture1b" />
   </head>
   <body>
     <section class="auth-shell" id="authShell" aria-label="Login">
@@ -1017,8 +1017,12 @@
 
         <section class="view" id="trade-entry" aria-labelledby="tradeEntryHeading">
           <header class="view-head">
-            <h2 id="tradeEntryHeading">Trade Entry</h2>
-            <p>Log the core trade fast, then expand advanced details for psychology, evidence, and notes.</p>
+            <h2 id="tradeEntryHeading">Full trade detail</h2>
+            <p>
+              Opening a position takes five fields &mdash; use &#8984;K or the Log&nbsp;a&nbsp;trade button. This form is
+              every field there is: it is what &ldquo;Add detail&rdquo; and Edit open, and the only place to set
+              exits, evidence and notes by hand.
+            </p>
           </header>
 
           <section class="panel">
@@ -1574,8 +1578,9 @@
 
          The FAB is an ACTION, not a destination: it is a <button> sibling
          OUTSIDE the <nav> landmark so screen readers do not announce it as
-         "5 of 5, tab". Its second, non-circular route is the sidebar's
-         "Trade Entry" item (and #journalNewTradeBtn from 900px up). -->
+         "5 of 5, tab". 1b route 3: it no longer navigates to the form view —
+         it expands in place into the five-field #tradeSheet. The full form
+         stays reachable from the sheet's "Add detail" and from Edit. -->
     <nav class="tabbar" id="tabBar" aria-label="Primary sections">
       <button class="nav-btn tabbar-btn is-active" type="button" data-target="dashboard" aria-current="page">
         <span class="tabbar-icon" aria-hidden="true">
@@ -1621,6 +1626,155 @@
       </span>
       <span class="visually-hidden">Log a new trade</span>
     </button>
+
+    <!-- ══ 1b QUICK CAPTURE ══════════════════════════════════════════════════
+         Three routes to logging a trade, two of them live here as <dialog>s
+         (native modal = focus trap, inert background and Escape for free).
+
+         Route 1 — the ⌘K command bar. One input, parsed live by
+         src/lib/tradeParse.js; the chips underneath are the interpretation,
+         never a prediction. Enter saves and closes with no screen change.
+
+         Route 2 / 3 — the sheet. FIVE fields to open a position; everything
+         the old form asked for post-trade moved out of the open path and into
+         step 2 (Close & journal). On mobile the .tabbar-fab expands into this
+         same sheet rather than navigating to the form view. -->
+    <dialog id="captureBar" class="cmdk" aria-label="Quick trade capture">
+      <form method="dialog" class="cmdk-form" id="captureBarForm">
+        <div class="cmdk-well">
+          <div class="cmdk-line">
+            <span class="cmdk-caret" aria-hidden="true">&rsaquo;</span>
+            <input
+              id="captureInput"
+              class="cmdk-input"
+              type="text"
+              autocomplete="off"
+              spellcheck="false"
+              enterkeyhint="done"
+              placeholder="btc long 118400 sl 117900 1%"
+              aria-label="Describe the trade"
+              aria-describedby="captureReadout"
+            />
+            <span class="cmdk-key" aria-hidden="true">ENTER</span>
+          </div>
+          <div class="cmdk-readout" id="captureReadout" role="status" aria-live="polite"></div>
+          <p class="cmdk-note">
+            Everything else &mdash; setup, session, timeframe, psychology &mdash; is inferred from the clock
+            and your last trade, and stays editable later.
+          </p>
+        </div>
+        <div class="cmdk-foot">
+          <p class="cmdk-hint"><kbd>&#9166;</kbd> save &middot; <kbd>Esc</kbd> close</p>
+          <button class="cmdk-foot-btn" type="button" id="captureToSheetBtn">Open the sheet instead</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="tradeSheet" class="sheet" aria-labelledby="tradeSheetTitle">
+      <form class="sheet-body" id="tradeSheetForm" novalidate>
+        <div class="sheet-head">
+          <ol class="sheet-steps">
+            <li class="sheet-step is-current" aria-current="step">
+              <span class="sheet-step-num" aria-hidden="true">1</span>
+              <span id="tradeSheetTitle">Open</span>
+            </li>
+            <li class="sheet-step" data-sheet-step="2">
+              <span class="sheet-step-num" aria-hidden="true">2</span>
+              <span>Close &amp; journal</span>
+            </li>
+          </ol>
+          <button class="sheet-close" type="button" id="tradeSheetCloseBtn" aria-label="Close">&times;</button>
+        </div>
+
+        <div class="sheet-grid">
+          <label class="sheet-field sheet-field-wide">
+            <span class="sheet-label">Symbol</span>
+            <input
+              id="sheetSymbol"
+              class="sheet-input sheet-input-lg"
+              type="text"
+              list="assetSuggestions"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="24"
+              placeholder="BTCUSDT"
+            />
+          </label>
+
+          <div class="sheet-field sheet-field-wide">
+            <span class="sheet-label" id="sheetDirectionLabel">Direction</span>
+            <div class="sheet-seg" role="group" aria-labelledby="sheetDirectionLabel">
+              <button class="sheet-seg-btn is-long is-active" type="button" data-sheet-direction="Buy" aria-pressed="true">Long</button>
+              <button class="sheet-seg-btn is-short" type="button" data-sheet-direction="Sell" aria-pressed="false">Short</button>
+            </div>
+          </div>
+
+          <label class="sheet-field">
+            <span class="sheet-label">Entry</span>
+            <input id="sheetEntry" class="sheet-input" type="text" inputmode="decimal" autocomplete="off" placeholder="118400" />
+          </label>
+
+          <label class="sheet-field">
+            <span class="sheet-label">Stop</span>
+            <input id="sheetStop" class="sheet-input" type="text" inputmode="decimal" autocomplete="off" placeholder="117900" />
+          </label>
+
+          <div class="sheet-field sheet-field-wide">
+            <span class="sheet-label" id="sheetRiskLabel">Risk</span>
+            <div class="sheet-risk" role="group" aria-labelledby="sheetRiskLabel">
+              <button class="sheet-risk-btn" type="button" data-sheet-risk="0.5" aria-pressed="false">0.5%</button>
+              <button class="sheet-risk-btn is-active" type="button" data-sheet-risk="1" aria-pressed="true">1%</button>
+              <button class="sheet-risk-btn" type="button" data-sheet-risk="2" aria-pressed="false">2%</button>
+              <button class="sheet-risk-btn" type="button" data-sheet-risk="custom" aria-pressed="false">Custom</button>
+              <input
+                id="sheetRiskCustom"
+                class="sheet-input sheet-risk-custom"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                aria-label="Custom risk percent"
+                placeholder="%"
+                hidden
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="sheet-readout" id="sheetReadout" role="status" aria-live="polite">
+          <div class="sheet-readout-cell">
+            <p class="sheet-readout-key">SIZE</p>
+            <p class="sheet-readout-val" id="sheetSize">&mdash;</p>
+          </div>
+          <div class="sheet-readout-cell">
+            <p class="sheet-readout-key">AT RISK</p>
+            <p class="sheet-readout-val" id="sheetAtRisk">&mdash;</p>
+          </div>
+          <div class="sheet-readout-cell">
+            <p class="sheet-readout-key">BUDGET AFTER</p>
+            <p class="sheet-readout-val" id="sheetBudgetAfter">&mdash;</p>
+          </div>
+        </div>
+
+        <fieldset class="sheet-rules">
+          <legend class="sheet-rules-title">Before you click &middot; your rules</legend>
+          <div class="sheet-rules-list" id="sheetRulesList"></div>
+          <p class="sheet-rules-note">
+            Which boxes you ticked is stored with the trade &mdash; so the discipline score stops being a guess.
+          </p>
+        </fieldset>
+
+        <p class="sheet-message" id="sheetMessage" role="status" aria-live="polite"></p>
+
+        <div class="sheet-actions">
+          <button class="sheet-submit" type="submit" id="sheetSubmitBtn">Open trade</button>
+          <button class="sheet-detail" type="button" id="sheetDetailBtn">Add detail</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Capture confirmation. The command bar closes with no screen change, so
+         this is the only feedback that the trade landed. -->
+    <div class="capture-toast" id="captureToast" role="status" aria-live="polite" hidden></div>
 
     <dialog id="scoreInfoDialog" class="score-info-dialog" aria-labelledby="scoreInfoTitle">
       <div class="score-info-head">
@@ -1676,6 +1830,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260807-dash1a"></script>
+    <script type="module" src="app.js?v=20260807-capture1b"></script>
   </body>
 </html>
