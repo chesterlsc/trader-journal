@@ -2501,3 +2501,691 @@ body.auth-locked .topnav {
   outline: none;
   box-shadow: var(--focus-ring);
 }
+
+/* ==========================================================================
+   13. 1e — TRADE REVIEW + CALENDAR
+   Source: docs/renovation/design-source/1e-review-calendar.html.
+   The review header carries search and Export, the chip row is the primary
+   filter, and the table drops to seven columns plus a chevron. The calendar
+   loses its two summary cards to a MONTH NET figure in the header.
+   Colours are tokens only, so both themes come for free; the literals are the
+   clay shadow recipes, theme-scoped exactly like §3/§4.
+   ========================================================================== */
+
+/* --- 13a. Review header --------------------------------------------------- */
+.rev-head,
+.cal-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.rev-head-copy h2,
+.cal-head-copy h2 {
+  margin: 0;
+  font: 700 24px/1.1 var(--font-ui);
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+
+.rev-count,
+.cal-meta {
+  margin: 6px 0 0;
+  color: var(--text-soft);
+  font: 400 13.5px/1.4 var(--font-ui);
+}
+
+.rev-count strong,
+.cal-meta strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.rev-head-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* The search well. The input is the real control; the pill is the affordance. */
+.rev-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+}
+
+.rev-search-icon {
+  color: var(--text-faint);
+  font: 600 15px/1 var(--font-mono);
+}
+
+.rev-search input {
+  width: clamp(140px, 22vw, 230px);
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font: 500 13.5px/1 var(--font-ui);
+}
+
+.rev-search input::placeholder {
+  color: var(--text-faint);
+}
+
+.rev-search input:focus,
+.rev-search input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.rev-search:focus-within {
+  box-shadow: var(--clay-pressed), var(--focus-ring);
+}
+
+.rev-search-key {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--text-soft);
+  font: 600 10.5px/1 var(--font-mono);
+}
+
+.rev-export {
+  min-height: 48px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  color: var(--text);
+  font: 600 13px/1 var(--font-ui);
+  cursor: pointer;
+  box-shadow: var(--clay-raised);
+}
+
+.rev-export:active {
+  box-shadow: var(--clay-pressed);
+}
+
+/* --- 13b. Filter chips ---------------------------------------------------- */
+.rev-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: var(--space-3);
+}
+
+.rev-chip,
+.rev-select select {
+  min-height: 44px;
+  padding: 0 17px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+  color: var(--text-soft);
+  font: 600 12.5px/1 var(--font-ui);
+  cursor: pointer;
+  box-shadow: var(--clay-pressed);
+}
+
+.rev-chip.is-active {
+  background: var(--accent);
+  color: var(--text-inverse);
+  box-shadow:
+    0 14px 24px -14px hsl(265 60% 40% / 0.6),
+    inset 0 -5px 10px -5px hsl(265 70% 30% / 0.45),
+    inset 0 6px 11px -5px hsl(0 0% 100% / 0.4);
+}
+
+:root:not([data-theme="light"]) .rev-chip.is-active {
+  box-shadow:
+    0 14px 26px -16px hsl(265 60% 8% / 0.75),
+    inset 0 -5px 10px -5px hsl(265 40% 12% / 0.5),
+    inset 0 6px 11px -5px hsl(265 60% 88% / 0.28);
+}
+
+/* The unjournalled count is a nag, not a neutral facet. */
+.rev-chip-alert:not(.is-active) {
+  background: var(--pnl-neg-soft);
+  color: var(--pnl-neg);
+}
+
+.rev-chip-sep {
+  width: 1px;
+  height: 30px;
+  margin: 0 4px;
+  background: var(--line-strong);
+}
+
+.rev-select {
+  position: relative;
+  display: inline-flex;
+  margin: 0;
+}
+
+.rev-select select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 36px;
+  max-width: 190px;
+  text-overflow: ellipsis;
+}
+
+.rev-select::after {
+  content: "▾";
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  font: 600 11px/1 var(--font-ui);
+  pointer-events: none;
+}
+
+/* --- 13c. The rest of the filters ---------------------------------------- */
+.rev-more {
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-2);
+  box-shadow: inset 0 1px 0 var(--clay-edge), var(--clay-soft);
+}
+
+.rev-more-summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  border-radius: var(--radius-clay-sm);
+  color: var(--text-soft);
+  font: 600 12px/1 var(--font-ui);
+  cursor: pointer;
+  list-style: none;
+}
+
+.rev-more-summary::-webkit-details-marker {
+  display: none;
+}
+
+.rev-more-summary::before {
+  content: "+";
+  margin-right: 9px;
+  color: var(--text-faint);
+  font: 700 14px/1 var(--font-mono);
+}
+
+.rev-more[open] .rev-more-summary::before {
+  content: "−";
+}
+
+.rev-more-body {
+  padding: 0 18px 18px;
+}
+
+/* --- 13d. The table ------------------------------------------------------- */
+#journal table {
+  min-width: 820px;
+}
+
+#journal thead th {
+  /* Seamless with the well the table sits in (§5c), and it has to stay opaque:
+     the header is position:sticky, so a transparent fill lets rows through. */
+  background: var(--surface-inset);
+  border-bottom: 0;
+  padding-bottom: 12px;
+  letter-spacing: 0.12em;
+}
+
+#journal thead th[data-sort] {
+  cursor: pointer;
+}
+
+.rev-date {
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+
+.rev-symbol {
+  font: 700 14px/1 var(--font-ui);
+  letter-spacing: -0.01em;
+}
+
+.rev-setup {
+  color: var(--text-soft);
+  font: 500 13px/1.3 var(--font-ui);
+}
+
+.rev-net {
+  font-weight: 700;
+}
+
+.rev-mood {
+  display: inline-block;
+  padding: 5px 11px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  color: var(--text-soft);
+  font: 600 11px/1 var(--font-mono);
+  white-space: nowrap;
+}
+
+.rev-mood.is-good {
+  background: var(--pnl-pos-soft);
+  color: var(--pnl-pos);
+}
+
+.rev-mood.is-warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.rev-mood.is-bad {
+  background: var(--pnl-neg-soft);
+  color: var(--pnl-neg);
+}
+
+.rev-chev-head,
+.rev-chev-cell {
+  width: 52px;
+}
+
+.rev-chev {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-left: auto;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.rev-chev-glyph {
+  display: block;
+  font: 700 17px/1 var(--font-ui);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.rev-chev[aria-expanded="true"] .rev-chev-glyph {
+  transform: rotate(90deg);
+}
+
+.rev-chev:hover {
+  color: var(--text);
+  background: var(--surface-3);
+}
+
+/* Depth as data, scaled (§5c + the 1e ramp). --row-intensity is stamped per
+   row by renderJournalTable from the biggest result on screen. */
+#journal tbody tr.trade-row-win {
+  box-shadow:
+    0 calc(10px + var(--row-intensity, 0) * 8px) calc(20px + var(--row-intensity, 0) * 12px) -16px
+      hsl(35 30% 40% / calc(0.4 + var(--row-intensity, 0) * 0.2)),
+    inset 0 -6px 12px -6px hsl(35 35% 45% / 0.18),
+    inset 0 7px 12px -7px hsl(40 60% 100% / 1);
+}
+
+#journal tbody tr.trade-row-loss {
+  box-shadow:
+    inset 0 calc(5px + var(--row-intensity, 0) * 5px) calc(12px + var(--row-intensity, 0) * 9px) -3px
+      hsl(345 38% 36% / calc(0.22 + var(--row-intensity, 0) * 0.2)),
+    inset 0 -3px 6px -3px hsl(40 60% 100% / 0.8);
+}
+
+:root:not([data-theme="light"]) #journal tbody tr.trade-row-win {
+  box-shadow:
+    0 calc(10px + var(--row-intensity, 0) * 8px) calc(20px + var(--row-intensity, 0) * 12px) -16px
+      hsl(30 40% 3% / calc(0.6 + var(--row-intensity, 0) * 0.2)),
+    inset 0 -6px 12px -6px hsl(30 35% 3% / 0.5),
+    inset 0 7px 12px -7px hsl(35 25% 78% / 0.12);
+}
+
+:root:not([data-theme="light"]) #journal tbody tr.trade-row-loss {
+  box-shadow:
+    inset 0 calc(5px + var(--row-intensity, 0) * 5px) calc(12px + var(--row-intensity, 0) * 9px) -3px
+      hsl(345 50% 6% / calc(0.45 + var(--row-intensity, 0) * 0.25)),
+    inset 0 -2px 5px -3px hsl(35 25% 78% / 0.05);
+}
+
+/* An open trade has no outcome yet, so it gets no depth in either direction. */
+#journal tbody tr.trade-row-open td {
+  background: var(--surface-3);
+}
+
+/* --- 13e. Row detail ------------------------------------------------------
+   Everything the 13→7 column cut dropped, plus the row actions. */
+#journal tbody tr.trade-detail-row {
+  box-shadow: none;
+}
+
+.trade-detail-row[hidden] {
+  display: none;
+}
+
+.trade-detail-row td {
+  padding: 0 0 10px;
+  background: transparent;
+}
+
+.rev-detail {
+  display: grid;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+}
+
+.rev-detail-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px 18px;
+  margin: 0;
+}
+
+.rev-detail-facts dt {
+  color: var(--text-faint);
+  font: 600 9.5px/1.2 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.rev-detail-facts dd {
+  margin: 5px 0 0;
+  color: var(--text);
+  font: 600 13px/1.3 var(--font-mono);
+}
+
+.rev-flag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  background: var(--pnl-neg-soft);
+  color: var(--pnl-neg);
+  font: 600 10px/1.4 var(--font-mono);
+}
+
+.rev-detail-note {
+  margin: 0;
+  color: var(--text-soft);
+  font: 400 13px/1.5 var(--font-ui);
+}
+
+.rev-detail-key {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--text-faint);
+  font: 600 9.5px/1.2 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.rev-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rev-detail-actions .mini-btn {
+  min-height: 44px;
+  padding: 0 15px;
+  margin-left: 0;
+}
+
+/* --- 13f. Calendar header ------------------------------------------------- */
+.cal-head-side {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cal-net {
+  text-align: right;
+}
+
+.cal-net-label {
+  margin: 0;
+  color: var(--text-faint);
+  font: 600 10px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.cal-net-value {
+  margin: 6px 0 0;
+  font: 700 30px/1 var(--font-mono);
+  font-feature-settings: "tnum";
+}
+
+.cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cal-nav-btn {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  color: var(--text-soft);
+  font: 600 17px/1 var(--font-ui);
+  cursor: pointer;
+  box-shadow: var(--clay-pressed);
+}
+
+.cal-nav-btn:hover {
+  color: var(--text);
+}
+
+.cal-jump {
+  margin: 0;
+}
+
+.cal-jump input {
+  min-height: 44px;
+  width: 148px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  color: var(--text-soft);
+  font: 600 12px/1 var(--font-mono);
+  box-shadow: var(--clay-pressed);
+}
+
+.calendar-cell-pnl {
+  font: 700 15px/1 var(--font-mono);
+}
+
+.calendar-cell-day {
+  justify-self: start;
+  font: 600 11px/1 var(--font-mono);
+}
+
+.calendar-cell {
+  min-height: 92px;
+  align-content: space-between;
+}
+
+.calendar-cell-meta {
+  color: var(--text-faint);
+  font: 500 10.5px/1.3 var(--font-mono);
+}
+
+.cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-soft);
+  font: 400 12.5px/1.4 var(--font-ui);
+}
+
+.cal-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.cal-legend-swatch {
+  flex: none;
+  width: 26px;
+  height: 20px;
+  border-radius: 8px;
+  background: var(--surface-3);
+}
+
+.cal-legend-up {
+  background: var(--surface-1);
+  box-shadow: 0 8px 14px -8px hsl(155 40% 25% / 0.5), inset 0 5px 8px -4px hsl(40 60% 100% / 1);
+}
+
+.cal-legend-down {
+  box-shadow: inset 0 5px 10px -2px hsl(345 40% 35% / 0.4);
+}
+
+:root:not([data-theme="light"]) .cal-legend-up {
+  box-shadow: 0 8px 14px -8px hsl(155 60% 8% / 0.7), inset 0 5px 8px -4px hsl(35 25% 78% / 0.12);
+}
+
+:root:not([data-theme="light"]) .cal-legend-down {
+  box-shadow: inset 0 5px 10px -2px hsl(345 50% 6% / 0.6);
+}
+
+/* --- 13g. Mobile ---------------------------------------------------------
+   375px is the target, not the fallback. The header stacks, the chip row
+   scrolls horizontally rather than wrapping into four ragged lines, and the
+   card transform from styles.css keeps working because every visible cell
+   still carries data-label. */
+@media (max-width: 900px) {
+  /* The chevron and the detail row have no label — an empty ::before would
+     leave a dead 42% column in the card grid. */
+  .rev-chev-cell::before,
+  .trade-detail-row td::before {
+    content: none;
+  }
+
+  .rev-chev-cell {
+    width: auto;
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 6px;
+    border-bottom: 0;
+  }
+
+  #journal tbody tr.trade-detail-row {
+    border: 0;
+    padding: 0;
+    background: transparent;
+  }
+
+  .trade-detail-row td {
+    padding: 0 0 8px;
+  }
+}
+
+@media (max-width: 760px) {
+  .rev-head,
+  .cal-head {
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .rev-head-tools {
+    width: 100%;
+  }
+
+  .rev-search {
+    flex: 1;
+  }
+
+  .rev-search input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .rev-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    margin-inline: calc(var(--space-3) * -1);
+    padding-inline: var(--space-3);
+    scrollbar-width: none;
+  }
+
+  .rev-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .rev-chip,
+  .rev-select,
+  .rev-select select,
+  .rev-chip-sep {
+    flex: none;
+  }
+
+  .cal-head-side {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .cal-net {
+    text-align: left;
+  }
+
+  .cal-net-value {
+    font-size: 26px;
+  }
+
+  .cal-jump input {
+    width: 130px;
+  }
+
+  .cal-legend {
+    gap: 10px 18px;
+    font-size: 12px;
+  }
+
+  /* Agenda mode hides untraded days, so the tiles are full-width rows. */
+  .calendar-cell {
+    min-height: 0;
+  }
+}
+
+/* --- 13h. Focus rings ----------------------------------------------------
+   The clay box-shadows out-specify the global :focus-visible ring, so it is
+   restored explicitly on every control this section introduces. */
+.rev-chip:focus-visible,
+.rev-select select:focus-visible,
+.rev-export:focus-visible,
+.rev-more-summary:focus-visible,
+.rev-chev:focus-visible,
+.cal-nav-btn:focus-visible,
+.cal-jump input:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rev-chev-glyph {
+    transition: none;
+  }
+}

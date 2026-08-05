@@ -159,10 +159,14 @@ const state = {
     dateTo: "",
     market: "all",
     setup: "all",
+    session: "all",
     timeframe: "all",
-    result: "all",
     psychology: "all",
-    search: ""
+    search: "",
+    // 1e chip row. Replaces the old Result <select>: "wins"/"losses" are the
+    // result filter, "rules" and "nonote" are predicates the selects could
+    // not express. One control, one field.
+    quick: "all"
   },
   dashboard: {
     performanceDimension: "setup",
@@ -390,11 +394,16 @@ const ui = {
     dateTo: document.getElementById("filterDateTo"),
     market: document.getElementById("filterMarket"),
     setup: document.getElementById("filterSetup"),
+    session: document.getElementById("filterSession"),
     timeframe: document.getElementById("filterTimeframe"),
-    result: document.getElementById("filterResult"),
     psychology: document.getElementById("filterPsychology"),
     search: document.getElementById("filterSearch")
   },
+  // 1e: the chip row replaced the Result <select> — Wins/Losses are chips now.
+  reviewChips: Array.from(document.querySelectorAll(".rev-chip")),
+  reviewCount: document.getElementById("reviewCount"),
+  reviewNoNoteCount: document.getElementById("revNoNoteCount"),
+  reviewExportBtn: document.getElementById("reviewExportBtn"),
   clearFiltersBtn: document.getElementById("clearFiltersBtn"),
   journalSortHeaders: Array.from(document.querySelectorAll("#journal th[data-sort]")),
   journalNewTradeBtn: document.getElementById("journalNewTradeBtn"),
@@ -422,7 +431,11 @@ const ui = {
   monthlyTrades: document.getElementById("monthlyTrades"),
   monthlyBestSetup: document.getElementById("monthlyBestSetup"),
   dashboardCalendarMonth: document.getElementById("dashboardCalendarMonth"),
-  calendarSummary: document.getElementById("calendarSummary"),
+  calendarHeading: document.getElementById("calendarHeading"),
+  calendarMeta: document.getElementById("calendarMeta"),
+  calendarNet: document.getElementById("calendarNet"),
+  calPrevBtn: document.getElementById("calPrevBtn"),
+  calNextBtn: document.getElementById("calNextBtn"),
   calendarGrid: document.getElementById("calendarGrid"),
   replayNotes: document.getElementById("replayNotes"),
   saveReplayBtn: document.getElementById("saveReplayBtn"),
@@ -542,6 +555,24 @@ const journalState = {
   tags: new Set(),
   screenshotName: "",
   screenshotData: ""
+};
+
+/* ── 1e review + calendar ──────────────────────────────────────────────────
+   Above init() like everything else here — a module-level binding below that
+   call is in the temporal dead zone during first render.
+
+   Which rows have their detail open. The table re-renders wholesale on every
+   filter/sort/save, so the open set has to live outside the markup. In-memory
+   only: an expansion is a glance, not a preference. */
+const expandedTradeIds = new Set();
+
+// Mood → tone, so the chip is never colour-only guesswork in the renderer.
+const MOOD_TONES = {
+  Focused: "is-good",
+  "Perfect Execution": "is-good",
+  Hesitant: "is-warn",
+  Emotional: "is-bad",
+  "Revenge Trade": "is-bad"
 };
 
 const METRIC_DELTA_SPECS = {
@@ -965,6 +996,12 @@ function bindEvents() {
   ui.clearFiltersBtn.addEventListener("click", clearFilters);
   ui.tradesBody.addEventListener("click", handleTradeTableClick);
 
+  // 1e review chips + header Export.
+  ui.reviewChips.forEach((chip) => {
+    chip.addEventListener("click", () => setQuickFilter(chip.dataset.quick));
+  });
+  ui.reviewExportBtn?.addEventListener("click", exportTradesCsv);
+
   // 1b: the primary path is capture, not the form. "Log a trade" advertises
   // ⌘K, so it opens exactly what ⌘K opens; the FAB and the empty-state CTA go
   // straight to the sheet (route 3 — the FAB expands in place, it no longer
@@ -1069,6 +1106,8 @@ function bindEvents() {
   ui.reflectionForm.addEventListener("submit", handleReflectionSubmit);
   ui.reviewMonth.addEventListener("change", renderMonthlyReview);
   ui.dashboardCalendarMonth.addEventListener("change", renderCalendarView);
+  ui.calPrevBtn?.addEventListener("click", () => stepCalendarMonth(-1));
+  ui.calNextBtn?.addEventListener("click", () => stepCalendarMonth(1));
   if (ui.calendarGrid) {
     ui.calendarGrid.addEventListener("click", handleCalendarDayClick);
   }
@@ -3389,8 +3428,8 @@ function handleFilterChange() {
   state.filters.dateTo = ui.filters.dateTo.value;
   state.filters.market = ui.filters.market.value;
   state.filters.setup = ui.filters.setup.value;
+  state.filters.session = ui.filters.session.value;
   state.filters.timeframe = ui.filters.timeframe.value;
-  state.filters.result = ui.filters.result.value;
   state.filters.psychology = ui.filters.psychology.value;
   state.filters.search = ui.filters.search.value.trim().toLowerCase();
   renderJournalTable();
@@ -3401,11 +3440,26 @@ function clearFilters() {
   ui.filters.dateTo.value = "";
   ui.filters.market.value = "all";
   ui.filters.setup.value = "all";
+  ui.filters.session.value = "all";
   ui.filters.timeframe.value = "all";
-  ui.filters.result.value = "all";
   ui.filters.psychology.value = "all";
   ui.filters.search.value = "";
+  state.filters.quick = "all";
   handleFilterChange();
+}
+
+// 1e chip row. Clicking the active chip clears it back to All — a chip that
+// cannot be un-pressed is a trap on a filter bar.
+function setQuickFilter(value) {
+  state.filters.quick = state.filters.quick === value ? "all" : value || "all";
+  renderJournalTable();
+}
+
+/* "Rule broken": the trade risked more than the configured per-trade cap.
+   Same predicate calculateAnalytics uses for riskPerTradeViolations, so the
+   chip and the Risk Controls warning list can never disagree. */
+function isRuleBroken(trade) {
+  return Number(trade.riskPercent) > state.settings.riskPerTrade;
 }
 
 /* ══ 1b QUICK CAPTURE ══════════════════════════════════════════════════════
@@ -4318,6 +4372,26 @@ function handleTradeTableClick(event) {
 
   const id = button.dataset.id;
   if (!id) {
+    return;
+  }
+
+  // 1e: the chevron opens the trade in place. Patched, not re-rendered — a
+  // full renderJournalTable() here would restamp the live-price cells mid
+  // 5s tick and blow away the row the pointer is on.
+  if (button.dataset.action === "expand") {
+    const detail = ui.tradesBody.querySelector(`[data-detail-for="${CSS.escape(id)}"]`);
+    if (!detail) {
+      return;
+    }
+    const open = detail.hidden;
+    detail.hidden = !open;
+    button.setAttribute("aria-expanded", open ? "true" : "false");
+    button.closest("tr")?.classList.toggle("is-expanded", open);
+    if (open) {
+      expandedTradeIds.add(id);
+    } else {
+      expandedTradeIds.delete(id);
+    }
     return;
   }
 
@@ -6813,8 +6887,30 @@ function scrollDashboardTo(node) {
   node.scrollIntoView({ block: "start", behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
 
+/* ══ 1e CALENDAR ═══════════════════════════════════════════════════════════
+   The month name is the heading, the meta line is trading days / trades /
+   most-traded symbol, and MONTH NET sits beside the ‹ › nav. Every figure is
+   computed from the closed trades in the month — there is no placeholder.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+// ‹ › month nav. The <input type="month"> stays the single source of truth,
+// so the existing change listener does the re-render.
+function stepCalendarMonth(delta) {
+  if (!ui.dashboardCalendarMonth) {
+    return;
+  }
+  const current = ui.dashboardCalendarMonth.value || toDateInputValue(new Date()).slice(0, 7);
+  const [yearText, monthText] = current.split("-");
+  const shifted = new Date(Number(yearText), Number(monthText) - 1 + delta, 1);
+  if (Number.isNaN(shifted.getTime())) {
+    return;
+  }
+  ui.dashboardCalendarMonth.value = `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, "0")}`;
+  renderCalendarView();
+}
+
 function renderCalendarView() {
-  if (!ui.calendarGrid || !ui.dashboardCalendarMonth || !ui.calendarSummary) {
+  if (!ui.calendarGrid || !ui.dashboardCalendarMonth) {
     return;
   }
 
@@ -6825,9 +6921,9 @@ function renderCalendarView() {
 
   if (!Number.isInteger(year) || !Number.isInteger(monthIndex) || monthIndex < 0 || monthIndex > 11) {
     ui.calendarGrid.innerHTML = "";
-    ui.calendarSummary.innerHTML = `
-      <div class="calendar-summary-empty">Choose a valid month.</div>
-    `;
+    if (ui.calendarMeta) {
+      ui.calendarMeta.textContent = "Choose a valid month.";
+    }
     return;
   }
 
@@ -6837,22 +6933,31 @@ function renderCalendarView() {
   const startOffset = firstDay.getDay();
   const monthTrades = getClosedTrades().filter((trade) => trade.date.startsWith(monthValue));
   const monthPnl = monthTrades.reduce((sum, trade) => sum + trade.netPnl, 0);
-  const monthWins = monthTrades.filter((trade) => trade.result === "Win").length;
-  const monthWinRate = monthTrades.length ? (monthWins / monthTrades.length) * 100 : 0;
 
-  const pnlClass = monthPnl > 0 ? "pnl-positive" : monthPnl < 0 ? "pnl-negative" : "";
-  ui.calendarSummary.innerHTML = `
-    <article class="calendar-summary-card">
-      <span class="calendar-summary-label">Total Trades</span>
-      <strong class="calendar-summary-value">${monthTrades.length}</strong>
-      <span class="calendar-summary-subtext">${monthWinRate.toFixed(1)}% win rate</span>
-    </article>
-    <article class="calendar-summary-card ${pnlClass}">
-      <span class="calendar-summary-label">P&amp;L</span>
-      <strong class="calendar-summary-value ${pnlClass}">${formatCurrency(monthPnl)}</strong>
-      <span class="calendar-summary-subtext">${monthValue}</span>
-    </article>
-  `;
+  if (ui.calendarHeading) {
+    ui.calendarHeading.textContent = new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      year: "numeric"
+    }).format(firstDay);
+  }
+
+  if (ui.calendarMeta) {
+    if (!monthTrades.length) {
+      ui.calendarMeta.textContent = "No closed trades this month.";
+    } else {
+      const counts = new Map();
+      monthTrades.forEach((trade) => counts.set(trade.asset, (counts.get(trade.asset) || 0) + 1));
+      const topAsset = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0][0];
+      ui.calendarMeta.innerHTML = `${dayStats.size} trading day${dayStats.size === 1 ? "" : "s"} · ${
+        monthTrades.length
+      } trade${monthTrades.length === 1 ? "" : "s"} · most traded <strong>${escapeHtml(topAsset)}</strong>`;
+    }
+  }
+
+  if (ui.calendarNet) {
+    ui.calendarNet.textContent = monthPnl === 0 ? formatCurrency(0) : formatSignedCurrency(monthPnl);
+    toneBySign(ui.calendarNet, monthPnl);
+  }
 
   const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const cells = [];
@@ -6889,16 +6994,18 @@ function renderCalendarView() {
       isoDate === todayIso ? "calendar-cell-today" : "",
       hasTrades ? "calendar-cell-has-trades" : ""
     ].filter(Boolean).join(" ");
+    // 1e tile: day number, P&L, one meta line. The signed money value carries
+    // the win/loss state in text as well as colour, so the raise/sink is never
+    // the only signal (WCAG 1.4.1).
     const cellBody = `
         <span class="calendar-cell-day">${day}</span>
-        <span class="calendar-cell-pnl ${pnlClass}">${hasTrades ? formatCurrency(stats.pnl) : "-"}</span>
-        <span class="calendar-cell-meta">${stats.trades} trade${stats.trades === 1 ? "" : "s"} | ${stats.winRate.toFixed(0)}% win</span>
-        <span class="calendar-cell-meta">${escapeHtml(stats.topAsset)}</span>
+        <span class="calendar-cell-pnl ${pnlClass}">${hasTrades ? escapeHtml(stats.pnl === 0 ? formatCurrency(0) : formatSignedCurrency(stats.pnl)) : "—"}</span>
+        <span class="calendar-cell-meta">${hasTrades ? `${stats.trades} trade${stats.trades === 1 ? "" : "s"} · ${escapeHtml(stats.topAsset)}` : "no trades"}</span>
     `;
 
     // Traded days are real buttons (graft): click filters the journal to that day.
     cells.push(hasTrades
-      ? `<button type="button" class="${cellClasses}" data-date="${isoDate}" style="--day-intensity:${intensity};" aria-label="Review trades from ${isoDate} in the journal">${cellBody}</button>`
+      ? `<button type="button" class="${cellClasses}" data-date="${isoDate}" style="--day-intensity:${intensity};" aria-label="${stats.trades} trade${stats.trades === 1 ? "" : "s"} on ${isoDate}, ${stats.pnl >= 0 ? "up" : "down"} ${formatCurrency(Math.abs(stats.pnl))} — review in the journal">${cellBody}</button>`
       : `<div class="${cellClasses}">${cellBody}</div>`);
   }
 
@@ -6920,6 +7027,9 @@ function handleCalendarDayClick(event) {
   ui.filters.dateFrom.value = date;
   ui.filters.dateTo.value = date;
   handleFilterChange();
+  // The date inputs now live under "More filters"; open it so the range the
+  // click just applied is visible rather than mysteriously in force.
+  document.querySelector(".rev-more")?.setAttribute("open", "");
   switchView("journal");
 }
 
@@ -7066,12 +7176,153 @@ function syncJournalSortIndicators() {
   });
 }
 
+/* ══ 1e TRADE REVIEW ═══════════════════════════════════════════════════════
+   design-source/1e-review-calendar.html. Seven columns and a chevron instead
+   of thirteen: Date, Symbol, Setup ("Liquidity Grab · H1 · London"), Net, R,
+   Pips, Mood. Market, direction, result, execution, prices, checklist, tags,
+   notes and the row actions all move into the detail the chevron opens.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function formatIsoShort(iso) {
+  const date = new Date(`${String(iso || "")}T00:00:00`);
+  return Number.isNaN(date.getTime())
+    ? String(iso || "—")
+    : new Intl.DateTimeFormat("en-US", { month: "short", day: "2-digit" }).format(date);
+}
+
+const QUICK_FILTER_LABELS = {
+  wins: "wins",
+  losses: "losses",
+  rules: "rule broken",
+  nonote: "not journalled"
+};
+
+// What the header line after "filtered to" says. Every clause is read off a
+// filter that is actually applied — never a fixed "last 30 days".
+function describeJournalFilters() {
+  const parts = [];
+  const { quick, dateFrom, dateTo, market, setup, session, timeframe, psychology, search } = state.filters;
+
+  if (QUICK_FILTER_LABELS[quick]) {
+    parts.push(QUICK_FILTER_LABELS[quick]);
+  }
+  if (dateFrom && dateTo) {
+    parts.push(dateFrom === dateTo ? formatIsoShort(dateFrom) : `${formatIsoShort(dateFrom)} – ${formatIsoShort(dateTo)}`);
+  } else if (dateFrom) {
+    parts.push(`from ${formatIsoShort(dateFrom)}`);
+  } else if (dateTo) {
+    parts.push(`up to ${formatIsoShort(dateTo)}`);
+  }
+  [market, setup, session, timeframe, psychology].forEach((value) => {
+    if (value && value !== "all") {
+      parts.push(value);
+    }
+  });
+  if (search) {
+    parts.push(`“${search}”`);
+  }
+
+  return parts;
+}
+
+function renderReviewHeader(shownCount) {
+  const noNote = state.trades.filter((trade) => trade.status !== "open" && !isTradeJournalled(trade)).length;
+  if (ui.reviewNoNoteCount) {
+    ui.reviewNoNoteCount.textContent = String(noNote);
+  }
+
+  ui.reviewChips.forEach((chip) => {
+    const active = (chip.dataset.quick || "all") === state.filters.quick;
+    chip.classList.toggle("is-active", active);
+    chip.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+
+  if (!ui.reviewCount) {
+    return;
+  }
+
+  const total = state.trades.length;
+  if (!total) {
+    ui.reviewCount.textContent = "No trades logged yet.";
+    return;
+  }
+
+  const parts = describeJournalFilters();
+  const noun = `trade${total === 1 ? "" : "s"}`;
+  ui.reviewCount.innerHTML = parts.length
+    ? `${shownCount} of ${total} ${noun} · filtered to <strong>${escapeHtml(parts.join(" · "))}</strong>`
+    : `${total} ${noun} · <strong>all time</strong>`;
+}
+
+function buildTradeDetailRow(trade, isOpen) {
+  const id = escapeHtml(String(trade.id || ""));
+  const resultClass = isOpen
+    ? "pill"
+    : trade.result === "Win"
+      ? "pill pill-win"
+      : trade.result === "Loss"
+        ? "pill pill-loss"
+        : "pill pill-be";
+
+  const facts = [
+    ["Result", `<span class="${resultClass}">${escapeHtml(isOpen ? "Open" : trade.result)}</span>`],
+    ["Market", escapeHtml(trade.market)],
+    ["Direction", escapeHtml(trade.direction)],
+    ["Timeframe", escapeHtml(trade.timeframe)],
+    ["Session", escapeHtml(trade.session)],
+    ["Execution", escapeHtml(trade.executionQuality)],
+    ["Entry", trade.entryPrice > 0 ? escapeHtml(formatProgressTradePrice(trade.entryPrice)) : "—"],
+    [isOpen ? "Stop" : "Exit", (isOpen ? trade.stopLoss : trade.exitPrice) > 0
+      ? escapeHtml(formatProgressTradePrice(isOpen ? trade.stopLoss : trade.exitPrice))
+      : "—"],
+    ["Risk", `${Number(trade.riskPercent || 0).toFixed(2)}%${isRuleBroken(trade) ? ' <span class="rev-flag">over cap</span>' : ""}`]
+  ];
+
+  const checklist = (trade.preTradeRules || [])
+    .map((ruleId) => PRE_TRADE_RULES.find((rule) => rule.id === ruleId)?.label)
+    .filter(Boolean);
+
+  const extras = [];
+  if (checklist.length) {
+    extras.push(`<p class="rev-detail-note"><span class="rev-detail-key">Checked before entry</span>${escapeHtml(checklist.join(" · "))}</p>`);
+  }
+  if ((trade.mistakeTags || []).length) {
+    extras.push(`<p class="rev-detail-note"><span class="rev-detail-key">What went wrong</span>${escapeHtml(trade.mistakeTags.join(" · "))}</p>`);
+  }
+  if (trade.notes) {
+    extras.push(`<p class="rev-detail-note"><span class="rev-detail-key">Note</span>${escapeHtml(trade.notes)}</p>`);
+  }
+
+  return `
+    <tr class="trade-detail-row" id="trade-detail-${id}" data-detail-for="${id}"${expandedTradeIds.has(String(trade.id)) ? "" : " hidden"}>
+      <td colspan="8">
+        <div class="rev-detail">
+          <dl class="rev-detail-facts">
+            ${facts.map(([key, value]) => `<div><dt>${key}</dt><dd>${value}</dd></div>`).join("")}
+          </dl>
+          ${extras.join("")}
+          <div class="rev-detail-actions">
+            ${isOpen
+              ? `<button class="mini-btn mini-btn-close" data-action="close" data-id="${id}" type="button">Close at market</button>`
+              : `<button class="mini-btn" data-action="journal" data-id="${id}" type="button">Journal</button>`}
+            <button class="mini-btn" data-action="edit" data-id="${id}" type="button">Edit</button>
+            <button class="mini-btn danger" data-action="delete" data-id="${id}" type="button">Delete</button>
+          </div>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
 function renderJournalTable() {
   syncJournalSortIndicators();
   const filtered = getFilteredTrades();
+  renderReviewHeader(filtered.length);
 
   if (!filtered.length) {
-    ui.tradesBody.innerHTML = '<tr class="empty-row"><td colspan="13">No trades match current filters.</td></tr>';
+    ui.tradesBody.innerHTML = `<tr class="empty-row"><td colspan="8">${
+      state.trades.length ? "No trades match current filters." : "No trades logged yet."
+    }</td></tr>`;
     return;
   }
 
@@ -7082,80 +7333,118 @@ function renderJournalTable() {
     ? [...filtered].sort((a, b) => compareTradeField(a, b, sortKey) * sortDir || sortTradesDesc(a, b))
     : filtered.sort(sortTradesDesc);
 
+  // Drop expansions for rows that are no longer on screen, so the set cannot
+  // grow without bound across a session of filtering.
+  const visibleIds = new Set(sorted.map((trade) => String(trade.id)));
+  expandedTradeIds.forEach((id) => {
+    if (!visibleIds.has(id)) {
+      expandedTradeIds.delete(id);
+    }
+  });
+
+  // Depth scales with size, relative to the biggest result on screen — the
+  // same four-step ramp the calendar tiles use, so a big loss is visibly
+  // deeper than a scratch. Purely decorative: colour and sign carry the state.
+  const peakAbsPnl = sorted.reduce((peak, trade) => Math.max(peak, Math.abs(trade.netPnl || 0)), 0);
+
   ui.tradesBody.innerHTML = sorted
     .map((trade) => {
+      const id = escapeHtml(String(trade.id || ""));
       const isOpen = trade.status === "open";
       const livePercent = getOpenTradePnlPercent(trade);
-      const resultClass = isOpen
-        ? "pill"
-        : trade.result === "Win"
-          ? "pill pill-win"
-          : trade.result === "Loss"
-            ? "pill pill-loss"
-            : "pill pill-be";
       const pnlClass = isOpen
         ? getLiveToneClass(livePercent)
-        : trade.netPnl >= 0
+        : trade.netPnl > 0
           ? "pnl-positive"
-          : "pnl-negative";
+          : trade.netPnl < 0
+            ? "pnl-negative"
+            : "";
       const pipClass = isOpen ? "" : trade.pips > 0 ? "pnl-positive" : trade.pips < 0 ? "pnl-negative" : "";
       // Clay V2 §5c: depth as data — a winning row is raised, a losing row is
       // pressed. Open rows stay flat (the outcome is not known yet). The money
-      // colour and the Result pill still carry the state, so the depth flip is
-      // never the sole signal (WCAG 1.4.1).
-      const rowClass = isOpen
-        ? ""
-        : trade.netPnl > 0
-          ? " class=\"trade-row-win\""
-          : trade.netPnl < 0
-            ? " class=\"trade-row-loss\""
-            : "";
+      // colour, the signed +/- glyph on Net and R, and the Result pill in the
+      // row detail all carry the state too, so the depth flip is never the
+      // sole signal (WCAG 1.4.1).
+      const rowClasses = [
+        isOpen ? "trade-row-open" : trade.netPnl > 0 ? "trade-row-win" : trade.netPnl < 0 ? "trade-row-loss" : "",
+        expandedTradeIds.has(String(trade.id)) ? "is-expanded" : ""
+      ].filter(Boolean).join(" ");
+
+      // "Liquidity Grab · H1 · London" — the mockup's one-line context.
+      const setupLine = [trade.setupType, trade.timeframe, trade.session].filter(Boolean).join(" · ");
+      const moodTone = MOOD_TONES[trade.psychology] || "";
+      const intensity = !isOpen && peakAbsPnl > 0
+        ? Math.ceil(clamp(Math.abs(trade.netPnl) / peakAbsPnl, 0, 1) * 4) / 4
+        : 0;
 
       return `
-        <tr${rowClass} data-trade-id="${escapeHtml(String(trade.id || ""))}">
-          <td data-label="Date">${escapeHtml(trade.date)}</td>
-          <td data-label="Asset">${escapeHtml(trade.asset)}</td>
-          <td data-label="Market">${escapeHtml(trade.market)}</td>
-          <td data-label="Direction">${escapeHtml(trade.direction)}</td>
-          <td data-label="Setup">${escapeHtml(trade.setupType)}</td>
-          <td data-label="Timeframe">${escapeHtml(trade.timeframe)}</td>
-          <td data-label="Result"><span class="${resultClass}">${escapeHtml(trade.result)}</span></td>
+        <tr${rowClasses ? ` class="${rowClasses}"` : ""} data-trade-id="${id}" style="--row-intensity:${intensity};">
+          <td data-label="Date" class="rev-date">${escapeHtml(formatIsoShort(trade.date))}</td>
+          <td data-label="Symbol" class="rev-symbol">${escapeHtml(trade.asset)}</td>
+          <td data-label="Setup" class="rev-setup">${escapeHtml(setupLine)}</td>
+          <td data-label="Net" class="num rev-net ${pnlClass}${isOpen ? " live-cell" : ""}"${isOpen ? ` ${liveCellAttrs(trade, "livePercent")}` : ""}>${isOpen ? escapeHtml(formatLivePercentLabel(livePercent, "OPEN")) : escapeHtml(trade.netPnl === 0 ? formatCurrency(0) : formatSignedCurrency(trade.netPnl))}</td>
+          <td data-label="R" class="num">${isOpen ? "—" : escapeHtml(formatSignedR(trade.rMultiple))}</td>
           <td data-label="Pips" class="num ${pipClass}">${isOpen ? "—" : Number.isFinite(trade.pips) ? trade.pips.toFixed(2) : "0.00"}</td>
-          <td data-label="Net P&L" class="num ${pnlClass}${isOpen ? " live-cell" : ""}"${isOpen ? ` ${liveCellAttrs(trade, "livePercent")}` : ""}>${isOpen ? escapeHtml(formatLivePercentLabel(livePercent, "OPEN")) : formatCurrency(trade.netPnl)}</td>
-          <td data-label="R-Multiple" class="num">${isOpen ? "—" : Number.isFinite(trade.rMultiple) ? trade.rMultiple.toFixed(2) : "0.00"}R</td>
-          <td data-label="Psychology">${escapeHtml(trade.psychology)}</td>
-          <td data-label="Execution">${escapeHtml(trade.executionQuality)}</td>
-          <td class="row-actions">
-            ${isOpen
-              ? `<button class="mini-btn mini-btn-close" data-action="close" data-id="${trade.id}" type="button">Close</button>`
-              : `<button class="mini-btn" data-action="journal" data-id="${trade.id}" type="button">Journal</button>`}
-            <button class="mini-btn" data-action="edit" data-id="${trade.id}" type="button">Edit</button>
-            <button class="mini-btn danger" data-action="delete" data-id="${trade.id}" type="button">Delete</button>
+          <td data-label="Mood"><span class="rev-mood ${moodTone}">${escapeHtml(trade.psychology)}</span></td>
+          <td class="rev-chev-cell">
+            <button
+              class="rev-chev"
+              type="button"
+              data-action="expand"
+              data-id="${id}"
+              aria-expanded="${expandedTradeIds.has(String(trade.id)) ? "true" : "false"}"
+              aria-controls="trade-detail-${id}"
+            >
+              <span class="rev-chev-glyph" aria-hidden="true">›</span>
+              <span class="visually-hidden">Details for ${escapeHtml(trade.asset)} on ${escapeHtml(formatIsoShort(trade.date))}</span>
+            </button>
           </td>
         </tr>
+        ${buildTradeDetailRow(trade, isOpen)}
       `;
     })
     .join("");
 }
 
-function hydrateSetupFilter() {
-  const setups = Array.from(new Set(state.trades.map((trade) => trade.setupType).filter(Boolean))).sort();
-  const currentValue = ui.filters.setup.value;
+function formatSignedR(value) {
+  if (!Number.isFinite(value)) {
+    return "0.00R";
+  }
+  const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+  return `${sign}${Math.abs(value).toFixed(2)}R`;
+}
 
-  ui.filters.setup.innerHTML = "";
+/* The chip-styled dropdowns show their own name when unset ("Setup", not
+   "All"), so the placeholder label is a parameter. Values are derived from the
+   journal, never a hard-coded list — a setup the trader invented yesterday is
+   filterable today. */
+function hydrateFilterSelect(select, values, placeholder) {
+  if (!select) {
+    return;
+  }
+
+  const options = Array.from(new Set(values.filter(Boolean))).sort();
+  const currentValue = select.value;
+
+  select.innerHTML = "";
   const allOption = document.createElement("option");
   allOption.value = "all";
-  allOption.textContent = "All";
-  ui.filters.setup.appendChild(allOption);
+  allOption.textContent = placeholder;
+  select.appendChild(allOption);
 
-  setups.forEach((setup) => {
+  options.forEach((value) => {
     const option = document.createElement("option");
-    option.value = setup;
-    option.textContent = setup;
-    ui.filters.setup.appendChild(option);
+    option.value = value;
+    option.textContent = value;
+    select.appendChild(option);
   });
 
-  ui.filters.setup.value = setups.includes(currentValue) ? currentValue : "all";
+  select.value = options.includes(currentValue) ? currentValue : "all";
+}
+
+function hydrateSetupFilter() {
+  hydrateFilterSelect(ui.filters.setup, state.trades.map((trade) => trade.setupType), "Setup");
+  hydrateFilterSelect(ui.filters.session, state.trades.map((trade) => trade.session), "Session");
 }
 
 function getFilteredTrades() {
@@ -7176,15 +7465,30 @@ function getFilteredTrades() {
       return false;
     }
 
+    if (state.filters.session !== "all" && trade.session !== state.filters.session) {
+      return false;
+    }
+
     if (state.filters.timeframe !== "all" && trade.timeframe !== state.filters.timeframe) {
       return false;
     }
 
-    if (state.filters.result !== "all" && trade.result !== state.filters.result) {
+    if (state.filters.psychology !== "all" && trade.psychology !== state.filters.psychology) {
       return false;
     }
 
-    if (state.filters.psychology !== "all" && trade.psychology !== state.filters.psychology) {
+    // 1e chips.
+    const quick = state.filters.quick;
+    if (quick === "wins" && trade.result !== "Win") {
+      return false;
+    }
+    if (quick === "losses" && trade.result !== "Loss") {
+      return false;
+    }
+    if (quick === "rules" && !isRuleBroken(trade)) {
+      return false;
+    }
+    if (quick === "nonote" && (trade.status === "open" || isTradeJournalled(trade))) {
       return false;
     }
 

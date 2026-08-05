@@ -592,3 +592,36 @@ Implemented `docs/renovation/design-source/1c-journaling.html`. Step 2 lives in 
 **Deleted / changed.** `focusTradeInJournal()` and its `#journal tbody tr.is-flagged` CSS are gone — the chevron opens the sheet instead of scrolling to a table row. `handleScreenshotUpload` rewritten onto `readInlineImage`. `normalizeTrades` gains `mistakeTags: []` and `journalledAt: ""`; `buildTradeRecord` carries both across a full-form edit the same way it carries `preTradeRules`; CSV export gains both columns (every cell is quoted, so the comma-joined tags are safe).
 
 **Verified.** `node --check app.js`; new `tests/journalQueue.check.mjs` (slices the real predicate + tag vocabulary out of `app.js`: pre-1c notes-only trades stay journalled, whitespace is not a note, graded-with-no-note counts, case-variant tags fold, empty tags never enter) green; `charts.smoke`, `demoJournal.check`, `guestStorage.check`, `sessions.smoke`, `tradeParse.check` all green; `php -l index.html` clean; CSS braces balanced; served page greped for `journalSaveBtn` / `dashJournalCta`, served `clay-v2.css` for 55 `jrn-` hits, served `app.js` for `openJournalSheet`. No new hexes — every colour is a token, both themes. Nothing new animates, so no reduced-motion branch was needed. Focus rings restored on all 8 new clay controls; chips, grades, the drop zone and the mobile pill are ≥44px. The desktop-only `:has()` width bump is fenced above 621px so it cannot out-specify §11e's bottom sheet. Cache buster → `v=20260808-journal1c`. Not verified in a browser (browser tools were off this phase).
+
+## Phase 1e — Trade Review + Calendar (design-source/1e-review-calendar.html)
+
+**Trade Review.** The `.view-head` + `.filter-grid` panel is gone. Header is now
+`.rev-head`: "Trade Review", a live count line (`N of M trades · filtered to …`,
+every clause read off a filter that is actually on — never the mockup's fixed
+"last 30 days"), the search well with its `/` hint (the `/` shortcut was already
+wired), and Export. `.rev-chips` is the primary control: All / Wins / Losses /
+Rule broken / "No note · N" plus Setup ▾ / Session ▾ / Mood ▾ as native
+`<select>`s styled as chips — no custom dropdown, no JS, keyboard for free.
+"Rule broken" = `riskPercent > settings.riskPerTrade`, the same predicate
+`calculateAnalytics` uses, so the chip and the Risk Controls list can't disagree.
+Date range, market, timeframe, Clear Filters and the backup/import/server
+buttons moved into a `<details class="rev-more">` and stay reachable.
+
+**Table 13 → 7 + chevron.** Date, Symbol, Setup ("Liquidity Grab · H1 ·
+London"), Net, R, Pips, Mood. Market, direction, result pill, execution, prices,
+risk, the 1b checklist, 1c tags and notes, and all row actions moved into the
+detail row the chevron opens (`expandedTradeIds`, patched in place so the 5s
+live tick is never restamped mid-hover). Click-to-sort and the ≤900px card
+transform both still work. Depth now scales: `--row-intensity` per row from the
+biggest result on screen. Colour + the signed `+/-` on Net and R + the Result
+pill in the detail carry win/loss independently of depth (WCAG 1.4.1).
+
+**Calendar.** "August 2026" is the heading, meta is `14 trading days · 44 trades
+· most traded BTCUSDT`, MONTH NET sits beside ‹ ›; the two summary cards are
+deleted (and their CSS stripped). The month `<input>` survives as a compact
+"jump" control — arrows walk, it leaps. Tiles are day number / signed P&L / one
+meta line. Day click still sets the journal date filters and switches view, and
+now opens the More-filters disclosure so the applied range is visible.
+
+New: `state.filters.quick` + `state.filters.session` (the Result `<select>` was
+deleted and folded into the chips). New check: `tests/reviewFilters.check.mjs`.

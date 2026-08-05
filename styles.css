@@ -516,8 +516,7 @@ body::before {
 .metric-value,
 td,
 .live-cell,
-.calendar-cell,
-.calendar-summary-value {
+.calendar-cell {
   font-feature-settings: "tnum";
 }
 
@@ -1445,20 +1444,6 @@ body.is-authenticated .auth-panel {
   gap: 12px;
 }
 
-.calendar-month-control {
-  display: grid;
-  gap: 5px;
-  min-width: 160px;
-  margin-bottom: 0;
-}
-
-.calendar-month-control span {
-  color: var(--text-faint);
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
 /* Chart wells: a lit stage rather than a flat inset. The radial wash sits
    behind the canvas bitmap (which is drawn transparent), so it reads as
    atmosphere under the curve without the renderer knowing about it. */
@@ -2146,46 +2131,6 @@ button.is-pending {
   padding: 6px 4px;
 }
 
-.calendar-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.calendar-summary-card {
-  display: grid;
-  gap: 8px;
-  padding: var(--space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface-1);
-  box-shadow: var(--edge-highlight);
-}
-
-.calendar-summary-label {
-  color: var(--text-faint);
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.calendar-summary-value {
-  margin: 0;
-  font: 700 var(--fs-metric)/1 var(--font-mono);
-  color: var(--text);
-}
-
-.calendar-summary-subtext {
-  color: var(--text-soft);
-  font: 500 var(--fs-label)/1.35 var(--font-mono);
-}
-
-.calendar-summary-empty {
-  color: var(--text-soft);
-  font: 500 var(--fs-label)/1.4 var(--font-mono);
-}
-
 .calendar-cell {
   appearance: none;
   min-height: 108px;
@@ -2870,15 +2815,6 @@ body.is-guest:not(.demo-signup) .trust-row {
     align-items: stretch;
   }
 
-  .calendar-month-control {
-    min-width: 0;
-  }
-
-  .calendar-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-
   .trader-score-foot {
     grid-template-columns: 1fr;
     gap: 10px;
@@ -3299,18 +3235,6 @@ body.is-guest:not(.demo-signup) .trust-row {
 
   .calendar-weekday {
     display: none;
-  }
-
-  .calendar-summary {
-    grid-template-columns: 1fr;
-  }
-
-  .calendar-summary-card {
-    padding: 12px 13px;
-  }
-
-  .calendar-summary-value {
-    font-size: var(--fs-h2);
   }
 
   .calendar-cell {

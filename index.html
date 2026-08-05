@@ -45,10 +45,10 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260808-journal1c" />
+    <link rel="stylesheet" href="styles.css?v=20260808-review1e" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260808-journal1c" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260808-review1e" />
   </head>
   <body>
     <section class="auth-shell" id="authShell" aria-label="Login">
@@ -1002,26 +1002,41 @@
 
         </section>
 
+        <!-- 1e Calendar: the month title IS the heading, the meta line carries
+             trading days / trades / most-traded, MONTH NET sits beside the
+             ‹ › nav, and the tiles do the rest (clay-v2 §5a: green rises, red
+             sinks, no-trade day is flat). -->
         <section class="view" id="calendar" aria-labelledby="calendarHeading">
-          <header class="view-head">
-            <h2 id="calendarHeading">Calendar P&amp;L</h2>
-            <p>Review daily profit, trade count, and the most traded asset in a dedicated monthly view.</p>
+          <header class="cal-head">
+            <div class="cal-head-copy">
+              <h2 id="calendarHeading">Calendar</h2>
+              <p id="calendarMeta" class="cal-meta" aria-live="polite">No trades this month.</p>
+            </div>
+            <div class="cal-head-side">
+              <div class="cal-net">
+                <p class="cal-net-label">Month net</p>
+                <p class="cal-net-value" id="calendarNet">$0.00</p>
+              </div>
+              <div class="cal-nav">
+                <button id="calPrevBtn" class="cal-nav-btn" type="button" aria-label="Previous month">&lsaquo;</button>
+                <button id="calNextBtn" class="cal-nav-btn" type="button" aria-label="Next month">&rsaquo;</button>
+                <!-- Kept from the old header: the arrows walk one month at a
+                     time, this jumps. Label is visually hidden, not removed. -->
+                <label class="cal-jump">
+                  <span class="visually-hidden">Jump to month</span>
+                  <input id="dashboardCalendarMonth" type="month" />
+                </label>
+              </div>
+            </div>
           </header>
 
-          <section class="panel">
-            <div class="panel-head panel-head-inline">
-              <div>
-                <h3>Monthly Calendar</h3>
-                <p>See daily profit, trade count, and the most traded asset for each day.</p>
-              </div>
-              <label class="calendar-month-control">
-                <span>Month</span>
-                <input id="dashboardCalendarMonth" type="month" />
-              </label>
-            </div>
-            <div id="calendarSummary" class="calendar-summary" aria-live="polite"></div>
-            <div id="calendarGrid" class="calendar-grid" aria-label="Trading calendar"></div>
-          </section>
+          <div id="calendarGrid" class="calendar-grid" aria-label="Trading calendar"></div>
+
+          <ul class="cal-legend">
+            <li><span class="cal-legend-swatch cal-legend-up" aria-hidden="true"></span>green day &mdash; the tile rises</li>
+            <li><span class="cal-legend-swatch cal-legend-down" aria-hidden="true"></span>red day &mdash; the tile sinks</li>
+            <li><span class="cal-legend-swatch cal-legend-flat" aria-hidden="true"></span>no trades</li>
+          </ul>
         </section>
 
         <section class="view" id="trade-entry" aria-labelledby="tradeEntryHeading">
@@ -1346,124 +1361,146 @@
           </section>
         </section>
 
+        <!-- 1e Trade Review: search + Export live in the header, the chip row is
+             the primary filter control, and the table drops from 13 columns to
+             7 + a chevron. Everything the columns lost moves into the row
+             detail the chevron opens. Date/market/timeframe and the data
+             buttons stay reachable under "More filters". -->
         <section class="view" id="journal" aria-labelledby="journalHeading">
-          <header class="view-head">
-            <h2 id="journalHeading">Trade Review</h2>
-            <p>Filter by setup, timeframe, psychology, and outcomes to isolate your edge.</p>
+          <header class="rev-head">
+            <div class="rev-head-copy">
+              <h2 id="journalHeading">Trade Review</h2>
+              <p id="reviewCount" class="rev-count" aria-live="polite">No trades logged yet.</p>
+            </div>
+            <div class="rev-head-tools">
+              <div class="rev-search">
+                <span class="rev-search-icon" aria-hidden="true">&#9906;</span>
+                <input
+                  id="filterSearch"
+                  type="search"
+                  placeholder="symbol, setup, note&hellip;"
+                  aria-label="Search trades by symbol, setup or note"
+                />
+                <kbd class="rev-search-key" aria-hidden="true">/</kbd>
+              </div>
+              <button id="reviewExportBtn" class="rev-export" type="button">Export</button>
+            </div>
           </header>
 
-          <section class="panel">
-            <div class="filter-grid">
-              <label>
-                Date From
-                <input id="filterDateFrom" type="date" />
-              </label>
-              <label>
-                Date To
-                <input id="filterDateTo" type="date" />
-              </label>
-              <label>
-                Market
-                <select id="filterMarket">
-                  <option value="all">All</option>
-                  <option value="Forex">Forex</option>
-                  <option value="Crypto">Crypto</option>
-                  <option value="Stocks">Stocks</option>
-                  <option value="Indices">Indices</option>
-                  <option value="Metals">Metals</option>
-                  <option value="Commodities">Commodities</option>
-                  <option value="Futures">Futures</option>
-                  <option value="ETFs">ETFs</option>
-                  <option value="Options">Options</option>
-                  <option value="Other">Other</option>
-                </select>
-              </label>
-              <label>
-                Setup
-                <select id="filterSetup">
-                  <option value="all">All</option>
-                </select>
-              </label>
-              <label>
-                Timeframe
-                <select id="filterTimeframe">
-                  <option value="all">All</option>
-                  <option value="M1">M1</option>
-                  <option value="M5">M5</option>
-                  <option value="M15">M15</option>
-                  <option value="H1">H1</option>
-                  <option value="H4">H4</option>
-                  <option value="D1">D1</option>
-                </select>
-              </label>
-              <label>
-                Result
-                <select id="filterResult">
-                  <option value="all">All</option>
-                  <option value="Win">Win</option>
-                  <option value="Loss">Loss</option>
-                  <option value="Break Even">Break Even</option>
-                </select>
-              </label>
-              <label>
-                Psychology
-                <select id="filterPsychology">
-                  <option value="all">All</option>
-                  <option value="Focused">Focused</option>
-                  <option value="Hesitant">Hesitant</option>
-                  <option value="Emotional">Emotional</option>
-                  <option value="Revenge Trade">Revenge Trade</option>
-                  <option value="Perfect Execution">Perfect Execution</option>
-                </select>
-              </label>
-              <label class="field-span-2">
-                Search Asset or Notes
-                <input id="filterSearch" type="search" placeholder="Type symbol, setup, or note keyword" />
-              </label>
-            </div>
+          <div class="rev-chips" role="group" aria-label="Quick filters">
+            <button class="rev-chip is-active" type="button" data-quick="all" aria-pressed="true">All</button>
+            <button class="rev-chip" type="button" data-quick="wins" aria-pressed="false">Wins</button>
+            <button class="rev-chip" type="button" data-quick="losses" aria-pressed="false">Losses</button>
+            <button class="rev-chip" type="button" data-quick="rules" aria-pressed="false">Rule broken</button>
+            <button class="rev-chip rev-chip-alert" type="button" data-quick="nonote" aria-pressed="false">
+              No note &middot; <span id="revNoNoteCount">0</span>
+            </button>
+            <span class="rev-chip-sep" aria-hidden="true"></span>
+            <label class="rev-select">
+              <span class="visually-hidden">Filter by setup</span>
+              <select id="filterSetup">
+                <option value="all">Setup</option>
+              </select>
+            </label>
+            <label class="rev-select">
+              <span class="visually-hidden">Filter by session</span>
+              <select id="filterSession">
+                <option value="all">Session</option>
+              </select>
+            </label>
+            <label class="rev-select">
+              <span class="visually-hidden">Filter by mood</span>
+              <select id="filterPsychology">
+                <option value="all">Mood</option>
+                <option value="Focused">Focused</option>
+                <option value="Hesitant">Hesitant</option>
+                <option value="Emotional">Emotional</option>
+                <option value="Revenge Trade">Revenge</option>
+                <option value="Perfect Execution">Perfect Execution</option>
+              </select>
+            </label>
+          </div>
 
-            <div class="form-actions split-wrap">
-              <div>
-                <button id="clearFiltersBtn" class="btn" type="button">Clear Filters</button>
+          <details class="rev-more">
+            <summary class="rev-more-summary">More filters &amp; data</summary>
+            <div class="rev-more-body">
+              <div class="filter-grid">
+                <label>
+                  Date From
+                  <input id="filterDateFrom" type="date" />
+                </label>
+                <label>
+                  Date To
+                  <input id="filterDateTo" type="date" />
+                </label>
+                <label>
+                  Market
+                  <select id="filterMarket">
+                    <option value="all">All</option>
+                    <option value="Forex">Forex</option>
+                    <option value="Crypto">Crypto</option>
+                    <option value="Stocks">Stocks</option>
+                    <option value="Indices">Indices</option>
+                    <option value="Metals">Metals</option>
+                    <option value="Commodities">Commodities</option>
+                    <option value="Futures">Futures</option>
+                    <option value="ETFs">ETFs</option>
+                    <option value="Options">Options</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+                <label>
+                  Timeframe
+                  <select id="filterTimeframe">
+                    <option value="all">All</option>
+                    <option value="M1">M1</option>
+                    <option value="M5">M5</option>
+                    <option value="M15">M15</option>
+                    <option value="H1">H1</option>
+                    <option value="H4">H4</option>
+                    <option value="D1">D1</option>
+                  </select>
+                </label>
               </div>
-              <div class="inline-actions">
-                <button id="backupJsonBtn" class="btn" type="button">Backup JSON</button>
-                <button id="importJsonBtn" class="btn" type="button">Import JSON</button>
-                <button id="savePhpBtn" class="btn" type="button">Save to Server DB</button>
-                <button id="loadPhpBtn" class="btn" type="button">Load from Server DB</button>
-                <input id="jsonImportInput" type="file" accept="application/json" hidden />
+
+              <div class="form-actions split-wrap">
+                <div>
+                  <button id="clearFiltersBtn" class="btn" type="button">Clear Filters</button>
+                </div>
+                <div class="inline-actions">
+                  <button id="backupJsonBtn" class="btn" type="button">Backup JSON</button>
+                  <button id="importJsonBtn" class="btn" type="button">Import JSON</button>
+                  <button id="savePhpBtn" class="btn" type="button">Save to Server DB</button>
+                  <button id="loadPhpBtn" class="btn" type="button">Load from Server DB</button>
+                  <input id="jsonImportInput" type="file" accept="application/json" hidden />
+                </div>
               </div>
             </div>
+          </details>
 
-            <p id="journalMessage" class="form-message" aria-live="polite"></p>
+          <p id="journalMessage" class="form-message" aria-live="polite"></p>
 
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th data-sort="date" tabindex="0">Date</th>
-                    <th data-sort="asset" tabindex="0">Asset</th>
-                    <th data-sort="market" tabindex="0">Market</th>
-                    <th data-sort="direction" tabindex="0">Dir</th>
-                    <th data-sort="setupType" tabindex="0">Setup</th>
-                    <th data-sort="timeframe" tabindex="0">TF</th>
-                    <th data-sort="result" tabindex="0">Result</th>
-                    <th class="num" data-sort="pips" tabindex="0">Pips</th>
-                    <th class="num" data-sort="netPnl" tabindex="0">Net P&amp;L</th>
-                    <th class="num" data-sort="rMultiple" tabindex="0">R-Multiple</th>
-                    <th data-sort="psychology" tabindex="0">Psychology</th>
-                    <th data-sort="executionQuality" tabindex="0">Execution</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="tradesBody">
-                  <tr class="empty-row">
-                    <td colspan="13">No trades logged yet.</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th data-sort="date" tabindex="0">Date</th>
+                  <th data-sort="asset" tabindex="0">Symbol</th>
+                  <th data-sort="setupType" tabindex="0">Setup</th>
+                  <th class="num" data-sort="netPnl" tabindex="0">Net</th>
+                  <th class="num" data-sort="rMultiple" tabindex="0">R</th>
+                  <th class="num" data-sort="pips" tabindex="0">Pips</th>
+                  <th data-sort="psychology" tabindex="0">Mood</th>
+                  <th class="rev-chev-head"><span class="visually-hidden">Open trade</span></th>
+                </tr>
+              </thead>
+              <tbody id="tradesBody">
+                <tr class="empty-row">
+                  <td colspan="8">No trades logged yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <section class="view" id="reflections" aria-labelledby="reflectionHeading">
@@ -1936,6 +1973,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260808-journal1c"></script>
+    <script type="module" src="app.js?v=20260808-review1e"></script>
   </body>
 </html>
