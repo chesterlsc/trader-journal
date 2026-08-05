@@ -45,10 +45,10 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260811-delete" />
+    <link rel="stylesheet" href="styles.css?v=20260812-accounts" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260811-delete" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260812-accounts" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -324,6 +324,14 @@
         </div>
 
         <nav class="main-nav" id="mainNav" aria-label="Main sections">
+          <!-- The mobile half of the account switcher. .topnav is display:none
+               below 1025px, so the top-bar select is unreachable on a phone and
+               this one carries it. Both are [data-account-switch]; one handler
+               renders and reads them together. -->
+          <div class="account-switch account-switch-mobile" data-account-switch-wrap hidden>
+            <label class="account-switch-label" for="accountSwitchNav">Account</label>
+            <select id="accountSwitchNav" class="account-switch-select" data-account-switch></select>
+          </div>
           <button class="nav-btn is-active" type="button" data-target="dashboard" aria-current="page">Dashboard</button>
           <button class="nav-btn" type="button" data-target="trade-entry">Trade Entry</button>
           <button class="nav-btn" type="button" data-target="journal">Trade Review</button>
@@ -393,6 +401,16 @@
             </button>
           </div>
           <div class="topnav-actions">
+            <!-- The account switcher. Everything on every screen is scoped to
+                 whatever this says, so it sits in the top bar rather than in a
+                 settings page. A native <select> on purpose: it is keyboard
+                 reachable, screen-reader correct and uses the platform picker
+                 on a phone, none of which a div would be for free. Hidden
+                 while there is only one account (app.js renderAccountSwitcher). -->
+            <div class="account-switch" data-account-switch-wrap hidden>
+              <label class="account-switch-label" for="accountSwitchTop">Account</label>
+              <select id="accountSwitchTop" class="account-switch-select" data-account-switch></select>
+            </div>
             <button
               class="topnav-icon-btn"
               type="button"
@@ -540,6 +558,80 @@
                   <button class="dash-risk-link" type="button" id="cooldownRulesBtn">Cooldown rules &rarr;</button>
                 </p>
               </section>
+            </section>
+
+            <!-- ══ PROP-FIRM TRACKER ══════════════════════════════════════
+                 Shown only when the ACTIVE account has prop rules switched on
+                 (app.js renderPropTracker). Order is deliberate: equity, then
+                 the max loss limit, because the limit is the number that ends
+                 accounts and it deserves to be the second thing read — stated
+                 in dollars, with the distance to it, not as a percentage.
+
+                 Every figure is computed from this account's closed trades and
+                 the limits the trader typed. Nothing is prefilled into the
+                 readout, and the honesty list at the bottom is not decoration:
+                 it states that the rules are user-entered and that this app
+                 cannot see intraday equity. -->
+            <section class="prop-card dash-reveal" id="propTracker" style="--i: 2" hidden aria-labelledby="propCardHeading">
+              <header class="prop-head">
+                <div class="prop-head-copy">
+                  <p class="metric-label" id="propCardHeading">Evaluation tracker</p>
+                  <p class="prop-account" id="propAccountName"></p>
+                </div>
+                <span class="prop-status is-live" id="propStatus">IN PROGRESS</span>
+              </header>
+
+              <div class="prop-figures">
+                <div class="prop-figure">
+                  <p class="prop-figure-label">Account equity</p>
+                  <p class="prop-figure-value" id="propEquity">$0.00</p>
+                  <p class="prop-figure-meta" id="propEquityMeta"></p>
+                </div>
+
+                <!-- The one that busts people. -->
+                <div class="prop-figure prop-figure-mll" id="propMllBlock">
+                  <p class="prop-figure-label">Max loss limit sits at</p>
+                  <p class="prop-figure-value" id="propMll">$0.00</p>
+                  <p class="prop-figure-room">
+                    <span class="prop-room-tag">Room</span>
+                    <strong id="propRoom">$0.00</strong>
+                  </p>
+                  <div class="prop-track" aria-hidden="true"><span class="prop-track-fill" id="propRoomBar"></span></div>
+                  <p class="prop-figure-meta" id="propMllMeta"></p>
+                  <p class="prop-figure-meta" id="propMllMoves"></p>
+                </div>
+              </div>
+
+              <div class="prop-meters">
+                <div class="prop-meter" id="propTargetBlock">
+                  <div class="prop-meter-head">
+                    <span class="prop-meter-label">Profit target</span>
+                    <span class="prop-meter-value" id="propTargetValue">$0.00 / $0.00</span>
+                  </div>
+                  <div class="prop-track" aria-hidden="true"><span class="prop-track-fill" id="propTargetBar"></span></div>
+                  <p class="prop-figure-meta" id="propTargetMeta"></p>
+                </div>
+
+                <div class="prop-meter" id="propDailyBlock">
+                  <div class="prop-meter-head">
+                    <span class="prop-meter-label">Daily loss used</span>
+                    <span class="prop-meter-value" id="propDailyValue">$0.00 / $0.00</span>
+                  </div>
+                  <div class="prop-track" aria-hidden="true"><span class="prop-track-fill" id="propDailyBar"></span></div>
+                  <p class="prop-figure-meta" id="propDailyMeta"></p>
+                </div>
+              </div>
+
+              <!-- The warning that has to arrive before the breach, not after.
+                   Computed from this account's real room and its real losses. -->
+              <p class="prop-warning is-safe" id="propWarning" role="status" aria-live="polite"></p>
+
+              <p class="prop-limits" id="propLimits" hidden></p>
+
+              <details class="prop-honesty">
+                <summary class="prop-honesty-summary">What this tracker does and does not know</summary>
+                <ul class="prop-honesty-list" id="propHonesty"></ul>
+              </details>
             </section>
 
             <section class="dash-quad" aria-label="Edge quality">
@@ -835,6 +927,25 @@
           </section>
 
           </div>
+
+          <!-- ══ ACCOUNTS ═══════════════════════════════════════════════════
+               Sits directly above Risk Controls because the two are read
+               together: the budgets below apply to whichever account is
+               active here. Archive, never delete — the trades under an account
+               have nowhere else to live. -->
+          <section class="panel" id="accountsPanel">
+            <div class="panel-head">
+              <h3>Accounts</h3>
+              <p>
+                One equity curve per account. Everything on every screen &mdash; dashboard, review,
+                calendar, exports &mdash; is scoped to the active one.
+              </p>
+            </div>
+            <ul class="account-list" id="accountList"></ul>
+            <div class="form-actions">
+              <button id="accountAddBtn" class="btn primary" type="button">+ Add account</button>
+            </div>
+          </section>
 
           <section class="panel">
             <div class="panel-head">
@@ -1872,6 +1983,142 @@
       </form>
     </dialog>
 
+    <!-- ══ ACCOUNT EDITOR ═══════════════════════════════════════════════════
+         Every prop-firm figure in here is a plain, editable input with no
+         hard-coded value behind it. The tier picker is a PREFILL and says so:
+         it stamps published numbers read on a stated date into fields the
+         trader then checks against their own account. Firms reprice, and a
+         tracker that pretends otherwise starts lying quietly. -->
+    <dialog id="accountDialog" class="account-dialog" aria-labelledby="accountDialogTitle">
+      <form id="accountForm" class="account-dialog-body" novalidate>
+        <h2 class="account-dialog-title" id="accountDialogTitle">Add an account</h2>
+
+        <div class="account-grid">
+          <label>
+            Account name
+            <input id="accountLabel" type="text" maxlength="40" placeholder="50K Combine" required />
+          </label>
+          <label>
+            Broker or firm
+            <input id="accountFirm" type="text" maxlength="40" placeholder="Topstep" />
+          </label>
+          <label>
+            Type
+            <select id="accountType"></select>
+          </label>
+          <label>
+            Starting balance
+            <input id="accountStartingBalance" type="number" min="0" step="0.01" placeholder="50000" required />
+          </label>
+          <label>
+            Currency
+            <input id="accountCurrency" type="text" maxlength="4" placeholder="USD" />
+          </label>
+        </div>
+
+        <label class="account-toggle">
+          <input id="propEnabled" type="checkbox" />
+          <span>This account has firm rules to track (evaluation or funded)</span>
+        </label>
+
+        <fieldset class="prop-fieldset" id="propFieldset" hidden>
+          <legend>Firm rules</legend>
+
+          <p class="prop-note prop-note-warn">
+            <strong>These are your numbers, not a rule book.</strong>
+            This app tracks the limits you enter here against your own closed trades. It is not a
+            source of truth on any firm&rsquo;s current rules and it gives no trading advice.
+            Confirm every figure against your own account before you rely on it.
+          </p>
+
+          <label>
+            Prefill from a published tier
+            <select id="propPreset"></select>
+          </label>
+          <p class="prop-note">
+            Prefills only. The figures were read from public documentation on a stated date and are
+            reproduced here to save typing &mdash; firms change them, and during this feature&rsquo;s
+            research one firm&rsquo;s own two pages disagreed with each other. Check yours.
+          </p>
+
+          <div class="account-grid">
+            <label>
+              Profit target ($)
+              <input id="propProfitTarget" type="number" min="0" step="0.01" placeholder="3000" />
+            </label>
+            <label>
+              Max loss limit &mdash; drawdown ($)
+              <input id="propDrawdown" type="number" min="0" step="0.01" placeholder="2000" required />
+            </label>
+            <label>
+              Limit behaviour
+              <select id="propMode">
+                <option value="trailing">Trailing &mdash; the floor follows new highs</option>
+                <option value="static">Static &mdash; the floor never moves</option>
+              </select>
+            </label>
+            <label id="propBasisRow">
+              Trails on
+              <select id="propBasis">
+                <option value="eod">End-of-day closed balance</option>
+                <option value="trade">Every closed trade (tighter)</option>
+              </select>
+            </label>
+          </div>
+          <p class="prop-note" id="propBasisNote"></p>
+
+          <div class="account-grid" id="propTrailRow">
+            <label class="account-toggle account-toggle-inline">
+              <input id="propTrailStops" type="checkbox" />
+              <span>The trail stops climbing at a level</span>
+            </label>
+            <label>
+              &hellip; and stops at ($)
+              <input id="propTrailStopAt" type="number" step="0.01" placeholder="50000" />
+            </label>
+          </div>
+
+          <div class="account-grid">
+            <label>
+              Daily loss limit ($, 0 = none)
+              <input id="propDailyLossLimit" type="number" min="0" step="0.01" placeholder="1000" />
+            </label>
+            <label>
+              Consistency rule (%, 0 = off)
+              <input id="propConsistencyPct" type="number" min="0" max="100" step="0.01" placeholder="50" />
+            </label>
+            <label>
+              Max contracts / position size
+              <input id="propMaxContracts" type="number" min="0" step="1" placeholder="5" />
+            </label>
+            <label>
+              Flatten by (your platform&rsquo;s clock)
+              <input id="propFlattenBy" type="time" />
+            </label>
+          </div>
+
+          <p class="prop-note" id="propZeroStartNote" hidden>
+            A $0 start is an Express-Funded style account. The tracker uses $0 as this account&rsquo;s
+            base, which is correct; the dashboard equity curve keeps plotting from the starting
+            balance in Risk Controls, because percentage and position-size maths off a $0 base
+            would be meaningless.
+          </p>
+
+          <label class="account-toggle">
+            <input id="propConfirmed" type="checkbox" />
+            <span>I have checked these figures against my own account</span>
+          </label>
+        </fieldset>
+
+        <p class="form-message" id="accountFormMessage" role="status" aria-live="polite"></p>
+
+        <div class="account-dialog-actions">
+          <button class="btn primary" type="submit">Save account</button>
+          <button class="btn" type="button" id="accountCancelBtn">Cancel</button>
+        </div>
+      </form>
+    </dialog>
+
     <!-- Capture confirmation. The command bar closes with no screen change, so
          this is the only feedback that the trade landed. -->
     <div class="capture-toast" id="captureToast" role="status" aria-live="polite" hidden></div>
@@ -1930,6 +2177,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260811-delete"></script>
+    <script type="module" src="app.js?v=20260812-accounts"></script>
   </body>
 </html>

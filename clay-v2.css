@@ -3865,3 +3865,571 @@ body.auth-locked .topnav {
 .auth-remember:hover {
   color: var(--text);
 }
+
+/* ==========================================================================
+   MULTI-ACCOUNT + PROP-FIRM TRACKER
+   Every colour here is a token, so both themes are covered by construction and
+   the dark re-derivation above applies without a second set of rules. Depth is
+   used as data exactly as §5 sets out — the max-loss card is PRESSED, because
+   a floor you can fall through is a hole, not a shelf — but depth is never the
+   only signal: the status word, the dollar figures and the tone classes carry
+   every state on their own (WCAG 1.4.1).
+   ========================================================================== */
+
+/* --- Account switcher ----------------------------------------------------- */
+.account-switch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.account-switch[hidden] {
+  display: none;
+}
+
+.account-switch-label {
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.account-switch-select {
+  max-width: 190px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  color: var(--text);
+  font: 600 var(--fs-label)/1.2 var(--font-ui);
+  box-shadow: var(--clay-pressed);
+  cursor: pointer;
+}
+
+.account-switch-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The sidebar copy is a stacked block, not an inline pair — the nav is a
+   column and a horizontal label/control pair would crowd it. */
+.account-switch-mobile {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+.account-switch-mobile .account-switch-select {
+  max-width: none;
+  width: 100%;
+}
+
+/* --- The tracker card ----------------------------------------------------- */
+.prop-card {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  border-radius: var(--radius-clay-lg);
+  background: var(--surface-1);
+  box-shadow: var(--clay-raised);
+}
+
+.prop-card[hidden] {
+  display: none;
+}
+
+.prop-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.prop-account {
+  margin: 4px 0 0;
+  font: 700 var(--fs-lg)/1.2 var(--font-ui);
+  color: var(--text);
+}
+
+.prop-status {
+  padding: 6px 11px;
+  border-radius: var(--radius-pill);
+  font: 700 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+.prop-status.is-live {
+  background: var(--accent-muted);
+  color: var(--accent-strong);
+}
+
+.prop-status.is-good {
+  background: var(--pnl-pos-soft);
+  color: var(--pnl-pos);
+}
+
+.prop-status.is-breach {
+  background: var(--pnl-neg-soft);
+  color: var(--pnl-neg);
+}
+
+.prop-status.is-idle {
+  background: var(--surface-3);
+  color: var(--text-soft);
+}
+
+.prop-figures {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: var(--space-4);
+}
+
+.prop-figure {
+  min-width: 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-clay-md);
+  background: var(--surface-2);
+  box-shadow: var(--clay-soft);
+}
+
+/* Depth as data: the max-loss card is CARVED IN, because the limit is a floor
+   the account falls through, not a value it stands on. */
+.prop-figure-mll {
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+}
+
+.prop-figure[hidden] {
+  display: none;
+}
+
+.prop-figure-label {
+  margin: 0;
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.prop-figure-value {
+  margin: var(--space-2) 0 0;
+  font: 700 var(--fs-metric)/1 var(--font-mono);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.prop-figure-meta {
+  margin: var(--space-2) 0 0;
+  font: 500 var(--fs-label)/1.5 var(--font-ui);
+  color: var(--text-soft);
+}
+
+.prop-figure-room {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+}
+
+.prop-room-tag {
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.prop-figure-room strong {
+  font: 700 var(--fs-lg)/1 var(--font-mono);
+  color: var(--pnl-pos);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Meters --------------------------------------------------------------- */
+.prop-track {
+  height: 8px;
+  margin-top: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+  overflow: hidden;
+}
+
+.prop-track-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: var(--radius-pill);
+  background: var(--pnl-pos);
+  transition: width var(--dur-base) var(--ease-out);
+}
+
+.prop-track.is-warn .prop-track-fill {
+  background: var(--warn);
+}
+
+.prop-track.is-breach .prop-track-fill {
+  background: var(--pnl-neg);
+}
+
+.prop-meters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+}
+
+.prop-meter {
+  min-width: 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-clay-md);
+  background: var(--surface-2);
+  box-shadow: var(--clay-soft);
+}
+
+.prop-meter[hidden] {
+  display: none;
+}
+
+.prop-meter-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.prop-meter-label {
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.prop-meter-value {
+  font: 700 var(--fs-md)/1 var(--font-mono);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- The pre-breach warning ----------------------------------------------- */
+.prop-warning {
+  margin: 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-clay-md);
+  background: var(--surface-3);
+  color: var(--text-soft);
+  font: 500 var(--fs-body)/1.55 var(--font-ui);
+  box-shadow: var(--clay-pressed);
+}
+
+.prop-warning.is-warn {
+  background: var(--warn-soft);
+  color: var(--text);
+}
+
+.prop-warning.is-breach {
+  background: var(--pnl-neg-soft);
+  color: var(--text);
+}
+
+.prop-limits {
+  margin: 0;
+  font: 600 var(--fs-label)/1.4 var(--font-mono);
+  color: var(--text-faint);
+}
+
+.prop-limits[hidden] {
+  display: none;
+}
+
+/* --- The honesty block ---------------------------------------------------- */
+.prop-honesty {
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+}
+
+.prop-honesty-summary {
+  padding: var(--space-3) var(--space-4);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-clay-sm);
+  color: var(--text-soft);
+  font: 600 var(--fs-label)/1.4 var(--font-ui);
+  cursor: pointer;
+}
+
+.prop-honesty-summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.prop-honesty-list {
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-4) calc(var(--space-4) + 16px);
+  display: grid;
+  gap: var(--space-2);
+  color: var(--text-soft);
+  font: 500 var(--fs-label)/1.55 var(--font-ui);
+}
+
+/* --- Accounts panel ------------------------------------------------------- */
+.account-list {
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-clay-md);
+  background: var(--surface-2);
+  box-shadow: var(--clay-soft);
+}
+
+/* The active account is raised out of the list — and also says "Active" in
+   text, because a shadow is not a label. */
+.account-row.is-active {
+  background: var(--surface-1);
+  box-shadow: var(--clay-raised);
+}
+
+.account-row.is-archived {
+  opacity: 0.62;
+}
+
+.account-row-main {
+  min-width: 0;
+  flex: 1 1 200px;
+}
+
+.account-row-name {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font: 700 var(--fs-md)/1.3 var(--font-ui);
+  color: var(--text);
+}
+
+.account-row-meta {
+  margin: 4px 0 0;
+  font: 500 var(--fs-label)/1.4 var(--font-ui);
+  color: var(--text-soft);
+}
+
+.account-tag {
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+}
+
+.account-tag.is-active-tag {
+  background: var(--accent-muted);
+  color: var(--accent-strong);
+}
+
+.account-row-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.account-row-btn {
+  min-height: 36px;
+  padding: 7px 12px;
+  font-size: var(--fs-label);
+}
+
+/* --- Account editor dialog ------------------------------------------------ */
+.account-dialog {
+  width: min(680px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-clay-lg);
+  background: var(--surface-1);
+  color: var(--text);
+  box-shadow: var(--clay-float);
+  overflow: auto;
+}
+
+.account-dialog::backdrop {
+  background: hsl(35 25% 12% / 0.44);
+  backdrop-filter: blur(3px);
+}
+
+:root:not([data-theme="light"]) .account-dialog::backdrop {
+  background: hsl(20 20% 3% / 0.66);
+}
+
+.account-dialog-body {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+
+.account-dialog-title {
+  margin: 0;
+  font: 700 var(--fs-h2)/1.2 var(--font-ui);
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--space-3) var(--space-4);
+}
+
+.account-grid[hidden] {
+  display: none;
+}
+
+.account-grid label {
+  display: grid;
+  gap: var(--space-1);
+  font: 600 var(--fs-label)/1.3 var(--font-ui);
+  color: var(--text-soft);
+}
+
+.account-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  font: 500 var(--fs-body)/1.4 var(--font-ui);
+  color: var(--text-soft);
+  cursor: pointer;
+}
+
+.account-toggle input {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  flex: 0 0 18px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.prop-fieldset {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-4);
+  border: 0;
+  border-radius: var(--radius-clay-md);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+}
+
+.prop-fieldset[hidden] {
+  display: none;
+}
+
+.prop-fieldset legend {
+  padding: 0 0 var(--space-2);
+  font: 700 var(--fs-md)/1.2 var(--font-ui);
+  color: var(--text);
+}
+
+.prop-note {
+  margin: 0;
+  font: 500 var(--fs-label)/1.55 var(--font-ui);
+  color: var(--text-soft);
+}
+
+/* The disclaimer is not fine print. It is the first thing inside the fieldset
+   and it is tinted, because "these are your numbers, not a rule book" is the
+   single most important sentence on this screen. */
+.prop-note-warn {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-clay-sm);
+  background: var(--warn-soft);
+  color: var(--text);
+}
+
+.account-dialog-actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* --- Phone ---------------------------------------------------------------- */
+/* The 44px touch floor and the 11px type floor both hold here; tests/
+   mobileFloors.check.mjs re-derives them from this file on every run. */
+@media (max-width: 899px), (pointer: coarse) {
+  .account-switch-select,
+  .account-row-btn {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 760px) {
+  .prop-card {
+    padding: var(--space-5);
+    gap: var(--space-4);
+  }
+
+  /* Two columns at 375px would put the max-loss figure on two lines; the
+     number that busts people gets the full width. */
+  .prop-figures {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .prop-figure-value {
+    font-size: 22px;
+  }
+
+  .prop-account {
+    font-size: var(--fs-md);
+  }
+
+  .account-row-actions {
+    width: 100%;
+  }
+
+  .account-row-btn {
+    flex: 1 1 auto;
+  }
+
+  .account-dialog-body {
+    padding: var(--space-4);
+  }
+}
+
+/* --- Reduced motion ------------------------------------------------------- */
+/* The global kill block zeroes durations, so the meters land in their final
+   width instantly. Restated here so a future edit to the fills cannot quietly
+   reintroduce an animation this file owns. */
+@media (prefers-reduced-motion: reduce) {
+  .prop-track-fill {
+    transition: none;
+  }
+}
+
+/* The room figure agrees with the bar beneath it. Colour is never the only
+   signal here — the dollar amount and the warning sentence both say it too. */
+.prop-figure-room strong.is-warn {
+  color: var(--warn);
+}
+
+.prop-figure-room strong.is-breach {
+  color: var(--pnl-neg);
+}

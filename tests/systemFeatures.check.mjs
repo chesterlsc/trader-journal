@@ -7,6 +7,8 @@
 // Run: node tests/systemFeatures.check.mjs
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
+import { evaluateProp, mllPressure, propSteps } from "../src/lib/propRules.js";
+import { toDateInputValue } from "../src/lib/core.js";
 
 const ROOT = "/Users/macbookairm3/Documents/Trader-Journal";
 const appSrc = readFileSync(`${ROOT}/app.js`, "utf8");
@@ -43,13 +45,20 @@ const bundle = [
   takeFunction(appSrc, "computeRuleCosts"),
   takeFunction(appSrc, "computeCooldownCost"),
   takeFunction(appSrc, "getConsecutiveLosses"),
+  // The prop-firm limits are a cooldown TRIGGER, not a parallel interlock, so
+  // the real functions come along rather than being stubbed — that is the only
+  // way this file can prove a prop breach outranks the personal budgets.
+  takeFunction(appSrc, "getAccounts"),
+  takeFunction(appSrc, "getActiveAccount"),
+  takeFunction(appSrc, "typicalLossSize"),
+  takeFunction(appSrc, "getActivePropEvaluation"),
   takeFunction(appSrc, "getCooldownState"),
   // getCooldownState formats figures and asks whether the app is reachable;
   // neither is what this test is about.
   "function canAccessApp() { return true; }",
   "function formatCurrency(v) { return `$${Number(v).toFixed(2)}`; }",
   "function formatSignedCurrency(v) { return (v >= 0 ? '+' : '-') + formatCurrency(Math.abs(v)); }",
-  "return { normalizePreTradeRules, preTradeRuleLabel, computeRuleCosts, computeCooldownCost, getConsecutiveLosses, getCooldownState };"
+  "return { normalizePreTradeRules, preTradeRuleLabel, computeRuleCosts, computeCooldownCost, getConsecutiveLosses, getCooldownState, getActivePropEvaluation };"
 ].join("\n");
 
 const state = {
@@ -60,7 +69,11 @@ const state = {
     dailyMaxLoss: 300,
     weeklyMaxLoss: 1000,
     cooldownEnabled: true,
-    cooldownLossStreak: 3
+    cooldownLossStreak: 3,
+    // One plain account with no firm rules: the default every pre-accounts
+    // journal migrates into, so the assertions above run unchanged.
+    accounts: [{ id: "acct-main", label: "Main", startingBalance: 10000, archived: false, prop: { enabled: false } }],
+    activeAccountId: "acct-main"
   }
 };
 
@@ -72,7 +85,14 @@ function DEFAULTS() {
 }
 
 // eslint-disable-next-line no-new-func
-const api = new Function("state", bundle)(state);
+const api = new Function(
+  "state",
+  "evaluateProp",
+  "propSteps",
+  "mllPressure",
+  "toDateInputValue",
+  bundle
+)(state, evaluateProp, propSteps, mllPressure, toDateInputValue);
 
 /* ── #02 the editor's normaliser ─────────────────────────────────────────── */
 assert.deepEqual(
@@ -180,6 +200,65 @@ assert.equal(
   "streak",
   "an unset budget cannot be breached — it falls through to the streak"
 );
+
+/* ── prop-firm limits feed the SAME speed bump ───────────────────────────── */
+// A firm limit is not a second interlock bolted alongside the cooldown; it is
+// another trigger for the one that already exists. And it outranks the
+// personal budgets, because it ends the account rather than the day.
+state.settings.dailyMaxLoss = 300;
+state.settings.weeklyMaxLoss = 1000;
+state.analytics.todayPnl = 0;
+state.analytics.weekPnl = 0;
+state.settings.cooldownLossStreak = 0;
+
+const propAccount = state.settings.accounts[0];
+propAccount.startingBalance = 50000;
+propAccount.prop = {
+  enabled: true,
+  drawdown: 2000,
+  mode: "trailing",
+  basis: "eod",
+  trailStops: true,
+  trailStopAt: 50000,
+  profitTarget: 3000,
+  dailyLossLimit: 0
+};
+
+// Plenty of room and small losses: no speed bump.
+state.trades = [closed({ id: "p1", date: "2026-08-01", netPnl: -200, closedAt: "2026-08-01T12:00:00.000Z" })];
+assert.equal(api.getActivePropEvaluation().room, 1800);
+assert.equal(api.getCooldownState(), null, "an account with room does not trip the bump");
+
+// Room down to 300 with a typical loss of 200 — one more, then the next
+// breaches. The warning has to arrive HERE, before the breach.
+state.trades.push(closed({ id: "p2", date: "2026-08-02", netPnl: -1500, closedAt: "2026-08-02T12:00:00.000Z" }));
+assert.equal(api.getActivePropEvaluation().room, 300);
+assert.equal(api.getCooldownState().reason, "prop-room", "the bump fires on room, not on the breach");
+
+// And the breach itself outranks a simultaneously-breached personal budget.
+state.analytics.todayPnl = -350;
+state.analytics.weekPnl = -1400;
+assert.equal(api.getCooldownState().reason, "prop-room", "a prop limit outranks the personal budgets");
+
+state.trades.push(closed({ id: "p3", date: "2026-08-03", netPnl: -400, closedAt: "2026-08-03T12:00:00.000Z" }));
+const breached = api.getActivePropEvaluation();
+assert.equal(breached.status, "breached");
+assert.equal(api.getCooldownState().reason, "prop-mll");
+
+// A firm daily limit trips it too, without any max-loss trouble.
+state.trades = [closed({ id: "p4", date: toDateInputValue(new Date()), netPnl: -600, closedAt: "2026-08-05T12:00:00.000Z" })];
+propAccount.prop.dailyLossLimit = 500;
+assert.equal(api.getCooldownState().reason, "prop-daily");
+
+// Switching the account's prop rules off removes the trigger entirely — the
+// personal budgets are back in charge.
+propAccount.prop.enabled = false;
+assert.equal(api.getActivePropEvaluation(), null, "no prop rules, no prop evaluation");
+assert.equal(api.getCooldownState().reason, "weekly", "the personal budgets are still doing their job");
+
+state.settings.cooldownLossStreak = 3;
+state.analytics.todayPnl = 0;
+state.analytics.weekPnl = 0;
 
 /* ── #03 the override log ────────────────────────────────────────────────── */
 state.trades = [

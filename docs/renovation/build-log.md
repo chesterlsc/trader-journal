@@ -1241,3 +1241,150 @@ The user reported the app "keeps bugging me to login". That was a regression int
 **Test:** `tests/rememberMe.check.mjs` pins the pair (Max-Age present iff remembered, and matching the payload `exp`), asserts the security attributes do not vary with the flag, and proves tampering with `rem` in the payload breaks the HMAC. Writing it caught a real property worth keeping: `encodeSession` spreads `...data` *before* setting `exp`, so a caller cannot choose its own expiry — that is now pinned rather than incidental. A correctly-signed but expired payload is still refused.
 
 17/17 test files green.
+
+## Prop-firm account tracker + multi-account (2026-08-05)
+
+The trader runs a 25K and a 50K. Until now the journal added their two equity
+curves together, which is not a rounding error — it is a wrong answer to every
+question the dashboard asks. This phase makes the whole app account-scoped and
+adds an evaluation tracker on top.
+
+### The scoping trick
+
+`state.trades` now holds the **active account's rows only**; everything else
+sits in `state.otherTrades`, and `persistState()` writes the concatenation.
+Fifty existing readers of `state.trades` — analytics, calendar, review, charts,
+CSV export, the live-price patcher — became account-scoped without being
+edited. Exactly three functions know the split exists: `loadState`,
+`persistState` and `adoptAllTrades`. The alternative (an `accountId` filter at
+every call site) is fifty chances to forget one.
+
+The cost of the trick is that a single missed `allTrades()` deletes a journal,
+so every whole-journal path was audited and converted: the server save payload,
+the server load (both the keep-local and the adopt-server branches), the JSON
+backup export, the backup import, `resetJournalState`, the demo seed and the
+guest carry-over.
+
+**Migration.** A journal written before this ships has no `accounts` and no
+`accountId` on any row. `ensureAccounts()` mints one account labelled "Main"
+seeded from the trader's existing starting balance, and `adoptAllTrades()`
+files every unowned row into it. A row pointing at an account that no longer
+exists is adopted too, never orphaned — an orphan would be invisible in every
+view while still occupying storage, which is the worst of both outcomes.
+
+### Nothing about any firm's rules is hard-coded
+
+This was the explicit instruction in the research brief and it drove the whole
+data model. Every parameter — profit target, max loss limit, trailing vs
+static, the trailing basis, whether the trail stops and at what level, daily
+loss limit, consistency percentage, max contracts, flatten-by time — is a
+user-editable field persisted per account.
+
+`PROP_PRESETS` exists only to prefill that form. It carries `PROP_PRESET_AS_OF`
+("2026-08-05"), each preset states what it is prefilling, and the dialog says in
+plain words that these are published figures read on a date, not current truth.
+Hand-editing any prefilled figure flips the tier picker back to "Custom", so the
+tracker stops attributing the number to a preset the moment it stops being one.
+The justification is in the research: during this pass Topstep's own legal page
+and its help centre disagreed with each other about payout caps, and three
+parameter articles had been edited within five weeks.
+
+Two specifics worth naming. **The 25K Labs tier is STATIC**, not trailing —
+applying trailing maths to it understates the room by 75% in the worked example
+(`$3,000` vs the correct `$4,000` at a `$28,000` balance), and `tests/
+propRules.check.mjs` pins both. And **drawdown mode is a per-account setting,
+never derived from the tier name**, because firms ship both.
+
+### The evaluator
+
+`src/lib/propRules.js` is pure — no DOM, no storage — which is what lets the
+firms' own published worked examples run as assertions. The 50K Combine trail,
+the 50K XFA floor locking at `$0`, the 25K Static room, and `<=` as the breach
+comparison are all tests rather than comments.
+
+Two mechanisms are kept strictly apart, because conflating them is the classic
+bug: **trailing** happens at session close off the closed balance and only ever
+moves the floor up; **breach** is a moment-by-moment comparison. The floor is
+`null`, not `0`, when no limit was entered — a limit nobody typed is not a
+limit of zero, and nothing downstream may draw a line from one.
+
+### What it refuses to claim
+
+- It never says **PASSED**. The research could not confirm the exact pass
+  condition (minimum trading days, how "maintain the target" is checked, the
+  size of an undisclosed consistency buffer), and the app cannot see the
+  account regardless. It says **TARGET MET**, which is the thing it knows.
+- It never claims an account is safe. Every figure is computed from closed
+  trades; this journal has no intraday equity and no open-position P&L, so a
+  limit touched and recovered from inside a session leaves no trace. That
+  sentence is in the UI, not just here.
+- Day bucketing uses the date on the trade. Topstep's trading day runs 17:00 CT
+  to 15:10 CT, so an evening fill belongs to the next day for them; this journal
+  stores a plain calendar date with no timezone and cannot reproduce that. The
+  UI says so rather than quietly being wrong.
+- The trailing basis offers "end-of-day" and "every closed trade". The second is
+  the conservative option — it trails at least as fast, so the floor it draws is
+  never looser than reality — and it is labelled as an approximation, not as an
+  intraday peak.
+- Consistency defaults to **0 (off)**. A rule the trader did not enter is not
+  asserted. When it is on and the account is not yet net profitable, the ratio
+  renders as prose rather than as a fabricated "0%".
+
+### Integrated, not duplicated
+
+The daily-loss meter shows the **tighter** of the firm limit and the trader's
+existing `dailyMaxLoss` budget, and names which one is binding. Prop limits feed
+the existing cooldown speed bump rather than getting a parallel interlock: three
+new triggers (`prop-mll`, `prop-daily`, `prop-room`) sit *ahead* of the weekly
+and daily budgets, because a firm limit ends the account rather than the day.
+`prop-room` fires **before** the breach — when one more typical loss would do it,
+where "typical" is the median of this account's real closed losses.
+
+### The one `api/` change, and why it was needed
+
+`sanitizeSettings` in `api/_lib/sanitize.js` was a pure whitelist, so it
+**silently deleted every settings key the front-end owned** on the first server
+round-trip. That is a pre-existing bug, not one this phase introduced: the
+trader's pre-trade checklist and cooldown configuration have been evaporating on
+login from a second device since they shipped. The prop configuration would have
+joined them. Fixed with a named passthrough list (`preTradeRules`,
+`cooldownEnabled`, `cooldownLossStreak`, `accounts`, `activeAccountId`), copied
+only when the client actually sent the key — which is what keeps the legacy-row
+fixture byte-identical — and capped at 128KB, dropped whole rather than
+truncated. No router, db or schema change.
+
+### Verified
+
+20/20 test files green. Three are new:
+
+- `tests/propRules.check.mjs` — the evaluator against every published worked
+  example, plus consistency, daily-budget binding, `mllPressure`, and the
+  presets.
+- `tests/accounts.check.mjs` — migration, scoping, switching and archiving, all
+  asserting the same invariant: **no trade is ever lost**. Drives the real
+  functions sliced out of `app.js`, never a copy.
+- `tests/bootOrder.check.mjs` — the TDZ trap, mechanised. `node --check` cannot
+  catch a module-level binding below the top-level `init()` call; a browser can,
+  but only if somebody opens one. This asserts no *new* module-level binding
+  sits below `init()`, with the four pre-existing safe ones on an explicit list
+  that must stay accurate. The trap has shipped four times; it now fails a test
+  instead.
+
+`tests/systemFeatures.check.mjs` was extended rather than stubbed — it drives
+the real `getActivePropEvaluation` through the real `getCooldownState`, and
+asserts a prop limit outranks a simultaneously-breached personal budget.
+
+`node --check` clean on `app.js` and `src/lib/propRules.js`. All seven new
+module-level bindings sit at lines 768–788, above the `init()` call at 791.
+`tests/mobileFloors.check.mjs` green with the new CSS: 11px type floor held via
+`--fs-micro`, 44px touch floor on `.account-switch-select` and `.account-row-btn`.
+Both themes come free — every new rule uses tokens only, so the dark
+re-derivation applies without a second rule set. Reduced motion drops the meter
+transition. Static server returns the new markers on `index.html`, `app.js`,
+`src/lib/propRules.js` and `clay-v2.css`; cache-busters bumped to
+`?v=20260812-accounts`.
+
+**Not built, deliberately:** payout tracking (winning-day counts, payout caps,
+the 90/10 split). The research covers it in detail, but it is a separate
+feature from "am I about to bust this account", and the caps are the figures
+the research found most in conflict between the firm's own pages.

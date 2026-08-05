@@ -58,9 +58,33 @@ export function sanitizeJournalName(value) {
   return Array.from(name).slice(0, 24).join('');
 }
 
+// Settings the FRONT-END owns end to end: the server stores and returns them
+// verbatim and never reads them. They are listed rather than passed through
+// wholesale so the column cannot become a dumping ground, and each is copied
+// only when the client actually sent it — an absent key stays absent, which is
+// what keeps the legacy-row fixture byte-identical to the PHP handler's output.
+//
+// This list is not decoration. The whitelist below used to be the whole
+// function, which silently deleted every one of these on the first server
+// round-trip: a trader's pre-trade checklist, cooldown setting and (now) their
+// whole prop-firm account configuration were written to localStorage, synced
+// up, and came back stripped. Anything the client persists into settings has
+// to be named here or it does not survive login on a second device.
+const CLIENT_OWNED_SETTINGS = [
+  'preTradeRules',
+  'cooldownEnabled',
+  'cooldownLossStreak',
+  'accounts',
+  'activeAccountId',
+];
+
+// Ceiling on the client-owned block so a runaway client cannot grow the
+// settings JSONB without bound. Roughly 200 accounts' worth of prop config.
+const CLIENT_SETTINGS_MAX_BYTES = 128 * 1024;
+
 export function sanitizeSettings(settings) {
   const source = settings && typeof settings === 'object' ? settings : {};
-  return {
+  const result = {
     journalName: sanitizeJournalName(source.journalName ?? 'Your'),
     startingBalance: positiveNumber(source.startingBalance ?? 10000, 10000),
     balanceOverride: nonNegativeNumber(source.balanceOverride ?? 0, 0),
@@ -69,6 +93,24 @@ export function sanitizeSettings(settings) {
     riskPerTrade: nonNegativeNumber(source.riskPerTrade ?? 1, 1),
     equityGoal: positiveNumber(source.equityGoal ?? 15000, 15000),
   };
+
+  const carried = {};
+  for (const key of CLIENT_OWNED_SETTINGS) {
+    if (source[key] !== undefined) carried[key] = source[key];
+  }
+  // Oversized blocks are dropped whole rather than truncated: half a settings
+  // object is worse than none, because the client would treat it as complete.
+  if (Object.keys(carried).length > 0) {
+    let size = Infinity;
+    try {
+      size = JSON.stringify(carried).length;
+    } catch {
+      size = Infinity;
+    }
+    if (size <= CLIENT_SETTINGS_MAX_BYTES) Object.assign(result, carried);
+  }
+
+  return result;
 }
 
 // PHP `is_array($value) ? $value : []`. A JSON object decodes to a PHP array

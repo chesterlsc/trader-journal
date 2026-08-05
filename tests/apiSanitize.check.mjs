@@ -77,4 +77,44 @@ assert.strictEqual(bad.equityGoal, 15000);
 assert.ok(!('screenshotData' in stripTradeScreenshotsFromTrades(trades)[0]), 'screenshots leave the payload');
 assert.strictEqual(collectTradeScreenshots(trades).length, 1, 'only trades with a screenshot are stored');
 
+// --- Client-owned settings survive the round trip ---------------------------
+// The whitelist used to be the entire function, so anything the front-end
+// stored in settings was deleted on the first server sync. The trader's
+// checklist, their cooldown setting and their whole prop-firm account
+// configuration all live there, so they are carried verbatim now.
+{
+  const accounts = [
+    { id: 'a1', label: '50K Combine', prop: { enabled: true, drawdown: 2000, mode: 'trailing' } },
+  ];
+  const carried = sanitizeSettings({
+    startingBalance: 50000,
+    accounts,
+    activeAccountId: 'a1',
+    preTradeRules: [{ id: 'playbook', label: 'Setup is in my playbook' }],
+    cooldownEnabled: false,
+    cooldownLossStreak: 4,
+  });
+  assert.deepStrictEqual(carried.accounts, accounts, 'accounts survive the server round trip');
+  assert.strictEqual(carried.activeAccountId, 'a1');
+  assert.strictEqual(carried.cooldownEnabled, false, 'a false setting is carried, not treated as absent');
+  assert.strictEqual(carried.cooldownLossStreak, 4);
+  assert.strictEqual(carried.preTradeRules.length, 1);
+  assert.strictEqual(carried.startingBalance, 50000, 'the audited fields are still sanitised');
+}
+
+// An absent key stays absent — that is what keeps the legacy fixture above
+// byte-identical to what the PHP handler returned.
+assert.ok(!('accounts' in sanitizeSettings({})), 'nothing is invented for a client that never sent it');
+
+// Unknown keys are still dropped: the column is not a dumping ground.
+assert.ok(!('somethingElse' in sanitizeSettings({ somethingElse: 1 })), 'unlisted keys do not pass through');
+
+// An oversized block is dropped whole rather than truncated — half a settings
+// object would be read by the client as a complete one.
+{
+  const huge = sanitizeSettings({ accounts: [{ id: 'a', note: 'x'.repeat(200 * 1024) }] });
+  assert.ok(!('accounts' in huge), 'a client-owned block over the size cap is refused');
+  assert.strictEqual(huge.startingBalance, 10000, 'and the audited fields still come back');
+}
+
 console.log('apiSanitize.check.mjs: all assertions passed');

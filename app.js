@@ -28,6 +28,16 @@ import { createTradeDisplayHelpers, liveCellAttrs } from "./src/modules/tradeDis
 import { createRecentTradesView } from "./src/modules/recentTradesView.js";
 import { createChartsModule, traceSmoothPath } from "./src/modules/charts.js";
 import { parseQuickTrade, resolveSymbol, inferMarket } from "./src/lib/tradeParse.js";
+import {
+  PROP_PRESETS,
+  PROP_PRESET_AS_OF,
+  defaultPropRules,
+  evaluateProp,
+  findPropPreset,
+  mllPressure,
+  normalizePropRules,
+  propSteps
+} from "./src/lib/propRules.js";
 
 const STORAGE_KEYS = {
   trades: "axiom_journal_trades_v1",
@@ -64,7 +74,12 @@ const DEFAULT_SETTINGS = {
   // consecutive-loss trigger; the loss-budget triggers still fire whenever a
   // budget is configured and breached, because that is the budget's whole job.
   cooldownEnabled: true,
-  cooldownLossStreak: 3
+  cooldownLossStreak: 3,
+  // Multi-account. Seeded empty and filled by ensureAccounts() on the first
+  // load, because the migration needs the trader's real starting balance and
+  // that is not known at module-evaluation time.
+  accounts: [],
+  activeAccountId: ""
 };
 
 /* ---- DEMO (guest) MODE ----------------------------------------------------
@@ -135,7 +150,14 @@ const PRODUCT_BRAND_MARKUP =
   '<span class="brand-word-accent">Trader</span><span class="brand-word-primary">Journal</span>';
 
 const state = {
+  // state.trades is the ACTIVE account's trades and nothing else. Every reader
+  // in this file — analytics, calendar, review, charts, exports — therefore
+  // scopes to the active account without knowing accounts exist. The other
+  // accounts' rows sit in state.otherTrades untouched until persistState()
+  // writes the two back out as one journal. Three functions know about the
+  // split (loadState, persistState, adoptAllTrades); nothing else needs to.
   trades: [],
+  otherTrades: [],
   settings: { ...DEFAULT_SETTINGS },
   reflections: [],
   replayNotes: {},
@@ -314,6 +336,65 @@ const ui = {
   cooldownStepAwayBtn: document.getElementById("cooldownStepAwayBtn"),
   cooldownSettingsBtn: document.getElementById("cooldownSettingsBtn"),
   dashLogCooldownFlag: document.getElementById("dashLogCooldownFlag"),
+  // Multi-account: the switcher exists twice (desktop top bar, mobile sidebar
+  // nav) because those are different DOM at different breakpoints.
+  accountSwitches: Array.from(document.querySelectorAll("[data-account-switch]")),
+  accountsPanel: document.getElementById("accountsPanel"),
+  accountList: document.getElementById("accountList"),
+  accountAddBtn: document.getElementById("accountAddBtn"),
+  accountDialog: document.getElementById("accountDialog"),
+  accountDialogTitle: document.getElementById("accountDialogTitle"),
+  accountForm: document.getElementById("accountForm"),
+  accountFormMessage: document.getElementById("accountFormMessage"),
+  accountCancelBtn: document.getElementById("accountCancelBtn"),
+  propFieldset: document.getElementById("propFieldset"),
+  propTrailRow: document.getElementById("propTrailRow"),
+  propBasisRow: document.getElementById("propBasisRow"),
+  propBasisNote: document.getElementById("propBasisNote"),
+  propZeroStartNote: document.getElementById("propZeroStartNote"),
+  accountFields: {
+    label: document.getElementById("accountLabel"),
+    firm: document.getElementById("accountFirm"),
+    type: document.getElementById("accountType"),
+    startingBalance: document.getElementById("accountStartingBalance"),
+    currency: document.getElementById("accountCurrency"),
+    preset: document.getElementById("propPreset"),
+    propEnabled: document.getElementById("propEnabled"),
+    profitTarget: document.getElementById("propProfitTarget"),
+    drawdown: document.getElementById("propDrawdown"),
+    mode: document.getElementById("propMode"),
+    basis: document.getElementById("propBasis"),
+    trailStops: document.getElementById("propTrailStops"),
+    trailStopAt: document.getElementById("propTrailStopAt"),
+    dailyLossLimit: document.getElementById("propDailyLossLimit"),
+    consistencyPct: document.getElementById("propConsistencyPct"),
+    maxContracts: document.getElementById("propMaxContracts"),
+    flattenBy: document.getElementById("propFlattenBy"),
+    confirmed: document.getElementById("propConfirmed")
+  },
+  // The tracker card itself.
+  propTracker: document.getElementById("propTracker"),
+  propAccountName: document.getElementById("propAccountName"),
+  propStatus: document.getElementById("propStatus"),
+  propEquity: document.getElementById("propEquity"),
+  propEquityMeta: document.getElementById("propEquityMeta"),
+  propMllBlock: document.getElementById("propMllBlock"),
+  propMll: document.getElementById("propMll"),
+  propRoom: document.getElementById("propRoom"),
+  propRoomBar: document.getElementById("propRoomBar"),
+  propMllMeta: document.getElementById("propMllMeta"),
+  propMllMoves: document.getElementById("propMllMoves"),
+  propTargetBlock: document.getElementById("propTargetBlock"),
+  propTargetValue: document.getElementById("propTargetValue"),
+  propTargetBar: document.getElementById("propTargetBar"),
+  propTargetMeta: document.getElementById("propTargetMeta"),
+  propDailyBlock: document.getElementById("propDailyBlock"),
+  propDailyValue: document.getElementById("propDailyValue"),
+  propDailyBar: document.getElementById("propDailyBar"),
+  propDailyMeta: document.getElementById("propDailyMeta"),
+  propWarning: document.getElementById("propWarning"),
+  propLimits: document.getElementById("propLimits"),
+  propHonesty: document.getElementById("propHonesty"),
   disciplineScore: document.getElementById("disciplineScore"),
   dailyTradingScore: document.getElementById("dailyTradingScore"),
   goalProgress: document.getElementById("goalProgress"),
@@ -678,6 +759,34 @@ const SWIPE_REVEAL_PX = 56;   // travel that counts as a reveal
 const SWIPE_AXIS_PX = 10;     // travel before the axis is decided
 const swipeTrack = { row: null, x0: 0, y0: 0, axis: "" };
 let swipedRow = null;
+
+/* ── multi-account + prop-firm tracker ─────────────────────────────────────
+   Above init() like every other module-level binding in this block. A const
+   declared below the init() call is in the temporal dead zone during the first
+   render and throws, which aborts boot and silently kills every listener bound
+   after it. That has shipped four times; it is not shipping a fifth. */
+const ACCOUNT_TYPES = [
+  { id: "personal", label: "Personal" },
+  { id: "evaluation", label: "Evaluation" },
+  { id: "funded", label: "Funded" }
+];
+const ACCOUNT_TYPE_IDS = new Set(ACCOUNT_TYPES.map((type) => type.id));
+const MAX_ACCOUNTS = 24;
+// The account every pre-multi-account trade migrates into. Renaming this is
+// cosmetic — the migration matches on "no accountId", never on this string.
+const DEFAULT_ACCOUNT_LABEL = "Main";
+
+// The account being edited in #accountDialog, or "" for a brand-new one.
+let accountDraftId = "";
+
+/* The single line that has to be true wherever a limit is shown. The app holds
+   the trader's own numbers checked against the trader's own typed limits — it
+   is not a source of truth on any firm's current rules, and it never sees an
+   intraday tick. */
+const PROP_DISCLAIMER =
+  "These limits are the ones you typed in, not a firm's rule book. Confirm every figure against your own account before you trade it.";
+const PROP_VISIBILITY_NOTE =
+  "Computed from closed trades only. This journal never sees intraday equity or open-position P&L, so a limit that was touched and recovered from inside a session leaves no trace here.";
 
 init();
 
@@ -1143,6 +1252,46 @@ function bindEvents() {
     }
   });
 
+  // --- multi-account + prop tracker ---------------------------------------
+  ui.accountSwitches.forEach((select) => {
+    select.addEventListener("change", () => switchAccount(select.value));
+  });
+  ui.accountList?.addEventListener("click", handleAccountsPanelClick);
+  ui.accountAddBtn?.addEventListener("click", () => openAccountDialog(""));
+  ui.accountForm?.addEventListener("submit", handleAccountSubmit);
+  ui.accountCancelBtn?.addEventListener("click", () => ui.accountDialog?.close());
+  ui.accountDialog?.addEventListener("close", () => {
+    accountDraftId = "";
+  });
+  ui.accountFields.preset?.addEventListener("change", (event) => applyPropPreset(event.target.value));
+  // Enabling prop rules, or switching between a trailing and a static limit,
+  // changes which fields are even meaningful — so the form follows immediately
+  // rather than leaving contradictory controls live.
+  [
+    ui.accountFields.propEnabled,
+    ui.accountFields.mode,
+    ui.accountFields.basis,
+    ui.accountFields.startingBalance
+  ].forEach((field) => {
+    field?.addEventListener("change", syncAccountDialogState);
+  });
+  ui.accountFields.startingBalance?.addEventListener("input", syncAccountDialogState);
+  // Any hand-edit of a prefilled figure means it is no longer the preset's
+  // number, and the tracker must stop calling it one.
+  [
+    ui.accountFields.profitTarget,
+    ui.accountFields.drawdown,
+    ui.accountFields.dailyLossLimit,
+    ui.accountFields.trailStopAt,
+    ui.accountFields.maxContracts
+  ].forEach((field) => {
+    field?.addEventListener("input", () => {
+      if (ui.accountFields.preset && ui.accountFields.preset.value !== "custom") {
+        ui.accountFields.preset.value = "custom";
+      }
+    });
+  });
+
   // 1f #03 cooldown dialog.
   ui.cooldownForm?.addEventListener("submit", handleCooldownSubmit);
   ui.cooldownStepAwayBtn?.addEventListener("click", handleCooldownStepAway);
@@ -1553,7 +1702,13 @@ function applyGuestCarryOver(carry) {
     return 0;
   }
   const existingIds = new Set(state.trades.map((trade) => trade.id));
-  const added = carry.trades.filter((trade) => !existingIds.has(trade.id));
+  // The demo journal has its own account list, so a carried row's accountId
+  // points at an account that does not exist in the real journal. Re-stamping
+  // it onto the active account is what puts the carried work where the trader
+  // is actually looking.
+  const added = carry.trades
+    .filter((trade) => !existingIds.has(trade.id))
+    .map((trade) => ({ ...trade, accountId: state.settings?.activeAccountId || "" }));
   state.trades = state.trades.concat(added);
   const existingReflectionIds = new Set(state.reflections.map((entry) => entry.id));
   state.reflections = state.reflections.concat(
@@ -1596,9 +1751,13 @@ function nudgeGuest(target, message) {
 function seedDemoJournal() {
   const demo = buildDemoJournal();
   state.settings = normalizeSettings(DEFAULT_SETTINGS);
-  state.trades = normalizeTrades(demo.trades);
+  state.otherTrades = [];
   state.reflections = normalizeReflections(demo.reflections);
   state.replayNotes = {};
+  // The demo gets the same one-account migration a real journal gets, so the
+  // switcher and the accounts panel are honest in demo mode too.
+  applyActiveAccount();
+  adoptAllTrades(normalizeTrades(demo.trades));
   persistState({ skipServerSync: true });
 }
 
@@ -2152,6 +2311,10 @@ async function submitAuth(action, password, successMessage, identifier = "") {
 function resetJournalState() {
   state.settings = normalizeSettings(DEFAULT_SETTINGS);
   state.trades = [];
+  // Both halves, or the next persistState() writes another account's journal
+  // back over an intentionally emptied one.
+  state.otherTrades = [];
+  applyActiveAccount();
   state.recentTrades = [];
   state.publicRecentTrades = [];
   state.reflections = [];
@@ -2495,7 +2658,12 @@ function handleRiskSubmit(event) {
     // The checklist is edited in its own panel and is untouched here.
     preTradeRules: state.settings.preTradeRules,
     cooldownEnabled: Boolean(ui.riskInputs.cooldownEnabled?.checked),
-    cooldownLossStreak: parseNumber(ui.riskInputs.cooldownLossStreak?.value)
+    cooldownLossStreak: parseNumber(ui.riskInputs.cooldownLossStreak?.value),
+    // Accounts are edited in their own dialog. This form rebuilds the settings
+    // object from scratch, so anything it does not carry is deleted — which is
+    // exactly how the prop configuration would silently vanish on a Save.
+    accounts: state.settings.accounts,
+    activeAccountId: state.settings.activeAccountId
   };
 
   if (
@@ -2511,6 +2679,12 @@ function handleRiskSubmit(event) {
   }
 
   state.settings = normalizeSettings(nextSettings);
+  // Starting balance has one owner — the account. Editing it here writes it
+  // back rather than leaving the mirror and the account disagreeing.
+  const activeAccount = getActiveAccount();
+  if (activeAccount && nextSettings.startingBalance > 0) {
+    activeAccount.startingBalance = nextSettings.startingBalance;
+  }
   persistState();
   renderAll();
   setMessage(ui.riskFormMessage, "Risk settings updated.", "success");
@@ -2733,6 +2907,12 @@ function buildTradeRecord(tradeInput, options = {}) {
     createdAt: existingId ? String(options.createdAt || now) : now,
     updatedAt: now,
     ...tradeInput,
+    // Every trade belongs to exactly one account, stamped in the one function
+    // every creation path already goes through (form, sheet, quick capture,
+    // bulk import, close-at-market). An edit keeps whatever account it was
+    // filed under; a new row lands in whichever account is on screen. Placed
+    // after the spread so a caller cannot half-set it.
+    accountId: String(existingTrade?.accountId || tradeInput.accountId || state.settings.activeAccountId || ""),
     // 1b: the pre-trade rules the trader ticked in the sheet. The full form
     // does not ask for them, so an edit through it must CARRY them, not wipe
     // them — an empty array from readTradeForm is absence, not a de-tick.
@@ -4938,7 +5118,11 @@ function exportTradesCsv() {
     return;
   }
 
+  // Scoped to the active account, like every other view. The account name is
+  // the first column so a file cannot be mistaken for the whole journal.
+  const accountLabel = getActiveAccount()?.label || "";
   const headers = [
+    "account",
     "createdAt",
     "closedAt",
     "date",
@@ -4973,7 +5157,9 @@ function exportTradesCsv() {
   ];
 
   const rows = state.trades.map((trade) => {
-    return headers.map((field) => escapeCsvValue(trade[field] ?? "")).join(",");
+    return headers
+      .map((field) => escapeCsvValue(field === "account" ? accountLabel : trade[field] ?? ""))
+      .join(",");
   });
 
   const csv = [headers.join(","), ...rows].join("\n");
@@ -5004,7 +5190,9 @@ function downloadBackupJson(trades, filename) {
 }
 
 function exportBackupJson() {
-  downloadBackupJson(state.trades, `trading-journal-backup-${Date.now()}.json`);
+  // A backup is the one thing that must NOT be account-scoped: it is the
+  // trader's whole journal, and settings carries the account list with it.
+  downloadBackupJson(allTrades(), `trading-journal-backup-${Date.now()}.json`);
   if (state.auth.guestMode) {
     nudgeGuest(ui.journalMessage, "JSON backup exported — it includes the sample rows.");
     return;
@@ -5029,9 +5217,13 @@ function importBackupJson(event) {
       }
 
       state.settings = normalizeSettings(parsed.settings);
-      state.trades = normalizeTrades(parsed.trades);
       state.reflections = normalizeReflections(parsed.reflections);
       state.replayNotes = normalizeReplayNotes(parsed.replayNotes);
+      // A backup taken before multi-account has no accountId on any row, and
+      // one taken after carries its own account list in settings — either way
+      // the split is re-derived rather than assumed.
+      applyActiveAccount();
+      adoptAllTrades(normalizeTrades(parsed.trades));
 
       persistState();
       hydrateRiskForm();
@@ -5068,7 +5260,9 @@ async function saveToPhpStorage(options = {}) {
 
   const payload = {
     settings: state.settings,
-    trades: state.trades,
+    // The server stores the whole journal, not the account currently on
+    // screen. Sending state.trades alone would delete the other accounts.
+    trades: allTrades(),
     reflections: state.reflections,
     replayNotes: state.replayNotes
   };
@@ -5126,7 +5320,7 @@ async function loadFromPhpStorage(options = {}) {
   try {
     const localSnapshot = {
       settings: { ...state.settings },
-      trades: [...state.trades],
+      trades: allTrades(),
       reflections: [...state.reflections],
       replayNotes: { ...state.replayNotes }
     };
@@ -5154,9 +5348,9 @@ async function loadFromPhpStorage(options = {}) {
 
     if (shouldKeepLocal) {
       state.settings = localSnapshot.settings;
-      state.trades = localSnapshot.trades;
       state.reflections = localSnapshot.reflections;
       state.replayNotes = localSnapshot.replayNotes;
+      adoptAllTrades(localSnapshot.trades);
       persistState();
       if (!silent) {
         setMessage(
@@ -5175,9 +5369,12 @@ async function loadFromPhpStorage(options = {}) {
     }
 
     state.settings = serverSettings;
-    state.trades = serverTrades;
     state.reflections = serverReflections;
     state.replayNotes = serverReplayNotes;
+    // Settings came from the server, so the account list did too — re-split
+    // the server journal against THAT list, not the one that was on screen.
+    applyActiveAccount();
+    adoptAllTrades(serverTrades);
 
     persistState({ skipServerSync: true });
     hydrateRiskForm();
@@ -5578,11 +5775,15 @@ function summarizeUserAgent(input) {
 
 function renderAll() {
   updateBranding();
+  // Scoped by construction: state.trades is the active account's rows only.
   state.analytics = calculateAnalytics(state.trades, state.settings, state.reflections);
+  renderAccountSwitcher();
+  renderAccountsPanel();
   renderHeroRecentTrades();
   renderProgressTradeSummary();
   renderDashboardMetrics(state.analytics);
   renderRiskStrip(state.analytics);
+  renderPropTracker();
   renderGreeting();
   renderPlaybook(state.analytics);
   renderUnjournalled();
@@ -7320,6 +7521,49 @@ function getCooldownState() {
   const dailyLimit = state.settings.dailyMaxLoss;
   const weeklyLimit = state.settings.weeklyMaxLoss;
 
+  /* Prop limits come FIRST, ahead of the personal budgets, because they are
+     the ones that end the account rather than the day. Same speed bump, same
+     one question, same override stamped on the trade — a prop limit does not
+     get its own parallel interlock, it reuses this one. */
+  const prop = getActivePropEvaluation();
+  if (prop) {
+    const account = getActiveAccount();
+    const pressure = mllPressure(prop, typicalLossSize());
+    if (prop.status === "breached") {
+      return {
+        reason: "prop-mll",
+        badge: "Max loss limit breached",
+        headline: `${account.label} is past its max loss limit on closed P&L.`,
+        detail: `Closed trades put the account at ${formatCurrency(prop.breachBalance)} on ${
+          prop.breachedOn
+        }, at or below the ${formatCurrency(prop.mll)} limit. Confirm with the firm before you trade it.`,
+        question: "What are you trading here, on an account you may no longer have?"
+      };
+    }
+    if (prop.dailyBreached) {
+      return {
+        reason: "prop-daily",
+        badge: "Daily limit spent",
+        headline: `Today has spent the ${formatCurrency(prop.dailyLimit)} daily limit on ${account.label}.`,
+        detail: `Today is ${formatSignedCurrency(prop.todayPnl)}, against the ${
+          prop.dailyBinding === "firm" ? "firm limit" : "budget"
+        } you entered.`,
+        question: "What is the setup here that the last one did not have?"
+      };
+    }
+    if (pressure.level === "warn") {
+      return {
+        reason: "prop-room",
+        badge: `${formatCurrency(prop.room)} to the limit`,
+        headline: `${formatCurrency(prop.room)} of room left on ${account.label}.`,
+        detail: `Your typical losing trade on this account is ${formatCurrency(
+          typicalLossSize()
+        )}. ${pressure.lossesLeft === 0 ? "One more of those breaches the limit." : "One more of those, then the next one breaches it."}`,
+        question: "What size are you taking, and what does it cost if it loses?"
+      };
+    }
+  }
+
   if (weeklyLimit > 0 && (analytics.weekPnl || 0) < -weeklyLimit) {
     return {
       reason: "weekly",
@@ -7445,6 +7689,747 @@ function consumePendingCooldown() {
   };
   pendingCooldown = null;
   return carry;
+}
+
+/* ══ MULTI-ACCOUNT ════════════════════════════════════════════════════════
+   A trader running a 25K evaluation and a 50K funded account has two separate
+   equity curves, two separate drawdowns and two separate sets of rules. Mixing
+   them into one number is not a rounding error, it is a wrong answer — so the
+   whole app is scoped to ONE account at a time and the switcher says which.
+
+   The scoping trick is deliberately dumb: state.trades holds the active
+   account's rows, state.otherTrades holds everything else, and persistState()
+   writes the concatenation. Fifty existing readers of state.trades became
+   account-scoped without being touched. */
+
+function getAccounts() {
+  return Array.isArray(state.settings.accounts) ? state.settings.accounts : [];
+}
+
+function getVisibleAccounts() {
+  return getAccounts().filter((account) => !account.archived);
+}
+
+function getActiveAccount() {
+  const accounts = getAccounts();
+  if (!accounts.length) {
+    return null;
+  }
+  const exact = accounts.find((account) => account.id === state.settings.activeAccountId);
+  // An archived account is not a place to be standing, so an active id that
+  // points at one falls through to the first live account.
+  if (exact && !exact.archived) {
+    return exact;
+  }
+  return accounts.find((account) => !account.archived) || exact || accounts[0];
+}
+
+function getAccountById(id) {
+  return getAccounts().find((account) => account.id === String(id)) || null;
+}
+
+function accountTypeLabel(type) {
+  return ACCOUNT_TYPES.find((item) => item.id === type)?.label || "Personal";
+}
+
+function makeAccount(input = {}) {
+  const startingBalance = ensureNonNegative(input.startingBalance, 0);
+  return {
+    id: String(input.id || "").trim() || createId(),
+    label: String(input.label || "").trim().slice(0, 40) || "Account",
+    firm: String(input.firm || "").trim().slice(0, 40),
+    type: ACCOUNT_TYPE_IDS.has(input.type) ? input.type : "personal",
+    startingBalance,
+    currency: (String(input.currency || "USD").trim().toUpperCase().slice(0, 4)) || "USD",
+    archived: Boolean(input.archived),
+    prop: normalizePropRules(input.prop, startingBalance)
+  };
+}
+
+function normalizeAccounts(input) {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+  const seen = new Set();
+  return input
+    .filter((item) => item && typeof item === "object")
+    .map((item) => {
+      const account = makeAccount(item);
+      // Two accounts sharing an id would make every trade ambiguous, so a
+      // collision mints a fresh id rather than dropping the account.
+      while (seen.has(account.id)) {
+        account.id = createId();
+      }
+      seen.add(account.id);
+      return account;
+    })
+    .slice(0, MAX_ACCOUNTS);
+}
+
+/* Every journal written before this feature has trades with no accountId and a
+   settings object with no accounts. Both are filled in here, once, from the
+   data that is already there — no trade is dropped, renamed or renumbered. */
+function ensureAccounts() {
+  if (!getAccounts().length) {
+    state.settings.accounts = [
+      makeAccount({
+        label: DEFAULT_ACCOUNT_LABEL,
+        startingBalance: state.settings.startingBalance
+      })
+    ];
+  }
+  const active = getActiveAccount();
+  state.settings.activeAccountId = active ? active.id : "";
+}
+
+function allTrades() {
+  return state.trades.concat(state.otherTrades);
+}
+
+/* Takes a WHOLE journal (all accounts) and splits it around the active
+   account. Callers: loadState, the server load, the backup import, the demo
+   seed and every account switch. */
+function adoptAllTrades(list) {
+  ensureAccounts();
+  const activeId = state.settings.activeAccountId;
+  const known = new Set(getAccounts().map((account) => account.id));
+  const stamped = (Array.isArray(list) ? list : []).map((trade) => {
+    const owner = String(trade.accountId || "");
+    // No accountId (pre-migration), or an accountId whose account is gone:
+    // the row belongs to the account the trader is looking at rather than to
+    // nothing at all. Losing it would be the one unforgivable bug here.
+    return known.has(owner) ? trade : { ...trade, accountId: activeId };
+  });
+  state.trades = stamped.filter((trade) => trade.accountId === activeId);
+  state.otherTrades = stamped.filter((trade) => trade.accountId !== activeId);
+}
+
+/* The account owns its starting balance; state.settings mirrors it so that
+   calculateAnalytics and every balance readout keep working without learning
+   what an account is. A $0 start (Express-Funded style) is left out of the
+   mirror on purpose — settings.startingBalance is also the base for percentage
+   and position-size maths, and zero makes those meaningless. The prop tracker
+   reads the account's own $0 directly, which is the only place it matters. */
+function applyActiveAccount() {
+  ensureAccounts();
+  const account = getActiveAccount();
+  if (account && account.startingBalance > 0) {
+    state.settings.startingBalance = account.startingBalance;
+  }
+  adoptAllTrades(allTrades());
+}
+
+function switchAccount(id) {
+  const account = getAccountById(id);
+  if (!account || account.id === state.settings.activeAccountId) {
+    renderAccountSwitcher();
+    return;
+  }
+  // Fold the two lists back together BEFORE moving the pointer, or the old
+  // active account's trades are the ones that get orphaned.
+  const everything = allTrades();
+  state.settings.activeAccountId = account.id;
+  if (account.startingBalance > 0) {
+    state.settings.startingBalance = account.startingBalance;
+  }
+  adoptAllTrades(everything);
+  // A filter set for one account is meaningless on another, and a half-open
+  // sheet belongs to a trade that is no longer on screen.
+  clearFilters();
+  hydrateRiskForm();
+  persistState();
+  renderAll();
+  showCaptureToast(`Switched to ${account.label}. Everything on screen is this account only.`);
+}
+
+function saveAccount(draft) {
+  const accounts = getAccounts();
+  const index = accounts.findIndex((account) => account.id === draft.id);
+  const everything = allTrades();
+  if (index >= 0) {
+    accounts[index] = draft;
+  } else {
+    accounts.push(draft);
+    state.settings.activeAccountId = draft.id;
+  }
+  if (draft.id === state.settings.activeAccountId && draft.startingBalance > 0) {
+    state.settings.startingBalance = draft.startingBalance;
+  }
+  adoptAllTrades(everything);
+  hydrateRiskForm();
+  persistState();
+  renderAll();
+}
+
+/* Archiving, never deleting. An archived account keeps every trade it owns —
+   it just stops appearing in the switcher. There is no "delete account" here
+   on purpose: the trades under it have no separate home, and this app already
+   has one irreversible action too many. */
+function setAccountArchived(id, archived) {
+  const account = getAccountById(id);
+  if (!account) {
+    return;
+  }
+  if (archived && getVisibleAccounts().length <= 1) {
+    showCaptureToast("That is your only live account — add another before archiving this one.", "warn");
+    return;
+  }
+  const everything = allTrades();
+  account.archived = Boolean(archived);
+  if (account.archived && account.id === state.settings.activeAccountId) {
+    state.settings.activeAccountId = getVisibleAccounts()[0]?.id || "";
+  }
+  applyActiveAccount();
+  adoptAllTrades(everything);
+  hydrateRiskForm();
+  persistState();
+  renderAll();
+  showCaptureToast(
+    archived
+      ? `${account.label} archived. Its ${countAccountTrades(account.id)} trades are still stored.`
+      : `${account.label} is live again.`
+  );
+}
+
+function countAccountTrades(id) {
+  return allTrades().filter((trade) => trade.accountId === id).length;
+}
+
+/* ══ THE PROP-FIRM TRACKER ════════════════════════════════════════════════
+   Everything below reads evaluateProp(), which reads the trader's own closed
+   trades and the trader's own typed limits. Nothing here asserts what a firm's
+   rules are, and nothing here says "you passed" — see renderPropTracker. */
+
+function getActivePropEvaluation() {
+  const account = getActiveAccount();
+  if (!account || !account.prop?.enabled) {
+    return null;
+  }
+  return evaluateProp({
+    rules: account.prop,
+    startBalance: account.startingBalance,
+    steps: propSteps(state.trades, account.prop.basis),
+    todayKey: toDateInputValue(new Date()),
+    personalDailyLimit: state.settings.dailyMaxLoss
+  });
+}
+
+// The size of an ordinary losing trade on THIS account, from real closed
+// losses. Median rather than mean: one catastrophic loss should not make the
+// warning complacent about the next normal one.
+function typicalLossSize() {
+  const losses = getClosedTrades()
+    .map((trade) => Number(trade.netPnl))
+    .filter((pnl) => Number.isFinite(pnl) && pnl < 0)
+    .map((pnl) => Math.abs(pnl))
+    .sort((a, b) => a - b);
+  if (!losses.length) {
+    return 0;
+  }
+  const middle = Math.floor(losses.length / 2);
+  return losses.length % 2 ? losses[middle] : (losses[middle - 1] + losses[middle]) / 2;
+}
+
+function propStatusCopy(evaluation) {
+  if (evaluation.status === "breached") {
+    return { word: "BREACHED", tone: "breach" };
+  }
+  if (evaluation.status === "target-met") {
+    // Deliberately NOT "PASSED". The research could not confirm the exact pass
+    // condition any firm applies (minimum days, how "maintain the target" is
+    // checked, an undisclosed consistency buffer), and this app cannot see the
+    // account anyway. It reports the one thing it actually knows.
+    return { word: "TARGET MET", tone: "good" };
+  }
+  if (evaluation.status === "idle") {
+    return { word: "NO TRADES YET", tone: "idle" };
+  }
+  return { word: "IN PROGRESS", tone: "live" };
+}
+
+function renderPropTracker() {
+  if (!ui.propTracker) {
+    return;
+  }
+
+  const account = getActiveAccount();
+  const evaluation = canAccessApp() ? getActivePropEvaluation() : null;
+  ui.propTracker.hidden = !evaluation;
+  if (!evaluation || !account) {
+    return;
+  }
+
+  const money = (value) => formatCurrency(value);
+  const status = propStatusCopy(evaluation);
+  const pressure = mllPressure(evaluation, typicalLossSize());
+
+  if (ui.propAccountName) {
+    ui.propAccountName.textContent = account.firm ? `${account.label} · ${account.firm}` : account.label;
+  }
+  if (ui.propStatus) {
+    ui.propStatus.textContent = status.word;
+    ui.propStatus.className = `prop-status is-${status.tone}`;
+  }
+
+  // 1. Equity. The account's own money, from its own closed trades.
+  setText(ui.propEquity, money(evaluation.balance));
+  setText(
+    ui.propEquityMeta,
+    `${formatSignedCurrency(evaluation.netProfit)} since ${money(evaluation.startBalance)} start · ${evaluation.daysTraded} day${
+      evaluation.daysTraded === 1 ? "" : "s"
+    } traded`
+  );
+
+  // 2. The Max Loss Limit. The number that busts people, so it is the biggest
+  //    thing after equity and it is stated in dollars, not as a percentage.
+  const hasMll = evaluation.mll !== null;
+  if (ui.propMllBlock) {
+    ui.propMllBlock.hidden = !hasMll;
+  }
+  if (hasMll) {
+    setText(ui.propMll, money(evaluation.mll));
+    setText(ui.propRoom, formatSignedCurrency(evaluation.room));
+    if (ui.propRoom) {
+      // Colour is never the only signal — the dollar figure is right there —
+      // but a green number above a red bar would be a contradiction.
+      ui.propRoom.classList.toggle("is-warn", pressure.level === "warn");
+      ui.propRoom.classList.toggle("is-breach", evaluation.room <= 0);
+    }
+    if (ui.propRoomBar) {
+      // The bar reads room remaining against the full drawdown allowance —
+      // never the sole signal, the dollar figures above carry it too.
+      const span = evaluation.rules.drawdown > 0 ? evaluation.rules.drawdown : 1;
+      const left = clamp(evaluation.room / span, 0, 1);
+      ui.propRoomBar.style.width = `${Math.round(left * 100)}%`;
+      ui.propRoomBar.parentElement?.classList.toggle("is-warn", left <= 0.4 && left > 0);
+      ui.propRoomBar.parentElement?.classList.toggle("is-breach", evaluation.room <= 0);
+    }
+    setText(
+      ui.propMllMeta,
+      evaluation.rules.mode === "static"
+        ? `Static floor — ${money(evaluation.startBalance)} start less a ${money(
+            evaluation.rules.drawdown
+          )} limit. It has never moved and never will.`
+        : evaluation.mllLocked
+          ? `Trailing, and now locked: it reached its ${money(evaluation.rules.trailStopAt)} ceiling and stops there.`
+          : `Trails your best ${
+              evaluation.rules.basis === "trade" ? "closed-trade" : "end-of-day"
+            } balance of ${money(evaluation.peak)}, less ${money(evaluation.rules.drawdown)}. It only ever moves up.`
+    );
+    // How the floor moved as equity made new highs — the thing that surprises
+    // people, shown as the moves that actually happened.
+    const moves = evaluation.mllMoves;
+    setText(
+      ui.propMllMoves,
+      moves.length
+        ? `Moved up ${moves.length} time${moves.length === 1 ? "" : "s"} — last on ${
+            moves[moves.length - 1].date
+          }, from ${money(moves[moves.length - 1].from)} to ${money(moves[moves.length - 1].to)}.`
+        : "Has not moved yet — it sits where it started."
+    );
+  }
+
+  // 3. Profit target.
+  const hasTarget = evaluation.baseTarget > 0;
+  if (ui.propTargetBlock) {
+    ui.propTargetBlock.hidden = !hasTarget;
+  }
+  if (hasTarget) {
+    setText(ui.propTargetValue, `${money(Math.max(evaluation.netProfit, 0))} / ${money(evaluation.effectiveTarget)}`);
+    if (ui.propTargetBar) {
+      ui.propTargetBar.style.width = `${Math.round((evaluation.targetProgress || 0) * 100)}%`;
+    }
+    // consistencyRatio is null while the account is net flat or down — a best
+    // day divided by a non-positive total profit is not a percentage, and
+    // printing `null * 100` as "0%" would be a fabricated number.
+    const ratioText =
+      evaluation.consistencyRatio === null
+        ? "the account is not net profitable yet, so there is no ratio to quote"
+        : `${(evaluation.consistencyRatio * 100).toFixed(0)}% of total profit`;
+    setText(
+      ui.propTargetMeta,
+      evaluation.effectiveTarget > evaluation.baseTarget
+        ? `Raised from ${money(evaluation.baseTarget)}: your best day, ${money(
+            evaluation.bestDay
+          )}, is ${ratioText} against the ${evaluation.rules.consistencyPct}% consistency figure you entered.`
+        : `${Math.round((evaluation.targetProgress || 0) * 100)}% of the ${money(evaluation.baseTarget)} target you entered.`
+    );
+  }
+
+  // 4. Daily loss, against whichever budget is tighter.
+  if (ui.propDailyBlock) {
+    ui.propDailyBlock.hidden = evaluation.dailyLimit <= 0;
+  }
+  if (evaluation.dailyLimit > 0) {
+    setText(ui.propDailyValue, `${money(evaluation.dailyUsed)} / ${money(evaluation.dailyLimit)}`);
+    if (ui.propDailyBar) {
+      const used = clamp(evaluation.dailyUsed / evaluation.dailyLimit, 0, 1);
+      ui.propDailyBar.style.width = `${Math.round(used * 100)}%`;
+      ui.propDailyBar.parentElement?.classList.toggle("is-warn", used >= 0.6 && used < 1);
+      ui.propDailyBar.parentElement?.classList.toggle("is-breach", evaluation.dailyBreached);
+    }
+    setText(
+      ui.propDailyMeta,
+      evaluation.dailyBinding === "firm"
+        ? `The firm limit you entered is the tighter of the two, so it is the one shown. Your own daily budget is ${
+            state.settings.dailyMaxLoss > 0 ? money(state.settings.dailyMaxLoss) : "not set"
+          }.`
+        : `Your own daily budget is tighter than the ${money(
+            evaluation.rules.dailyLossLimit
+          )} firm limit you entered, so it is the one shown.`
+    );
+  }
+
+  // 5. The warning that has to arrive BEFORE the breach.
+  if (ui.propWarning) {
+    const warning = buildPropWarning(evaluation, pressure);
+    ui.propWarning.textContent = warning.text;
+    ui.propWarning.className = `prop-warning is-${warning.tone}`;
+  }
+
+  if (ui.propLimits) {
+    const bits = [];
+    if (evaluation.rules.maxContracts > 0) {
+      bits.push(`Max ${evaluation.rules.maxContracts} contract${evaluation.rules.maxContracts === 1 ? "" : "s"}`);
+    }
+    if (evaluation.rules.flattenBy) {
+      bits.push(`Flat by ${evaluation.rules.flattenBy}`);
+    }
+    ui.propLimits.textContent = bits.join(" · ");
+    ui.propLimits.hidden = bits.length === 0;
+  }
+
+  if (ui.propHonesty) {
+    const notes = [PROP_DISCLAIMER, PROP_VISIBILITY_NOTE];
+    if (!evaluation.rules.confirmed) {
+      notes.unshift("These figures are still the prefilled defaults — open the account and confirm them against your statement.");
+    }
+    notes.push(
+      "Days are bucketed by the date on each trade. If your firm's trading day starts the evening before, an evening fill will sit on the wrong day here."
+    );
+    ui.propHonesty.innerHTML = notes.map((note) => `<li>${escapeHtml(note)}</li>`).join("");
+  }
+}
+
+// One sentence, computed from the account's real room and its real losses.
+// Never a prediction, never advice — an arithmetic statement about the gap.
+function buildPropWarning(evaluation, pressure) {
+  if (evaluation.status === "breached") {
+    return {
+      tone: "breach",
+      text: `Closed P&L put this account at ${formatCurrency(evaluation.breachBalance)} on ${
+        evaluation.breachedOn
+      }, at or below the ${formatCurrency(evaluation.mll)} limit in force that day. Check the account with the firm before trading it.`
+    };
+  }
+  if (evaluation.dailyBreached) {
+    return {
+      tone: "breach",
+      text: `Today's ${formatCurrency(evaluation.dailyUsed)} loss has spent the ${formatCurrency(
+        evaluation.dailyLimit
+      )} daily limit.`
+    };
+  }
+  if (pressure.level === "unknown") {
+    return {
+      tone: "idle",
+      text: evaluation.mll === null
+        ? "No max loss limit entered, so there is no floor to measure against. Add one in the account settings."
+        : `${formatCurrency(evaluation.room)} of room. No closed losses on this account yet, so there is no typical loss size to measure it against.`
+    };
+  }
+  if (pressure.lossesLeft === 0) {
+    return {
+      tone: "breach",
+      text: `${formatCurrency(evaluation.room)} of room left, and your typical losing trade on this account is ${formatCurrency(
+        typicalLossSize()
+      )}. One more of those breaches the limit.`
+    };
+  }
+  if (pressure.level === "warn") {
+    return {
+      tone: "warn",
+      text: `${formatCurrency(evaluation.room)} of room left — one more typical loss of ${formatCurrency(
+        typicalLossSize()
+      )}, then the next one breaches the limit.`
+    };
+  }
+  return {
+    tone: "safe",
+    text: `${formatCurrency(evaluation.room)} of room — about ${pressure.lossesLeft} more typical losses of ${formatCurrency(
+      typicalLossSize()
+    )} before the limit.`
+  };
+}
+
+function setText(node, text) {
+  if (node) {
+    node.textContent = text;
+  }
+}
+
+/* ══ THE ACCOUNT SWITCHER + EDITOR ════════════════════════════════════════ */
+
+function renderAccountSwitcher() {
+  const accounts = getVisibleAccounts();
+  const activeId = getActiveAccount()?.id || "";
+  // Two selects — the desktop top bar and the mobile sidebar nav, which are
+  // different DOM under different breakpoints. One handler, one render.
+  ui.accountSwitches.forEach((select) => {
+    const options = accounts
+      .map(
+        (account) =>
+          `<option value="${escapeHtml(account.id)}"${account.id === activeId ? " selected" : ""}>${escapeHtml(
+            account.label
+          )}</option>`
+      )
+      .join("");
+    select.innerHTML = options;
+    select.value = activeId;
+    // A single account is not a choice; the control stays in the DOM for
+    // screen readers but stops competing for attention.
+    select.closest("[data-account-switch-wrap]")?.toggleAttribute("hidden", accounts.length < 2);
+  });
+}
+
+function renderAccountsPanel() {
+  if (!ui.accountList) {
+    return;
+  }
+  const activeId = getActiveAccount()?.id || "";
+  ui.accountList.innerHTML = getAccounts()
+    .map((account) => {
+      const isActive = account.id === activeId;
+      const count = countAccountTrades(account.id);
+      const prop = account.prop?.enabled
+        ? `<span class="account-tag">${escapeHtml(
+            account.prop.mode === "static" ? "Static limit" : "Trailing limit"
+          )}</span>`
+        : "";
+      return `
+        <li class="account-row${isActive ? " is-active" : ""}${account.archived ? " is-archived" : ""}">
+          <div class="account-row-main">
+            <p class="account-row-name">
+              ${escapeHtml(account.label)}
+              ${isActive ? '<span class="account-tag is-active-tag">Active</span>' : ""}
+              ${account.archived ? '<span class="account-tag">Archived</span>' : ""}
+              ${prop}
+            </p>
+            <p class="account-row-meta">
+              ${escapeHtml(accountTypeLabel(account.type))}${account.firm ? ` · ${escapeHtml(account.firm)}` : ""}
+              · ${escapeHtml(formatCurrency(account.startingBalance))} start
+              · ${count} trade${count === 1 ? "" : "s"}
+            </p>
+          </div>
+          <div class="account-row-actions">
+            ${
+              isActive || account.archived
+                ? ""
+                : `<button class="btn account-row-btn" type="button" data-account-activate="${escapeHtml(account.id)}">Switch to</button>`
+            }
+            <button class="btn account-row-btn" type="button" data-account-edit="${escapeHtml(account.id)}">Edit</button>
+            <button class="btn account-row-btn" type="button" data-account-archive="${escapeHtml(account.id)}">${
+              account.archived ? "Restore" : "Archive"
+            }</button>
+          </div>
+        </li>
+      `;
+    })
+    .join("");
+}
+
+function openAccountDialog(id) {
+  if (!ui.accountDialog) {
+    return;
+  }
+  const account = id ? getAccountById(id) : null;
+  accountDraftId = account?.id || "";
+  const prop = account?.prop || defaultPropRules(account?.startingBalance || 0);
+
+  // The preset list is built here rather than in the HTML so the "as of" date
+  // travels with the options and cannot go stale in a template.
+  if (ui.accountFields.preset) {
+    ui.accountFields.preset.innerHTML = PROP_PRESETS.map(
+      (preset) => `<option value="${escapeHtml(preset.id)}">${escapeHtml(preset.label)}</option>`
+    ).join("");
+    ui.accountFields.preset.value = prop.presetId || "custom";
+  }
+  if (ui.accountFields.type) {
+    ui.accountFields.type.innerHTML = ACCOUNT_TYPES.map(
+      (type) => `<option value="${escapeHtml(type.id)}">${escapeHtml(type.label)}</option>`
+    ).join("");
+  }
+
+  const fields = ui.accountFields;
+  if (fields.label) fields.label.value = account?.label || "";
+  if (fields.firm) fields.firm.value = account?.firm || "";
+  if (fields.type) fields.type.value = account?.type || "personal";
+  if (fields.startingBalance) fields.startingBalance.value = account ? String(account.startingBalance) : "";
+  if (fields.currency) fields.currency.value = account?.currency || "USD";
+  if (fields.propEnabled) fields.propEnabled.checked = Boolean(prop.enabled);
+  if (fields.profitTarget) fields.profitTarget.value = prop.profitTarget ? String(prop.profitTarget) : "";
+  if (fields.drawdown) fields.drawdown.value = prop.drawdown ? String(prop.drawdown) : "";
+  if (fields.mode) fields.mode.value = prop.mode;
+  if (fields.basis) fields.basis.value = prop.basis;
+  if (fields.trailStops) fields.trailStops.checked = Boolean(prop.trailStops);
+  if (fields.trailStopAt) fields.trailStopAt.value = String(prop.trailStopAt);
+  if (fields.dailyLossLimit) fields.dailyLossLimit.value = prop.dailyLossLimit ? String(prop.dailyLossLimit) : "";
+  if (fields.consistencyPct) fields.consistencyPct.value = prop.consistencyPct ? String(prop.consistencyPct) : "";
+  if (fields.maxContracts) fields.maxContracts.value = prop.maxContracts ? String(prop.maxContracts) : "";
+  if (fields.flattenBy) fields.flattenBy.value = prop.flattenBy;
+  if (fields.confirmed) fields.confirmed.checked = Boolean(prop.confirmed);
+
+  setMessage(ui.accountFormMessage, "", "");
+  syncAccountDialogState();
+  ui.accountDialogTitle.textContent = account ? `Edit ${account.label}` : "Add an account";
+  ui.accountDialog.showModal();
+  fields.label?.focus();
+}
+
+// Prefills from the tier table, then gets out of the way. Everything it writes
+// is an ordinary form value the trader can overwrite before saving.
+function applyPropPreset(presetId) {
+  const preset = findPropPreset(presetId);
+  const fields = ui.accountFields;
+  if (!preset || !preset.rules) {
+    setMessage(ui.accountFormMessage, "", "");
+    syncAccountDialogState();
+    return;
+  }
+  if (preset.account) {
+    if (fields.startingBalance) fields.startingBalance.value = String(preset.account.startingBalance);
+    if (fields.type) fields.type.value = preset.account.type;
+  }
+  if (fields.firm && preset.firm) fields.firm.value = preset.firm;
+  if (fields.propEnabled) fields.propEnabled.checked = true;
+  if (fields.profitTarget) fields.profitTarget.value = preset.rules.profitTarget ? String(preset.rules.profitTarget) : "";
+  if (fields.drawdown) fields.drawdown.value = String(preset.rules.drawdown);
+  if (fields.mode) fields.mode.value = preset.rules.mode;
+  if (fields.basis) fields.basis.value = preset.rules.basis;
+  if (fields.trailStops) fields.trailStops.checked = Boolean(preset.rules.trailStops);
+  if (fields.trailStopAt) fields.trailStopAt.value = String(preset.rules.trailStopAt);
+  if (fields.dailyLossLimit) fields.dailyLossLimit.value = String(preset.rules.dailyLossLimit);
+  if (fields.consistencyPct) fields.consistencyPct.value = preset.rules.consistencyPct ? String(preset.rules.consistencyPct) : "";
+  if (fields.maxContracts) fields.maxContracts.value = String(preset.rules.maxContracts);
+  if (fields.flattenBy) fields.flattenBy.value = preset.rules.flattenBy;
+  // A preset is not a confirmation. The trader ticks that box themselves.
+  if (fields.confirmed) fields.confirmed.checked = false;
+  setMessage(
+    ui.accountFormMessage,
+    `Prefilled from published figures read on ${PROP_PRESET_AS_OF}. ${preset.note} Check every number against your own account — firms change them.`,
+    // "notice" is the only neutral kind setMessage styles; "info" would add an
+    // unstyled class and the copy would read as ordinary body text.
+    "notice"
+  );
+  syncAccountDialogState();
+}
+
+function syncAccountDialogState() {
+  const on = Boolean(ui.accountFields.propEnabled?.checked);
+  ui.propFieldset?.toggleAttribute("hidden", !on);
+  const trailing = ui.accountFields.mode?.value !== "static";
+  // A static limit has no trail, so its trail controls are not merely
+  // irrelevant — leaving them enabled invites a contradictory rule set.
+  ui.propTrailRow?.toggleAttribute("hidden", !trailing);
+  if (ui.propBasisRow) {
+    ui.propBasisRow.hidden = !trailing;
+  }
+  if (ui.propBasisNote) {
+    ui.propBasisNote.textContent =
+      ui.accountFields.basis?.value === "trade"
+        ? "Trails after every closed trade. This is the closest a journal of closed trades can get to an intraday rule, and it draws a tighter floor than the end-of-day option. It is still not a real intraday peak — this app never sees one."
+        : "Trails your end-of-day closed balance. If your firm trails intraday highs instead, your real limit will sit higher than the one shown here.";
+  }
+  const zeroStart = parseNumber(ui.accountFields.startingBalance?.value) === 0;
+  if (ui.propZeroStartNote) {
+    ui.propZeroStartNote.hidden = !zeroStart;
+  }
+}
+
+function handleAccountSubmit(event) {
+  event.preventDefault();
+  const fields = ui.accountFields;
+  const label = String(fields.label?.value || "").trim();
+  if (!label) {
+    setMessage(ui.accountFormMessage, "Give the account a name you will recognise in the switcher.", "error");
+    fields.label?.focus();
+    return;
+  }
+
+  const startingBalance = parseNumber(fields.startingBalance?.value);
+  if (!Number.isFinite(startingBalance) || startingBalance < 0) {
+    setMessage(ui.accountFormMessage, "Starting balance must be zero or more.", "error");
+    fields.startingBalance?.focus();
+    return;
+  }
+
+  const propEnabled = Boolean(fields.propEnabled?.checked);
+  const drawdown = Math.max(parseNumber(fields.drawdown?.value) || 0, 0);
+  if (propEnabled && !(drawdown > 0)) {
+    setMessage(
+      ui.accountFormMessage,
+      "A max loss limit is the one figure the tracker cannot work without. Enter the dollar drawdown from your account.",
+      "error"
+    );
+    fields.drawdown?.focus();
+    return;
+  }
+
+  const draft = makeAccount({
+    id: accountDraftId,
+    label,
+    firm: fields.firm?.value,
+    type: fields.type?.value,
+    startingBalance,
+    currency: fields.currency?.value,
+    archived: accountDraftId ? Boolean(getAccountById(accountDraftId)?.archived) : false,
+    prop: {
+      enabled: propEnabled,
+      presetId: fields.preset?.value || "custom",
+      presetAsOf: fields.preset?.value && fields.preset.value !== "custom" ? PROP_PRESET_AS_OF : "",
+      profitTarget: parseNumber(fields.profitTarget?.value) || 0,
+      drawdown,
+      mode: fields.mode?.value,
+      basis: fields.basis?.value,
+      trailStops: Boolean(fields.trailStops?.checked),
+      trailStopAt: parseNumber(fields.trailStopAt?.value) || 0,
+      dailyLossLimit: parseNumber(fields.dailyLossLimit?.value) || 0,
+      consistencyPct: parseNumber(fields.consistencyPct?.value) || 0,
+      maxContracts: parseNumber(fields.maxContracts?.value) || 0,
+      flattenBy: fields.flattenBy?.value || "",
+      confirmed: Boolean(fields.confirmed?.checked)
+    }
+  });
+
+  if (!accountDraftId && getAccounts().length >= MAX_ACCOUNTS) {
+    setMessage(ui.accountFormMessage, `${MAX_ACCOUNTS} accounts is the limit.`, "error");
+    return;
+  }
+
+  saveAccount(draft);
+  ui.accountDialog?.close();
+  showCaptureToast(accountDraftId ? `${draft.label} updated.` : `${draft.label} added and switched to.`);
+  accountDraftId = "";
+}
+
+function handleAccountsPanelClick(event) {
+  const activate = event.target.closest("[data-account-activate]");
+  if (activate) {
+    switchAccount(activate.dataset.accountActivate);
+    return;
+  }
+  const edit = event.target.closest("[data-account-edit]");
+  if (edit) {
+    openAccountDialog(edit.dataset.accountEdit);
+    return;
+  }
+  const archive = event.target.closest("[data-account-archive]");
+  if (archive) {
+    const account = getAccountById(archive.dataset.accountArchive);
+    if (account) {
+      setAccountArchived(account.id, !account.archived);
+    }
+  }
 }
 
 function stepCalendarMonth(delta) {
@@ -8146,16 +9131,21 @@ function journalKey(key) {
 function loadState() {
   const store = journalStore();
   state.settings = normalizeSettings(readStorageJson(journalKey(STORAGE_KEYS.settings), DEFAULT_SETTINGS, store));
-  state.trades = normalizeTrades(readStorageJson(journalKey(STORAGE_KEYS.trades), [], store));
   state.reflections = normalizeReflections(readStorageJson(journalKey(STORAGE_KEYS.reflections), [], store));
   state.replayNotes = normalizeReplayNotes(readStorageJson(journalKey(STORAGE_KEYS.replay), {}, store));
+  // The stored trades key holds the WHOLE journal, every account. adoptAllTrades
+  // splits it around the active one and runs the pre-accounts migration.
+  adoptAllTrades(normalizeTrades(readStorageJson(journalKey(STORAGE_KEYS.trades), [], store)));
+  applyActiveAccount();
 }
 
 function persistState(options = {}) {
   const { skipServerSync = false } = options;
   const store = journalStore();
   writeStorageJson(journalKey(STORAGE_KEYS.settings), state.settings, store);
-  writeStorageJson(journalKey(STORAGE_KEYS.trades), state.trades, store);
+  // Both halves, always. Writing state.trades alone would delete every other
+  // account's journal on the next save.
+  writeStorageJson(journalKey(STORAGE_KEYS.trades), allTrades(), store);
   writeStorageJson(journalKey(STORAGE_KEYS.reflections), state.reflections, store);
   writeStorageJson(journalKey(STORAGE_KEYS.replay), state.replayNotes, store);
   try {
@@ -8246,7 +9236,12 @@ function normalizeSettings(input) {
       Math.round(ensureNonNegative(value.cooldownLossStreak, DEFAULT_SETTINGS.cooldownLossStreak)),
       0,
       20
-    )
+    ),
+    // Multi-account. Absent on every journal written before this ships;
+    // ensureAccounts() fills it from the trader's existing starting balance on
+    // the first load, so nothing has to be re-entered.
+    accounts: normalizeAccounts(value.accounts),
+    activeAccountId: String(value.activeAccountId || "")
   };
 }
 
@@ -8331,6 +9326,10 @@ function normalizeTrades(input) {
         screenshotName: String(item.screenshotName || ""),
         screenshotData: String(item.screenshotData || ""),
         importBatchId: String(item.importBatchId || ""),
+        // Multi-account. Empty on every trade written before this ships;
+        // adoptAllTrades() adopts those rows into the migrated default account
+        // rather than leaving them ownerless (and therefore invisible).
+        accountId: String(item.accountId || ""),
         // 1b pre-trade checklist. Absent on every trade logged before this
         // ships and on every imported row — an empty array is "not asked",
         // not "ticked nothing", and nothing scores off it yet.
