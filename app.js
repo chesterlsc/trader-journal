@@ -3570,28 +3570,35 @@ function renderProgressTradeSummary() {
       const dollarMove = liveSnapshot?.dollarPnl ?? null;
       const directionClass = String(trade.direction || "").toLowerCase() === "sell" ? "recent-trade-direction-sell" : "recent-trade-direction-buy";
 
+      // PHASE E — one calm clay object instead of a grid of boxes-in-boxes.
+      // Identity row (symbol + direction + ONE status chip), the live price as
+      // the hero numeral with its move beside it, quiet Show/Close actions, and
+      // entry/SL/TP/$ folded into the disclosure. Every live-cell tag the 5s
+      // poll patches in place is preserved, as are the two data-* handlers.
       return `
         <article class="progress-trade-card">
           <div class="progress-trade-card-top">
             <div class="progress-trade-card-top-main">
               <strong class="progress-trade-card-symbol">${escapeHtml(trade.asset || "—")}</strong>
               <span class="recent-trade-direction ${directionClass}">${escapeHtml(trade.direction || "Buy")}</span>
-              <span class="progress-trade-badge">OPEN</span>
+              <span class="progress-trade-badge">Live</span>
             </div>
-            <span class="progress-trade-live-inline ${pnlToneClass} live-cell" ${liveCellAttrs(trade, "livePercent")}>${escapeHtml(formatLivePercentLabel(livePercent, "OPEN"))}</span>
           </div>
-          <div class="progress-trade-card-prices">
-            <span class="progress-trade-price-chip"><em>Move</em><strong class="${pnlToneClass} live-cell" ${liveCellAttrs(trade, "priceMove")}>${formatPriceMove(priceMove)}</strong></span>
-            <span class="progress-trade-price-chip"><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
-            <span class="progress-trade-price-chip progress-trade-price-chip-live"><em>Current Price</em><strong class="${pnlToneClass} live-cell" ${liveCellAttrs(trade, "currentPrice")}>${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : "—"}</strong></span>
-            <button class="progress-trade-price-chip progress-trade-price-chip-toggle" type="button" data-progress-details-toggle aria-expanded="false">
+          <p class="progress-trade-hero">
+            <strong class="progress-trade-price ${pnlToneClass} live-cell" ${liveCellAttrs(trade, "currentPrice")}>${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : "—"}</strong>
+            <span class="progress-trade-move ${pnlToneClass} live-cell" ${liveCellAttrs(trade, "livePercent")}>${escapeHtml(formatLivePercentLabel(livePercent, "OPEN"))}</span>
+            <span class="progress-trade-move progress-trade-move-abs ${pnlToneClass} live-cell" ${liveCellAttrs(trade, "priceMove")}>${formatPriceMove(priceMove)}</span>
+          </p>
+          <div class="progress-trade-actions">
+            <button class="progress-trade-action" type="button" data-progress-details-toggle aria-expanded="false">
               <strong>Show</strong>
             </button>
-            <button class="progress-trade-price-chip progress-trade-price-chip-close" type="button" data-close-trade="${escapeHtml(String(trade.id || ""))}" aria-label="Close ${escapeHtml(trade.asset || "")} at market price">
+            <button class="progress-trade-action progress-trade-action-close" type="button" data-close-trade="${escapeHtml(String(trade.id || ""))}" aria-label="Close ${escapeHtml(trade.asset || "")} at market price">
               <strong>Close</strong>
             </button>
           </div>
           <div class="progress-trade-card-meta progress-trade-card-meta-hidden">
+              <span class="progress-trade-stat"><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
               <span class="progress-trade-stat"><em>SL</em><strong>${formatProgressTradePrice(trade.stopLoss)}</strong></span>
               <span class="progress-trade-stat"><em>TP</em><strong>${formatProgressTradePrice(trade.takeProfit)}</strong></span>
               <span class="progress-trade-stat"><em>$ Move</em><strong class="${pnlToneClass} live-cell" ${liveCellAttrs(trade, "dollarPnl")}>${formatSignedCurrency(dollarMove)}</strong></span>

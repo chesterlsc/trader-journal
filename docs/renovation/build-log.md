@@ -335,3 +335,54 @@ beyond the four inline-style-driven ones; `clay-contrast.mjs` exits 0; curl of
 the served page and stylesheet greps the new markers. Cache buster →
 `v=20260805-clay1`. Landing page deliberately untouched beyond what falls out
 of the token change — a later phase owns it, as does the bottom tab bar + FAB.
+
+## Phase E — Dashboard + command bar in clay (2026-08-05)
+
+The user's complaint was specific: the top of the dashboard was cluttered, said
+OPEN twice, spent vertical space on a marketing tagline, and rendered the
+in-progress trade as boxes inside boxes.
+
+**Command bar.** The brand collapses to the mark alone — the kicker and the
+"Execution analytics, risk control, and discipline tracking…" tagline were
+DELETED from `index.html`, not hidden, in the sidebar and the desktop nav. The
+dashboard view head lost its own duplicate kicker and, via a compound
+`.view-head.view-head-dashboard` selector, its Phase D clay box: everywhere
+else a `.view-head` is still a clay panel, but here a header box was eating
+rows the numbers should own.
+
+**In-progress trade, rebuilt.** One calm clay object instead of a 5-cell chip
+grid: identity row (symbol + direction + ONE status chip), the live price as a
+33px tabular hero numeral with its move beside it, two quiet 44px pill actions,
+and entry/SL/TP/$ folded into the existing disclosure. The chip now reads
+"Live" and wears `--info`, not the money green Phase C gave it — `--pnl-*` is
+money by contract — so "OPEN" survives only as the percent node's no-feed
+fallback, which `patchLiveNodes` also writes. Money colour rides the MOVE, not
+the price: the price keeps full-contrast `--text` and the sign glyph carries
+direction. All four `data-live-field` tags, both `data-*` handlers,
+`.is-details-open` and the `<strong>` the toggle relabels are preserved. ~120
+lines of now-dead `.progress-trade-price-chip*` / `-live-inline` CSS deleted.
+
+**Dashboard.** Bento gaps 12→16px (clay without air reads as a bug), stepping
+back to 12 at 560px. Score items became pressed wells, chart panel heads got
+air, `.panel-chart canvas` dropped to the clay-sm radius, and panel hover lift
+no longer *transitions* box-shadow — a 4-layer clay stack re-blurring on every
+pointer pass is the repaint mobile Safari cannot pay while the 5s loop runs.
+`--chart-canvas-top/-bottom` were re-cut in BOTH themes: light was `#ffffff` on
+a `#fbfbff` card, a well that read as a bump. Reveal retuned to `--ease-clay`
+(cubic-bezier(0.22,1,0.36,1), no overshoot), 820ms base, 72ms stagger, 16px
+travel. Mobile: command bar stacks at 900, buttons go 50/50 with `min-width: 0`
+(the 760px block's 160px floor overflowed a 375px screen), the trade card drops
+to one column at 560.
+
+**Not touched, deliberately:** `.dash-rail-item` (its nth-child separator
+shadows), the chart renderers, `--pl-intensity`, risk warn/breach, the
+dataset-hash guard, the empty-state toggle, `.metric-grid.compact`.
+
+**Verified.** `node --check app.js`; `tests/charts.smoke.mjs` green (12,206
+ops); CSS braces 1100/1100 and no undefined `var()` beyond the five
+inline-style/JS-driven ones; HTML tag balance clean; served page, stylesheet
+and module greped for the new markers. Contrast harness extended with the
+chart-well pairings, the status chip, both quiet actions and the move pill,
+plus a luminance assert that the chart well is darker than the card in both
+themes — all pass, worst text pairing unchanged at 4.57:1. Cache buster →
+`v=20260805-clay2`.
