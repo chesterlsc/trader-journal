@@ -61,12 +61,52 @@
   --chart-grid: #1b1f27;
   --chart-axis: #7d8598;
   --chart-line: var(--accent);
-  --chart-fill: rgba(91, 141, 239, 0.10);
   --chart-pos: var(--pnl-pos);
   --chart-neg: var(--pnl-neg);
   --chart-radar: var(--info);
   --chart-font-size: 11;       /* px, unitless for canvas */
   --chart-font-family: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Charts — depth pass. Every gradient stop, glow and extruded face the
+     canvas renderer uses is a token, so both themes stay authored in CSS.
+     *-fade pairs exist because a canvas gradient interpolates RGBA channels
+     literally: fading to `transparent` (rgba(0,0,0,0)) greys the ramp, so
+     every fade stop repeats its own RGB at alpha 0. */
+  --chart-line-deep: #2f4f8f;               /* extruded side face, accent bars */
+  --chart-glow: rgba(91, 141, 239, 0.55);
+  --chart-halo: rgba(91, 141, 239, 0.26);
+  --chart-halo-fade: rgba(91, 141, 239, 0);
+  --chart-area-top: rgba(91, 141, 239, 0.42);
+  --chart-area-mid: rgba(91, 141, 239, 0.13);
+  --chart-area-bottom: rgba(91, 141, 239, 0);
+  --chart-pos-deep: #17805a;
+  --chart-pos-glow: rgba(47, 209, 140, 0.55);
+  --chart-neg-deep: #8f2646;
+  --chart-neg-glow: rgba(245, 83, 122, 0.55);
+  --chart-halo-neg: rgba(245, 83, 122, 0.26);
+  --chart-halo-neg-fade: rgba(245, 83, 122, 0);
+  --chart-neg-area-top: rgba(245, 83, 122, 0.04);
+  --chart-neg-area-bottom: rgba(245, 83, 122, 0.46);
+  --chart-highlight: rgba(255, 255, 255, 0.30);
+  --chart-highlight-fade: rgba(255, 255, 255, 0);
+  --chart-shade: rgba(0, 0, 0, 0.38);
+  --chart-shade-fade: rgba(0, 0, 0, 0);
+  --chart-track: rgba(125, 133, 152, 0.10);
+  --chart-crosshair: rgba(154, 162, 180, 0.55);
+  --chart-tooltip-bg: rgba(19, 22, 28, 0.96);
+  --chart-tooltip-line: #333a49;
+  --chart-tooltip-shadow: rgba(0, 0, 0, 0.6);
+  --chart-ring-wash: rgba(125, 133, 152, 0.05);
+  --chart-radar-core: rgba(76, 195, 232, 0.40);
+  --chart-radar-edge: rgba(76, 195, 232, 0.04);
+  --chart-radar-glow: rgba(76, 195, 232, 0.55);
+  --chart-canvas-top: #10131a;
+  --chart-canvas-bottom: #090b0f;
+  --chart-canvas-glow: rgba(91, 141, 239, 0.07);
+  --chart-canvas-shadow: rgba(0, 0, 0, 0.55);
+  /* Sparkline area fades — the alpha-0 twins of --pnl-pos/--pnl-neg. */
+  --spark-pos-fade: rgba(47, 209, 140, 0);
+  --spark-neg-fade: rgba(245, 83, 122, 0);
 
   /* Type */
   --font-ui: "Sora", "Manrope", system-ui, sans-serif;
@@ -158,7 +198,43 @@
 
   --chart-grid: #e4e7ed;
   --chart-axis: #646c7d;
-  --chart-fill: rgba(38, 88, 199, 0.08);
+
+  /* Depth pass, light theme. Glows are tighter and areas lighter: on white the
+     same alphas that read as atmosphere on graphite read as smudge. */
+  --chart-line-deep: #16337c;
+  --chart-glow: rgba(38, 88, 199, 0.32);
+  --chart-halo: rgba(38, 88, 199, 0.18);
+  --chart-halo-fade: rgba(38, 88, 199, 0);
+  --chart-area-top: rgba(38, 88, 199, 0.28);
+  --chart-area-mid: rgba(38, 88, 199, 0.09);
+  --chart-area-bottom: rgba(38, 88, 199, 0);
+  --chart-pos-deep: #064e31;
+  --chart-pos-glow: rgba(12, 123, 78, 0.32);
+  --chart-neg-deep: #8a1c39;
+  --chart-neg-glow: rgba(203, 46, 86, 0.32);
+  --chart-halo-neg: rgba(203, 46, 86, 0.18);
+  --chart-halo-neg-fade: rgba(203, 46, 86, 0);
+  --chart-neg-area-top: rgba(203, 46, 86, 0.03);
+  --chart-neg-area-bottom: rgba(203, 46, 86, 0.30);
+  --chart-highlight: rgba(255, 255, 255, 0.55);
+  --chart-highlight-fade: rgba(255, 255, 255, 0);
+  --chart-shade: rgba(23, 26, 33, 0.22);
+  --chart-shade-fade: rgba(23, 26, 33, 0);
+  --chart-track: rgba(100, 108, 125, 0.10);
+  --chart-crosshair: rgba(76, 85, 103, 0.55);
+  --chart-tooltip-bg: rgba(255, 255, 255, 0.98);
+  --chart-tooltip-line: #c2c8d3;
+  --chart-tooltip-shadow: rgba(23, 26, 33, 0.20);
+  --chart-ring-wash: rgba(100, 108, 125, 0.05);
+  --chart-radar-core: rgba(13, 115, 149, 0.26);
+  --chart-radar-edge: rgba(13, 115, 149, 0.03);
+  --chart-radar-glow: rgba(13, 115, 149, 0.32);
+  --chart-canvas-top: #ffffff;
+  --chart-canvas-bottom: #f6f7fa;
+  --chart-canvas-glow: rgba(38, 88, 199, 0.05);
+  --chart-canvas-shadow: rgba(23, 26, 33, 0.10);
+  --spark-pos-fade: rgba(12, 123, 78, 0);
+  --spark-neg-fade: rgba(203, 46, 86, 0);
 
   --shadow: 0 1px 2px rgba(23, 26, 33, 0.06), 0 8px 24px rgba(23, 26, 33, 0.07);
   --shadow-modal: 0 24px 64px rgba(23, 26, 33, 0.18);
@@ -1246,12 +1322,36 @@ body.is-authenticated .auth-panel {
   letter-spacing: 0.06em;
 }
 
+/* Chart wells: a lit stage rather than a flat inset. The radial wash sits
+   behind the canvas bitmap (which is drawn transparent), so it reads as
+   atmosphere under the curve without the renderer knowing about it. */
 .panel-chart canvas {
+  display: block;
   width: 100%;
   height: auto;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--line);
-  background: var(--surface-inset);
+  background:
+    radial-gradient(130% 88% at 50% 0%, var(--chart-canvas-glow) 0%, transparent 64%),
+    linear-gradient(180deg, var(--chart-canvas-top) 0%, var(--chart-canvas-bottom) 100%);
+  box-shadow:
+    inset 0 1px 0 var(--chart-highlight),
+    0 14px 30px -22px var(--chart-canvas-shadow);
+  transition: border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+
+.panel-chart:hover canvas {
+  border-color: var(--line-strong);
+  box-shadow:
+    inset 0 1px 0 var(--chart-highlight),
+    0 18px 38px -22px var(--chart-canvas-shadow);
+}
+
+/* Crosshair only where a crosshair actually appears (the two line charts);
+   bar and radar panels keep the default cursor. */
+#equityChart,
+#drawdownChart {
+  cursor: crosshair;
 }
 
 .panel-strategy-performance {

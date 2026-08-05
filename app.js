@@ -25,7 +25,7 @@ import {
 } from "./src/modules/livePrices.js";
 import { createTradeDisplayHelpers, liveCellAttrs } from "./src/modules/tradeDisplay.js";
 import { createRecentTradesView } from "./src/modules/recentTradesView.js";
-import { createChartsModule } from "./src/modules/charts.js";
+import { createChartsModule, traceSmoothPath } from "./src/modules/charts.js";
 
 const STORAGE_KEYS = {
   trades: "axiom_journal_trades_v1",
@@ -4297,62 +4297,77 @@ function drawDashSparkline(canvas, points, progress) {
     return;
   }
 
+  // Same visual language as the equity chart: multi-stop area, layered glow
+  // stroke, haloed head marker. Every colour is a token.
   const styles = getComputedStyle(document.documentElement);
+  const token = (name, fallback) => (styles.getPropertyValue(name) || "").trim() || fallback;
   const rising = points[points.length - 1] >= points[0];
-  const stroke = (styles.getPropertyValue(rising ? "--pnl-pos" : "--pnl-neg") || "").trim() || "#2fd18c";
+  const stroke = token(rising ? "--pnl-pos" : "--pnl-neg", "#2fd18c");
+  const areaTop = token(rising ? "--pnl-pos-line" : "--pnl-neg-line", stroke);
+  const areaMid = token(rising ? "--pnl-pos-soft" : "--pnl-neg-soft", stroke);
+  const areaFade = token(rising ? "--spark-pos-fade" : "--spark-neg-fade", "rgba(0, 0, 0, 0)");
+  const glow = token(rising ? "--chart-pos-glow" : "--chart-neg-glow", stroke);
 
   const min = Math.min(...points);
   const max = Math.max(...points);
   const span = max - min || 1;
-  const padTop = 12;
-  const usable = Math.max(height - padTop - 2, 1);
-  const stepX = width / (points.length - 1);
+  const padTop = 14;
+  const usable = Math.max(height - padTop - 4, 1);
+  const stepX = Math.max(width - 5, 1) / (points.length - 1);
   const yFor = (value) => padTop + (1 - (value - min) / span) * usable;
 
   // Partial reveal: draw the first `progress` fraction of the series.
   const lastIndex = Math.max(1, Math.round((points.length - 1) * clamp(progress, 0, 1)));
-  const drawn = points.slice(0, lastIndex + 1);
-
-  ctx.beginPath();
-  drawn.forEach((value, index) => {
-    const x = index * stepX;
-    const y = yFor(value);
-    if (index === 0) {
-      ctx.moveTo(x, y);
-    } else {
-      ctx.lineTo(x, y);
-    }
-  });
-
-  // Area wash under the line, then the line itself.
-  const areaPath = new Path2D();
-  drawn.forEach((value, index) => {
-    const x = index * stepX;
-    const y = yFor(value);
-    if (index === 0) {
-      areaPath.moveTo(x, height);
-      areaPath.lineTo(x, y);
-    } else {
-      areaPath.lineTo(x, y);
-    }
-  });
-  areaPath.lineTo((drawn.length - 1) * stepX, height);
-  areaPath.closePath();
+  const drawn = points.slice(0, lastIndex + 1).map((value, index) => ({ x: index * stepX, y: yFor(value) }));
+  const head = drawn[drawn.length - 1];
 
   const gradient = ctx.createLinearGradient(0, padTop, 0, height);
-  ctx.save();
-  ctx.globalAlpha = 0.16;
-  gradient.addColorStop(0, stroke);
-  gradient.addColorStop(1, "transparent");
+  gradient.addColorStop(0, areaTop);
+  gradient.addColorStop(0.5, areaMid);
+  gradient.addColorStop(1, areaFade);
+  ctx.beginPath();
+  ctx.moveTo(drawn[0].x, height);
+  traceSmoothPath(ctx, drawn, false);
+  ctx.lineTo(head.x, height);
+  ctx.closePath();
   ctx.fillStyle = gradient;
-  ctx.fill(areaPath);
-  ctx.restore();
+  ctx.fill();
 
-  ctx.strokeStyle = stroke;
-  ctx.lineWidth = 1.75;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
-  ctx.stroke();
+  ctx.strokeStyle = stroke;
+  [
+    [14, 0.32, 2.4],
+    [6, 0.62, 2],
+    [0, 1, 1.8]
+  ].forEach(([blur, alpha, lineWidth]) => {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = blur;
+    ctx.lineWidth = lineWidth;
+    ctx.beginPath();
+    traceSmoothPath(ctx, drawn);
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  const halo = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, 15);
+  halo.addColorStop(0, areaMid);
+  halo.addColorStop(1, areaFade);
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.arc(head.x, head.y, 15, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.save();
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = 12;
+  ctx.fillStyle = stroke;
+  ctx.beginPath();
+  ctx.arc(head.x, head.y, 3.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }
 
 function renderDashSparkline(analytics) {
