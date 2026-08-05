@@ -1,0 +1,82 @@
+<!-- ══════════════ 1d — LANDING ══════════════ -->
+<div id="1d" style="flex:none;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:baseline;gap:9px;font:400 11.5px/1.3 'Space Grotesk',sans-serif;color:#6B6259"><a href="#1d" style="font:600 10.5px/1 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(36,31,26,.09);color:#241F1A;border-radius:5px">1d</a>Landing — the tape is the pitch</div>
+
+<div data-screen-label="Landing" style="width:1440px;border-radius:18px;background:#E2DACE;overflow:hidden;box-shadow:0 1px 3px rgba(36,31,26,.1)">
+<header style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 48px">
+<div style="display:flex;align-items:center;gap:12px"><span style="width:38px;height:38px;border-radius:14px;background:#7A4FE2;color:#fff;display:grid;place-items:center;font:700 15px/1 'Space Grotesk',sans-serif;box-shadow:0 14px 24px -12px hsl(265 60% 40%/.6),inset 0 6px 10px -5px hsl(0 0% 100%/.4)">TJ</span><span style="font:700 19px/1 'Space Grotesk',sans-serif;letter-spacing:-.02em">Trader Journal</span></div>
+<div style="display:flex;align-items:center;gap:12px">
+<a href="#1d" style="font:600 12.5px/1 'Space Grotesk',sans-serif;color:#6B6259;padding:12px 16px">Log in</a>
+<button type="button" style="height:46px;padding:0 22px;border:0;border-radius:999px;background:#F5F0E8;color:#241F1A;font:600 13.5px/1 'Space Grotesk',sans-serif;cursor:pointer;box-shadow:0 14px 24px -16px hsl(35 30% 40%/.5),inset 0 -5px 10px -5px hsl(35 35% 45%/.2),inset 0 6px 11px -5px hsl(40 60% 100%/1)">Start free</button>
+</div>
+</header>
+
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 520px;gap:44px;align-items:center;padding:34px 48px 56px">
+<div style="display:grid;gap:22px">
+<span style="justify-self:start;display:inline-flex;align-items:center;gap:9px;padding:9px 16px;border-radius:999px;background:#F5F0E8;font:600 11.5px/1 'JetBrains Mono',monospace;letter-spacing:.06em;color:#6B6259;box-shadow:0 10px 18px -14px hsl(35 30% 40%/.5),inset 0 5px 9px -4px hsl(40 60% 100%/1)"><span style="width:7px;height:7px;border-radius:50%;background:#1E9E6B"></span>1,284 trades journalled this week</span>
+<h1 style="margin:0;font:700 76px/1.02 'Space Grotesk',sans-serif;letter-spacing:-.045em">Every trade<br>you'd rather<br><span style="color:#7A4FE2">not remember.</span></h1>
+<p style="margin:0;max-width:44ch;font:400 18px/1.55 'Space Grotesk',sans-serif;color:#6B6259">Log the position in eight seconds. Say what you were thinking when it closed. The journal does the arithmetic and tells you which of your setups actually pays — and which one only feels like it does.</p>
+<div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:999px;background:#F5F0E8;max-width:500px;box-shadow:0 22px 38px -20px hsl(35 30% 38%/.55),inset 0 -8px 16px -8px hsl(35 35% 45%/.24),inset 0 9px 15px -8px hsl(40 60% 100%/1)">
+<input type="text" placeholder="you@email.com" style="flex:1;border:0;background:transparent;padding:16px 20px;font:500 15px/1 'Space Grotesk',sans-serif;color:#241F1A;outline:none">
+<button type="button" style="height:56px;padding:0 28px;border:0;border-radius:999px;background:#7A4FE2;color:#fff;font:700 15px/1 'Space Grotesk',sans-serif;cursor:pointer;box-shadow:0 18px 30px -14px hsl(265 60% 40%/.6),inset 0 -6px 12px -6px hsl(265 70% 30%/.45),inset 0 7px 12px -6px hsl(0 0% 100%/.4)">Start journalling</button>
+</div>
+<p style="margin:0;font:400 13px/1.5 'Space Grotesk',sans-serif;color:#8C8378">Free, no card. Export to CSV or JSON whenever you want. Dark and light.</p>
+</div>
+
+<div style="display:grid;gap:16px">
+<div style="border-radius:34px;background:#F5F0E8;padding:8px;box-shadow:0 30px 50px -20px hsl(35 30% 38%/.55),0 8px 16px -8px hsl(35 30% 40%/.35),inset 0 -9px 18px -9px hsl(35 35% 45%/.26),inset 0 10px 16px -9px hsl(40 60% 100%/1)">
+<div style="display:flex;align-items:center;gap:10px;padding:14px 18px 16px"><span style="width:9px;height:9px;border-radius:50%;background:#1E9E6B;display:block"></span><span style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#6B6259">Live tape · real journals</span><span style="margin-left:auto;font:500 11px/1 'JetBrains Mono',monospace;color:#B0A79A">delayed 2s</span></div>
+<div style="border-radius:28px;background:#E7DFD3;padding:8px;display:grid;gap:6px;box-shadow:inset 0 6px 14px -3px hsl(35 35% 40%/.36),inset 0 -3px 6px -3px hsl(40 60% 100%/.9)">
+<sc-for list="{{ tape }}" as="t" hint-placeholder-count="7">
+<div style="display:grid;grid-template-columns:96px 1fr auto auto;align-items:center;gap:12px;padding:13px 16px;border-radius:20px;background:{{ t.bg }};box-shadow:{{ t.shadow }}">
+<span style="font:700 14px/1 'Space Grotesk',sans-serif">{{ t.sym }}</span>
+<span style="font:500 11.5px/1 'JetBrains Mono',monospace;color:#8C8378">{{ t.meta }}</span>
+<span style="font:700 14px/1 'JetBrains Mono',monospace;color:{{ t.color }}">{{ t.r }}</span>
+<span style="padding:5px 11px;border-radius:999px;background:{{ t.pillBg }};color:{{ t.color }};font:700 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.06em">{{ t.result }}</span>
+</div>
+</sc-for>
+</div>
+<p style="margin:0;padding:16px 18px 12px;font:400 12.5px/1.45 'Space Grotesk',sans-serif;color:#8C8378">Raised rows made money. Sunk rows lost it. Nothing here is a mock-up — it is the public feed, one row per closed trade.</p>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+<div style="padding:20px;border-radius:26px;background:#F5F0E8;box-shadow:0 16px 28px -18px hsl(35 30% 40%/.5),inset 0 -6px 12px -6px hsl(35 35% 45%/.2),inset 0 7px 12px -6px hsl(40 60% 100%/1)"><p style="margin:0;font:700 30px/1 'JetBrains Mono',monospace">8<span style="font-size:16px;color:#8C8378">s</span></p><p style="margin:6px 0 0;font:500 11.5px/1.3 'Space Grotesk',sans-serif;color:#6B6259">to log a trade</p></div>
+<div style="padding:20px;border-radius:26px;background:#F5F0E8;box-shadow:0 16px 28px -18px hsl(35 30% 40%/.5),inset 0 -6px 12px -6px hsl(35 35% 45%/.2),inset 0 7px 12px -6px hsl(40 60% 100%/1)"><p style="margin:0;font:700 30px/1 'JetBrains Mono',monospace">12</p><p style="margin:6px 0 0;font:500 11.5px/1.3 'Space Grotesk',sans-serif;color:#6B6259">execution metrics</p></div>
+<div style="padding:20px;border-radius:26px;background:#F5F0E8;box-shadow:0 16px 28px -18px hsl(35 30% 40%/.5),inset 0 -6px 12px -6px hsl(35 35% 45%/.2),inset 0 7px 12px -6px hsl(40 60% 100%/1)"><p style="margin:0;font:700 30px/1 'JetBrains Mono',monospace">$0</p><p style="margin:6px 0 0;font:500 11.5px/1.3 'Space Grotesk',sans-serif;color:#6B6259">forever, no tier</p></div>
+</div>
+</div>
+</div>
+
+<section style="padding:56px 48px 64px;background:#F5F0E8">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:56px;align-items:center">
+<div style="display:grid;gap:18px">
+<p style="margin:0;font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#8C8378">What you get back</p>
+<h2 style="margin:0;font:700 46px/1.08 'Space Grotesk',sans-serif;letter-spacing:-.035em">The setup you love is<br>the one costing you money.</h2>
+<p style="margin:0;max-width:46ch;font:400 16px/1.6 'Space Grotesk',sans-serif;color:#6B6259">Expectancy per setup, per session, per mood. After about thirty trades the journal starts telling you things you would not have volunteered about yourself.</p>
+<div style="display:grid;gap:12px;margin-top:6px">
+<div style="display:flex;gap:12px;align-items:flex-start"><span style="flex:0 0 auto;width:24px;height:24px;border-radius:9px;background:#7A4FE2;color:#fff;display:grid;place-items:center;font:700 12px/1 'Space Grotesk',sans-serif">✓</span><p style="margin:0;font:400 14.5px/1.5 'Space Grotesk',sans-serif;color:#241F1A">Daily and weekly loss budgets that actually lock the desk</p></div>
+<div style="display:flex;gap:12px;align-items:flex-start"><span style="flex:0 0 auto;width:24px;height:24px;border-radius:9px;background:#7A4FE2;color:#fff;display:grid;place-items:center;font:700 12px/1 'Space Grotesk',sans-serif">✓</span><p style="margin:0;font:400 14.5px/1.5 'Space Grotesk',sans-serif;color:#241F1A">Bulk import from Vantage, Binance or a spreadsheet</p></div>
+<div style="display:flex;gap:12px;align-items:flex-start"><span style="flex:0 0 auto;width:24px;height:24px;border-radius:9px;background:#7A4FE2;color:#fff;display:grid;place-items:center;font:700 12px/1 'Space Grotesk',sans-serif">✓</span><p style="margin:0;font:400 14.5px/1.5 'Space Grotesk',sans-serif;color:#241F1A">Screenshots, notes and psychology attached to every row</p></div>
+</div>
+</div>
+<div style="border-radius:34px;background:#E7DFD3;padding:22px;box-shadow:inset 0 8px 20px -5px hsl(35 35% 40%/.4),inset 0 -4px 8px -4px hsl(40 60% 100%/.9)">
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px"><span style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#8C8378">Expectancy by setup</span><span style="font:500 11px/1 'JetBrains Mono',monospace;color:#B0A79A">last 90 days</span></div>
+<div style="display:grid;gap:12px">
+<div style="display:grid;grid-template-columns:118px 1fr 68px;align-items:center;gap:12px"><span style="font:600 13px/1 'Space Grotesk',sans-serif">Liquidity Grab</span><div style="height:26px;border-radius:999px;background:#DCD3C6;overflow:hidden;box-shadow:inset 0 3px 7px -2px hsl(35 35% 40%/.4)"><span style="display:block;height:100%;width:88%;border-radius:999px;background:#1E9E6B;box-shadow:inset 0 -5px 10px -5px hsl(155 60% 18%/.5),inset 0 5px 9px -4px hsl(0 0% 100%/.35)"></span></div><span style="font:700 13px/1 'JetBrains Mono',monospace;color:#1E9E6B;text-align:right">+$229</span></div>
+<div style="display:grid;grid-template-columns:118px 1fr 68px;align-items:center;gap:12px"><span style="font:600 13px/1 'Space Grotesk',sans-serif">Breakout</span><div style="height:26px;border-radius:999px;background:#DCD3C6;overflow:hidden;box-shadow:inset 0 3px 7px -2px hsl(35 35% 40%/.4)"><span style="display:block;height:100%;width:56%;border-radius:999px;background:#1E9E6B;box-shadow:inset 0 -5px 10px -5px hsl(155 60% 18%/.5),inset 0 5px 9px -4px hsl(0 0% 100%/.35)"></span></div><span style="font:700 13px/1 'JetBrains Mono',monospace;color:#1E9E6B;text-align:right">+$137</span></div>
+<div style="display:grid;grid-template-columns:118px 1fr 68px;align-items:center;gap:12px"><span style="font:600 13px/1 'Space Grotesk',sans-serif">Scalp</span><div style="height:26px;border-radius:999px;background:#DCD3C6;overflow:hidden;box-shadow:inset 0 3px 7px -2px hsl(35 35% 40%/.4)"><span style="display:block;height:100%;width:22%;border-radius:999px;background:#1E9E6B;box-shadow:inset 0 -5px 10px -5px hsl(155 60% 18%/.5),inset 0 5px 9px -4px hsl(0 0% 100%/.35)"></span></div><span style="font:700 13px/1 'JetBrains Mono',monospace;color:#1E9E6B;text-align:right">+$42</span></div>
+<div style="display:grid;grid-template-columns:118px 1fr 68px;align-items:center;gap:12px"><span style="font:600 13px/1 'Space Grotesk',sans-serif;color:#DC3F66">Reversal</span><div style="height:26px;border-radius:999px;background:#DCD3C6;overflow:hidden;box-shadow:inset 0 3px 7px -2px hsl(35 35% 40%/.4);display:flex;justify-content:flex-end"><span style="display:block;height:100%;width:30%;border-radius:999px;background:#DC3F66;box-shadow:inset 0 -5px 10px -5px hsl(345 60% 25%/.5),inset 0 5px 9px -4px hsl(0 0% 100%/.3)"></span></div><span style="font:700 13px/1 'JetBrains Mono',monospace;color:#DC3F66;text-align:right">-$68</span></div>
+</div>
+<p style="margin:18px 0 0;padding:14px 16px;border-radius:18px;background:#F0E4E8;font:400 13px/1.45 'Space Grotesk',sans-serif;color:#241F1A;box-shadow:inset 0 3px 8px -2px hsl(345 30% 45%/.2)">Your Reversal trades are 33% of your volume and all of your drawdown.</p>
+</div>
+</div>
+</section>
+
+<section style="padding:56px 48px 64px;text-align:center;display:grid;justify-items:center;gap:20px">
+<h2 style="margin:0;max-width:20ch;font:700 44px/1.1 'Space Grotesk',sans-serif;letter-spacing:-.035em">Your next trade is worth journalling.</h2>
+<p style="margin:0;max-width:52ch;font:400 16px/1.55 'Space Grotesk',sans-serif;color:#6B6259">Free to use. Your data stays yours — export it as CSV or JSON whenever you want.</p>
+<button type="button" style="height:62px;padding:0 34px;border:0;border-radius:999px;background:#7A4FE2;color:#fff;font:700 17px/1 'Space Grotesk',sans-serif;cursor:pointer;box-shadow:0 22px 38px -16px hsl(265 60% 40%/.6),0 6px 14px -7px hsl(265 60% 35%/.4),inset 0 -7px 14px -7px hsl(265 70% 30%/.45),inset 0 8px 14px -7px hsl(0 0% 100%/.4)">Create your free account</button>
+<p style="margin:0;font:500 12.5px/1 'JetBrains Mono',monospace;color:#8C8378">No card · no trial clock · log in from any browser</p>
+</section>
+</div>
+</div>
+

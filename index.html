@@ -45,10 +45,10 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260806-clayv2" />
+    <link rel="stylesheet" href="styles.css?v=20260807-dash1a" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260806-clayv2" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260807-dash1a" />
   </head>
   <body>
     <section class="auth-shell" id="authShell" aria-label="Login">
@@ -463,6 +463,9 @@
           <button class="nav-btn" type="button" data-target="calendar">Calendar P&amp;L</button>
           <button class="nav-btn" type="button" data-target="monthly">Monthly Review</button>
           <button class="btn theme-toggle" type="button" data-theme-toggle aria-label="Switch to light theme">Light</button>
+          <!-- Export lived in the deleted .journal-action-bar; the desktop
+               route is now the top bar's overflow menu, this is the mobile one. -->
+          <button id="exportCsvBtnMobile" class="btn nav-export-mobile" type="button">Export CSV</button>
           <button id="previewLandingBtnMobile" class="dev-chip nav-preview-landing" type="button" data-preview-landing hidden>
             <span class="dev-chip-tag">dev</span>
             <span>Preview landing</span>
@@ -477,32 +480,73 @@
       </aside>
 
       <main class="content">
-        <nav class="desktop-nav" aria-label="Desktop sections">
-          <div class="desktop-nav-brand">
-            <div class="desktop-brand-block">
-              <div class="desktop-brand-copy">
-                <p class="desktop-brand-title brand-mark" data-brand-title>
-                  <span class="brand-word-accent">Trader</span>
-                  <span class="brand-word-primary">Journal</span>
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="desktop-nav-links">
-            <button class="nav-btn nav-btn-top is-active" type="button" data-target="dashboard" aria-current="page">Dashboard</button>
-            <button class="nav-btn nav-btn-top" type="button" data-target="trade-entry">Trade Entry</button>
-            <button class="nav-btn nav-btn-top" type="button" data-target="journal">Trade Review</button>
-            <button class="nav-btn nav-btn-top" type="button" data-target="reflections">Reflections</button>
-            <button class="nav-btn nav-btn-top" type="button" data-target="calendar">Calendar P&amp;L</button>
-            <button class="nav-btn nav-btn-top" type="button" data-target="monthly">Monthly Review</button>
-          </div>
-          <div class="desktop-nav-actions">
-            <button id="previewLandingBtnDesktop" class="dev-chip nav-preview-landing" type="button" data-preview-landing hidden>
-              <span class="dev-chip-tag">dev</span>
-              <span>Preview landing</span>
+        <!-- 1a: the six-item text nav is gone. A compact icon bar — TJ mark,
+             five destinations, a moon toggle and an overflow menu. Every
+             button still carries .nav-btn + data-target, so switchView(), the
+             hash router, aria-current and the auth gate need no changes.
+             RULES is an ACTION (jump to Risk Controls), not a view, so it is
+             deliberately not a .nav-btn — it must never claim aria-current. -->
+        <nav class="topnav" aria-label="Main sections">
+          <button class="topnav-mark nav-btn" type="button" data-target="dashboard" data-nav-silent aria-label="Trader Journal — dashboard">TJ</button>
+          <span class="topnav-rule" aria-hidden="true"></span>
+          <div class="topnav-links">
+            <button class="nav-btn topnav-btn is-active" type="button" data-target="dashboard" aria-current="page">
+              <span class="topnav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 19.25v-6.5M9.75 19.25V6.75M14.25 19.25v-9.5M19.25 19.25v-14.5" /></svg>
+              </span>
+              <span class="topnav-label">Dash</span>
             </button>
-            <button class="btn theme-toggle" type="button" data-theme-toggle aria-label="Switch to light theme">Light</button>
-            <button id="desktopLogoutBtn" class="btn nav-logout-desktop" type="button" hidden>Logout</button>
+            <button class="nav-btn topnav-btn" type="button" data-target="journal">
+              <span class="topnav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 5.75h14.5v12.5H4.75zM4.75 10h14.5M4.75 14.25h14.5M10 10v8.25" /></svg>
+              </span>
+              <span class="topnav-label">Trades</span>
+              <!-- Count of closed trades with no note. Lives on Trades because
+                   that is the view where the note gets written. -->
+              <span class="topnav-badge" id="navUnjournalledBadge" hidden></span>
+            </button>
+            <button class="nav-btn topnav-btn" type="button" data-target="calendar">
+              <span class="topnav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 6.75h14.5v12.5H4.75zM4.75 11h14.5M8.75 4v4M15.25 4v4" /></svg>
+              </span>
+              <span class="topnav-label">Cal</span>
+            </button>
+            <button class="nav-btn topnav-btn" type="button" data-target="reflections">
+              <span class="topnav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 5.75h14.5v10.5h-8.5l-4.5 3.5v-3.5h-1.5z" /></svg>
+              </span>
+              <span class="topnav-label">Journal</span>
+            </button>
+            <button class="topnav-btn topnav-btn-action" type="button" id="riskRulesBtn">
+              <span class="topnav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false"><path d="M12 4.75 5 8v5c0 4 3 7.3 7 8.2 4-.9 7-4.2 7-8.2V8z" /><path d="M9.3 12.2l2 2 3.4-3.8" /></svg>
+              </span>
+              <span class="topnav-label">Rules</span>
+            </button>
+          </div>
+          <div class="topnav-actions">
+            <button
+              class="topnav-icon-btn"
+              type="button"
+              data-theme-toggle
+              data-theme-glyph
+              aria-label="Switch to dark theme"
+            >
+              <span aria-hidden="true">&#9790;</span>
+            </button>
+            <details class="topnav-more" id="topnavMore">
+              <summary class="topnav-icon-btn" aria-label="More menu"><span aria-hidden="true">&#8943;</span></summary>
+              <div class="topnav-menu">
+                <button class="topnav-menu-item nav-btn" type="button" data-target="trade-entry">Trade entry</button>
+                <button class="topnav-menu-item nav-btn" type="button" data-target="monthly">Monthly review</button>
+                <button id="exportCsvBtn" class="topnav-menu-item" type="button">Export CSV</button>
+                <button id="previewLandingBtnDesktop" class="topnav-menu-item nav-preview-landing" type="button" data-preview-landing hidden>
+                  <span class="dev-chip-tag">dev</span>
+                  <span>Preview landing</span>
+                </button>
+                <button id="desktopLogoutBtn" class="topnav-menu-item topnav-menu-item-danger" type="button" hidden>Logout</button>
+              </div>
+            </details>
           </div>
         </nav>
 
@@ -525,42 +569,34 @@
           </div>
         </aside>
 
-        <div class="journal-action-bar" aria-label="Quick trade actions">
-          <div class="journal-action-buttons">
-            <button id="journalNewTradeBtn" class="btn primary journal-action-btn" type="button">
+        <!-- aria-label rather than aria-labelledby: the h2 is now a greeting,
+             which names the trader, not the region. -->
+        <section class="view is-active" id="dashboard" aria-label="Dashboard">
+          <!-- 1a header row: greeting + session clock, the inline LIVE ticker
+               (the old .journal-action-bar in-progress strip, restyled — the
+               5s poll still patches its [data-live-field] nodes in place), and
+               the primary action. #journalNewTradeBtn keeps its id so ⌘K, the
+               FAB and every existing binding are untouched. -->
+          <header class="dash-head">
+            <div class="dash-greeting">
+              <p class="dash-clock" id="dashClock"></p>
+              <h2 id="dashboardHeading" class="dash-hello">Welcome back.</h2>
+            </div>
+
+            <article id="progressTradeSummary" class="dash-live" hidden aria-label="Open positions">
+              <p id="progressTradeLabel" class="visually-hidden">Open position</p>
+              <div id="progressTradeTrack" class="dash-live-track"></div>
+            </article>
+
+            <button id="journalNewTradeBtn" class="btn primary dash-log-btn" type="button">
               <span class="journal-action-icon" aria-hidden="true">
-                <svg viewBox="0 0 16 16" focusable="false">
-                  <path d="M8 3.25v9.5M3.25 8h9.5" />
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M12 5.75v12.5M5.75 12h12.5" />
                 </svg>
               </span>
-              <span>New Trade</span>
+              <span>Log a trade</span>
               <span class="kbd-hint" aria-hidden="true">&#8984;K</span>
             </button>
-            <button id="exportCsvBtn" class="btn journal-action-btn journal-action-btn-secondary" type="button">
-              <span class="journal-action-icon" aria-hidden="true">
-                <svg viewBox="0 0 16 16" focusable="false">
-                  <path d="M8 2.75v6.5M5.25 6.75 8 9.5l2.75-2.75M3.25 11.75h9.5" />
-                </svg>
-              </span>
-              <span>Export</span>
-            </button>
-          </div>
-
-          <article id="progressTradeSummary" class="progress-trade-summary" hidden aria-live="polite">
-            <p id="progressTradeLabel" class="progress-trade-label">In Progress Trade</p>
-            <div class="progress-trade-viewport">
-              <div id="progressTradeTrack" class="progress-trade-track"></div>
-            </div>
-          </article>
-        </div>
-
-        <section class="view is-active" id="dashboard" aria-labelledby="dashboardHeading">
-          <!-- PHASE E: one line of header. The kicker repeated the heading. -->
-          <header class="view-head view-head-dashboard">
-            <div class="view-head-copy">
-              <h2 id="dashboardHeading">Performance Dashboard</h2>
-            </div>
-            <p class="view-head-support">Equity, drawdown, and edge quality at a glance.</p>
           </header>
 
           <!-- Bento stats: command deck (balance hero + risk meters), edge quad,
@@ -570,50 +606,78 @@
             <section class="dash-deck">
               <article class="metric-card metric-card-balance dash-hero dash-reveal" data-tilt style="--i: 0">
                 <div class="dash-hero-top">
-                  <p class="metric-label">Account Balance</p>
-                  <span
-                    class="metric-note"
-                    id="balanceOverrideNote"
-                    title="This balance is set manually in Risk Controls and may differ from the computed equity curve."
-                    hidden
-                    >Manual override</span
-                  >
+                  <p class="metric-label">Account balance</p>
+                  <div class="dash-range" role="group" aria-label="Balance range">
+                    <button class="dash-range-btn is-active" type="button" data-balance-range="1m" aria-pressed="true">1M</button>
+                    <button class="dash-range-btn" type="button" data-balance-range="3m" aria-pressed="false">3M</button>
+                    <button class="dash-range-btn" type="button" data-balance-range="all" aria-pressed="false">ALL</button>
+                  </div>
                 </div>
+                <span
+                  class="metric-note"
+                  id="balanceOverrideNote"
+                  title="This balance is set manually in Risk Controls and may differ from the computed equity curve."
+                  hidden
+                  >Manual override</span
+                >
                 <p class="metric-value dash-hero-value" data-metric="accountBalance">$0.00</p>
                 <div class="dash-hero-meta">
-                  <span class="metric-delta" data-metric-delta="accountBalance" hidden></span>
                   <span class="dash-hero-today" id="dashHeroToday" hidden></span>
+                  <span class="dash-hero-week" id="dashHeroWeek" hidden></span>
+                  <span class="dash-hero-range" id="dashHeroRange" hidden></span>
                 </div>
                 <div class="dash-spark-wrap" aria-hidden="true">
                   <canvas id="dashSparkline" class="dash-spark" width="1000" height="180"></canvas>
                 </div>
               </article>
 
-              <section class="risk-strip dash-risk dash-reveal" id="riskStrip" data-tilt style="--i: 1" hidden aria-label="Risk budget">
-                <p class="dash-risk-kicker">Risk budget</p>
-                <div class="risk-strip-item" data-risk-strip="day">
-                  <span class="risk-strip-label">Daily loss budget</span>
-                  <span class="risk-strip-remain">$0.00 left</span>
-                  <div class="risk-strip-track" aria-hidden="true"><span class="risk-strip-fill"></span></div>
-                  <span class="risk-strip-value">$0.00 today / $0.00 limit</span>
+              <section class="risk-strip dash-risk dash-reveal" id="riskStrip" data-tilt style="--i: 1" hidden aria-label="Risk left today">
+                <div class="dash-risk-head">
+                  <p class="metric-label">Risk left today</p>
+                  <span class="dash-risk-state" id="riskState">SAFE</span>
                 </div>
-                <div class="risk-strip-item" data-risk-strip="week">
-                  <span class="risk-strip-label">Weekly loss budget</span>
-                  <span class="risk-strip-remain">$0.00 left</span>
-                  <div class="risk-strip-track" aria-hidden="true"><span class="risk-strip-fill"></span></div>
-                  <span class="risk-strip-value">$0.00 this week / $0.00 limit</span>
+                <div class="dash-risk-body">
+                  <div class="dash-dial" id="riskDial">
+                    <svg viewBox="0 0 118 118" aria-hidden="true" focusable="false">
+                      <circle class="dash-dial-track" cx="59" cy="59" r="48" />
+                      <circle class="dash-dial-fill" id="riskDialArc" cx="59" cy="59" r="48" />
+                    </svg>
+                    <p class="dash-dial-copy">
+                      <strong class="dash-dial-value" id="riskDialValue">100<span>%</span></strong>
+                      <span class="dash-dial-label">LEFT</span>
+                    </p>
+                  </div>
+                  <div class="dash-risk-figures">
+                    <div class="risk-strip-item" data-risk-strip="day">
+                      <span class="risk-strip-label">Daily</span>
+                      <span class="risk-strip-value">$0.00 / $0.00</span>
+                      <div class="risk-strip-track" aria-hidden="true"><span class="risk-strip-fill"></span></div>
+                    </div>
+                    <div class="risk-strip-item" data-risk-strip="week">
+                      <span class="risk-strip-label">Weekly</span>
+                      <span class="risk-strip-value">$0.00 / $0.00</span>
+                      <div class="risk-strip-track" aria-hidden="true"><span class="risk-strip-fill"></span></div>
+                    </div>
+                  </div>
                 </div>
+                <p class="dash-risk-consequence">
+                  <span id="riskConsequence"></span>
+                  <!-- Phase 6 builds the cooldown lock. Until it exists this
+                       points at the budgets that drive the sentence above,
+                       which is the only honest destination today. -->
+                  <button class="dash-risk-link" type="button" id="cooldownRulesBtn">Cooldown rules &rarr;</button>
+                </p>
               </section>
             </section>
 
             <section class="dash-quad" aria-label="Edge quality">
               <article class="metric-card dash-quad-card dash-reveal" data-tilt style="--i: 2">
-                <p class="metric-label">Win Rate</p>
+                <p class="metric-label">Win rate</p>
                 <p class="metric-value" data-metric="winRate">0%</p>
                 <span class="metric-delta" data-metric-delta="winRate" hidden></span>
               </article>
               <article class="metric-card dash-quad-card dash-reveal" data-tilt style="--i: 3">
-                <p class="metric-label">Profit Factor</p>
+                <p class="metric-label">Profit factor</p>
                 <p class="metric-value" data-metric="profitFactor">0.00</p>
                 <span class="metric-delta" data-metric-delta="profitFactor" hidden></span>
               </article>
@@ -623,11 +687,47 @@
                 <span class="metric-delta" data-metric-delta="expectancy" hidden></span>
               </article>
               <article class="metric-card dash-quad-card dash-reveal" data-tilt style="--i: 5">
-                <p class="metric-label">Average R:R</p>
+                <p class="metric-label">Avg R:R</p>
                 <p class="metric-value" data-metric="avgRR">0.00</p>
                 <span class="metric-delta" data-metric-delta="avgRR" hidden></span>
               </article>
             </section>
+
+            <!-- 1a boards: playbook (expectancy per setup, raised = positive)
+                 and the unjournalled queue. Both render from real state and
+                 hide themselves when there is nothing honest to show. -->
+            <div class="dash-boards">
+              <section class="dash-board dash-playbook" id="dashPlaybook" hidden aria-labelledby="dashPlaybookHeading">
+                <div class="dash-board-head">
+                  <div>
+                    <h3 id="dashPlaybookHeading">Your playbook</h3>
+                    <p>Expectancy per setup. Sunk tiles are losing you money.</p>
+                  </div>
+                  <button class="dash-board-link" type="button" id="allSetupsBtn">All setups &rarr;</button>
+                </div>
+                <div class="dash-playbook-grid" id="dashPlaybookGrid"></div>
+                <div class="dash-alert" id="dashSetupAlert" hidden>
+                  <span class="dash-alert-mark" aria-hidden="true">!</span>
+                  <p id="dashSetupAlertText"></p>
+                </div>
+              </section>
+
+              <section class="dash-board dash-unjournalled" id="dashUnjournalled" hidden aria-labelledby="dashUnjournalledHeading">
+                <div class="dash-board-head">
+                  <h3 id="dashUnjournalledHeading">Unjournalled</h3>
+                  <span class="dash-unj-count" id="dashUnjournalledCount">0 trades</span>
+                </div>
+                <p class="dash-unj-lede">Closed, but you never said why. Two minutes each.</p>
+                <div class="dash-unj-list" id="dashUnjournalledList"></div>
+                <div class="dash-unj-foot">
+                  <div>
+                    <p class="dash-unj-streak-label">Journal streak</p>
+                    <p class="dash-unj-streak" id="dashJournalStreak">0 days</p>
+                  </div>
+                  <div class="dash-unj-bars" id="dashJournalBars" role="img" aria-label="Journalling history"></div>
+                </div>
+              </section>
+            </div>
 
             <section class="dash-rail dash-reveal" style="--i: 6" aria-label="Secondary metrics">
               <article class="metric-card dash-rail-item">
@@ -1576,6 +1676,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260805-clay4"></script>
+    <script type="module" src="app.js?v=20260807-dash1a"></script>
   </body>
 </html>

@@ -1233,79 +1233,19 @@ body.is-authenticated .auth-panel {
   display: none !important;
 }
 
-.desktop-nav {
-  display: none;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface-2);
-  box-shadow: var(--edge-highlight);
-  position: sticky;
-  top: 18px;
-  z-index: var(--z-nav);
-}
 
-.desktop-nav-brand {
-  flex: 0 0 auto;
-}
 
-.desktop-nav-links {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(108px, 1fr));
-  gap: 10px;
-  flex: 1 1 auto;
-  min-width: 0;
-}
 
-.desktop-nav-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 14px;
-  flex: 0 0 auto;
-}
 
-.nav-btn-top {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 10px 8px;
-  min-height: 46px;
-  white-space: nowrap;
-}
 
-.desktop-brand-block {
-  display: grid;
-  justify-items: center;
-  gap: 2px;
-  min-width: 176px;
-}
 
-.desktop-brand-copy {
-  display: grid;
-  gap: 0;
-  text-align: center;
-}
 
-.desktop-brand-title {
-  margin: 0;
-  font-size: 1.08rem;
-}
 
-.desktop-brand-title.brand-mark {
-  gap: 0.24rem;
-}
 
 .brand-block .brand-mark {
   font-size: 1.48rem;
 }
 
-.nav-logout-desktop {
-  min-width: 108px;
-}
 
 .nav-logout-mobile {
   width: 100%;
@@ -1426,8 +1366,7 @@ body.is-authenticated .auth-panel {
 /* display:grid on these would defeat the hidden attribute (author rules beat
    the UA [hidden] rule) — JS toggles hidden on all three. */
 .metric-grid[hidden],
-.dashboard-empty[hidden],
-.progress-trade-summary[hidden] {
+.dashboard-empty[hidden] {
   display: none;
 }
 
@@ -2032,162 +1971,25 @@ textarea.is-invalid {
   gap: 8px;
 }
 
-.journal-action-bar {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  margin: 0 0 12px;
-}
 
-.journal-action-buttons {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 14px;
-  flex-wrap: wrap;
-}
 
-.progress-trade-summary {
-  display: grid;
-  gap: 10px;
-  flex: 1 1 420px;
-  min-width: min(100%, 320px);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface-1);
-  margin-left: auto;
-}
 
-.progress-trade-label {
-  margin: 0;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-}
 
-.progress-trade-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line-strong);
-  background: var(--surface-inset);
-  color: var(--text-soft);
-  font: 600 var(--fs-micro)/1 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
 
-.progress-trade-viewport {
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: thin;
-}
 
-.progress-trade-track {
-  display: flex;
-  justify-content: flex-start;
-  gap: 10px;
-  width: 100%;
-  min-width: 100%;
-  margin-inline: 0;
-}
 
-.progress-trade-card {
-  flex: 0 0 100%;
-  display: grid;
-  gap: 7px;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface-2);
-}
 
-.progress-trade-card-top {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  text-align: center;
-}
 
-.progress-trade-card-top-main {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  flex-wrap: wrap;
-  justify-content: center;
-}
 
-.progress-trade-card-symbol {
-  font: 700 var(--fs-md)/1 var(--font-ui);
-  letter-spacing: -0.04em;
-  color: var(--text);
-}
 
-.progress-trade-stat em {
-  font-style: normal;
-  color: var(--text-faint);
-  font: 600 var(--fs-micro)/1.1 var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
 
-.progress-trade-card-meta {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  text-align: center;
-}
 
-.progress-trade-card-meta-hidden {
-  margin-top: 2px;
-}
 
-.progress-trade-card:not(.is-details-open) .progress-trade-card-meta-hidden {
-  display: none;
-}
 
-.progress-trade-stat {
-  display: grid;
-  gap: 2px;
-  padding: 5px 6px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-inset);
-  color: var(--text-soft);
-  font: 500 var(--fs-micro)/1.16 var(--font-mono);
-}
 
-.progress-trade-stat strong {
-  color: var(--text);
-  font-weight: 700;
-  font-size: var(--fs-data);
-  font-feature-settings: "tnum";
-}
 
-.progress-trade-card-meta .pnl-positive {
-  color: var(--pnl-pos);
-}
 
-.progress-trade-card-meta .pnl-negative {
-  color: var(--pnl-neg);
-}
 
-.journal-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  white-space: nowrap;
-}
 
 .journal-action-icon {
   display: inline-flex;
@@ -2728,7 +2530,6 @@ tbody tr:hover {
   color: var(--text-soft);
 }
 
-body.auth-locked .desktop-nav,
 body.auth-locked .view {
   display: none !important;
 }
@@ -2847,9 +2648,6 @@ body.is-guest:not(.demo-signup) .trust-row {
     display: none;
   }
 
-  .desktop-nav {
-    display: flex;
-  }
 }
 
 @media (max-width: 1300px) {
@@ -2944,9 +2742,6 @@ body.is-guest:not(.demo-signup) .trust-row {
     margin: 8px auto 18px;
   }
 
-  .desktop-nav {
-    display: none;
-  }
 
   .sidebar {
     min-height: auto;
@@ -3239,8 +3034,7 @@ body.is-guest:not(.demo-signup) .trust-row {
     gap: 0.28rem;
   }
 
-  .brand-block .brand-mark,
-  .desktop-brand-title.brand-mark {
+  .brand-block .brand-mark {
     font-size: 1.16rem;
     gap: 0.2rem;
   }
@@ -3381,65 +3175,17 @@ body.is-guest:not(.demo-signup) .trust-row {
     font-size: 10px;
   }
 
-  .journal-action-bar {
-    justify-content: center;
-    gap: 12px;
-  }
 
-  .journal-action-buttons {
-    width: 100%;
-    justify-content: center;
-    margin-left: 0;
-  }
 
-  .journal-action-btn {
-    min-width: 160px;
-  }
 
-  .progress-trade-summary {
-    order: 2;
-    width: 100%;
-    min-width: 0;
-    padding: 11px 12px;
-    margin-left: 0;
-  }
 
-  .progress-trade-card {
-    flex-basis: 100%;
-    padding: 8px 9px;
-    gap: 6px;
-  }
 
-  .progress-trade-card-top {
-    gap: 6px;
-    text-align: center;
-  }
 
-  .progress-trade-card-top-main {
-    justify-content: center;
-  }
 
-  .progress-trade-card-meta {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 5px;
-  }
 
-  .progress-trade-card-symbol {
-    font-size: 0.92rem;
-  }
 
-  .progress-trade-stat em {
-    font-size: 0.58rem;
-  }
 
-  .progress-trade-stat {
-    padding: 5px 4px;
-    font-size: 0.6rem;
-  }
 
-  .progress-trade-stat strong {
-    font-size: 0.76rem;
-  }
 
   body:not(.auth-ready):not(.is-authenticated) .auth-panel,
   body:not(.auth-ready):not(.is-authenticated) #resetPasswordView {
@@ -3652,21 +3398,6 @@ body.is-guest:not(.demo-signup) .trust-row {
   .nav-logout-mobile {
     margin-top: 6px;
     margin-bottom: 10px;
-  }
-}
-
-@media (max-width: 1180px) and (min-width: 1025px) {
-  .desktop-nav-links {
-    grid-template-columns: repeat(6, minmax(84px, 1fr));
-  }
-
-  .nav-btn-top {
-    font-size: var(--fs-micro);
-    padding: 9px 6px;
-  }
-
-  .desktop-brand-block {
-    min-width: 154px;
   }
 }
 
@@ -3995,20 +3726,6 @@ th[aria-sort] {
   transform: none;
 }
 
-/* View head: editorial header row instead of a full-width panel box. */
-.view-head-dashboard {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-1) var(--space-4);
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
 
 .view-kicker {
   margin: 0 0 6px;
@@ -4018,9 +3735,6 @@ th[aria-sort] {
   font: 600 var(--fs-micro)/1.2 var(--font-mono);
 }
 
-.view-head-dashboard h2 {
-  font-size: clamp(24px, 2.6vw, 30px);
-}
 
 .view-head-support {
   margin: 0;
@@ -4316,11 +4030,7 @@ th[aria-sort] {
 }
 
 @media (max-width: 720px) {
-  .view-head-dashboard {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
+
 
   .dash-hero {
     min-height: 172px;
@@ -4408,55 +4118,15 @@ th[aria-sort] {
   margin-top: var(--space-1);
 }
 
-/* Command bar: one compact row. The in-progress ticker was a card inside a
-   card — the summary is now the only frame and its content aligns left. */
-.journal-action-bar {
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
 
-.progress-trade-summary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  margin-left: auto;
-}
 
-.progress-trade-label {
-  flex: 0 0 auto;
-}
 
-.progress-trade-viewport {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding-bottom: 0;
-}
 
-.progress-trade-card {
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  gap: var(--space-2);
-}
 
-.progress-trade-card-top {
-  justify-content: flex-start;
-  text-align: left;
-}
 
 @media (max-width: 1180px) {
   .dash-risk {
     min-height: 0;
-  }
-}
-
-@media (max-width: 900px) {
-  .progress-trade-summary {
-    flex-direction: column;
-    align-items: stretch;
-    margin-left: 0;
   }
 }
 
@@ -6129,23 +5799,7 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
   border-radius: var(--radius-sm);
 }
 
-/* Open-position pulse: the only perpetual motion on the dashboard, and it is
-   status, not decoration — it says the price behind this row is live. */
-.progress-trade-badge {
-  gap: 6px;
-  border-color: var(--pnl-pos-line);
-  color: var(--pnl-pos);
-  background-image: linear-gradient(180deg, var(--pnl-pos-soft), transparent);
-}
 
-.progress-trade-badge::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--pnl-pos);
-  animation: livePulse 2.4s var(--ease-in-out) infinite;
-}
 
 @keyframes livePulse {
   0% {
@@ -6162,12 +5816,6 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
   }
 }
 
-/* --- 4. Command bar + in-progress strip ---------------------------------- */
-.journal-action-btn {
-  position: relative;
-  transition: transform var(--dur-instant) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out),
-    border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
-}
 
 .btn.primary {
   background-image: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 100%);
@@ -6179,76 +5827,19 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
 }
 
 /* Press depth: the button sinks into the page instead of just nudging down. */
-.btn:active,
-.journal-action-btn:active {
+.btn:active {
   transform: translateY(1px) scale(0.985);
   box-shadow: inset 0 2px 6px -2px var(--deck-groove);
 }
 
-.journal-action-btn-secondary:hover {
-  border-color: var(--accent);
-  box-shadow: 0 8px 20px -12px var(--halo-accent);
-}
 
-/* The ticker strip is the live surface of the command bar: lit plane, accent
-   left edge, and it lifts on hover like the panels below it. */
-.progress-trade-summary {
-  position: relative;
-  overflow: hidden;
-  border-color: var(--line-strong);
-  background-image: linear-gradient(100deg, var(--deck-top) 0%, var(--deck-bottom) 100%);
-  box-shadow: inset 0 1px 0 var(--deck-edge), var(--deck-shadow);
-  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out),
-    border-color var(--dur-base) var(--ease-out);
-}
 
-.progress-trade-summary:hover {
-  transform: translateY(-2px);
-  box-shadow: inset 0 1px 0 var(--deck-edge), var(--deck-shadow-lift);
-}
 
-.progress-trade-label {
-  color: var(--accent);
-}
 
-/* --- 5. Nav rail --------------------------------------------------------- */
-/* One underline that slides between items instead of six that blink on and
-   off. app.js writes --nav-rail-x/-w/-o from the active button's box; the
-   per-button inset underline is suppressed while the rail is doing the job
-   (but never while the button is focused — the focus ring must survive). */
-.desktop-nav-links {
-  position: relative;
-}
 
-.desktop-nav-links::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: -6px;
-  height: 2px;
-  width: var(--nav-rail-w, 0px);
-  transform: translateX(var(--nav-rail-x, 0px));
-  border-radius: var(--radius-pill);
-  background-image: linear-gradient(90deg, var(--accent) 0%, var(--accent-strong) 100%);
-  box-shadow: 0 0 14px -1px var(--halo-accent);
-  opacity: var(--nav-rail-o, 0);
-  pointer-events: none;
-  transition: transform var(--dur-base) var(--ease-snap), width var(--dur-base) var(--ease-snap),
-    opacity var(--dur-fast) var(--ease-out);
-}
 
-.desktop-nav-links .nav-btn.is-active:not(:focus-visible) {
-  box-shadow: none;
-}
 
-.desktop-nav-links .nav-btn {
-  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out),
-    transform var(--dur-instant) var(--ease-out);
-}
 
-.desktop-nav-links .nav-btn:active {
-  transform: translateY(1px);
-}
 
 /* --- 6. Focus with presence ---------------------------------------------- */
 button:focus-visible,
@@ -6276,13 +5867,6 @@ summary:focus-visible {
   }
 
   [data-tilt]::after {
-    display: none;
-  }
-}
-
-/* The sliding rail only exists where the desktop nav does. */
-@media (max-width: 1024px) {
-  .desktop-nav-links::after {
     display: none;
   }
 }
@@ -6531,8 +6115,7 @@ summary:focus-visible {
 }
 
 .btn:active,
-.btn.primary:active,
-.journal-action-btn:active {
+.btn.primary:active {
   transform: translateY(2px) scale(0.985);
   background: var(--surface-3);
   background-image: none;
@@ -6814,10 +6397,9 @@ summary:focus-visible {
    shadow flip carry the state on their own. */
 @media (prefers-reduced-motion: reduce) {
   .btn:active,
-  .mini-btn:active,
-  .nav-toggle:active,
-  .tag-set label:active,
-  .journal-action-btn:active {
+.mini-btn:active,
+.nav-toggle:active,
+.tag-set label:active {
     transform: none;
   }
 }
@@ -6877,134 +6459,17 @@ summary:focus-visible {
   }
 }
 
-/* ==========================================================================
-   PHASE E — DASHBOARD + COMMAND BAR IN CLAY
-   Phase D built the clay token layer and converted the shared components.
-   This section spends it on the dashboard itself and rebuilds the command bar
-   the user called out: a brand block wearing a marketing tagline above a
-   working desk, two actions, and an in-progress card that was a grid of boxes
-   inside boxes saying OPEN twice.
 
-   What changed, and why:
-     - The brand collapses to the mark (index.html). The kicker and the tagline
-       were removed there, not hidden here — dead copy should not ship.
-     - The in-progress trade is now ONE clay object: identity row, the live
-       price as the hero numeral with its move beside it, two quiet actions,
-       and entry/SL/TP/$ folded into the existing disclosure. The status chip
-       reads "Live" (see markup) so the word OPEN appears exactly once — as the
-       percent node's no-feed fallback, which patchLiveNodes also writes.
-     - Money colour stays on the MOVE, never on the price itself: the price is
-       the number you read, so it keeps --text at full contrast, and the sign
-       glyph carries the direction for anyone who cannot see the tint.
-     - Breathing room goes up one rung across the bento (12px -> 16px). Clay
-       without space reads as a rendering mistake.
-   Every id, [data-metric], [data-live-field], [data-tilt] and state class is
-   untouched; --pl-intensity, the risk-strip warn/breach states and the
-   empty-state toggle all behave exactly as before.
-   ========================================================================== */
 
-/* Token changes for this phase live in the token layer at the top of this
-   file, not here: --ease-clay / --dur-reveal / --stagger-dash and the
-   --chart-canvas-* well colours. Semantic names, both themes, one home. */
 
-/* --- 1. Command bar ------------------------------------------------------ */
-.journal-action-bar {
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  gap: var(--space-4);
-  margin: 0 0 var(--space-4);
-}
 
-.journal-action-buttons {
-  flex: 0 0 auto;
-  gap: var(--space-3);
-}
 
-/* The in-progress ticker: the only frame. Clay carries the depth, so the
-   hairline and the 2px accent stripe are gone — a straight 2px rail tapers
-   into a wedge against a 26px radius, the same trap the money rail hit. */
-.progress-trade-summary {
-  display: grid;
-  align-content: start;
-  gap: var(--space-3);
-  flex: 1 1 460px;
-  min-width: min(100%, 320px);
-  padding: var(--space-4) var(--space-5);
-  border: 0;
-  border-radius: var(--radius-clay-lg);
-  background: var(--surface-1);
-  background-image: none;
-  box-shadow: inset 0 1px 0 var(--clay-edge), var(--clay-raised);
-  margin-left: auto;
-}
 
-/* Not an interactive object — it must not lift, and a large-blur box-shadow
-   transition on every pointer pass is exactly the repaint mobile cannot pay. */
-.progress-trade-summary,
-.progress-trade-summary:hover {
-  transform: none;
-  transition: none;
-  box-shadow: inset 0 1px 0 var(--clay-edge), var(--clay-raised);
-}
 
-.progress-trade-label {
-  flex: 0 0 auto;
-  color: var(--text-faint);
-}
 
-/* Vertical room for a focus ring: overflow-x on the scroller computes
-   overflow-y to auto, which would clip the ring on the action buttons. */
-.progress-trade-viewport {
-  padding-block: 6px;
-}
 
-.progress-trade-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: var(--space-4);
-  row-gap: var(--space-2);
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
 
-.progress-trade-card-top {
-  grid-column: 1;
-  display: flex;
-  justify-content: flex-start;
-  text-align: left;
-  gap: var(--space-2);
-}
 
-.progress-trade-card-top-main {
-  justify-content: flex-start;
-  gap: var(--space-2);
-}
-
-.progress-trade-card-symbol {
-  font-size: var(--fs-md);
-  letter-spacing: -0.02em;
-}
-
-/* One status chip, and it is STATUS — so it wears --info, not the money
-   green Phase C gave it. --pnl-* is reserved for money by contract. */
-.progress-trade-badge {
-  border: 0;
-  border-radius: var(--radius-pill);
-  padding: 5px 10px;
-  gap: 6px;
-  background: var(--info-soft);
-  background-image: none;
-  color: var(--info);
-  letter-spacing: 0.1em;
-}
-
-.progress-trade-badge::before {
-  background: currentColor;
-}
 
 /* Tone-agnostic: the ring follows whatever colour the chip is wearing. */
 @keyframes livePulse {
@@ -7022,155 +6487,23 @@ summary:focus-visible {
   }
 }
 
-/* Hero: the live price, with its move beside it. */
-.progress-trade-hero {
-  grid-column: 1;
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
-  margin: 0;
-}
 
-.progress-trade-price {
-  color: var(--text);
-  font: 700 clamp(26px, 3vw, 33px)/1.05 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.025em;
-}
 
-.progress-trade-move {
-  padding: 3px 10px;
-  border-radius: var(--radius-pill);
-  background: var(--surface-inset);
-  color: var(--text-soft);
-  font: 600 var(--fs-data)/1.35 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
 
-.progress-trade-move.pnl-positive {
-  background: var(--pnl-pos-soft);
-  color: var(--pnl-pos);
-}
 
-.progress-trade-move.pnl-negative {
-  background: var(--pnl-neg-soft);
-  color: var(--pnl-neg);
-}
 
-/* The absolute move is the same fact in another unit — it rides as a quiet
-   text run so the row has one filled pill, not two competing ones. */
-.progress-trade-move-abs,
-.progress-trade-move-abs.pnl-positive,
-.progress-trade-move-abs.pnl-negative {
-  padding-inline: 0;
-  background: transparent;
-  color: var(--text-soft);
-  font-weight: 500;
-}
 
-/* Quiet actions: real controls (44px, --control-edge boundary at 3:1) that
-   do not shout next to the primary New Trade button. */
-.progress-trade-actions {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
 
-.progress-trade-action {
-  appearance: none;
-  -webkit-appearance: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  min-width: 76px;
-  padding: 10px 16px;
-  border: 1px solid var(--control-edge);
-  border-radius: var(--radius-pill);
-  background: var(--surface-2);
-  color: var(--text-soft);
-  cursor: pointer;
-  box-shadow: var(--clay-raised);
-  transition: transform var(--dur-squish) var(--ease-squish),
-    background-color var(--dur-fast) var(--ease-out),
-    border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
-}
 
-.progress-trade-action strong {
-  font: 600 var(--fs-label)/1 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: inherit;
-}
 
-.progress-trade-action:hover {
-  background: var(--surface-3);
-  border-color: var(--accent);
-  color: var(--text);
-}
 
-/* Pressed moves fill AND shadow direction, never shadow alone. */
-.progress-trade-action:active {
-  transform: translateY(2px) scale(0.985);
-  background: var(--surface-3);
-  box-shadow: var(--clay-pressed);
-}
 
-/* Destructive reads by colour; the boundary stays --control-edge so the 3:1
-   control-identification bar is met by something other than a soft tint. */
-.progress-trade-action-close,
-.progress-trade-action-close:hover {
-  color: var(--pnl-neg);
-}
 
-.progress-trade-action-close:hover {
-  background: var(--pnl-neg-soft);
-  border-color: var(--pnl-neg);
-}
 
-/* Disclosure: flat label/value runs, not four more little boxes. */
-.progress-trade-card-meta {
-  grid-column: 1 / -1;
-  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
-  gap: var(--space-2) var(--space-4);
-  margin-top: var(--space-1);
-  text-align: left;
-}
 
-.progress-trade-stat {
-  padding: 0;
-  border-radius: 0;
-  background: transparent;
-  gap: 3px;
-}
 
-/* --- 2. Dashboard head --------------------------------------------------- */
-/* An editorial line, not a panel and not a ruled header. The compound
-   selector is deliberate: Phase D §1 gives every .view-head the clay box, and
-   the dashboard is the one place a header box wastes vertical space the
-   numbers should own. Everywhere else the clay .view-head stands. */
-.view-head.view-head-dashboard {
-  align-items: baseline;
-  gap: var(--space-2) var(--space-5);
-  padding: var(--space-1) var(--space-2) var(--space-2);
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  background-image: none;
-  box-shadow: none;
-}
 
-:root:not([data-theme="light"]) .view-head.view-head-dashboard {
-  border: 0;
-}
 
-.view-head-dashboard h2 {
-  font-size: clamp(23px, 2.4vw, 28px);
-}
 
 .view-head-support {
   max-width: 44ch;
@@ -7319,41 +6652,6 @@ summary:focus-visible {
   animation-duration: 860ms;
 }
 
-/* --- 9. Dark-only soft edge ---------------------------------------------- */
-/* Same rule as Phase D §9: in dark the drop shadow is invisible against the
-   page, so the barely-there top edge is what separates surface from page. */
-:root:not([data-theme="light"]) .progress-trade-summary {
-  border: 1px solid var(--clay-edge);
-}
-
-/* --- 10. Mobile ---------------------------------------------------------- */
-@media (max-width: 900px) {
-  .journal-action-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .journal-action-buttons {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-3);
-  }
-
-  /* min-width: 0 is load-bearing — the 760px block sets a 160px floor, which
-     on a grid item at 375px overflows the bar rather than shrinking. */
-  .journal-action-btn {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .progress-trade-summary {
-    margin-left: 0;
-    /* The bar is flex-direction: column here, so flex-basis is measured on the
-       VERTICAL axis — the desktop `flex: 1 1 460px` was being read as a 460px
-       height, which is what inflated the ticker into a tall empty card. */
-    flex: 0 0 auto;
-  }
-}
 
 @media (max-width: 720px) {
   /* The hero keeps a floor because the sparkline is absolutely positioned
@@ -7366,26 +6664,14 @@ summary:focus-visible {
     min-height: 0;
   }
 
-  .progress-trade-summary {
-    padding: var(--space-4);
-  }
 }
 
 /* One column at phone width: the actions drop under the price instead of
    squeezing it to four characters. */
 @media (max-width: 560px) {
-  .progress-trade-card {
-    grid-template-columns: minmax(0, 1fr);
-  }
 
-  .progress-trade-actions {
-    grid-column: 1;
-    grid-row: auto;
-  }
 
-  .progress-trade-action {
-    flex: 1 1 0;
-  }
+
 
   .dash-stats,
   .dash-deck,
@@ -7405,22 +6691,6 @@ summary:focus-visible {
     gap: var(--space-3);
   }
 
-  .view-head-dashboard {
-    padding-inline: var(--space-1);
-  }
-}
-
-/* --- 11. Reduced motion --------------------------------------------------- */
-@media (prefers-reduced-motion: reduce) {
-  .progress-trade-action:active {
-    transform: none;
-  }
-
-  /* The status pulse is perpetual, so it dies outright rather than running at
-     0.01ms forever; the chip's fill and label still say the price is live. */
-  .progress-trade-badge::before {
-    animation: none;
-  }
 }
 
 /* ==========================================================================
@@ -7716,9 +6986,6 @@ body:has(textarea:focus) .tabbar-fab {
     display: none;
   }
 
-  .journal-action-buttons {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 /* --- 6. Touch targets ----------------------------------------------------- */

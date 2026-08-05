@@ -19,6 +19,7 @@
   debounce
 } from "./src/lib/core.js";
 import { formatCurrency } from "./src/lib/format.js";
+import { getNextSessionOpen, formatCountdown } from "./src/lib/sessions.js";
 import {
   normalizeMarketSymbol,
   fetchLivePricesFromBackend
@@ -164,7 +165,10 @@ const state = {
   },
   dashboard: {
     performanceDimension: "setup",
-    performanceMetric: "pnl"
+    performanceMetric: "pnl",
+    // 1a balance card range toggle: scopes the equity sparkline and the
+    // range-return chip. "1m" = 30 days, "3m" = 90, "all" = since start.
+    balanceRange: "1m"
   },
   journalSort: {
     key: "",
@@ -220,6 +224,30 @@ const ui = {
   metricGrid: document.getElementById("dashboardMetricGrid"),
   dashSparkline: document.getElementById("dashSparkline"),
   dashHeroToday: document.getElementById("dashHeroToday"),
+  dashHeroWeek: document.getElementById("dashHeroWeek"),
+  dashHeroRange: document.getElementById("dashHeroRange"),
+  balanceRangeButtons: Array.from(document.querySelectorAll("[data-balance-range]")),
+  dashClock: document.getElementById("dashClock"),
+  dashHello: document.getElementById("dashboardHeading"),
+  riskState: document.getElementById("riskState"),
+  riskDial: document.getElementById("riskDial"),
+  riskDialArc: document.getElementById("riskDialArc"),
+  riskDialValue: document.getElementById("riskDialValue"),
+  riskConsequence: document.getElementById("riskConsequence"),
+  cooldownRulesBtn: document.getElementById("cooldownRulesBtn"),
+  riskRulesBtn: document.getElementById("riskRulesBtn"),
+  allSetupsBtn: document.getElementById("allSetupsBtn"),
+  navUnjournalledBadge: document.getElementById("navUnjournalledBadge"),
+  topnavMore: document.getElementById("topnavMore"),
+  dashPlaybook: document.getElementById("dashPlaybook"),
+  dashPlaybookGrid: document.getElementById("dashPlaybookGrid"),
+  dashSetupAlert: document.getElementById("dashSetupAlert"),
+  dashSetupAlertText: document.getElementById("dashSetupAlertText"),
+  dashUnjournalled: document.getElementById("dashUnjournalled"),
+  dashUnjournalledCount: document.getElementById("dashUnjournalledCount"),
+  dashUnjournalledList: document.getElementById("dashUnjournalledList"),
+  dashJournalStreak: document.getElementById("dashJournalStreak"),
+  dashJournalBars: document.getElementById("dashJournalBars"),
   balanceCard: document.querySelector(".metric-card-balance"),
   balanceOverrideNote: document.getElementById("balanceOverrideNote"),
   riskStrip: document.getElementById("riskStrip"),
@@ -328,6 +356,7 @@ const ui = {
   // .nav-btn + data-target, so ui.navButtons above already owns them.
   tabBarNewTradeBtn: document.getElementById("tabBarNewTradeBtn"),
   exportCsvBtn: document.getElementById("exportCsvBtn"),
+  exportCsvBtnMobile: document.getElementById("exportCsvBtnMobile"),
   progressTradeSummary: document.getElementById("progressTradeSummary"),
   progressTradeLabel: document.getElementById("progressTradeLabel"),
   progressTradeTrack: document.getElementById("progressTradeTrack"),
@@ -405,6 +434,12 @@ const { renderCharts } = createChartsModule({ ui, state, prefersReducedMotion })
 let dashSparkHash = "";
 let dashSparkFrame = 0;
 
+// 1a balance-card range toggle. Declared here (above the module-level init()
+// call) like every other module const: anything below it is in the temporal
+// dead zone during the first render.
+const BALANCE_RANGE_DAYS = { "1m": 30, "3m": 90, all: 0 };
+const BALANCE_RANGE_LABELS = { "1m": "past 30 days", "3m": "past 90 days", all: "all time" };
+
 const METRIC_DELTA_SPECS = {
   accountBalance: { read: (a) => a.totalPnl, format: formatCurrency },
   totalTrades: { read: (a) => a.totalTrades, format: (v) => String(Math.round(v)), neutral: true },
@@ -476,8 +511,6 @@ function init() {
   setupHeroTilt();
   setupDeckTilt();
   setupLandingParallax();
-  // One frame late so the nav has a laid-out box to measure.
-  requestAnimationFrame(positionNavRail);
   startLivePriceLoop();
   // Hash router: restore the deep-linked view for preview sessions; the
   // authenticated flow restores in checkAuthSession once the gate opens.
@@ -525,7 +558,11 @@ function applyTheme(theme) {
   }
   ui.themeToggles.forEach((button) => {
     const next = theme === "light" ? "dark" : "light";
-    button.textContent = next === "light" ? "Light" : "Dark";
+    // [data-theme-glyph] toggles carry a moon mark (1a top bar) — label them
+    // through aria only, or the glyph gets overwritten with a word.
+    if (!button.hasAttribute("data-theme-glyph")) {
+      button.textContent = next === "light" ? "Light" : "Dark";
+    }
     button.setAttribute("aria-label", `Switch to ${next} theme`);
   });
   window.dispatchEvent(new CustomEvent("themechange", { detail: { theme } }));
@@ -577,14 +614,8 @@ function bindEvents() {
     window.clearTimeout(sparkResizeTimer);
     sparkResizeTimer = window.setTimeout(() => {
       if (ui.dashSparkline) {
-        drawDashSparkline(
-          ui.dashSparkline,
-          Array.isArray(state.analytics.equity) ? state.analytics.equity.filter(Number.isFinite) : [],
-          1
-        );
+        drawDashSparkline(ui.dashSparkline, getScopedEquity(state.analytics), 1);
       }
-      // Piggybacks the existing debounce: the nav rail is a measured box too.
-      positionNavRail();
     }, 150);
   });
 
@@ -834,6 +865,56 @@ function bindEvents() {
   ui.tabBarNewTradeBtn?.addEventListener("click", openFreshTradeEntry);
   ui.dashboardEmptyCta?.addEventListener("click", openFreshTradeEntry);
   ui.exportCsvBtn.addEventListener("click", exportTradesCsv);
+  ui.exportCsvBtnMobile?.addEventListener("click", exportTradesCsv);
+
+  // --- 1a dashboard wiring -------------------------------------------------
+  ui.balanceRangeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      state.dashboard.balanceRange = button.dataset.balanceRange || "1m";
+      syncBalanceRangeButtons();
+      renderBalanceCard(state.analytics);
+    });
+  });
+
+  // Both "Rules" routes land on the risk budgets that drive the consequence
+  // line. Phase 6 replaces this target with the cooldown feature itself.
+  [ui.cooldownRulesBtn, ui.riskRulesBtn].forEach((button) => {
+    button?.addEventListener("click", () => {
+      switchView("dashboard");
+      scrollDashboardTo(ui.riskForm);
+    });
+  });
+  ui.allSetupsBtn?.addEventListener("click", () => {
+    switchView("dashboard");
+    scrollDashboardTo(ui.edgeRows?.closest(".panel"));
+  });
+  ui.dashUnjournalledList?.addEventListener("click", (event) => {
+    const row = event.target.closest("[data-unjournalled-trade]");
+    if (row) {
+      focusTradeInJournal(row.dataset.unjournalledTrade);
+    }
+  });
+  // Overflow menu is a <details>; close it on outside click and on Escape.
+  if (ui.topnavMore) {
+    document.addEventListener("click", (event) => {
+      if (ui.topnavMore.open && !ui.topnavMore.contains(event.target)) {
+        ui.topnavMore.open = false;
+      }
+    });
+    ui.topnavMore.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        ui.topnavMore.open = false;
+        ui.topnavMore.querySelector("summary")?.focus();
+      }
+    });
+    ui.topnavMore.addEventListener("click", (event) => {
+      if (event.target.closest(".topnav-menu-item")) {
+        ui.topnavMore.open = false;
+      }
+    });
+  }
+  // The greeting carries a live session countdown; a minute tick is enough.
+  window.setInterval(renderGreeting, 60000);
   ui.backupJsonBtn.addEventListener("click", exportBackupJson);
   ui.importJsonBtn.addEventListener("click", () => ui.jsonImportInput.click());
   ui.jsonImportInput.addEventListener("change", importBackupJson);
@@ -968,7 +1049,9 @@ function switchView(id) {
   ui.navButtons.forEach((btn) => {
     const isActive = btn.dataset.target === id;
     btn.classList.toggle("is-active", isActive);
-    if (isActive) {
+    // [data-nav-silent] routes (the TJ mark) share a destination with a real
+    // nav item — two aria-current="page" in one nav is a screen-reader bug.
+    if (isActive && !btn.hasAttribute("data-nav-silent")) {
       btn.setAttribute("aria-current", "page");
     } else {
       btn.removeAttribute("aria-current");
@@ -1004,8 +1087,6 @@ function switchView(id) {
     state.auth.guestNoticeDismissed = false;
     syncDemoNotice();
   }
-
-  positionNavRail();
 }
 
 function getViewFromHash() {
@@ -1504,8 +1585,6 @@ function updateAccessGate() {
   if (locked) {
     toggleMobileNav(false);
   }
-
-  positionNavRail();
 }
 
 function readAuthForm(forRegister = false) {
@@ -3997,6 +4076,9 @@ function renderAll() {
   renderProgressTradeSummary();
   renderDashboardMetrics(state.analytics);
   renderRiskStrip(state.analytics);
+  renderGreeting();
+  renderPlaybook(state.analytics);
+  renderUnjournalled();
   syncBulkUndoButton();
   renderRiskViolations(state.analytics);
   renderEdgeTable(state.analytics);
@@ -4028,50 +4110,27 @@ function renderProgressTradeSummary() {
     return;
   }
 
-  ui.progressTradeLabel.textContent = openTrades.length === 1 ? "In Progress Trade" : "In Progress Trades";
+  ui.progressTradeLabel.textContent = openTrades.length === 1 ? "Open position" : "Open positions";
+  // 1a: the in-progress cards collapse into an inline LIVE ticker pill —
+  // symbol, price, % move, Close. innerHTML runs from renderAll only; the 5s
+  // poll patches the [data-live-field] nodes in place (patchLiveNodes), so
+  // this markup is never rebuilt on a tick.
   ui.progressTradeTrack.innerHTML = openTrades
     .map((trade) => {
-      const liveSnapshot = getOpenTradeLiveSnapshot(trade);
-      const currentPrice = liveSnapshot?.currentPrice ?? null;
-      const livePercent = liveSnapshot?.livePercent ?? null;
-      const pnlToneClass = liveSnapshot?.toneClass ?? "";
-      const priceMove = liveSnapshot?.priceMove ?? null;
-      const dollarMove = liveSnapshot?.dollarPnl ?? null;
-      const directionClass = String(trade.direction || "").toLowerCase() === "sell" ? "recent-trade-direction-sell" : "recent-trade-direction-buy";
+      const snapshot = getOpenTradeLiveSnapshot(trade);
+      const currentPrice = snapshot?.currentPrice ?? null;
+      const livePercent = snapshot?.livePercent ?? null;
+      const tone = snapshot?.toneClass ?? "";
+      const symbol = escapeHtml(trade.asset || "—");
 
-      // PHASE E — one calm clay object instead of a grid of boxes-in-boxes.
-      // Identity row (symbol + direction + ONE status chip), the live price as
-      // the hero numeral with its move beside it, quiet Show/Close actions, and
-      // entry/SL/TP/$ folded into the disclosure. Every live-cell tag the 5s
-      // poll patches in place is preserved, as are the two data-* handlers.
       return `
-        <article class="progress-trade-card">
-          <div class="progress-trade-card-top">
-            <div class="progress-trade-card-top-main">
-              <strong class="progress-trade-card-symbol">${escapeHtml(trade.asset || "—")}</strong>
-              <span class="recent-trade-direction ${directionClass}">${escapeHtml(trade.direction || "Buy")}</span>
-              <span class="progress-trade-badge">Live</span>
-            </div>
-          </div>
-          <p class="progress-trade-hero">
-            <strong class="progress-trade-price ${pnlToneClass} live-cell" ${liveCellAttrs(trade, "currentPrice")}>${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : "—"}</strong>
-            <span class="progress-trade-move ${pnlToneClass} live-cell" ${liveCellAttrs(trade, "livePercent")}>${escapeHtml(formatLivePercentLabel(livePercent, "OPEN"))}</span>
-            <span class="progress-trade-move progress-trade-move-abs ${pnlToneClass} live-cell" ${liveCellAttrs(trade, "priceMove")}>${formatPriceMove(priceMove)}</span>
-          </p>
-          <div class="progress-trade-actions">
-            <button class="progress-trade-action" type="button" data-progress-details-toggle aria-expanded="false">
-              <strong>Show</strong>
-            </button>
-            <button class="progress-trade-action progress-trade-action-close" type="button" data-close-trade="${escapeHtml(String(trade.id || ""))}" aria-label="Close ${escapeHtml(trade.asset || "")} at market price">
-              <strong>Close</strong>
-            </button>
-          </div>
-          <div class="progress-trade-card-meta progress-trade-card-meta-hidden">
-              <span class="progress-trade-stat"><em>Entry</em><strong>${formatProgressTradePrice(trade.entryPrice)}</strong></span>
-              <span class="progress-trade-stat"><em>SL</em><strong>${formatProgressTradePrice(trade.stopLoss)}</strong></span>
-              <span class="progress-trade-stat"><em>TP</em><strong>${formatProgressTradePrice(trade.takeProfit)}</strong></span>
-              <span class="progress-trade-stat"><em>$ Move</em><strong class="${pnlToneClass} live-cell" ${liveCellAttrs(trade, "dollarPnl")}>${formatSignedCurrency(dollarMove)}</strong></span>
-          </div>
+        <article class="dash-live-pill">
+          <span class="dash-live-dot" aria-hidden="true"></span>
+          <span class="dash-live-tag">Live</span>
+          <strong class="dash-live-symbol">${symbol}</strong>
+          <span class="dash-live-price live-cell" ${liveCellAttrs(trade, "currentPrice")}>${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : "—"}</span>
+          <span class="dash-live-move ${tone} live-cell" ${liveCellAttrs(trade, "livePercent")}>${escapeHtml(formatLivePercentLabel(livePercent, "OPEN"))}</span>
+          <button class="dash-live-close" type="button" data-close-trade="${escapeHtml(String(trade.id || ""))}" aria-label="Close ${symbol} at market price">Close</button>
         </article>
       `;
     })
@@ -4083,24 +4142,6 @@ function handleProgressTradeDetailsToggle(event) {
   const closeButton = event.target.closest("[data-close-trade]");
   if (closeButton) {
     closeTradeAtMarket(closeButton.dataset.closeTrade);
-    return;
-  }
-
-  const toggle = event.target.closest("[data-progress-details-toggle]");
-  if (!toggle) {
-    return;
-  }
-
-  const card = toggle.closest(".progress-trade-card");
-  if (!card) {
-    return;
-  }
-
-  const isOpen = card.classList.toggle("is-details-open");
-  toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
-  const label = toggle.querySelector("strong");
-  if (label) {
-    label.textContent = isOpen ? "Hide" : "Show";
   }
 }
 
@@ -4621,15 +4662,29 @@ function renderMetricDeltas() {
     const spec = METRIC_DELTA_SPECS[node.dataset.metricDelta];
     if (!spec || !hasComparison || (spec.skip && spec.skip(current, previous))) {
       node.hidden = true;
+      node.closest(".dash-quad-card")?.classList.remove("is-pos", "is-neg");
       return;
     }
 
     const delta = spec.read(current) - spec.read(previous);
     const tone = spec.neutral ? 0 : spec.invert ? -delta : delta;
-    node.textContent = `${delta > 0 ? "+" : ""}${spec.format(delta)} ${windows.label}`;
+    // 1a: the chip leads with an arrow glyph and a negative one says
+    // "sinking" in words, so the tile's pressed clay is never the only cue.
+    const arrow = tone > 0 ? "▲ " : tone < 0 ? "▼ " : "";
+    const magnitude = spec.format(Math.abs(delta));
+    const suffix = tone < 0 ? " — sinking" : "";
+    node.textContent = `${arrow}${magnitude} ${windows.label}${suffix}`;
     node.classList.toggle("is-pos", tone > 0);
     node.classList.toggle("is-neg", tone < 0);
     node.hidden = false;
+
+    // Depth as data on the edge quad: the tile sinks when the metric got
+    // worse against the previous period.
+    const quadCard = node.closest(".dash-quad-card");
+    if (quadCard) {
+      quadCard.classList.toggle("is-pos", tone > 0);
+      quadCard.classList.toggle("is-neg", tone < 0);
+    }
   });
 }
 
@@ -4724,8 +4779,8 @@ function renderDashboardMetrics(analytics) {
   });
 
   renderMetricDeltas();
-  renderDashHeroToday(analytics);
-  renderDashSparkline(analytics);
+  // 1a: the balance card owns its own chips + sparkline scoping.
+  renderBalanceCard(analytics);
 
   // Reconcile balanceOverride vs the equity curve: when the override is set,
   // the balance card says so instead of silently contradicting the chart.
@@ -4745,25 +4800,6 @@ function renderDashboardMetrics(analytics) {
   if (ui.traderScoreCaption) {
     ui.traderScoreCaption.textContent = analytics.traderScore.caption;
   }
-}
-
-// Balance hero: today's realized P&L as a toned chip beside the delta.
-function renderDashHeroToday(analytics) {
-  if (!ui.dashHeroToday) {
-    return;
-  }
-
-  const hasTrades = state.trades.length > 0;
-  ui.dashHeroToday.hidden = !hasTrades;
-  if (!hasTrades) {
-    return;
-  }
-
-  // A flat day reads "$0.00", not the ± sentinel formatSignedCurrency returns.
-  const todayText = analytics.todayPnl === 0 ? formatCurrency(0) : formatSignedCurrency(analytics.todayPnl);
-  ui.dashHeroToday.textContent = `Today ${todayText}`;
-  ui.dashHeroToday.classList.toggle("is-pos", analytics.todayPnl > 0);
-  ui.dashHeroToday.classList.toggle("is-neg", analytics.todayPnl < 0);
 }
 
 function drawDashSparkline(canvas, points, progress) {
@@ -4863,8 +4899,10 @@ function renderDashSparkline(analytics) {
     return;
   }
 
-  const points = Array.isArray(analytics.equity) ? analytics.equity.filter(Number.isFinite) : [];
-  const hash = `${points.length}:${points[points.length - 1]}:${points[0]}`;
+  // Scoped by the 1M / 3M / ALL toggle; the range rides in the hash so a
+  // toggle repaints (and re-animates) but a live tick still does not.
+  const points = getScopedEquity(analytics);
+  const hash = `${state.dashboard.balanceRange}:${points.length}:${points[points.length - 1]}:${points[0]}`;
   const changed = hash !== dashSparkHash;
   dashSparkHash = hash;
 
@@ -5122,29 +5160,6 @@ function setupDeckTilt() {
   document.querySelectorAll("[data-tilt]").forEach((card) => bindPointerTilt(card, card, 3.5));
 }
 
-// Sliding nav underline. One rail, positioned from the active button's box
-// instead of six underlines blinking on and off. Measured only on view
-// switch, gate change and a debounced resize — never inside the 5s
-// live-price loop.
-function positionNavRail() {
-  const rail = document.querySelector(".desktop-nav-links");
-  if (!rail) {
-    return;
-  }
-
-  const active = rail.querySelector(".nav-btn.is-active");
-  // offsetParent is null while the nav is display:none (logged out) — the
-  // measurement would be zeros, so hide the rail instead of parking it at 0.
-  if (!active || !active.offsetParent) {
-    rail.style.setProperty("--nav-rail-o", "0");
-    return;
-  }
-
-  rail.style.setProperty("--nav-rail-x", `${active.offsetLeft}px`);
-  rail.style.setProperty("--nav-rail-w", `${active.offsetWidth}px`);
-  rail.style.setProperty("--nav-rail-o", "1");
-}
-
 // Landing parallax: one passive scroll listener writing a single custom
 // property on the shell. CSS consumes it (grid floor, hero canvas) with
 // transforms only, so scrolling stays a composite — no layout, no repaint of
@@ -5236,8 +5251,8 @@ function renderRiskStrip(analytics) {
   }
 
   const entries = [
-    { key: "day", pnl: analytics.todayPnl, limit: state.settings.dailyMaxLoss, period: "today" },
-    { key: "week", pnl: analytics.weekPnl, limit: state.settings.weeklyMaxLoss, period: "this week" }
+    { key: "day", pnl: analytics.todayPnl, limit: state.settings.dailyMaxLoss },
+    { key: "week", pnl: analytics.weekPnl, limit: state.settings.weeklyMaxLoss }
   ];
 
   const visible = state.trades.length > 0 && entries.some((entry) => entry.limit > 0);
@@ -5245,6 +5260,9 @@ function renderRiskStrip(analytics) {
   if (!visible) {
     return;
   }
+
+  let tightestLeft = 1;
+  let breached = false;
 
   entries.forEach((entry) => {
     const item = ui.riskStrip.querySelector(`[data-risk-strip="${entry.key}"]`);
@@ -5259,25 +5277,489 @@ function renderRiskStrip(analytics) {
 
     const used = Math.max(-entry.pnl, 0);
     const ratio = clamp(used / entry.limit, 0, 1);
-    const breached = entry.pnl < -entry.limit;
-    item.classList.toggle("is-breach", breached);
-    item.classList.toggle("is-warn", !breached && ratio >= 0.6);
+    const isBreach = entry.pnl < -entry.limit;
+    breached = breached || isBreach;
+    tightestLeft = Math.min(tightestLeft, 1 - ratio);
+
+    item.classList.toggle("is-breach", isBreach);
+    item.classList.toggle("is-warn", !isBreach && ratio >= 0.6);
 
     const fill = item.querySelector(".risk-strip-fill");
     if (fill) {
       fill.style.width = `${Math.round(ratio * 100)}%`;
     }
+    // "used / limit" — the figures the mockup asks for, in that order.
     const value = item.querySelector(".risk-strip-value");
     if (value) {
-      value.textContent = `${formatCurrency(entry.pnl)} ${entry.period} / ${formatCurrency(entry.limit)} limit`;
-    }
-    // Headline numeral: budget still available — the actionable number.
-    const remain = item.querySelector(".risk-strip-remain");
-    if (remain) {
-      const left = Math.max(entry.limit - used, 0);
-      remain.textContent = breached ? "Limit breached" : `${formatCurrency(left)} left`;
+      value.textContent = `${formatCurrency(used)} / ${formatCurrency(entry.limit)}`;
     }
   });
+
+  // The dial reads the TIGHTEST of the two budgets: the one that locks the
+  // desk first is the one that matters. State is carried by the word, the
+  // colour and the arc — never by the arc alone (WCAG 1.4.1).
+  const percentLeft = Math.round(clamp(tightestLeft, 0, 1) * 100);
+  const state3 = breached ? "breach" : tightestLeft <= 0.4 ? "warn" : "safe";
+
+  if (ui.riskDial) {
+    ui.riskDial.classList.remove("is-safe", "is-warn", "is-breach");
+    ui.riskDial.classList.add(`is-${state3}`);
+  }
+  if (ui.riskState) {
+    ui.riskState.textContent = state3.toUpperCase();
+    ui.riskState.classList.remove("is-safe", "is-warn", "is-breach");
+    ui.riskState.classList.add(`is-${state3}`);
+  }
+  if (ui.riskDialArc) {
+    // r=48 → circumference 2πr. dasharray paints the remaining budget.
+    const circumference = 2 * Math.PI * 48;
+    ui.riskDialArc.setAttribute(
+      "stroke-dasharray",
+      `${(clamp(tightestLeft, 0, 1) * circumference).toFixed(1)} ${circumference.toFixed(1)}`
+    );
+  }
+  if (ui.riskDialValue) {
+    ui.riskDialValue.innerHTML = `${percentLeft}<span>%</span>`;
+    ui.riskDial?.setAttribute("aria-label", `${percentLeft}% of the tightest loss budget left — ${state3}`);
+    ui.riskDial?.setAttribute("role", "img");
+  }
+  if (ui.riskConsequence) {
+    ui.riskConsequence.textContent = buildRiskConsequence(analytics, breached);
+  }
+}
+
+// The consequence line, computed from the real budgets and risk-per-trade:
+// risk amount = account balance x risk% , losses left = daily budget / that.
+function buildRiskConsequence(analytics, breached) {
+  const dailyLimit = state.settings.dailyMaxLoss;
+  const weeklyLimit = state.settings.weeklyMaxLoss;
+
+  if (weeklyLimit > 0 && analytics.weekPnl < -weeklyLimit) {
+    return "The weekly budget is gone — the desk is locked until next week.";
+  }
+  if (breached || (dailyLimit > 0 && analytics.todayPnl < -dailyLimit)) {
+    return "Today's budget is gone — the desk is locked until tomorrow.";
+  }
+  if (!(dailyLimit > 0)) {
+    return "No daily loss budget set, so nothing stops you. Set one in Risk Controls.";
+  }
+
+  const riskPercent = state.settings.riskPerTrade;
+  const riskAmount = (analytics.accountBalance * riskPercent) / 100;
+  if (!(riskAmount > 0)) {
+    return "Set a risk-per-trade percentage to see how many losses today's budget survives.";
+  }
+
+  const left = Math.max(dailyLimit - Math.max(-analytics.todayPnl, 0), 0);
+  const losses = Math.floor(left / riskAmount);
+  const risk = `${round(riskPercent)}%`;
+  if (losses <= 0) {
+    return `The next loss at ${risk} breaches today's budget and the desk locks until tomorrow.`;
+  }
+  if (losses === 1) {
+    return `One more loss at ${risk} and the desk locks until tomorrow.`;
+  }
+  return `${losses} more losses at ${risk} and the desk locks until tomorrow.`;
+}
+
+/* ── 1a greeting ───────────────────────────────────────────────────────────
+   "Wednesday · London open in 42m" + "Good morning, <name>."
+   The countdown is computed against the real clock in each venue's own time
+   zone (so DST is handled by Intl, not by a hard-coded offset) and weekend
+   occurrences are skipped forward to Monday. */
+// Name: the journal name if the trader set one, else the account username.
+// No name configured returns "" and the greeting drops the address entirely —
+// it never invents one.
+function getTraderName() {
+  const journalName = normalizeJournalName(state.settings.journalName);
+  if (journalName && journalName !== DEFAULT_SETTINGS.journalName) {
+    return journalName;
+  }
+  return String(state.auth.username || "").trim();
+}
+
+function renderGreeting() {
+  if (!ui.dashClock || !ui.dashHello) {
+    return;
+  }
+
+  const now = new Date();
+  const weekday = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(now);
+  const next = getNextSessionOpen(now);
+  ui.dashClock.textContent = next
+    ? `${weekday} · ${next.name} open in ${formatCountdown(next.minutes)}`
+    : weekday;
+
+  const hour = now.getHours();
+  const partOfDay = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
+  const name = getTraderName();
+  ui.dashHello.textContent = name ? `Good ${partOfDay}, ${name}.` : `Good ${partOfDay}.`;
+}
+
+/* ── 1a balance card ─────────────────────────────────────────────────────── */
+function syncBalanceRangeButtons() {
+  ui.balanceRangeButtons.forEach((button) => {
+    const isActive = button.dataset.balanceRange === state.dashboard.balanceRange;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+}
+
+function shiftDaysIso(days) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return toDateInputValue(date);
+}
+
+// Equity value as of a date, read off the analytics equity/equityDates pair.
+// Before the first trade there is only the starting balance.
+function balanceAtDate(analytics, isoDate) {
+  const equity = Array.isArray(analytics?.equity) ? analytics.equity : [];
+  const dates = Array.isArray(analytics?.equityDates) ? analytics.equityDates : [];
+  if (!equity.length) {
+    return state.settings.startingBalance;
+  }
+  let value = equity[0];
+  for (let index = 0; index < equity.length; index += 1) {
+    if ((dates[index] || "") <= isoDate) {
+      value = equity[index];
+    } else {
+      break;
+    }
+  }
+  return value;
+}
+
+function getScopedEquity(analytics) {
+  const equity = Array.isArray(analytics?.equity) ? analytics.equity.filter(Number.isFinite) : [];
+  const days = BALANCE_RANGE_DAYS[state.dashboard.balanceRange] || 0;
+  if (!days || equity.length < 2) {
+    return equity;
+  }
+  const cutoff = shiftDaysIso(days);
+  const dates = Array.isArray(analytics.equityDates) ? analytics.equityDates : [];
+  const scoped = equity.filter((_, index) => (dates[index] || "") >= cutoff);
+  // Fewer than two points in the window is not a curve — fall back to all.
+  return scoped.length >= 2 ? scoped : equity;
+}
+
+function renderBalanceCard(analytics) {
+  if (!analytics) {
+    return;
+  }
+  syncBalanceRangeButtons();
+
+  const hasTrades = state.trades.length > 0;
+  const equity = Array.isArray(analytics.equity) ? analytics.equity : [];
+  // Change figures come off the computed equity curve, never off a manual
+  // balance override — mixing the two would produce a number nobody can trace.
+  const computedBalance = equity[equity.length - 1] ?? state.settings.startingBalance;
+
+  const setChip = (node, text, tone) => {
+    if (!node) {
+      return;
+    }
+    node.hidden = !hasTrades || !text;
+    node.textContent = text || "";
+    node.classList.toggle("is-pos", tone > 0);
+    node.classList.toggle("is-neg", tone < 0);
+  };
+
+  const today = analytics.todayPnl;
+  setChip(
+    ui.dashHeroToday,
+    `${today > 0 ? "▲ " : today < 0 ? "▼ " : ""}${formatCurrency(Math.abs(today))} today`,
+    today
+  );
+
+  const weekAgo = balanceAtDate(analytics, shiftDaysIso(7));
+  const weekPct = weekAgo > 0 ? ((computedBalance - weekAgo) / weekAgo) * 100 : 0;
+  setChip(
+    ui.dashHeroWeek,
+    `${weekPct >= 0 ? "+" : "−"}${Math.abs(weekPct).toFixed(2)}% vs last week`,
+    weekPct
+  );
+
+  const range = state.dashboard.balanceRange;
+  const days = BALANCE_RANGE_DAYS[range] || 0;
+  const base = days ? balanceAtDate(analytics, shiftDaysIso(days)) : state.settings.startingBalance;
+  const change = computedBalance - base;
+  setChip(
+    ui.dashHeroRange,
+    `${change >= 0 ? "+" : "−"}${formatCurrency(Math.abs(change))} ${BALANCE_RANGE_LABELS[range]}`,
+    change
+  );
+
+  renderDashSparkline(analytics);
+}
+
+/* ── 1a playbook ─────────────────────────────────────────────────────────── */
+function renderPlaybook(analytics) {
+  if (!ui.dashPlaybook || !ui.dashPlaybookGrid) {
+    return;
+  }
+
+  // Expectancy per setup = net P&L / trades taken. Most-used setups first,
+  // which is what a playbook review actually wants to see.
+  const rows = (analytics?.setupStats || [])
+    .filter((row) => row.trades > 0)
+    .map((row) => ({
+      setup: row.setup,
+      trades: row.trades,
+      netPnl: row.netPnl,
+      winRate: (row.wins / row.trades) * 100,
+      expectancy: row.netPnl / row.trades
+    }))
+    .sort((a, b) => b.trades - a.trades)
+    .slice(0, 4);
+
+  ui.dashPlaybook.hidden = rows.length === 0;
+  if (!rows.length) {
+    ui.dashPlaybookGrid.innerHTML = "";
+    renderSetupAlert();
+    return;
+  }
+
+  const peak = Math.max(...rows.map((row) => Math.abs(row.expectancy)), 1);
+  ui.dashPlaybookGrid.innerHTML = rows
+    .map((row) => {
+      const positive = row.expectancy >= 0;
+      const width = clamp((Math.abs(row.expectancy) / peak) * 100, 6, 100);
+      return `
+        <article class="dash-play-tile ${positive ? "is-raised" : "is-sunk"}">
+          <p class="dash-play-name">${escapeHtml(row.setup)}</p>
+          <p class="dash-play-value ${positive ? "pnl-positive" : "pnl-negative"}">${positive ? "▲" : "▼"} ${formatCurrency(Math.abs(row.expectancy))}<span class="dash-play-unit">/trade</span></p>
+          <p class="dash-play-meta">Net ${positive ? "+" : "−"}${formatCurrency(Math.abs(row.netPnl))}</p>
+          <p class="dash-play-meta">${row.trades} trade${row.trades === 1 ? "" : "s"} · ${row.winRate.toFixed(0)}% win</p>
+          <div class="dash-play-bar" aria-hidden="true"><span style="width:${width.toFixed(0)}%"></span></div>
+        </article>
+      `;
+    })
+    .join("");
+
+  renderSetupAlert();
+}
+
+// A setup is "failing" when its most recent closed trades are an unbroken run
+// of losses. Three is the shortest run worth naming; below that it is noise.
+function findFailingSetup() {
+  const bySetup = new Map();
+  getClosedTrades()
+    .slice()
+    .sort(sortTradesDesc)
+    .forEach((trade) => {
+      const key = trade.setupType || "Unknown";
+      if (!bySetup.has(key)) {
+        bySetup.set(key, []);
+      }
+      bySetup.get(key).push(trade);
+    });
+
+  let worst = null;
+  bySetup.forEach((trades, setup) => {
+    let streak = 0;
+    for (const trade of trades) {
+      if (Number(trade.netPnl) < 0) {
+        streak += 1;
+      } else {
+        break;
+      }
+    }
+    if (streak >= 3 && (!worst || streak > worst.streak)) {
+      worst = { setup, streak, trades: trades.slice(0, streak) };
+    }
+  });
+  return worst;
+}
+
+function renderSetupAlert() {
+  if (!ui.dashSetupAlert || !ui.dashSetupAlertText) {
+    return;
+  }
+
+  const failing = findFailingSetup();
+  ui.dashSetupAlert.hidden = !failing;
+  if (!failing) {
+    return;
+  }
+
+  const tags = failing.trades.map((trade) => String(trade.psychology || "").trim()).filter(Boolean);
+  const counts = new Map();
+  tags.forEach((tag) => counts.set(tag, (counts.get(tag) || 0) + 1));
+  const unique = Array.from(counts.keys());
+
+  let tagSentence = "";
+  if (tags.length === failing.streak && unique.length && unique.length <= 2) {
+    tagSentence = ` Every one was tagged ${unique.join(" or ")}.`;
+  } else if (unique.length) {
+    const [topTag, topCount] = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0];
+    if (topCount / failing.streak >= 0.5) {
+      tagSentence = ` Most were tagged ${topTag}.`;
+    }
+  }
+
+  ui.dashSetupAlertText.textContent =
+    `${failing.setup} has been negative for ${failing.streak} trades straight.${tagSentence}` +
+    " Retire it, or gate it behind your checklist.";
+}
+
+/* ── 1a unjournalled ─────────────────────────────────────────────────────────
+   RULE: a trade is unjournalled when it is CLOSED and its notes field is
+   empty. Notes are the one field the app cannot infer — psychology ships with
+   a populated default in the form, so testing it would flag nothing. One rule,
+   used by the card, the streak, the bars and the nav badge. */
+function getUnjournalledTrades() {
+  return getClosedTrades()
+    .filter((trade) => !String(trade.notes || "").trim())
+    .sort(sortTradesDesc);
+}
+
+function renderUnjournalled() {
+  const pending = getUnjournalledTrades();
+
+  if (ui.navUnjournalledBadge) {
+    ui.navUnjournalledBadge.hidden = pending.length === 0;
+    ui.navUnjournalledBadge.textContent = String(pending.length);
+    ui.navUnjournalledBadge.setAttribute(
+      "aria-label",
+      `${pending.length} trade${pending.length === 1 ? "" : "s"} without a note`
+    );
+  }
+
+  if (!ui.dashUnjournalled || !ui.dashUnjournalledList) {
+    return;
+  }
+
+  // The card stays up once there is anything closed to journal: with an empty
+  // queue it flips to the all-clear state, which is the only place the streak
+  // is visible — hiding it would hide the reward for keeping it.
+  const hasClosed = getClosedTrades().length > 0;
+  ui.dashUnjournalled.hidden = !hasClosed;
+  if (!hasClosed) {
+    ui.dashUnjournalledList.innerHTML = "";
+    return;
+  }
+
+  ui.dashUnjournalled.classList.toggle("is-clear", pending.length === 0);
+  const lede = ui.dashUnjournalled.querySelector(".dash-unj-lede");
+  if (ui.dashUnjournalledCount) {
+    ui.dashUnjournalledCount.textContent = pending.length
+      ? `${pending.length} trade${pending.length === 1 ? "" : "s"}`
+      : "All clear";
+  }
+  if (lede) {
+    lede.textContent = pending.length
+      ? "Closed, but you never said why. Two minutes each."
+      : "Every closed trade has a note. Keep it that way.";
+  }
+
+  ui.dashUnjournalledList.innerHTML = pending
+    .slice(0, 3)
+    .map((trade) => {
+      const net = Number(trade.netPnl) || 0;
+      const tone = net > 0 ? "pnl-positive" : net < 0 ? "pnl-negative" : "";
+      const symbol = escapeHtml(trade.asset || "—");
+      return `
+        <button class="dash-unj-row" type="button" data-unjournalled-trade="${escapeHtml(String(trade.id || ""))}">
+          <span class="dash-unj-symbol">${symbol}</span>
+          <span class="dash-unj-net ${tone}">${net === 0 ? formatCurrency(0) : formatSignedCurrency(net)}</span>
+          <span class="dash-unj-date">${escapeHtml(formatCompactTradeDate(trade))}</span>
+          <span class="dash-unj-chevron" aria-hidden="true">›</span>
+          <span class="visually-hidden">Journal this ${symbol} trade</span>
+        </button>
+      `;
+    })
+    .join("");
+
+  renderJournalStreak();
+}
+
+// JOURNAL STREAK = consecutive TRADING days, counting back from the most
+// recent day that has closed trades, on which every closed trade has a note.
+function buildJournalDays() {
+  const byDate = new Map();
+  getClosedTrades().forEach((trade) => {
+    const day = byDate.get(trade.date) || { date: trade.date, total: 0, journalled: 0 };
+    day.total += 1;
+    if (String(trade.notes || "").trim()) {
+      day.journalled += 1;
+    }
+    byDate.set(trade.date, day);
+  });
+  return Array.from(byDate.values()).sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+function renderJournalStreak() {
+  const days = buildJournalDays();
+
+  let streak = 0;
+  for (const day of days) {
+    if (day.total > 0 && day.journalled === day.total) {
+      streak += 1;
+    } else {
+      break;
+    }
+  }
+
+  if (ui.dashJournalStreak) {
+    ui.dashJournalStreak.textContent = `${streak} day${streak === 1 ? "" : "s"}`;
+  }
+
+  if (!ui.dashJournalBars) {
+    return;
+  }
+
+  // Seven most recent trading days, oldest → newest. Bar height is the trade
+  // count for that day; the tone says whether they were all journalled.
+  const recent = days.slice(0, 7).reverse();
+  const peak = Math.max(...recent.map((day) => day.total), 1);
+  ui.dashJournalBars.innerHTML = recent
+    .map((day) => {
+      const complete = day.journalled === day.total;
+      const height = 10 + Math.round((day.total / peak) * 16);
+      return `<span class="dash-unj-bar ${complete ? "is-done" : "is-missing"}" style="height:${height}px"></span>`;
+    })
+    .join("");
+  ui.dashJournalBars.setAttribute(
+    "aria-label",
+    recent.length
+      ? `Last ${recent.length} trading day${recent.length === 1 ? "" : "s"}: ${recent.filter((day) => day.journalled === day.total).length} fully journalled`
+      : "No trading days yet"
+  );
+}
+
+// Chevron target: the trade's row in the journal view. Phase 3 replaces this
+// with the journalling sheet.
+function focusTradeInJournal(id) {
+  if (!id) {
+    return;
+  }
+  switchView("journal");
+
+  const reveal = () => {
+    const row = ui.tradesBody?.querySelector(`[data-trade-id="${CSS.escape(id)}"]`);
+    if (!row) {
+      return false;
+    }
+    row.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    row.classList.add("is-flagged");
+    window.setTimeout(() => row.classList.remove("is-flagged"), 2400);
+    return true;
+  };
+
+  // An active filter can hide the row; clearing is the only way to show it.
+  // clearFilters() re-renders the table synchronously, so one retry is enough.
+  if (!reveal()) {
+    clearFilters();
+    reveal();
+  }
+}
+
+function scrollDashboardTo(node) {
+  if (!node) {
+    return;
+  }
+  node.scrollIntoView({ block: "start", behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
 
 function renderCalendarView() {
@@ -5579,7 +6061,7 @@ function renderJournalTable() {
             : "";
 
       return `
-        <tr${rowClass}>
+        <tr${rowClass} data-trade-id="${escapeHtml(String(trade.id || ""))}">
           <td data-label="Date">${escapeHtml(trade.date)}</td>
           <td data-label="Asset">${escapeHtml(trade.asset)}</td>
           <td data-label="Market">${escapeHtml(trade.market)}</td>

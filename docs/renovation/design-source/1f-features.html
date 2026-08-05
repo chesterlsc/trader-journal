@@ -1,0 +1,97 @@
+<!-- ══════════════ 1f — FEATURES ══════════════ -->
+<div id="1f" style="flex:none;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:baseline;gap:9px;font:400 11.5px/1.3 'Space Grotesk',sans-serif;color:#6B6259"><a href="#1f" style="font:600 10.5px/1 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(36,31,26,.09);color:#241F1A;border-radius:5px">1f</a>Features I'd add — ranked</div>
+
+<div style="width:820px;display:grid;gap:16px">
+<div style="padding:26px 28px;border-radius:30px;background:#241F1A;color:#F5F0E8;box-shadow:0 22px 40px -18px hsl(35 30% 25%/.6),inset 0 -8px 16px -8px hsl(35 30% 5%/.5),inset 0 8px 14px -8px hsl(40 20% 70%/.22)">
+<p style="margin:0;font:400 15px/1.6 'Space Grotesk',sans-serif;color:rgba(245,240,232,.78)">Everything below is built on data the app already collects. Nothing here needs a new integration, and the top three are what turn the journal from a record into a system.</p>
+</div>
+
+<article style="display:grid;grid-template-columns:52px 1fr;gap:20px;padding:24px 26px;border-radius:28px;background:#F5F0E8;box-shadow:0 18px 32px -18px hsl(35 30% 40%/.45),inset 0 -8px 16px -8px hsl(35 35% 45%/.22),inset 0 8px 14px -8px hsl(40 60% 100%/.95)">
+<span style="width:52px;height:52px;border-radius:18px;background:#7A4FE2;color:#fff;display:grid;place-items:center;font:700 19px/1 'JetBrains Mono',monospace;box-shadow:0 16px 26px -14px hsl(265 60% 40%/.6),inset 0 -5px 10px -5px hsl(265 70% 30%/.45),inset 0 6px 11px -5px hsl(0 0% 100%/.4)">01</span>
+<div><h4 style="margin:0;font:700 18px/1.2 'Space Grotesk',sans-serif">The unjournalled queue</h4><p style="margin:8px 0 0;font:400 14px/1.55 'Space Grotesk',sans-serif;color:#6B6259">A trade that closed without a note is an incomplete row, and the app should say so. A counted badge in the dock, a card on the dashboard, and a two-minute sheet per trade. This is the single change that will move your data quality, because the psychology fields are the ones people skip and the ones every report depends on. Pairs with a journal streak so there's a reason to keep it at zero.</p></div>
+</article>
+
+<article style="display:grid;grid-template-columns:52px 1fr;gap:20px;padding:24px 26px;border-radius:28px;background:#F5F0E8;box-shadow:0 18px 32px -18px hsl(35 30% 40%/.45),inset 0 -8px 16px -8px hsl(35 35% 45%/.22),inset 0 8px 14px -8px hsl(40 60% 100%/.95)">
+<span style="width:52px;height:52px;border-radius:18px;background:#7A4FE2;color:#fff;display:grid;place-items:center;font:700 19px/1 'JetBrains Mono',monospace;box-shadow:0 16px 26px -14px hsl(265 60% 40%/.6),inset 0 -5px 10px -5px hsl(265 70% 30%/.45),inset 0 6px 11px -5px hsl(0 0% 100%/.4)">02</span>
+<div><h4 style="margin:0;font:700 18px/1.2 'Space Grotesk',sans-serif">Pre-trade checklist, attached to the trade</h4><p style="margin:8px 0 0;font:400 14px/1.55 'Space Grotesk',sans-serif;color:#6B6259">Three or four rules you write once, shown inside the New Trade sheet, stored with the row. Today the Discipline Score is calculated after the fact from psychology tags. With this it becomes causal: "the nine trades where you skipped the news check are −$1,240." Costs one tap and makes an existing number honest.</p></div>
+</article>
+
+<article style="display:grid;grid-template-columns:52px 1fr;gap:20px;padding:24px 26px;border-radius:28px;background:#F5F0E8;box-shadow:0 18px 32px -18px hsl(35 30% 40%/.45),inset 0 -8px 16px -8px hsl(35 35% 45%/.22),inset 0 8px 14px -8px hsl(40 60% 100%/.95)">
+<span style="width:52px;height:52px;border-radius:18px;background:#7A4FE2;color:#fff;display:grid;place-items:center;font:700 19px/1 'JetBrains Mono',monospace;box-shadow:0 16px 26px -14px hsl(265 60% 40%/.6),inset 0 -5px 10px -5px hsl(265 70% 30%/.45),inset 0 6px 11px -5px hsl(0 0% 100%/.4)">03</span>
+<div><h4 style="margin:0;font:700 18px/1.2 'Space Grotesk',sans-serif">Cooldown lock</h4><p style="margin:8px 0 0;font:400 14px/1.55 'Space Grotesk',sans-serif;color:#6B6259">The loss budgets already exist and already know when they're breached — right now they only colour a bar. Let them do something: at the daily limit, or after N losses in a row, the Log-a-trade button changes state and asks one question before it unlocks. Not a hard block, a speed bump. Revenge Trade is a tag in your schema; this is the feature that reduces the count.</p></div>
+</article>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<article style="padding:22px 24px;border-radius:26px;background:#EFE9E1;box-shadow:inset 0 5px 12px -3px hsl(35 35% 40%/.28)"><p style="margin:0;font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.14em;color:#8C8378">04</p><h4 style="margin:8px 0 0;font:700 16px/1.2 'Space Grotesk',sans-serif">Playbook pages</h4><p style="margin:7px 0 0;font:400 13.5px/1.5 'Space Grotesk',sans-serif;color:#6B6259">Each setup gets a page: its expectancy curve, its best session, its screenshots side by side. The Edge Detection table already computes every number — it just has nowhere to go.</p></article>
+<article style="padding:22px 24px;border-radius:26px;background:#EFE9E1;box-shadow:inset 0 5px 12px -3px hsl(35 35% 40%/.28)"><p style="margin:0;font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.14em;color:#8C8378">05</p><h4 style="margin:8px 0 0;font:700 16px/1.2 'Space Grotesk',sans-serif">Equity scrub</h4><p style="margin:7px 0 0;font:400 13.5px/1.5 'Space Grotesk',sans-serif;color:#6B6259">Drag along the equity curve and the trades under your finger stream past with their notes and screenshots. Turns the drawdown from a shape into a story.</p></article>
+<article style="padding:22px 24px;border-radius:26px;background:#EFE9E1;box-shadow:inset 0 5px 12px -3px hsl(35 35% 40%/.28)"><p style="margin:0;font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.14em;color:#8C8378">06</p><h4 style="margin:8px 0 0;font:700 16px/1.2 'Space Grotesk',sans-serif">Voice notes</h4><p style="margin:7px 0 0;font:400 13.5px/1.5 'Space Grotesk',sans-serif;color:#6B6259">Thirty seconds of talking beats a paragraph nobody types. Transcribe on save so it stays searchable next to the written notes.</p></article>
+<article style="padding:22px 24px;border-radius:26px;background:#EFE9E1;box-shadow:inset 0 5px 12px -3px hsl(35 35% 40%/.28)"><p style="margin:0;font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.14em;color:#8C8378">07</p><h4 style="margin:8px 0 0;font:700 16px/1.2 'Space Grotesk',sans-serif">Sunday digest</h4><p style="margin:7px 0 0;font:400 13.5px/1.5 'Space Grotesk',sans-serif;color:#6B6259">A drafted weekly review — your numbers, your worst rule break, your best trade — which you edit rather than write. Feeds the Monthly Review that currently starts as a blank textarea.</p></article>
+</div>
+
+<div style="padding:22px 26px;border-radius:26px;background:#F0E4E8;box-shadow:inset 0 5px 12px -3px hsl(345 30% 45%/.22)">
+<p style="margin:0;font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#B03354">Things I would cut</p>
+<p style="margin:9px 0 0;font:400 14px/1.55 'Space Grotesk',sans-serif;color:#241F1A">The landing page's fake dashboard mock — the live tape does that job honestly. The six-item top nav, which spends a full row on destinations you visit weekly. And "Advanced Details": burying psychology behind a disclosure is what guarantees it stays empty.</p>
+</div>
+</div>
+</div>
+
+</div>
+
+<p style="margin:30px 0 0;font:400 12px/1.6 'Space Grotesk',sans-serif;color:#6B6259">Try next: "push <a href="#1a" style="font-weight:600">1a</a> further — the charts should be weirder" · "show me <a href="#1a" style="font-weight:600">1a</a> in dark clay" · "make <a href="#1b" style="font-weight:600">1b</a> one screen, drop the sheet" · "build <a href="#1f" style="font-weight:600">1f</a> #01 and #03 as real screens"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const RAISED = "0 14px 24px -16px hsl(35 30% 40%/.5),inset 0 -6px 12px -6px hsl(35 35% 45%/.18),inset 0 7px 12px -7px hsl(40 60% 100%/1)";
+const SUNK = "inset 0 5px 12px -3px hsl(35 35% 40%/.36),inset 0 -3px 6px -3px hsl(40 60% 100%/.85)";
+
+class Component extends DCLogic {
+  renderVals() {
+    const tape = [
+      ["BTCUSDT", "H1 · Liquidity Grab · London", "+3.1R", "Win"],
+      ["XAUUSD", "H1 · Breakout · London", "-1.0R", "Loss"],
+      ["ETHUSDT", "M15 · Trend Cont. · New York", "+1.8R", "Win"],
+      ["NAS100", "M5 · Reversal · New York", "-1.0R", "Loss"],
+      ["EURUSD", "M1 · Scalp · London", "0.0R", "Break even"],
+      ["SOLUSDT", "M15 · Liquidity Grab · Asia", "+2.4R", "Win"],
+      ["USDJPY", "H4 · Trend Cont. · Asia", "+1.2R", "Win"]
+    ].map(t => {
+      const win = t[3] === "Win", loss = t[3] === "Loss";
+      return {
+        sym: t[0], meta: t[1], r: t[2], result: t[3].toUpperCase(),
+        bg: win ? "#FBF8F3" : loss ? "#E4DCD0" : "#EFE9E1",
+        shadow: win ? RAISED : loss ? SUNK : "none",
+        color: win ? "#1E9E6B" : loss ? "#DC3F66" : "#8C8378",
+        pillBg: win ? "rgba(30,158,107,.14)" : loss ? "rgba(220,63,102,.13)" : "rgba(36,31,26,.07)"
+      };
+    });
+
+    const pnls = [null,null,null,320,-140,0,null,null,180,460,-90,240,55,null,null,-320,610,120,0,880,null,null,70,-210,340,150,-60,null,null,420,0,190,-110,260,null];
+    const days = pnls.map((v, i) => {
+      const dayNum = i - 2;
+      if (i < 3 || dayNum > 31) return { day: "", pnl: "", meta: "", bg: "transparent", shadow: "none", color: "#8C8378", show: false };
+      if (v === null) return { day: String(dayNum), pnl: "", meta: "", bg: "#E4DCD0", shadow: "inset 0 2px 5px -2px hsl(35 35% 40%/.22)", color: "#B0A79A", show: false };
+      const t = Math.min(Math.abs(v) / 900, 1);
+      const win = v > 0, loss = v < 0;
+      return {
+        day: String(dayNum),
+        pnl: (win ? "+$" : loss ? "-$" : "$") + Math.abs(v),
+        meta: (v === 0 ? 1 : Math.max(1, Math.round(Math.abs(v) / 180))) + " trades",
+        bg: win ? `color-mix(in srgb, #1E9E6B ${(6 + t * 16).toFixed(0)}%, #FBF8F3)`
+          : loss ? `color-mix(in srgb, #DC3F66 ${(5 + t * 13).toFixed(0)}%, #E4DCD0)` : "#EFE9E1",
+        shadow: win
+          ? `0 ${(8 + t * 14).toFixed(0)}px ${(16 + t * 16).toFixed(0)}px -14px hsl(155 40% 25%/${(0.3 + t * 0.3).toFixed(2)}),inset 0 -6px 12px -6px hsl(35 35% 45%/.18),inset 0 7px 12px -7px hsl(40 60% 100%/1)`
+          : loss
+            ? `inset 0 ${(4 + t * 6).toFixed(0)}px ${(10 + t * 8).toFixed(0)}px -3px hsl(345 40% 35%/${(0.22 + t * 0.22).toFixed(2)}),inset 0 -3px 6px -3px hsl(40 60% 100%/.75)`
+            : "inset 0 3px 7px -3px hsl(35 35% 40%/.24)",
+        color: win ? "#177C53" : loss ? "#C22F55" : "#8C8378",
+        show: true
+      };
+    });
+
+    return { tape, days, weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] };
+  }
+}
+</script>
+</body>
+</html>

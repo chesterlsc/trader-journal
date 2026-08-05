@@ -558,3 +558,954 @@ textarea {
     padding-bottom: 126px;
   }
 }
+
+/* ==========================================================================
+   10. DASHBOARD 1a — compact top bar, greeting, live ticker, balance/risk
+   deck, playbook and the unjournalled queue.
+   Source: docs/renovation/design-source/1a-dashboard.html.
+   Every colour is a token, so both themes come for free; the only literals
+   are the clay shadow recipes, which are theme-scoped like §3/§4 above.
+   ========================================================================== */
+
+/* --- 10a. Compact top bar -------------------------------------------------
+   Replaces the six-item text nav. Desktop only: below 1025px the sidebar
+   drawer + the bottom tab bar already own navigation, and stacking a third
+   nav on a 375px screen is how you lose the content. */
+.topnav {
+  display: none;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-clay-lg);
+  background: var(--surface-2);
+  box-shadow: inset 0 1px 0 var(--clay-edge), var(--clay-raised);
+  position: sticky;
+  top: 18px;
+  z-index: var(--z-nav);
+}
+
+@media (min-width: 1025px) {
+  .topnav {
+    display: flex;
+  }
+}
+
+/* Locked session: same contract the deleted .desktop-nav had. */
+body.auth-locked .topnav {
+  display: none !important;
+}
+
+.topnav-mark {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 0;
+  border-radius: var(--radius-clay-sm);
+  background: var(--accent);
+  color: #fff;
+  font: 700 18px/1 var(--font-ui);
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: var(--clay-accent);
+}
+
+/* The mark carries .nav-btn for free routing + auth gating, so the generic
+   .nav-btn.is-active fill has to be neutralised on it. */
+.topnav-mark.is-active {
+  background: var(--accent);
+  border-radius: var(--radius-clay-sm);
+  box-shadow: var(--clay-accent);
+}
+
+.topnav-rule {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 26px;
+  background: var(--line);
+}
+
+.topnav-links {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.topnav-btn {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 5px;
+  min-width: 62px;
+  min-height: 52px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--radius-clay-sm);
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+
+.topnav-btn:hover {
+  color: var(--text);
+  background: var(--surface-3);
+}
+
+.topnav-btn.is-active {
+  background: var(--surface-3);
+  color: var(--accent);
+  box-shadow: var(--clay-pressed);
+}
+
+.topnav-icon svg {
+  display: block;
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.topnav-label {
+  font: 600 9px/1 var(--font-mono);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.topnav-badge {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--pnl-neg);
+  color: #fff;
+  font: 700 9.5px/17px var(--font-mono);
+  text-align: center;
+}
+
+.topnav-badge[hidden] {
+  display: none;
+}
+
+.topnav-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.topnav-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-3);
+  color: var(--text-soft);
+  font: 600 16px/1 var(--font-ui);
+  cursor: pointer;
+  list-style: none;
+  box-shadow: var(--clay-pressed);
+}
+
+.topnav-icon-btn::-webkit-details-marker {
+  display: none;
+}
+
+.topnav-icon-btn:hover {
+  color: var(--text);
+}
+
+.topnav-more {
+  position: relative;
+}
+
+.topnav-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 2;
+  display: grid;
+  gap: 2px;
+  min-width: 210px;
+  padding: var(--space-2);
+  border-radius: var(--radius-clay-md);
+  background: var(--surface-2);
+  box-shadow: var(--clay-float);
+}
+
+.topnav-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text);
+  font: 600 var(--fs-body)/1.2 var(--font-ui);
+  letter-spacing: 0;
+  text-transform: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.topnav-menu-item.is-active {
+  background: var(--surface-3);
+  border-radius: var(--radius-md);
+  color: var(--accent);
+}
+
+.topnav-menu-item:hover {
+  background: var(--surface-3);
+}
+
+.topnav-menu-item-danger {
+  color: var(--pnl-neg);
+}
+
+.topnav-menu-item[hidden] {
+  display: none;
+}
+
+/* Mobile keeps the drawer; Export lost its home when the action bar went. */
+.nav-export-mobile {
+  width: 100%;
+}
+
+/* --- 10b. Dashboard header row ------------------------------------------- */
+.dash-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-1) var(--space-3);
+}
+
+.dash-greeting {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.dash-clock {
+  margin: 0;
+  color: var(--text-faint);
+  font: 600 10.5px/1.3 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.dash-hello {
+  margin: 6px 0 0;
+  font: 700 clamp(21px, 2.4vw, 27px)/1.15 var(--font-ui);
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+/* Inline LIVE ticker. Patched in place by the 5s poll — never rebuilt. */
+.dash-live {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.dash-live[hidden] {
+  display: none;
+}
+
+.dash-live-track {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.dash-live-pill {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 8px 8px 8px 18px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  box-shadow: var(--clay-raised);
+}
+
+.dash-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--pnl-pos);
+}
+
+.dash-live-tag {
+  color: var(--pnl-pos);
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dash-live-symbol {
+  font: 700 15px/1 var(--font-ui);
+  color: var(--text);
+}
+
+.dash-live-price {
+  font: 700 16px/1 var(--font-mono);
+  color: var(--text);
+}
+
+.dash-live-move {
+  padding: 5px 11px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  font: 700 12px/1 var(--font-mono);
+}
+
+.dash-live-move.pnl-positive {
+  background: var(--pnl-pos-soft);
+  color: var(--pnl-pos);
+}
+
+.dash-live-move.pnl-negative {
+  background: var(--pnl-neg-soft);
+  color: var(--pnl-neg);
+}
+
+.dash-live-close {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  color: var(--text-soft);
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: var(--clay-pressed);
+}
+
+.dash-live-close:hover {
+  color: var(--text);
+}
+
+/* Primary action: the biggest, and the only violet, object in the row. */
+.dash-log-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 60px;
+  padding: 0 26px 0 22px;
+  border-radius: var(--radius-pill);
+  font: 700 15px/1 var(--font-ui);
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+.dash-log-btn .journal-action-icon svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.4;
+}
+
+/* --- 10c. Balance card --------------------------------------------------- */
+.dash-hero-top {
+  justify-content: space-between;
+}
+
+.dash-range {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  box-shadow: var(--clay-pressed);
+}
+
+.dash-range-btn {
+  min-height: 32px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-faint);
+  font: 600 10.5px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.dash-range-btn.is-active {
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: var(--clay-soft);
+}
+
+.dash-hero-week,
+.dash-hero-range {
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  color: var(--text-soft);
+  font: 600 12px/1 var(--font-mono);
+  box-shadow: var(--clay-pressed);
+}
+
+.dash-hero-week[hidden],
+.dash-hero-range[hidden] {
+  display: none;
+}
+
+.dash-hero-today {
+  padding: 5px 12px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  font-size: 12.5px;
+}
+
+.dash-hero-today.is-pos,
+.dash-hero-week.is-pos,
+.dash-hero-range.is-pos {
+  background: var(--pnl-pos-soft);
+  color: var(--pnl-pos);
+}
+
+.dash-hero-today.is-neg,
+.dash-hero-week.is-neg,
+.dash-hero-range.is-neg {
+  background: var(--pnl-neg-soft);
+  color: var(--pnl-neg);
+}
+
+/* The card reserves room for the carved sparkline well (§7 grew it to 118px). */
+.metric-card.dash-hero {
+  padding-bottom: 132px;
+}
+
+/* --- 10d. Risk left today ------------------------------------------------ */
+/* Beats .risk-strip's auto-fit columns from styles.css — the card is now a
+   single stacked column: head, dial + figures, consequence. */
+.dash-risk {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--space-5);
+}
+
+.dash-risk-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.dash-risk-state {
+  font: 600 10.5px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+}
+
+.dash-risk-state.is-safe {
+  color: var(--pnl-pos);
+}
+
+.dash-risk-state.is-warn {
+  color: var(--warn);
+}
+
+.dash-risk-state.is-breach {
+  color: var(--pnl-neg);
+}
+
+.dash-risk-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.dash-dial {
+  position: relative;
+  flex: 0 0 auto;
+  width: 118px;
+  height: 118px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-3);
+  box-shadow: var(--clay-pressed);
+}
+
+.dash-dial svg {
+  position: absolute;
+  inset: 0;
+  width: 118px;
+  height: 118px;
+  transform: rotate(-90deg);
+}
+
+.dash-dial-track {
+  fill: none;
+  stroke: var(--surface-inset);
+  stroke-width: 13;
+}
+
+.dash-dial-fill {
+  fill: none;
+  stroke: var(--pnl-pos);
+  stroke-width: 13;
+  stroke-linecap: round;
+  transition: stroke-dasharray var(--dur-base) var(--ease-out);
+}
+
+.dash-dial.is-warn .dash-dial-fill {
+  stroke: var(--warn);
+}
+
+.dash-dial.is-breach .dash-dial-fill {
+  stroke: var(--pnl-neg);
+}
+
+.dash-dial-copy {
+  position: relative;
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  text-align: center;
+}
+
+.dash-dial-value {
+  font: 700 24px/1 var(--font-mono);
+  color: var(--text);
+}
+
+.dash-dial-value span {
+  font-size: 14px;
+}
+
+.dash-dial-label {
+  font: 600 9px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+}
+
+.dash-risk-figures {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.dash-risk .risk-strip-label {
+  letter-spacing: 0.1em;
+}
+
+.dash-risk .risk-strip-value {
+  font: 700 18px/1 var(--font-mono);
+}
+
+.dash-risk-consequence {
+  margin: 0;
+  padding: 15px 17px;
+  border-radius: var(--radius-clay-md);
+  background: var(--surface-3);
+  color: var(--text-soft);
+  font: 500 13px/1.5 var(--font-ui);
+  box-shadow: var(--clay-pressed);
+}
+
+.dash-risk-link {
+  border: 0;
+  padding: 0;
+  margin-left: 4px;
+  background: none;
+  color: var(--accent);
+  font: 600 13px/1.5 var(--font-ui);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* --- 10e. Playbook + unjournalled boards ---------------------------------- */
+.dash-boards {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.dash-board {
+  padding: var(--space-6);
+  border-radius: var(--radius-clay-lg);
+  background: var(--surface-1);
+  box-shadow: var(--clay-raised);
+}
+
+.dash-board[hidden] {
+  display: none;
+}
+
+.dash-board-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.dash-board-head h3 {
+  margin: 0;
+  font: 700 17px/1.2 var(--font-ui);
+  color: var(--text);
+}
+
+.dash-board-head p {
+  margin: 4px 0 0;
+  color: var(--text-soft);
+  font: 400 13px/1.4 var(--font-ui);
+}
+
+.dash-board-link {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.dash-playbook-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+/* Depth as data: a setup with positive expectancy is raised, a losing one is
+   sunk. The money colour and the ▲/▼ glyph carry it too (WCAG 1.4.1). */
+.dash-play-tile {
+  display: grid;
+  gap: 7px;
+  padding: 18px;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-2);
+  box-shadow: var(--clay-raised);
+}
+
+.dash-play-tile.is-sunk {
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+}
+
+.dash-play-name {
+  margin: 0;
+  font: 600 13px/1.2 var(--font-ui);
+  color: var(--text);
+}
+
+.dash-play-value {
+  margin: 0;
+  font: 700 22px/1 var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+.dash-play-unit {
+  margin-left: 3px;
+  font: 500 11px/1 var(--font-mono);
+  color: var(--text-faint);
+}
+
+.dash-play-meta {
+  margin: 0;
+  font: 500 11px/1.3 var(--font-mono);
+  color: var(--text-faint);
+}
+
+.dash-play-bar {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  box-shadow: var(--clay-pressed);
+  overflow: hidden;
+}
+
+.dash-play-bar span {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--pnl-pos);
+}
+
+.dash-play-tile.is-sunk .dash-play-bar span {
+  background: var(--pnl-neg);
+}
+
+.dash-alert {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-top: var(--space-4);
+  padding: 16px 18px;
+  border-radius: var(--radius-clay-md);
+  background: var(--pnl-neg-soft);
+  box-shadow: var(--clay-pressed);
+}
+
+.dash-alert[hidden] {
+  display: none;
+}
+
+.dash-alert-mark {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--pnl-neg);
+  color: #fff;
+  font: 700 15px/1 var(--font-ui);
+}
+
+.dash-alert p {
+  margin: 0;
+  font: 500 13px/1.45 var(--font-ui);
+  color: var(--text);
+}
+
+/* Unjournalled: the one inverted card on the dashboard — it is a to-do list,
+   not a metric, and it should not read as one. */
+.dash-unjournalled {
+  align-content: start;
+  display: grid;
+  gap: var(--space-3);
+  background: var(--surface-inset);
+}
+
+.dash-unj-count {
+  flex: 0 0 auto;
+  padding: 5px 11px;
+  border-radius: var(--radius-pill);
+  background: var(--pnl-neg);
+  color: #fff;
+  font: 700 11px/1 var(--font-mono);
+}
+
+.dash-unj-lede {
+  margin: 0;
+  color: var(--text-soft);
+  font: 400 13px/1.45 var(--font-ui);
+}
+
+.dash-unj-list {
+  display: grid;
+  gap: 10px;
+}
+
+.dash-unj-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 52px;
+  padding: 13px 15px;
+  border: 0;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--clay-raised);
+}
+
+.dash-unj-row:hover {
+  background: var(--surface-3);
+}
+
+.dash-unj-symbol {
+  flex: 1 1 auto;
+  font: 700 13px/1 var(--font-ui);
+}
+
+.dash-unj-net {
+  font: 600 12px/1 var(--font-mono);
+}
+
+.dash-unj-date {
+  font: 600 10.5px/1 var(--font-mono);
+  color: var(--text-faint);
+}
+
+.dash-unj-chevron {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font: 700 14px/1 var(--font-ui);
+}
+
+.dash-unj-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.dash-unj-streak-label {
+  margin: 0;
+  font: 600 10px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.dash-unj-streak {
+  margin: 5px 0 0;
+  font: 700 27px/1 var(--font-mono);
+  color: var(--text);
+}
+
+.dash-unj-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  min-height: 26px;
+}
+
+.dash-unj-bar {
+  display: block;
+  width: 8px;
+  border-radius: 3px;
+  background: var(--pnl-pos);
+}
+
+.dash-unj-bar.is-missing {
+  background: var(--pnl-neg);
+}
+
+/* Journal row the unjournalled chevron jumped to. */
+#journal tbody tr.is-flagged td {
+  background: var(--accent-muted);
+}
+
+/* --- 10f. Mobile --------------------------------------------------------- */
+@media (max-width: 900px) {
+  .dash-boards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .dash-head {
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .dash-greeting {
+    flex: 1 1 100%;
+  }
+
+  .dash-live {
+    flex: 1 1 100%;
+    margin: 0 calc(-1 * var(--space-1));
+    padding-bottom: 4px;
+  }
+
+  .dash-log-btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .dash-risk-body {
+    gap: var(--space-4);
+  }
+
+  .dash-dial,
+  .dash-dial svg {
+    width: 96px;
+    height: 96px;
+  }
+
+  .dash-board {
+    padding: var(--space-4);
+  }
+
+  .dash-playbook-grid {
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  }
+
+  .dash-unj-foot {
+    flex-wrap: wrap;
+  }
+}
+
+/* --- 10g. Reduced motion ------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .dash-dial-fill,
+  .dash-live-move,
+  .topnav-btn {
+    transition: none;
+  }
+}
+
+/* --- 10h. Focus + touch targets -------------------------------------------
+   The clay box-shadows above out-specify the global button:focus-visible
+   ring, so it is restored here (same trick the old nav rail used). */
+.topnav-mark:focus-visible,
+.topnav-btn:focus-visible,
+.topnav-icon-btn:focus-visible,
+.topnav-menu-item:focus-visible,
+.dash-range-btn:focus-visible,
+.dash-live-close:focus-visible,
+.dash-board-link:focus-visible,
+.dash-risk-link:focus-visible,
+.dash-unj-row:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Touch pointers get 44px on the two controls the mockup draws small. */
+@media (pointer: coarse) {
+  .dash-range-btn {
+    min-height: 44px;
+    padding: 0 18px;
+  }
+
+  .dash-live-close {
+    min-height: 44px;
+    padding: 0 20px;
+  }
+}
+
+/* All-clear state: nothing left to journal, so the count chip stops shouting
+   and the card becomes the streak's home. */
+.dash-unjournalled.is-clear .dash-unj-count {
+  background: var(--pnl-pos-soft);
+  color: var(--pnl-pos);
+}
+
+.dash-unjournalled.is-clear .dash-unj-list {
+  display: none;
+}
