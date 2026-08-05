@@ -1481,8 +1481,12 @@ body.auth-locked .topnav {
   box-shadow: var(--focus-ring);
 }
 
-/* Touch pointers get 44px on the two controls the mockup draws small. */
-@media (pointer: coarse) {
+/* Touch pointers get 44px on the two controls the mockup draws small.
+   The width branch is load-bearing, not belt-and-braces: a phone-sized
+   viewport is a thumb whether or not the UA reports a coarse pointer, and
+   every headless/emulated run reports `fine` — which is exactly why the
+   375px audit still measured these at 32px and 38px. */
+@media (max-width: 899px), (pointer: coarse) {
   .dash-range-btn {
     min-height: 44px;
     padding: 0 18px;
@@ -2098,9 +2102,6 @@ body.auth-locked .topnav {
   .sheet-step { font-size: 13.5px; }
 
   .cmdk { width: 100vw; margin-top: 24px; }
-
-  /* The tab bar owns the bottom edge on mobile. */
-  .capture-toast { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
 }
 
 @keyframes sheetExpand {
@@ -3587,4 +3588,142 @@ body.auth-locked .topnav {
 .cooldown-toggle input:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
+}
+
+/* ==========================================================================
+   15. SITEWIDE MOBILE POLISH
+   1a–1f were each drawn from a desktop mockup, so each one arrived with its
+   own sub-11px kicker and its own 32–42px control. This section is the sweep:
+   it enforces the two floors the system already claims — 11px type (the
+   --fs-micro floor) and a 44px touch target — across every view at once.
+
+   It is last in the file, and clay-v2.css is last in <head>, so a bare
+   `.foo { font: 600 9px/1 … }` anywhere above is out-ranked here by the same
+   selector at the same specificity. tests/mobileFloors.check.mjs re-derives
+   both floors from the two stylesheets, so a component added later cannot
+   quietly reintroduce 9px type.
+   ========================================================================== */
+
+/* --- 15a. The 11px type floor ---------------------------------------------
+   Width-only, with no (pointer: coarse) branch: a 1400px touch laptop is a
+   desktop layout and keeps the desktop type scale. Nothing here changes a
+   box — every one of these is a micro-label whose line box is smaller than
+   the gap around it — except where a note says otherwise. */
+@media (max-width: 899px) {
+  /* Dashboard */
+  .dash-risk-state,
+  .dash-unj-date,
+  .dash-unj-streak-label,
+  .dash-range-btn,
+  /* Quick capture + close-and-journal sheets */
+  .sheet-label,
+  .sheet-readout-key,
+  .sheet-rules-title,
+  .jrn-kicker,
+  .jrn-label,
+  /* Trade Review row detail (only measurable once a row is expanded) */
+  .rev-detail-facts dt,
+  .rev-detail-key,
+  .rev-flag,
+  /* Calendar */
+  .calendar-cell-meta,
+  /* System features: checklist cost readout + cooldown lock */
+  .rule-cost-title,
+  .cooldown-kicker,
+  /* Landing */
+  .lnd-row-result,
+  .lnd-expect-tag,
+  .dev-chip-tag {
+    font-size: 11px;
+  }
+
+  /* <small> inherits 0.83em from the UA sheet, so the trade-entry hints and
+     #screenshotLabel land at 10px under a 12px label. Stated, not inherited. */
+  small {
+    font-size: 11px;
+  }
+
+  /* Where the raise would cost horizontal room, the tracking pays for it:
+     at 0.10em an 11px glyph is NARROWER than a 10.5px one at 0.16em, so the
+     greeting line still fits "Wednesday · New York open in 3h 12m". */
+  .dash-clock {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+
+  .cal-net-label {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+
+  /* The dial's inner clear diameter is 96 - 2*13 = 70px; "LEFT" at 11px/0.08em
+     measures ~33px, so the label gains 2px of type without touching the ring. */
+  .dash-dial-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+
+  /* A count badge is text. 11px needs a 19px disc, which is still smaller than
+     the 24px icon it sits on. */
+  .tabbar-badge {
+    min-width: 19px;
+    height: 19px;
+    font-size: 11px;
+    line-height: 19px;
+  }
+
+  /* The two keyboard hints advertise shortcuts a phone does not have, and the
+     "/" pill was eating width from the search field the audit found cramped.
+     Dead affordance + stolen room: it goes, rather than growing to 11px. */
+  .rev-search-key {
+    display: none;
+  }
+}
+
+/* --- 15b. The 44px touch floor --------------------------------------------
+   Same condition as styles.css §6's control pass — a coarse pointer is a
+   thumb at any width, and a phone-width viewport is a thumb whatever the UA
+   reports. .dash-range-btn / .dash-live-close are handled at §10h; the
+   reflection checkboxes and #tradeInProgress already sit inside padded label
+   wrappers that reach 44px, so only the box itself is grown here. */
+@media (max-width: 899px), (pointer: coarse) {
+  /* "Cooldown rules →" is a real destination, not decoration: it was a 19px
+     text run inside a paragraph. inline-flex keeps it in the sentence. */
+  .dash-risk-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  /* The ⓘ next to the score headings — 42px, and square, so it gets both. */
+  .info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 3px 8px;
+  }
+
+  /* The wrappers already carry the tap target (styles.css). A 14–15px box
+     inside a 44px label is still a 14px thing to AIM at, so the box grows to
+     18px — visible, but nowhere near the 44px the label spends. */
+  .tag-set input,
+  .trade-status-toggle input {
+    inline-size: 18px;
+    block-size: 18px;
+  }
+}
+
+/* --- 15c. Clearing the fixed dock -----------------------------------------
+   The tab bar is shown from 899px down (styles.css §1) and occupies the band
+   from 12px to 76px off the bottom edge, plus the safe area. §11e lifted the
+   capture toast above it only below 620px, so between 621 and 899 — an iPad
+   in portrait, a small laptop window — the toast landed ON the bar and the
+   confirmation for a just-logged trade was half-hidden behind the dock.
+   Tied to the bar's own breakpoint instead of the bottom-sheet one. */
+@media (max-width: 899px) {
+  .capture-toast {
+    bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
 }

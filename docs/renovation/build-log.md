@@ -1044,3 +1044,93 @@ re-introduced by hand to confirm the check throws, then reverted. `node --check`
 clean on `app.js` (untouched this phase — no module state was added, so the
 top-level `init()` TDZ trap was not in play). Static server returns 200 for
 `clay-v2.css` and serves all four markers.
+
+---
+
+## Phase: sitewide mobile polish (11px type floor, 44px touch floor)
+
+**One rule, applied everywhere, instead of eight patches.** The audit listed
+eight sub-11px items; walking both stylesheets found **23**. Every one is the
+same defect with a different class name: a component drawn from a desktop
+mockup ships its own micro-kicker (`.jrn-kicker`, `.cooldown-kicker`,
+`.rule-cost-title`, `.rev-detail-key`, `.lnd-expect-tag`, `.dev-chip-tag`, …)
+at whatever size looked right at 1400px, and nothing in the build ever
+compared it to the `--fs-micro: 11px` the design system calls "the floor". So
+the fix is one section — `clay-v2.css` §15, last in the last stylesheet — that
+restates the floor for the whole product at once, plus a test that re-derives
+it from the CSS so component #24 cannot quietly reintroduce 9px.
+
+**Type floor (§15a, `@media (max-width: 899px)`).** `.dash-dial-label` 9 →
+11px; `.rev-detail-facts dt` / `.rev-detail-key` 9.5 → 11; `.tabbar-badge`
+9.5 → 11 (its disc grows 17 → 19px to match, still smaller than the 24px icon
+it sits on); `.cal-net-label`, `.rev-flag`, `.dash-unj-streak-label`,
+`.sheet-readout-key`, `.rule-cost-title`, `.cooldown-kicker`, `.dev-chip-tag`
+10 → 11; `.dash-clock`, `.dash-range-btn`, `.dash-risk-state`,
+`.dash-unj-date`, `.sheet-label`, `.sheet-rules-title`, `.jrn-kicker`,
+`.jrn-label`, `.calendar-cell-meta`, `.lnd-row-result`, `.lnd-expect-tag`
+10.5 → 11. `small` is stated rather than inherited: the UA's 0.83em under a
+12px label is what put the trade-entry hints and `#screenshotLabel` at 10px.
+
+Two of these would have cost horizontal room, so the tracking pays for the
+type: `.dash-clock` and `.cal-net-label` drop from 0.16em/0.14em to 0.10em,
+which makes an 11px glyph *narrower* than the 10.5px one it replaces — the
+greeting still fits "Wednesday · New York open in 3h 12m" on one line at 375px.
+`.dash-dial-label` goes to 0.08em: "LEFT" measures ~33px inside the mobile
+dial's 70px clear diameter (96px ring − 2×13px stroke), so the ring is
+untouched. No layout was kept small to keep small text.
+
+`.rev-search-key` — the `/` hotkey pill in the review search — is hidden below
+900px instead of grown. It advertises a shortcut a phone does not have, and it
+was taking width from the search field the audit already found cramped.
+
+**Touch floor (§15b + a one-line fix at §10h).** `.dash-range-btn` (32px) and
+`.dash-live-close` (38px) already *had* 44px rules — behind a bare
+`@media (pointer: coarse)`. Emulated and headless viewports report
+`pointer: fine`, which is exactly why the 375px audit still measured 32 and 38.
+That query is now `(max-width: 899px), (pointer: coarse)`: a phone-width
+viewport is a thumb whatever the UA claims. `#cooldownRulesBtn`
+(`.dash-risk-link`) becomes `inline-flex` with `min-height: 44px` so it stays
+inside its sentence while growing from a 19px text run; `.info-btn` gets 44×44.
+
+The two checkbox findings were not missing targets: `#tradeInProgress` and the
+five reflection checkboxes already sit inside padded label wrappers that reach
+44px (`.trade-status-toggle`, `.tag-set label`), so the whole chip is the hit
+area. What was wrong is that a 14–15px box inside a 44px chip is still a 14px
+thing to *aim at*, so only the box grows, to 18px — no visual bloat, no change
+to the chip.
+
+**One real collision found in the sweep.** The tab bar is shown from 899px
+down, but §11e lifted `.capture-toast` above it only below 620px. Between 621
+and 899 — iPad portrait, a small laptop window — the "trade logged"
+confirmation landed *on* the dock. Now tied to the bar's own breakpoint (§15c).
+The rest of the sweep came back clean: all four `<dialog>`s already scroll
+internally (`.sheet-body` and `.cooldown-body` set `max-height` +
+`overflow-y: auto`; `#scoreInfoDialog` keeps the UA `dialog:modal` scroll,
+since §11a's `overflow: visible` opt-out lists only the other three), inputs
+already hold 16px below 620px so iOS never zoom-jumps on focus, the calendar is
+already an agenda list below 760px, `.dash-hero-top` already wraps so the 44px
+range buttons cannot overflow the hero at 360px, and `.tag-set` is already a
+2-up grid with wrapping labels.
+
+**Desktop safety by construction.** Every added declaration is inside
+`@media (max-width: 899px)`; the two touch blocks add `, (pointer: coarse)`,
+which is the condition styles.css §6's existing control pass already uses. At
+1400px with a mouse, not one line in this phase evaluates. The only edit
+outside a new block is the §10h media *condition*, which widens when an
+existing rule applies and never changes what it declares.
+
+**Verified:** 15/15 test files green — `tests/mobileFloors.check.mjs` is new.
+It parses both stylesheets with the §1e brace walker, resolves `font:`
+shorthands and `var(--fs-*)` tokens, models the cascade per selector (equal
+selector ⇒ equal specificity ⇒ last phone-applicable rule wins), and fails on
+anything under 11px that is not `display: none` at phone width or gated off the
+phone entirely (`.topnav-*` is `min-width: 1025px`; `.kbd-hint` and
+`.dash-log-flag` live inside `#journalNewTradeBtn`, which the FAB replaces
+below 899px). It also asserts each of the six audited controls has a
+phone-applicable rule reaching `min-height: 44px`. Regression re-introduced by
+hand (`.dash-dial-label` back to 9px) to confirm it throws, then reverted.
+`node --check` clean on `app.js` — untouched this phase, so no module state was
+added and the top-level `init()` TDZ trap was not in play. The static server
+returns 200 and serves the §15a/§15b/§15c markers; the two stylesheet
+cache-busters were bumped to `?v=20260810-mobile2` so a returning browser
+actually gets them.
