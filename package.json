@@ -1,0 +1,17 @@
+{
+  "name": "trader-journal",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Trader Journal — vanilla JS front-end with a Vercel serverless (Node) backend on PostgreSQL.",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "test": "for f in tests/*.mjs; do echo \"— $f\"; node \"$f\" || exit 1; done"
+  },
+  "dependencies": {
+    "bcryptjs": "3.0.3",
+    "pg": "8.22.0"
+  }
+}

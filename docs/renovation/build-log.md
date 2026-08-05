@@ -723,3 +723,156 @@ This is the FOURTH time this exact failure mode has shipped in this codebase (`g
 **2. Unsigned expectancy on losing playbook tiles.** The sunk tile rendered `▼ $210.00/trade` — the arrow, colour and the signed `Net −$420.00` line carried the loss, but the headline figure itself read as a positive per-trade expectancy at a glance. The design source signs it (`Reversal -$68`), so the minus was restored.
 
 **Verified working:** compact TJ top bar with unjournalled badge and overflow menu; greeting with real per-venue session countdown; LIVE ticker; balance card with 1M/3M/ALL re-scoping; risk dial (78% LEFT, SAFE) with the computed consequence line; four edge tiles; playbook raised/sunk tiles from real setupStats; unjournalled queue; ⌘K live parse (`btc long 118400 sl 117900 1%` → BTCUSDT / LONG / entry 118,400 / stop 117,900 / risk 1% = $140.30 / size 0.2806 BTC / no target — R:R unknown); the five-field sheet with live SIZE/AT RISK/BUDGET AFTER and the pre-trade rules checklist; Trade Review filter chips with real counts and the reduced 8-column table; calendar with computed month net; landing with the honest tape counter, raised/sunk rows and the fake dashboard mock removed. Zero console errors; all nine test files green.
+
+## Phase 2a — PHP → Vercel port: audit and specification (2026-08-05)
+
+No application code. `trade_handler.php` read in full, `db/schema.sql` and every
+`fetch()` in `app.js` / `src/modules/livePrices.js` inventoried, and the four
+architectural unknowns settled with local evidence where evidence was possible.
+
+**The bug.** Vercel has no PHP runtime, so `trade_handler.php` is never executed
+there — it is served as a static file. Every API call gets HTML/PHP source
+instead of JSON, which surfaces as "Auth service unavailable". Two consequences
+the port must fix, not one: the API is dead, *and* the handler's source is
+publicly readable.
+
+**Bcrypt interop — proven, not assumed.** `bcryptjs@3.0.3` (pure JS, no native
+build, the only thing that survives serverless bundling cleanly). Verified both
+directions locally with PHP 8.5 and Node 25:
+
+- Node verifies PHP `$2y$` for ASCII, an 80-byte password, and a UTF-8 password
+  with emoji; rejects the wrong password.
+- `bcryptjs` emits `$2b$`. PHP's `password_verify()` accepts that `$2b$` output
+  as-is, and also accepts it with the prefix rewritten to `$2y$`.
+
+`$2y$`, `$2a$` and `$2b$` are the same algorithm — the letter is a marker, not a
+parameter, and bcryptjs handles all three. New hashes will be written with the
+prefix rewritten to `$2y$` so the column stays uniform and a rollback to the PHP
+handler still logs everyone in. The frozen hash/password pair becomes a
+committed test fixture (synthetic — not a real account).
+
+**Sessions.** Signed HttpOnly cookie (HMAC-SHA256, `node:crypto`, no dependency)
+carrying `{uid, username, csrf, iat}` — chosen over a sessions table because the
+table buys revocation and nothing else, and revocation can be had for free from
+data already in `login_info`: a cookie is refused when the user has a successful
+`logout` or `reset` row newer than the cookie's `iat`. That keeps PHP's
+server-side logout invalidation *and* closes the gap PHP had, where a password
+reset did not kill live sessions. Zero schema change.
+
+**Postgres.** `pg` with a module-scope `Pool({ max: 1 })` cached on `globalThis`,
+so each warm instance holds at most one connection. Neon's HTTP driver was
+rejected: it only speaks to Neon, and the live database is Railway. The user's
+`DATABASE_URL` on Vercel must be the **public** Railway URL —
+`*.railway.internal` is unreachable from outside Railway.
+
+**No DDL at runtime.** The PHP re-ran ~30 `CREATE TABLE IF NOT EXISTS` /
+`ADD COLUMN IF NOT EXISTS` statements on every single request. The port issues
+none. The live schema already matches `db/schema.sql`, and the strongest
+data-safety guarantee available is that the new code cannot alter it.
+
+**Two findings that are not obvious.** (1) Vercel applies `rewrites` *after* the
+filesystem check, so a deployed `trade_handler.php` would shadow the rewrite and
+keep serving source — `.vercelignore` must exclude it, and must also carry over
+the `.dockerignore` exclusions (`db/`, `docs/`, `scripts/`, `tests/`), which
+zero-config Vercel would otherwise publish as static downloads. (2) Vercel caps
+request and response bodies at 4.5 MB. `save` posts every screenshot on every
+write (350 KB cap each, ~467 KB base64), so roughly nine attached screenshots
+break saving. PHP had no such ceiling. Port keeps PHP semantics exactly and the
+ceiling is logged as the first follow-up.
+
+## Phase 2b — PHP → Vercel port: the build (2026-08-05)
+
+The port itself. `trade_handler.php` is **not deleted** — the cutover phase does
+that, so rollback stays a one-line `.vercelignore` edit until the port is proven
+against the live database.
+
+**Shape.** `api/handler.js` is the only function; `vercel.json` rewrites
+`/trade_handler.php` → `/api/handler`, so the URL contract is unchanged and
+**app.js and src/modules/livePrices.js were not touched at all**. Behaviour lives
+in `api/_lib/`: `router.js` (the 15 actions), `db.js` (all SQL), `session.js`
+(signed cookie + CSRF), `sanitize.js` (payload coercion), `prices.js` (live
+quotes). The handler does HTTP plumbing only. `ctx` carries db, env, clock and
+`fetch` into the router, which is what makes every action testable against a
+fake db with no Postgres, no network and no credentials.
+
+All 15 actions ported: `session`, `register`, `login`, `forgot_password`,
+`validate_reset_token`, `reset_password`, `logout`, `save`, `load`,
+`recent_trades`, `public_recent_trades`, `live_prices`, `update_prices`,
+`login_logs`, `users_admin`.
+
+**Data safety, in order of strength.**
+
+1. *No DDL, at all.* As specified in 2a. Asserted in `tests/apiDb.check.mjs`
+   against the module source, not against one code path: `db.js` may contain no
+   `CREATE TABLE`, `CREATE INDEX`, `ALTER TABLE`, `DROP` or `TRUNCATE`, and the
+   only `DELETE` permitted is the per-user screenshot re-sync the PHP also did.
+   A fresh database is set up once by hand from `db/schema.sql`.
+2. *Sanitizers proven equal to the PHP's, not merely similar.* The PHP sanitizer
+   functions (lines 1418–2169) were extracted into a standalone harness and run
+   over a fixture of deliberately awful rows — snake_case keys, numeric strings,
+   missing fields, unparseable dates, screenshots, client-invented keys, a bare
+   string and a null in the array. Output diffed against the JS. **Identical in
+   every field bar one:** PHP encodes an empty replay-notes map as `[]`, JS as
+   `{}`; `normalizeReplayNotes()` in app.js maps both to `{}` and `{}` is the
+   column default, so it is invisible. That PHP output is now the committed
+   expectation in `tests/fixtures/legacyRows.expected.json`, which keeps the
+   guarantee after `trade_handler.php` is gone.
+3. *Every write parameterised.* `'BAD; DROP TABLE trades;--'` as a symbol is
+   rejected by the charset check and never reaches the driver — asserted.
+
+**Bcrypt.** As specified: `bcryptjs@3.0.3` reads the existing `$2y$` hashes
+(verified against real PHP output at cost 10 *and* cost 12 — PHP 8.5 moved
+`PASSWORD_DEFAULT` to cost 12, so both may exist in the column, and the cost
+travels in the hash). New hashes are written `$2y$` cost 10 by rewriting
+bcryptjs's `$2b$` prefix; only the prefix changes, salt and digest are untouched,
+and PHP's `password_verify()` accepts both — checked directly, so rollback still
+logs everyone in.
+
+**Sessions.** Signed HttpOnly `tj_session` cookie carrying
+`{username, userId, csrf, iat, exp}`, HMAC-SHA256 via `node:crypto`. Revocation
+comes from `login_info` exactly as specified: a cookie older than the user's
+newest successful `logout` or `reset` row is refused. That required one addition
+the PHP never had — a successful reset now writes a `reset` row (`success=true`,
+so it cannot pollute the reset rate limit). Comparison is strictly greater, so
+"log out, log straight back in" survives. Anonymous cookies carry no username
+and skip the lookup entirely, so public page views cost no extra query.
+
+**Security controls, all preserved and two improved.** CSRF on every
+state-changing POST bar the four pre-session actions; DB-backed rate limit
+(6 failures / 10 minutes, scoped by IP and — for login and forgot — identity,
+checked *before* the user table is touched so it cannot be used as an account
+oracle); auth on `update_prices`; admin gating with the bootstrap fallback still
+opt-in; identical responses for wrong-password vs unknown-account and for
+existing vs non-existing forgot-password addresses; no reset URL in any response;
+no exception detail in any response. Improved: the CSRF token is now **rotated on
+login and register** (PHP carried `$_SESSION` across `session_regenerate_id()`,
+so a token planted before login stayed valid after it), and every response
+carries `Cache-Control: no-store`.
+
+**Front-end untouched.** `git diff` over `app.js`, `index.html` and `src/` is
+empty. `res.status().send()` (a Vercel-only helper) was swapped for plain
+`res.statusCode` / `res.end()` so the same function runs under `vercel dev` or a
+bare node server — which is how it was smoke-tested.
+
+**Verified locally:** 13 test files green (`npm test`), including four new ones —
+`bcryptCompat`, `apiRouter` (CSRF, rate-limit window, public whitelist + cap,
+dispatch, revocation, admin gating), `apiSanitize` (the PHP differential),
+`apiDb` (no-DDL, parameterisation, TLS). Every backend module imports cleanly;
+`php -l trade_handler.php` still passes; the front-end still loads from the PHP
+dev server on 127.0.0.1:8000. `api/handler.js` was booted behind a real
+`node:http` server: `action=session` returns 200 with a CSRF token and a correctly
+flagged `Set-Cookie` (`HttpOnly; SameSite=Lax`, `Secure` only under HTTPS), and
+with the database unreachable it returns the generic 500 with the connection
+error in the log only.
+
+**Cannot be verified without the user's database or a deploy:** that the live
+schema matches what the queries expect; that existing rows load and re-save
+unchanged; that real stored `$2y$` hashes authenticate; that the Vercel rewrite
+resolves `/trade_handler.php` to the function rather than serving source (the
+`.vercelignore` exclusion is what makes that work — filesystem beats rewrites);
+Railway TLS negotiation from Vercel's network; Resend delivery.
+
+**Left for the cutover phase:** delete `trade_handler.php`, `Dockerfile` and
+`.dockerignore` — kept for now precisely so rollback is trivial. The 4.5 MB
+Vercel body cap on `save` (~9 screenshots) is unchanged from PHP semantics and
+remains the first follow-up.

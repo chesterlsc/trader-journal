@@ -1,0 +1,20 @@
+{
+  "trades": [
+    {"id":"t1","trade_date":"2026-03-04","symbol":"XAUUSD","direction":"Sell","entry_price":"2400.55","stop_loss":2410,"take_profit":"2350.0","exit_price":"","profit_loss":"-123.45","risk_percent":"1.5","position_size":0.25,"in_progress":1,"setup_type":"Breakout","trade_result":"Loss","execution_quality":"C","screenshot_name":" chart.png ","screenshot_data":"data:image/png;base64,AAA","created_at":"2026-03-04T09:00:00Z","notes":"legacy snake_case row"},
+    {"id":"t2","closedAt":"2026-02-01T15:30:00Z","asset":"BTCUSDT","direction":"Buy","entryPrice":68000,"netPnl":250.5,"status":"closed","createdAt":"2026-02-01T10:00:00Z","playbookTag":"ORB","checklist":{"a":true},"pips":40},
+    {"id":"","asset":"EURUSD","status":"open","entryPrice":"not a number","netPnl":null,"updated_at":"2025-12-31T23:59:59Z"},
+    {"id":"t4","date":"bad-date","created_at":"2025-11-15T08:00:00+00:00","asset":"","direction":true,"netPnl":"1e3","journalName":null},
+    {"id":"t5","date":"2026-01-09","netPnl":0,"status":"closed","screenshotName":"","screenshotData":"","extraArray":[1,2],"extraObj":{"k":"v"}},
+    "not an object",
+    null
+  ],
+  "settings": [
+    {"journalName":"  Chester   the  Trader with a very long name indeed  ","startingBalance":"25000","balanceOverride":-5,"dailyMaxLoss":"0","weeklyMaxLoss":null,"riskPerTrade":"2.5","equityGoal":0},
+    {},
+    {"journalName":"","startingBalance":-1,"equityGoal":"abc"}
+  ],
+  "replay": [
+    {"2026-01":"January notes","2026-02":42,"2026-03":null,"2026-04":true,"2026-05":{"nested":"x"}},
+    {}
+  ]
+}

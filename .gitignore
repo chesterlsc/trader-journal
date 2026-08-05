@@ -1,6 +1,13 @@
 data/
 *.log
 .DS_Store
+node_modules/
+.vercel/
+
+# Real secrets never get committed — .env.example holds the names only.
+.env
+.env.*
+!.env.example
 tools/node/
 tools/php/
 tools/*.zip

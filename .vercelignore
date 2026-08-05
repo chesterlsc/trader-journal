@@ -1,0 +1,20 @@
+# Vercel checks the filesystem before it applies rewrites. If trade_handler.php
+# were part of the deployment it would win the /trade_handler.php route and be
+# served as readable PHP source (there is no PHP runtime here) — which is the
+# exact bug this port fixes. Excluding it lets the rewrite to /api/handler take
+# effect. The file stays in git so a rollback stays trivial.
+trade_handler.php
+
+# Railway app-hosting config. The Railway *database* is unaffected — the
+# functions still connect to it via DATABASE_URL.
+Dockerfile
+.dockerignore
+
+# Not part of the deployed site.
+db/
+docs/
+scripts/
+tests/
+MVP.md
+README.md
+.claude/
