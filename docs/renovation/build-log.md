@@ -1841,3 +1841,155 @@ Journal button re-opens the same sheet for any closed trade, so there is one
 recorder, not two); no global "manage clips" screen — a clip is found the way
 its trade is found, and the full-storage message names the oldest one rather
 than asking the trader to hunt.
+
+---
+
+## 1f #07 — Sunday digest
+
+> *design-source/1f-features.html*: "A drafted weekly review — your numbers,
+> your worst rule break, your best trade — which you edit rather than write.
+> Feeds the Monthly Review that currently starts as a blank textarea."
+
+The Reflections screen gains a **Weekly digest** block above the reflection
+form: a date field ("any day in the week"), two week steppers, and **Draft it**.
+Press it and the Monday–Sunday week around that date is drafted from the active
+account's closed trades — straight into the form's own boxes, which the trader
+then edits and saves with the button that was already there.
+
+### What the draft actually says
+
+Three blocks, mapped onto the three fields the reflection record already has:
+
+**What went well** — the week label and range, closed-trade count, net, trading
+days; wins/losses/scratches and the win rate; expectancy per trade; the best
+trade with its symbol, money, setup and date; the previous week's count and net
+with the delta; and how many of the week's trades carry a journal note.
+
+**What mistake did I make** — the worst trade with its setup; the rule you
+skipped most often this week, how many of the trades that *asked* it you
+skipped it on, and what those trades are worth; the dominant psychology tag on
+losing trades; and every limit that moved — the daily loss limit with the days
+and figures, the weekly loss limit, trades over the per-trade risk cap with the
+worst percentage, and trades taken through a cooldown prompt with their net.
+
+**What will I improve** — exactly one lever, chosen by what the data supports:
+the skipped rule that cost money, else the unjournalled trades, else the
+dominant losing tag, else the setup that cost most over at least two trades.
+When none of the four apply this box is left **empty** and the summary line says
+so: *"Nothing computed for 'what will I improve' — that one is yours."*
+
+**Did I follow my rules** is pre-answered: `No` on a breached loss limit,
+`Partially` on a skipped rule / oversized trade / cooldown override, `Yes`
+otherwise. The trader can overrule it — it is their answer, this is a starting
+position.
+
+### The honesty rule, enforced
+
+There is no language model here and none may be added. Every sentence is a
+fixed template wrapped around a computed figure. A clause with no data behind
+it is **dropped**, never softened: no prior week means no comparison sentence,
+no checklist shown means no rule sentence, one loss tagged Emotional means no
+psychology sentence, an empty week produces no prose at all. The test asserts
+the draft contains none of *roughly / approximately / about / maybe / probably /
+seems / appears / likely / around*.
+
+Two thresholds exist for the same reason. A psychology tag is "dominant" only
+at **two or more** losses **and** strictly more than any other tag — one loss is
+an anecdote and a tie is not a pattern. A setup is named as costly only over
+**two or more** trades. Both return null and their clause disappears.
+
+The rule-cost clause reuses the population rule `computeRuleCosts()` already
+uses: only trades that were actually *shown* a checklist count, on either side.
+Imports, command-bar captures and everything logged before 1f #02 have no answer
+to compare, so they are in neither the numerator nor the denominator.
+
+### Feeding the Monthly Review
+
+`renderMonthlyReview()` no longer opens on `""`. For each week with a closed
+trade in the month it emits one paragraph — **your saved digest where you saved
+one** (headed *"(your saved digest)"*), a fresh draft where you did not. A note
+under the box shows only while the content is a draft.
+
+Two guards there, both fixing something that was already true of that line:
+
+* it tests `hasOwnProperty(state.replayNotes, month)`, not truthiness, so a
+  month you deliberately cleared to empty stays empty instead of re-seeding;
+* it returns early when the textarea has focus. `renderMonthlyReview` runs on
+  every `renderAll`, and it has always been able to overwrite what was being
+  typed. That is now impossible.
+
+### State
+
+`reflection.weekOf` — one new field, an ISO week key (`2026-W32`), stamped only
+by `applyWeeklyDigest()` via `ui.reflectionForm.dataset.weekOf` and cleared the
+moment the date is retyped by hand. Absent on every pre-existing reflection,
+which reads correctly as "not a weekly digest": **no migration**. It rides the
+existing `reflections` array to storage, to export and to the server —
+`api/_lib/db.js` passes reflections through `sanitizeArray()` whole, so
+`api/` needed **no change at all** and `CLIENT_OWNED_SETTINGS` is untouched.
+
+Re-drafting and saving a week **replaces** its filed digest rather than stacking
+a second near-identical entry. The Reflection History marks digests with their
+week key.
+
+Zero new module-level bindings in `app.js` — everything added is a hoisted
+function declaration or a key inside the existing `ui` object literal above
+`init()`. `tests/bootOrder.check.mjs` green with its KNOWN_SAFE list unchanged
+at four entries.
+
+### The week is the same week the risk engine uses
+
+`weekBoundsFor()` keys off `getWeekKey()` from `src/lib/core.js` — the function
+the weekly loss limit already uses. A digest and a weekly breach can never
+disagree about which seven days they mean, and the test pins that equality
+rather than restating the algorithm.
+
+### Verification
+
+`tests/weeklyDigest.check.mjs` (new, 9 groups) slices the real
+`weekBoundsFor` / `worstWeekRule` / `dominantLosingMood` / `worstWeekSetup` /
+`weekBreaches` / `buildWeeklyDigest` / `buildMonthlySeed` out of `app.js` by
+name and drives them: Monday-boundary and getWeekKey agreement, the empty week
+producing nothing, every headline figure, the hedge-word ban, the dropped
+comparison clause, the two dominance thresholds, the un-asked import excluded
+from the rule denominator, the empty lever, the three breach paths and their
+rules answer, and the monthly seed including the right weeks, excluding the
+wrong ones and yielding to a saved edit. All 24 test files green.
+
+A throwaway boot harness (`scratchpad/bootdigest.mjs`, forked from the voice
+phase's, not committed) imported the real `app.js` against a fake DOM built from
+the real `index.html` id list, with an error trap installed before the import:
+
+```
+boot errors: NONE
+digestDraftBtn click listeners: 1
+summary at first render: "Week of Aug 03 – Aug 09 · no closed trades in this account"
+followRules: Yes | form weekOf: 2026-W32
+saved reflections: 1 | weekOf: 2026-W32 | date: 2026-08-05
+replayNotes seeded length: 370 | seed note hidden: false
+```
+
+Note the saved date: the week's Sunday is 9 Aug, which has not happened, so the
+record is dated today. A reflection dated in the future is a lie about when it
+was written.
+
+`tests/mobileFloors.check.mjs` green — every new rule is ≥11px, the steppers are
+44px squares by construction rather than by a phone-width override, and at
+≤560px the picker becomes a grid so the date field is not crushed to 90px.
+Token-only, so dark is the same re-derivation. Static server returns the new
+markers; cache-busters bumped to `?v=20260816-digest`.
+
+**Not built, deliberately:** no Sunday notification or dashboard nudge — the
+brief asked for it to be available whenever the trader asks, and a weekly
+"it's time to review" prompt is a notification feature with its own opt-out
+story. No digest export or share sheet: it is a reflection, and reflections
+already ride the JSON backup. No month-level draft when a month has no weekly
+digests — an empty month seeds nothing rather than a paragraph explaining that
+it is empty.
+
+**The honest reservation:** the three boxes are still the *daily* reflection's
+questions ("what went well", "what mistake did I make", "what will I improve"),
+because reusing that record is what let the digest ship with no new save path,
+no new storage key and no migration. They fit a week well enough. If a future
+phase wants a genuinely week-shaped record, the field names are the change and
+`weekOf` is already there to branch on.

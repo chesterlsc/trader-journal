@@ -595,6 +595,14 @@ const ui = {
   reflectionMessage: document.getElementById("reflectionMessage"),
   reflectionsList: document.getElementById("reflectionsList"),
 
+  // 1f #07 weekly digest
+  digestDate: document.getElementById("digestDate"),
+  digestPrevBtn: document.getElementById("digestPrevBtn"),
+  digestNextBtn: document.getElementById("digestNextBtn"),
+  digestDraftBtn: document.getElementById("digestDraftBtn"),
+  digestSummary: document.getElementById("digestSummary"),
+  replaySeedNote: document.getElementById("replaySeedNote"),
+
   reviewMonth: document.getElementById("reviewMonth"),
   monthlyNet: document.getElementById("monthlyNet"),
   monthlyWinRate: document.getElementById("monthlyWinRate"),
@@ -1519,6 +1527,19 @@ function bindEvents() {
   });
 
   ui.reflectionForm.addEventListener("submit", handleReflectionSubmit);
+
+  // 1f #07. The digest fills the reflection form; the form saves it. One save
+  // path, not two. dataset.weekOf is the only thing that marks a saved entry
+  // as a weekly digest, so retyping the date by hand drops the mark rather
+  // than filing a hand-written Tuesday note as week 31's review.
+  ui.digestDraftBtn?.addEventListener("click", applyWeeklyDigest);
+  ui.digestPrevBtn?.addEventListener("click", () => stepDigestWeek(-7));
+  ui.digestNextBtn?.addEventListener("click", () => stepDigestWeek(7));
+  ui.digestDate?.addEventListener("change", renderDigestSummary);
+  document.getElementById("reflectionDate")?.addEventListener("change", () => {
+    delete ui.reflectionForm.dataset.weekOf;
+  });
+
   ui.reviewMonth.addEventListener("change", renderMonthlyReview);
   ui.dashboardCalendarMonth.addEventListener("change", renderCalendarView);
   ui.calPrevBtn?.addEventListener("click", () => stepCalendarMonth(-1));
@@ -2788,6 +2809,11 @@ function applyInitialDates() {
   const reflectionDate = document.getElementById("reflectionDate");
   if (!reflectionDate.value) {
     reflectionDate.value = today;
+  }
+
+  // The digest defaults to the week you are in, not the Sunday you are near.
+  if (ui.digestDate && !ui.digestDate.value) {
+    ui.digestDate.value = today;
   }
 
   if (!ui.reviewMonth.value) {
@@ -5798,6 +5824,14 @@ function handleReflectionSubmit(event) {
     return;
   }
 
+  // 1f #07: set only by applyWeeklyDigest(), cleared the moment the date is
+  // retyped by hand. One digest per week — re-drafting and saving replaces the
+  // filed one instead of stacking near-identical entries.
+  const weekOf = String(ui.reflectionForm.dataset.weekOf || "");
+  if (weekOf) {
+    state.reflections = state.reflections.filter((entry) => entry.weekOf !== weekOf);
+  }
+
   state.reflections.unshift({
     id: createId(),
     date,
@@ -5806,6 +5840,7 @@ function handleReflectionSubmit(event) {
     followRules,
     improveTomorrow,
     tags,
+    weekOf,
     createdAt: new Date().toISOString()
   });
 
@@ -5816,8 +5851,13 @@ function handleReflectionSubmit(event) {
   persistState();
   renderAll();
   ui.reflectionForm.reset();
+  delete ui.reflectionForm.dataset.weekOf;
   document.getElementById("reflectionDate").value = toDateInputValue(new Date());
-  setMessage(ui.reflectionMessage, "Reflection saved.", "success");
+  setMessage(
+    ui.reflectionMessage,
+    weekOf ? `Weekly digest saved for ${weekOf}. It now seeds the Monthly Review.` : "Reflection saved.",
+    "success"
+  );
 }
 
 function saveReplayNotes() {
@@ -10264,7 +10304,428 @@ function getFilteredTrades() {
   });
 }
 
+/* ══ 1f #07 — the Sunday digest ════════════════════════════════════════════
+   design-source/1f-features.html: "A drafted weekly review — your numbers,
+   your worst rule break, your best trade — which you edit rather than write.
+   Feeds the Monthly Review that currently starts as a blank textarea."
+
+   THE HONESTY RULE FOR THIS WHOLE BLOCK: there is no language model here and
+   none may be added. Every sentence below is a fixed template wrapped around
+   a figure computed from this account's closed trades. A clause whose data is
+   missing is DROPPED — never softened, never guessed, never padded with
+   "roughly" or "it seems". If the week is thin, the draft is short, and the
+   trader writes the rest. That is the honest failure mode.
+
+   It is not a Sunday-only screen either: pick any day and the Monday–Sunday
+   week around it is what gets drafted. The draft fills the reflection form,
+   so the trader edits prose rather than starting from a blank box, and the
+   form's own save path files it — with a weekOf stamp — as that week's
+   reflection. buildMonthlySeed() then stitches a month's worth into the
+   Monthly Review textarea that used to open empty. */
+
+// Nothing here is a module-level binding: every one is a hoisted function
+// declaration, so the file's init()-at-top-level trap does not apply.
+function plural(count) {
+  return count === 1 ? "" : "s";
+}
+
+function digestMoney(value) {
+  return formatSignedCurrency(round(Number(value) || 0));
+}
+
+// Monday..Sunday around any date, keyed with the SAME ISO week key the weekly
+// loss limit already uses (src/lib/core.js getWeekKey) so a breach the risk
+// engine reports and a week the digest drafts are the same seven days.
+function weekBoundsFor(dateString) {
+  const date = new Date(`${String(dateString || "")}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const offset = (date.getUTCDay() + 6) % 7; // Monday = 0
+  const from = new Date(date.getTime() - offset * 86400000).toISOString().slice(0, 10);
+  const to = new Date(date.getTime() + (6 - offset) * 86400000).toISOString().slice(0, 10);
+  return {
+    from,
+    to,
+    key: getWeekKey(from),
+    label: `Week of ${formatIsoShort(from)} – ${formatIsoShort(to)}`
+  };
+}
+
+// Account-scoped for free: state.trades holds only the active account.
+function digestWeekTrades(from, to) {
+  return getClosedTrades().filter((trade) => trade.date >= from && trade.date <= to);
+}
+
+/* The rule this week skipped most often, among the trades that were actually
+   SHOWN a checklist. Everything logged before the checklist existed, every
+   import and every command-bar capture has no answer to compare, so it is out
+   of both sides — the same population rule computeRuleCosts() uses. */
+function worstWeekRule(trades) {
+  const asked = trades.filter((trade) => (trade.preTradeRulesAsked || []).length > 0);
+  if (!asked.length) {
+    return null;
+  }
+
+  return (
+    getPreTradeRules()
+      .map((rule) => {
+        const seen = asked.filter((trade) => trade.preTradeRulesAsked.includes(rule.id));
+        const skipped = seen.filter((trade) => !(trade.preTradeRules || []).includes(rule.id));
+        return {
+          label: rule.label,
+          asked: seen.length,
+          skipped: skipped.length,
+          pnl: round(skipped.reduce((total, trade) => total + (Number(trade.netPnl) || 0), 0))
+        };
+      })
+      .filter((entry) => entry.skipped > 0)
+      // Most often skipped first; ties go to the one that cost more.
+      .sort((a, b) => b.skipped - a.skipped || a.pnl - b.pnl)[0] || null
+  );
+}
+
+/* "Dominant" means at least two losses carrying the same tag AND strictly more
+   of them than any other tag. One loss tagged Emotional is an anecdote and a
+   two-way tie is not a pattern — both return null and the clause disappears. */
+function dominantLosingMood(trades) {
+  const losers = trades.filter((trade) => trade.result === "Loss");
+  const counts = new Map();
+  losers.forEach((trade) => {
+    const label = String(trade.psychology || "").trim();
+    if (label) {
+      counts.set(label, (counts.get(label) || 0) + 1);
+    }
+  });
+
+  const ranked = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+  if (!ranked.length || ranked[0][1] < 2 || (ranked[1] && ranked[1][1] === ranked[0][1])) {
+    return null;
+  }
+
+  return { label: ranked[0][0], count: ranked[0][1], of: losers.length };
+}
+
+// The setup that cost the most this week, over at least two trades so one bad
+// morning does not get named as a pattern.
+function worstWeekSetup(trades) {
+  const bySetup = new Map();
+  trades.forEach((trade) => {
+    const label = String(trade.setupType || "").trim();
+    if (!label) {
+      return;
+    }
+    const bucket = bySetup.get(label) || { label, count: 0, pnl: 0 };
+    bucket.count += 1;
+    bucket.pnl = round(bucket.pnl + (Number(trade.netPnl) || 0));
+    bySetup.set(label, bucket);
+  });
+
+  return (
+    Array.from(bySetup.values())
+      .filter((entry) => entry.count >= 2 && entry.pnl < 0)
+      .sort((a, b) => a.pnl - b.pnl)[0] || null
+  );
+}
+
+/* The limits the app already enforces, re-read for this week alone. Each line
+   states the figure AND the limit it passed, so the sentence survives being
+   copied out of the app. `hard` is a breached loss limit; `soft` is an
+   oversized trade or a cooldown taken through — the two feed the "did I follow
+   my rules" answer differently. */
+function weekBreaches(trades, net) {
+  const { dailyMaxLoss, weeklyMaxLoss, riskPerTrade } = state.settings;
+  const lines = [];
+
+  const byDay = new Map();
+  trades.forEach((trade) => {
+    byDay.set(trade.date, round((byDay.get(trade.date) || 0) + (Number(trade.netPnl) || 0)));
+  });
+  const overDays = Array.from(byDay.entries())
+    .filter(([, pnl]) => pnl < -dailyMaxLoss)
+    .sort((a, b) => a[0].localeCompare(b[0]));
+  if (overDays.length) {
+    lines.push(
+      `The ${formatCurrency(dailyMaxLoss)} daily loss limit went on ${overDays.length} day${plural(
+        overDays.length
+      )}: ${overDays.map(([day, pnl]) => `${formatIsoShort(day)} ${digestMoney(pnl)}`).join(", ")}.`
+    );
+  }
+
+  const weeklyBreached = net < -weeklyMaxLoss;
+  if (weeklyBreached) {
+    lines.push(
+      `The week closed at ${digestMoney(net)}, past your ${formatCurrency(weeklyMaxLoss)} weekly loss limit.`
+    );
+  }
+
+  const oversized = trades.filter((trade) => Number(trade.riskPercent) > riskPerTrade);
+  if (oversized.length) {
+    const worst = Math.max(...oversized.map((trade) => Number(trade.riskPercent)));
+    lines.push(
+      `${oversized.length} trade${plural(oversized.length)} risked more than your ${riskPerTrade}% per-trade cap, up to ${worst.toFixed(
+        2
+      )}%.`
+    );
+  }
+
+  const cooled = trades.filter((trade) => trade.cooldownOverride);
+  if (cooled.length) {
+    lines.push(
+      `${cooled.length} trade${plural(cooled.length)} taken through a cooldown prompt: ${digestMoney(
+        cooled.reduce((total, trade) => total + (Number(trade.netPnl) || 0), 0)
+      )}.`
+    );
+  }
+
+  return {
+    lines,
+    hard: overDays.length > 0 || weeklyBreached,
+    soft: oversized.length > 0 || cooled.length > 0
+  };
+}
+
+// The draft itself. Returns the three prose blocks the reflection form wants,
+// plus the rules answer and the figures the summary line quotes.
+function buildWeeklyDigest(dateString) {
+  const week = weekBoundsFor(dateString);
+  if (!week) {
+    return null;
+  }
+
+  const trades = digestWeekTrades(week.from, week.to);
+  const count = trades.length;
+  const net = round(trades.reduce((total, trade) => total + (Number(trade.netPnl) || 0), 0));
+  if (!count) {
+    return { ...week, count: 0, net: 0, wentWell: "", mistake: "", improveTomorrow: "", followRules: "Yes" };
+  }
+
+  const wins = trades.filter((trade) => trade.result === "Win").length;
+  const losses = trades.filter((trade) => trade.result === "Loss").length;
+  const scratches = count - wins - losses;
+  const days = new Set(trades.map((trade) => trade.date)).size;
+  const journalled = trades.filter(isTradeJournalled).length;
+  const ranked = [...trades].sort((a, b) => (Number(b.netPnl) || 0) - (Number(a.netPnl) || 0));
+  const best = ranked[0];
+  const worst = ranked[ranked.length - 1];
+  const setupOf = (trade) => String(trade.setupType || "").trim() || "an untagged setup";
+
+  // --- the numbers, and what went right --------------------------------
+  const well = [
+    `${week.label}: ${count} closed trade${plural(count)}, ${digestMoney(net)} net across ${days} trading day${plural(
+      days
+    )}.`,
+    `${wins} win${plural(wins)}, ${losses} loss${losses === 1 ? "" : "es"}${
+      scratches ? `, ${scratches} scratch${scratches === 1 ? "" : "es"}` : ""
+    } — a ${((wins / count) * 100).toFixed(1)}% win rate.`,
+    `Expectancy ran ${digestMoney(net / count)} per trade.`
+  ];
+  if (best && Number(best.netPnl) > 0) {
+    well.push(
+      `Best trade: ${best.asset} ${digestMoney(best.netPnl)} on ${setupOf(best)}, ${formatIsoShort(best.date)}.`
+    );
+  }
+  const previous = digestWeekTrades(shiftDateString(week.from, -7), shiftDateString(week.from, -1));
+  if (previous.length) {
+    const previousNet = round(previous.reduce((total, trade) => total + (Number(trade.netPnl) || 0), 0));
+    const delta = round(net - previousNet);
+    well.push(
+      `The week before was ${previous.length} trade${plural(previous.length)} for ${digestMoney(
+        previousNet
+      )} — ${delta >= 0 ? "up" : "down"} ${formatCurrency(Math.abs(delta))} on that.`
+    );
+  }
+  well.push(
+    journalled === count
+      ? count === 1
+        ? "It carries a journal note."
+        : `All ${count} carry a journal note.`
+      : `${journalled} of the ${count} carry a journal note.`
+  );
+
+  // --- what it cost -----------------------------------------------------
+  const rule = worstWeekRule(trades);
+  const mood = dominantLosingMood(trades);
+  const breaches = weekBreaches(trades, net);
+  const bad = [];
+  if (worst && Number(worst.netPnl) < 0) {
+    bad.push(
+      `Worst trade: ${worst.asset} ${digestMoney(worst.netPnl)} on ${setupOf(worst)}, ${formatIsoShort(worst.date)}.`
+    );
+  }
+  if (rule) {
+    bad.push(
+      `You skipped “${rule.label}” on ${rule.skipped} of the ${rule.asked} trade${plural(
+        rule.asked
+      )} that asked; those ${rule.skipped} are ${digestMoney(rule.pnl)}.`
+    );
+  }
+  if (mood) {
+    bad.push(
+      mood.count === mood.of
+        ? `Every one of your ${mood.of} losing trades was tagged “${mood.label}”.`
+        : `${mood.count} of your ${mood.of} losing trades were tagged “${mood.label}”.`
+    );
+  }
+  bad.push(...breaches.lines);
+  if (!bad.length) {
+    // Only reachable when nothing closed red, no shown rule was skipped and no
+    // limit moved — so this is a statement of fact, not a consolation.
+    bad.push("No trade closed red, no rule you were shown was skipped, and no limit moved.");
+  }
+
+  // --- the one lever, or nothing ---------------------------------------
+  // Exactly one, chosen by what the data actually supports. When none of the
+  // four apply the box is left EMPTY on purpose: the app has no computed
+  // improvement to offer and will not invent one.
+  const lever = [];
+  const unjournalled = count - journalled;
+  const worstSetup = worstWeekSetup(trades);
+  if (rule && rule.pnl < 0) {
+    lever.push(
+      `Tick “${rule.label}” before every entry — the ${rule.skipped} trade${plural(
+        rule.skipped
+      )} that skipped it this week are ${digestMoney(rule.pnl)}.`
+    );
+  } else if (unjournalled > 0) {
+    lever.push(
+      `Journal the ${unjournalled} trade${plural(unjournalled)} from this week that still ${
+        unjournalled === 1 ? "has" : "have"
+      } no note.`
+    );
+  } else if (mood) {
+    lever.push(
+      `Watch the “${mood.label}” entries — they are ${mood.count} of your ${mood.of} losses this week.`
+    );
+  } else if (worstSetup) {
+    lever.push(
+      `“${worstSetup.label}” cost ${formatCurrency(Math.abs(worstSetup.pnl))} across ${
+        worstSetup.count
+      } trades this week.`
+    );
+  }
+
+  return {
+    ...week,
+    count,
+    net,
+    wentWell: well.join(" "),
+    mistake: bad.join(" "),
+    improveTomorrow: lever.join(" "),
+    // A breached loss limit is a No. A skipped rule, an oversized trade or a
+    // cooldown taken through is a Partially. The trader can overrule all of it
+    // in the select — it is their answer, this is only the starting position.
+    followRules: breaches.hard ? "No" : breaches.soft || rule ? "Partially" : "Yes"
+  };
+}
+
+function setDigestSummary(text, tone = "") {
+  if (!ui.digestSummary) {
+    return;
+  }
+  ui.digestSummary.textContent = text;
+  ui.digestSummary.className = `digest-summary${tone ? ` ${tone}` : ""}`;
+}
+
+// The passive line: which week the picker is on and what is in it. Re-run from
+// renderAll, so logging a trade updates the count without touching the picker.
+function renderDigestSummary() {
+  const week = weekBoundsFor(ui.digestDate?.value || "");
+  if (!week) {
+    setDigestSummary("Pick any day and the Monday-to-Sunday week around it gets drafted.", "is-empty");
+    return;
+  }
+
+  const trades = digestWeekTrades(week.from, week.to);
+  if (!trades.length) {
+    setDigestSummary(`${week.label} · no closed trades in this account`, "is-empty");
+    return;
+  }
+
+  const net = round(trades.reduce((total, trade) => total + (Number(trade.netPnl) || 0), 0));
+  setDigestSummary(`${week.label} · ${trades.length} closed trade${plural(trades.length)} · ${digestMoney(net)} net`);
+}
+
+function stepDigestWeek(days) {
+  if (!ui.digestDate) {
+    return;
+  }
+  ui.digestDate.value = shiftDateString(ui.digestDate.value || toDateInputValue(new Date()), days);
+  renderDigestSummary();
+}
+
+// Draft → fill the reflection form → the trader edits → the form's own submit
+// saves it. Deliberately no second save path.
+function applyWeeklyDigest() {
+  const digest = buildWeeklyDigest(ui.digestDate?.value || toDateInputValue(new Date()));
+  if (!digest) {
+    setDigestSummary("Pick any day and the Monday-to-Sunday week around it gets drafted.", "is-empty");
+    return;
+  }
+
+  if (!digest.count) {
+    setDigestSummary(`${digest.label}: no closed trades, so there is nothing to draft.`, "is-empty");
+    return;
+  }
+
+  const reflectionDate = document.getElementById("reflectionDate");
+  const today = toDateInputValue(new Date());
+  // The week's Sunday, unless that has not happened yet — a reflection dated
+  // in the future is a lie about when it was written.
+  reflectionDate.value = digest.to > today ? today : digest.to;
+  document.getElementById("wentWell").value = digest.wentWell;
+  document.getElementById("mistake").value = digest.mistake;
+  document.getElementById("improveTomorrow").value = digest.improveTomorrow;
+  document.getElementById("followRules").value = digest.followRules;
+  ui.reflectionForm.dataset.weekOf = digest.key;
+
+  const replacing = state.reflections.some((entry) => entry.weekOf === digest.key);
+  setDigestSummary(
+    `${digest.label} drafted — ${digest.count} trade${plural(digest.count)}, ${digestMoney(digest.net)}. ` +
+      "Edit it below, then save." +
+      (digest.improveTomorrow ? "" : " Nothing computed for “what will I improve” — that one is yours.") +
+      (replacing ? " Saving replaces the digest already filed for this week." : "")
+  );
+  document.getElementById("wentWell").focus();
+}
+
+/* The Monthly Review textarea used to open blank. It now opens on the month's
+   weekly digests: your saved edit where you saved one, a fresh draft where you
+   did not. Only weeks with a closed trade in the month appear — an empty week
+   contributes nothing rather than a paragraph saying so. */
+function buildMonthlySeed(month) {
+  const weeks = new Map();
+  getClosedTrades()
+    .filter((trade) => String(trade.date || "").startsWith(month))
+    .forEach((trade) => {
+      const week = weekBoundsFor(trade.date);
+      if (week) {
+        weeks.set(week.key, week);
+      }
+    });
+
+  return Array.from(weeks.values())
+    .sort((a, b) => a.from.localeCompare(b.from))
+    .map((week) => {
+      const saved = state.reflections.find((entry) => entry.weekOf === week.key);
+      const source = saved || buildWeeklyDigest(week.from);
+      const body = [source?.wentWell, source?.mistake, source?.improveTomorrow]
+        .map((text) => String(text || "").trim())
+        .filter(Boolean);
+      // A fresh draft opens with the week label already, so heading it again
+      // would stutter. A saved digest may have been edited past recognition,
+      // so that one keeps its label.
+      const head = saved ? `${week.label} (your saved digest)` : "";
+      return body.length ? [head, ...body].filter(Boolean).join("\n") : "";
+    })
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 function renderReflections() {
+  renderDigestSummary();
+
   if (!state.reflections.length) {
     ui.reflectionsList.innerHTML = '<li class="muted">No reflections yet.</li>';
     return;
@@ -10285,7 +10746,9 @@ function renderReflections() {
       const tagText = entry.tags?.length ? entry.tags.join(", ") : "no tags";
       return `
         <li>
-          <h4>${escapeHtml(entry.date)} | Followed Rules: ${escapeHtml(entry.followRules)}</h4>
+          <h4>${escapeHtml(entry.date)} | Followed Rules: ${escapeHtml(entry.followRules)}${
+            entry.weekOf ? ` | Weekly digest ${escapeHtml(entry.weekOf)}` : ""
+          }</h4>
           <p><strong>Went Well:</strong> ${escapeHtml(entry.wentWell)}</p>
           <p><strong>Mistake:</strong> ${escapeHtml(entry.mistake)}</p>
           <p><strong>Improve:</strong> ${escapeHtml(entry.improveTomorrow)}</p>
@@ -10329,7 +10792,20 @@ function renderMonthlyReview() {
   ui.monthlyTrades.textContent = String(total);
   ui.monthlyBestSetup.textContent = bestSetup;
 
-  ui.replayNotes.value = state.replayNotes[month] || "";
+  // This runs on every renderAll, so it must never overwrite what is being
+  // typed. (It always could — the guard is a fix, not a new restriction.)
+  if (document.activeElement === ui.replayNotes) {
+    return;
+  }
+
+  // 1f #07: saved text always wins, and "saved" means the key EXISTS — a month
+  // deliberately cleared to empty stays empty rather than re-seeding itself.
+  const hasSaved = Object.prototype.hasOwnProperty.call(state.replayNotes, month);
+  const seed = hasSaved ? "" : buildMonthlySeed(month);
+  ui.replayNotes.value = hasSaved ? state.replayNotes[month] : seed;
+  if (ui.replaySeedNote) {
+    ui.replaySeedNote.hidden = !seed;
+  }
 }
 
 // The one place that decides WHERE the journal lives. Demo mode gets
@@ -10613,6 +11089,9 @@ function normalizeReflections(input) {
       followRules: String(item.followRules || "Partially"),
       improveTomorrow: String(item.improveTomorrow || ""),
       tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
+      // 1f #07. Absent on every pre-digest reflection, which reads correctly as
+      // "this was not a weekly digest" — nothing to migrate.
+      weekOf: String(item.weekOf || ""),
       createdAt: String(item.createdAt || "")
     }));
 }

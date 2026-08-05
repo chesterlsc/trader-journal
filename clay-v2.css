@@ -5113,3 +5113,148 @@ body.auth-locked .topnav {
     grid-row: 2;
   }
 }
+
+/* ==========================================================================
+   §12. 1f #07 — THE SUNDAY DIGEST
+   design-source/1f-features.html: "A drafted weekly review — your numbers,
+   your worst rule break, your best trade — which you edit rather than write."
+
+   Deliberately quiet: this block is a lead-in to the form under it, not a
+   report card, so it uses the inset/pressed treatment the rules editor uses
+   rather than a raised card competing with the panel it sits inside. Tokens
+   only, so the dark re-derivation applies without a second set of rules, and
+   no state here is carried by colour alone — the summary line always says the
+   trade count and the money in words and figures.
+   ========================================================================== */
+
+.digest {
+  margin: 0 0 var(--space-5);
+  padding: 18px 20px;
+  border-radius: var(--radius-clay-md);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+}
+
+.digest-eyebrow {
+  margin: 0;
+  font: 600 11px/1 var(--font-mono, "JetBrains Mono", monospace);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.digest-lede {
+  margin: 8px 0 0;
+  font: 400 13px/1.55 var(--font-ui);
+  color: var(--text-soft);
+}
+
+.digest-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.digest-week {
+  flex: 1 1 190px;
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  font: 500 12px/1.3 var(--font-ui);
+  color: var(--text-soft);
+}
+
+.digest-week-label {
+  font: 500 12px/1.3 var(--font-ui);
+  color: var(--text-soft);
+}
+
+.digest-week input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: 500 14px/1.3 var(--font-ui);
+  box-shadow: var(--clay-raised);
+}
+
+/* The week steppers. 44px square, so the touch floor is met by construction
+   rather than by a phone-width override. */
+.digest-step {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text-soft);
+  font: 400 20px/1 var(--font-ui);
+  cursor: pointer;
+  box-shadow: var(--clay-raised);
+}
+
+.digest-step:hover {
+  color: var(--accent);
+}
+
+.digest-step:active {
+  box-shadow: var(--clay-pressed);
+}
+
+.digest-draft {
+  flex: none;
+  min-height: 44px;
+}
+
+.digest-summary {
+  margin: 12px 0 0;
+  font: 500 12.5px/1.6 var(--font-ui);
+  color: var(--text);
+}
+
+/* Absence is a state, and it reads as one in words — the muted colour is the
+   second signal, never the only one. */
+.digest-summary.is-empty {
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+.reflection-list h4 {
+  overflow-wrap: anywhere;
+}
+
+/* Shown only while the Monthly Review box holds a draft rather than the
+   trader's own text. */
+.digest-seed-note {
+  margin: 8px 0 0;
+  font: 400 12px/1.55 var(--font-ui);
+  color: var(--text-faint);
+}
+
+.digest-seed-note[hidden] {
+  display: none;
+}
+
+/* At phone width the picker stacks: a date field, two steppers and a button
+   on one 375px row leaves the date input under 100px wide. */
+@media (max-width: 560px) {
+  .digest-pick {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+  }
+
+  .digest-week {
+    grid-column: 2;
+  }
+
+  .digest-draft {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}

@@ -45,10 +45,10 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260815-voicenote" />
+    <link rel="stylesheet" href="styles.css?v=20260816-digest" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260815-voicenote" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260816-digest" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -1629,6 +1629,35 @@
 
           <section class="panel-grid panel-grid-two">
             <article class="panel">
+              <!-- 1f #07 — the Sunday digest. Every sentence it produces is a
+                   template over a figure computed from this account's closed
+                   trades; a clause with nothing behind it is DROPPED, never
+                   hedged. Nothing here is written by a model — the app can do
+                   arithmetic and it says only what arithmetic supports. The
+                   draft lands in the form below, which the trader edits and
+                   saves as that week's reflection. Any week, any day. -->
+              <div class="digest">
+                <p class="digest-eyebrow">Weekly digest</p>
+                <p class="digest-lede">
+                  Draft a week out of your own numbers, then edit it. Saving files it as that
+                  week&rsquo;s reflection and seeds the Monthly Review.
+                </p>
+                <div class="digest-pick">
+                  <button class="digest-step" id="digestPrevBtn" type="button" aria-label="Previous week">
+                    <span aria-hidden="true">&lsaquo;</span>
+                  </button>
+                  <label class="digest-week">
+                    <span class="digest-week-label">Any day in the week</span>
+                    <input id="digestDate" type="date" />
+                  </label>
+                  <button class="digest-step" id="digestNextBtn" type="button" aria-label="Next week">
+                    <span aria-hidden="true">&rsaquo;</span>
+                  </button>
+                  <button class="btn digest-draft" id="digestDraftBtn" type="button">Draft it</button>
+                </div>
+                <p id="digestSummary" class="digest-summary" aria-live="polite"></p>
+              </div>
+
               <form id="reflectionForm" novalidate>
                 <label>
                   Date
@@ -1720,6 +1749,13 @@
                 Trade Replay Notes
                 <textarea id="replayNotes" rows="8" placeholder="Key trade screenshots, pattern notes, and process insights..."></textarea>
               </label>
+              <!-- 1f #07: this box used to open blank. It now opens on the
+                   month's weekly digests — your saved one where you saved one,
+                   a fresh draft where you did not — and the note only shows
+                   while what is in the box is a draft rather than your text. -->
+              <p id="replaySeedNote" class="digest-seed-note" hidden>
+                Drafted from this month&rsquo;s weekly digests. Edit it and save to make it yours.
+              </p>
               <div class="form-actions">
                 <button id="saveReplayBtn" class="btn" type="button">Save Replay Notes</button>
               </div>
@@ -2289,6 +2325,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260815-voicenote"></script>
+    <script type="module" src="app.js?v=20260816-digest"></script>
   </body>
 </html>
