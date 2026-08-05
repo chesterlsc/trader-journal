@@ -876,3 +876,89 @@ Railway TLS negotiation from Vercel's network; Resend delivery.
 `.dockerignore` — kept for now precisely so rollback is trivial. The 4.5 MB
 Vercel body cap on `save` (~9 screenshots) is unchanged from PHP semantics and
 remains the first follow-up.
+
+## Phase 2c — PHP → Vercel port: cutover and cleanup (2026-08-05)
+
+**The PHP is gone.** `trade_handler.php` (2,100 lines) deleted, along with
+`Dockerfile`, `.dockerignore` and `scripts/migrate_legacy_json.php`. That last
+one went for two reasons: it was the only remaining `.php` file, and it carried
+the second copy of the `*.railway.internal → sslmode=disable` special-case plus
+a drifted duplicate of the schema. Its job — importing file-based legacy JSON —
+was done long ago; the data lives in Postgres. Git history keeps all four.
+
+Deleting `trade_handler.php` rather than merely `.vercelignore`-ing it is the
+security decision. On Vercel a file on disk beats a rewrite, so a deployed
+`.php` file would both shadow the `/trade_handler.php` route *and* be served as
+readable source — credentials logic, admin gating and all. The ignore rule
+alone is one edit away from failing silently.
+
+**No Railway app config left, and no host-specific code.** The two things the
+task named were already absent from the Node backend: `resolveSslOption` in
+`api/_lib/db.js` reads `sslmode` from the `DATABASE_URL` query string, then
+`PGSSLMODE`, with no hostname branch; `buildResetUrl` in `api/_lib/router.js`
+resolves `APP_URL` → `VERCEL_PROJECT_PRODUCTION_URL` → `VERCEL_URL` → the
+request `Host` header, with no `RAILWAY_PUBLIC_DOMAIN`. Both host-neutral
+already, so this phase deleted the PHP originals rather than rewriting anything.
+
+**The Railway *database* is untouched and stays.** Every remaining "Railway"
+string in the tree is either a comment explaining that the queries run against
+the existing database, or documentation telling the user to point `DATABASE_URL`
+at Railway's *public* host. Nothing in this phase — or the port — issues DDL.
+
+**`vercel.json` now has a belt and braces.** Two rewrites:
+
+```json
+{ "source": "/trade_handler.php",  "destination": "/api/handler" }
+{ "source": "/:path(.*\\.php)",    "destination": "/api/handler" }
+```
+
+The first is the front-end contract. The second means that even if a `.php` file
+ever returns to the repo *and* slips past `.vercelignore`'s `*.php`, the path
+resolves to the function (which answers JSON) instead of to source text. The
+patterns were validated against `path-to-regexp` directly: both compile, all of
+`/foo.php`, `/a/b/deep.php`, `/wp-admin/setup-config.php` route to the function,
+and `/`, `/app.js`, `/styles.css`, `/a.php.js` are left to static serving.
+`db/schema.sql` stays in the repo as live-schema documentation and stays out of
+the deployment via `.vercelignore`'s `db/`.
+
+**Front-end contract verified, not assumed.** `git grep` finds 13 backend URLs
+across `app.js` (12) and `src/modules/livePrices.js` (1). Every one is a
+relative `trade_handler.php?action=…`, so every one resolves to the single path
+`/trade_handler.php` and is covered by rewrite #1. Query strings pass through
+untouched. `app.js`, `index.html` and `src/` were not edited in this phase.
+
+**Docs.** `README.md` rewritten: Vercel deployment, every environment variable
+documented by name in required/recommended/optional tables, TLS driven by the
+URL, the no-DDL guarantee, `vercel dev` replacing `php -S`, and the honest
+caveat that `vercel dev` on plain-HTTP localhost still triggers the front-end's
+local-preview auth bypass — so the real session path has to be exercised over
+HTTPS or by curling the endpoint directly. New `docs/DEPLOY.md` is the
+user-performed runbook: Railway public URL, Vercel project settings, env vars
+by name only, first deploy, a five-step end-to-end verification that ends at
+"log in with your existing password", turning off the Railway *app* service
+while leaving Postgres running, and a rollback plan. It opens with a blockquote
+telling the user never to paste a secret into a file in this repo.
+`MVP.md` and `docs/launch-checklist.md` were de-Railwayed and de-PHPed
+(`php -l trade_handler.php` → `npm test`; "let the handler create missing
+tables" → "the backend issues no DDL").
+
+**Verified locally:** `npm test` green, 13/13, including `bcryptCompat` (the
+PHP `$2y$` round-trip) and `apiDb` (no-DDL, parameterisation, TLS resolution).
+`node --check` clean on all six backend modules. `vercel.json` parses and its
+rewrites compile and match correctly. `api/handler.js` boots behind a real
+`node:http` server and, with no `DATABASE_URL`, returns the generic 500 with the
+cause in the server log only — no leak. The front-end serves and loads from a
+plain static server (`index.html`, `app.js`, both stylesheets, `src/` modules
+all 200) while `/trade_handler.php` now 404s from disk, which is precisely the
+condition that lets the Vercel rewrite win. The leftover `php -S` dev server
+from phase 2b was stopped; it was serving stale content.
+
+**Cannot be verified without a deploy:** that Vercel accepts the rewrite config
+end to end; that `DATABASE_URL` reaches the Railway public host through Vercel's
+network and negotiates TLS; that existing rows load and re-save unchanged; that
+real stored `$2y$` hashes authenticate against the live table; Resend delivery.
+All five are step 5 of `docs/DEPLOY.md`.
+
+**Rollback** is code-only — no schema changed, no row was rewritten, and new
+hashes are still written with the `$2y$` prefix, so restoring `trade_handler.php`
+from `880750e` re-authenticates every account including ones created on Vercel.

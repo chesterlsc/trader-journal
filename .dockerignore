@@ -1,9 +1,0 @@
-.git
-.gitignore
-.claude
-.DS_Store
-*.log
-db
-docs
-scripts
-data

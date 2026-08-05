@@ -2,7 +2,8 @@
 
 ## Configuration
 
-- Set `DATABASE_URL` or the `PG*` variables on the app service.
+- Set `DATABASE_URL` on the Vercel project (Production, Preview and Development).
+- Set `SESSION_SECRET` so cookies survive a database URL rotation.
 - Set `APP_URL` so reset links point to the public domain.
 - Set `MAIL_FROM` and, if using Resend, `RESEND_API_KEY`.
 - Set `ADMIN_USERNAME` or `ADMIN_USERNAMES` if bootstrap-admin fallback is not desired.
@@ -12,7 +13,7 @@
 
 - Register a new account.
 - Log out and log back in with both username and email, if email login is enabled for that user.
-- Request a password reset and confirm the email or debug reset URL works.
+- Request a password reset and confirm the emailed link works (there is no debug reset URL any more).
 - Create a trade with a screenshot, save, reload, and confirm the screenshot still appears.
 - Edit the same trade, replace or remove the screenshot, save, and reload again.
 - Add open and closed trades, then confirm the recent-trades cards render correctly.
@@ -27,9 +28,10 @@
 
 ## Deployment
 
-- Run `php -l trade_handler.php`.
-- Apply `db/schema.sql` or let the handler create missing tables on first request.
+- Run `npm test` (13 checks, no database needed).
+- Existing database: apply nothing — the backend issues no DDL. Brand-new database only: `psql "$DATABASE_URL" -f db/schema.sql`.
 - Deploy the app and verify the production domain matches `APP_URL`.
+- Confirm `curl -s https://YOUR-DOMAIN/trade_handler.php?action=session` returns JSON, not source text.
 - Clear CDN or browser cache if users may still have older `app.js` or `styles.css` cached.
 
 ## Post-Deploy Verification

@@ -9,60 +9,74 @@ Professional trading journal web app ("Institutional Terminal" design, dark + li
 - Local autosave plus PostgreSQL sync
 - Bulk import from Vantage, Binance, and Google Sheets CSV/TSV — missing values flagged, open rows supported, one-click undo per import batch
 
-See `MVP.md` for the full scope and roadmap, and `docs/renovation/` for the design blueprint and build log.
+See `MVP.md` for the full scope and roadmap, `docs/DEPLOY.md` for the step-by-step
+deploy, and `docs/renovation/` for the design blueprint and build log.
 
 ## Stack
 
-- Frontend: `index.html`, `styles.css`, `app.js` + `src/` modules (vanilla, no build step)
-- Backend: `trade_handler.php`
-- Storage: PostgreSQL
+- Frontend: `index.html`, `styles.css`, `clay-v2.css`, `app.js` + `src/` modules — vanilla, **no build step, no dependencies**
+- Backend: Vercel Serverless Functions (Node 22) — `api/handler.js` + `api/_lib/`
+- Storage: PostgreSQL (the existing Railway database; any Postgres works)
 
-## Environment
+The PHP backend is gone. `trade_handler.php` was removed in the Vercel port —
+Vercel has no PHP runtime, so the file could never execute there and would have
+been served as readable source. Its behaviour lives in `api/`, action for action,
+and the front-end still calls the same `trade_handler.php?action=…` URLs via a
+rewrite in `vercel.json`. Nothing in `app.js` or `src/` changed.
 
-Set either:
+## Environment variables
 
-- `DATABASE_URL=postgres://USER:PASSWORD@HOST:5432/DBNAME?sslmode=require`
-- `DATABASE_PRIVATE_URL=postgres://USER:PASSWORD@HOST:5432/DBNAME`
+All values live in **Vercel → Project → Settings → Environment Variables**.
+Never put a real value in a file in this repo. `.env.example` holds the names
+only; there is no `.env` in version control and `.gitignore` keeps it that way.
 
-or these variables:
+### Required
 
-- `PGHOST`
-- `PGPORT` (optional, default `5432`)
-- `PGDATABASE`
-- `PGUSER`
-- `PGPASSWORD`
-- `PGSSLMODE` (optional, for example `require`)
+| Name | What it is |
+| --- | --- |
+| `DATABASE_URL` | Postgres connection string. Point it at the **existing Railway database** — copy Railway's *public* URL (`postgres://…@*.proxy.rlwy.net:PORT/railway`). The private `*.railway.internal` host only resolves inside Railway's network and a Vercel function cannot reach it. |
 
-App behavior:
+`POSTGRES_URL`, `POSTGRESQL_URL` and `DATABASE_PUBLIC_URL` are accepted as
+fallbacks, in that order, for platforms that inject one of those names instead.
 
-- `APP_URL=https://your-domain.example` so password reset links use the public app URL
-- `RAILWAY_PUBLIC_DOMAIN=...` as a fallback if `APP_URL` is not set
-- `APP_DEBUG=true` to expose detailed backend errors and reset URLs in development only
-- `ADMIN_USERNAMES=your_username,another_admin` for explicit admin access
-- `ADMIN_USERNAME=your_username` as a single-admin alternative
-- `ALLOW_BOOTSTRAP_ADMIN=1` to let the first registered user become admin when no admin env var is set (off by default; enable only for the first deploy, then set `ADMIN_USERNAMES` and remove it)
-- `PUBLIC_RECENT_TRADES_USERNAME=your_username` or `PUBLIC_RECENT_TRADES_USER_ID=123` to power the landing-page public trade feed
+### Recommended
 
-Password reset email:
+| Name | What it is |
+| --- | --- |
+| `SESSION_SECRET` | HMAC key signing the session cookie. Any long random string. If unset, a key is derived from `DATABASE_URL` — the app still works, but rotating the database URL would then log everyone out. |
+| `APP_URL` | Canonical origin (`https://your-app.vercel.app`) used to build password-reset links. Falls back to `VERCEL_PROJECT_PRODUCTION_URL`, then `VERCEL_URL`, then the request `Host` header. |
 
-- `MAIL_FROM=no-reply@your-domain.example`
-- `MAIL_FROM_NAME=Trader Journal` (optional)
-- `RESEND_API_KEY=...` to send reset emails through Resend
-- If `RESEND_API_KEY` is not set, the backend falls back to PHP `mail()`
+### Optional
 
-Notes:
+| Name | What it is |
+| --- | --- |
+| `RESEND_API_KEY` | Sends password-reset email through Resend. Without it (or without `MAIL_FROM`) a reset link is created but no email goes out — and the link is never disclosed in a response. A Vercel function has no local MTA, so there is no `mail()`-style fallback any more. |
+| `MAIL_FROM` | Sender address for reset email, e.g. `no-reply@your-domain.example`. Required alongside `RESEND_API_KEY`. |
+| `MAIL_FROM_NAME` | Display name on reset email. |
+| `ADMIN_USERNAMES` | Comma-separated usernames allowed into `login_logs` / `users_admin`. |
+| `ADMIN_USERNAME` | Single-name alternative, used only when `ADMIN_USERNAMES` is empty. |
+| `ALLOW_BOOTSTRAP_ADMIN` | `1`/`true`/`yes` falls back to "first registered user is admin" when neither variable above is set. Off by default — prefer setting `ADMIN_USERNAMES`. |
+| `PUBLIC_RECENT_TRADES_USER_ID` | Whose trades feed the landing-page tape. Wins over the username form. |
+| `PUBLIC_RECENT_TRADES_USERNAME` | Same, by username. With both empty the public tape returns an empty list. |
+| `PGSSLMODE` | `disable` \| `prefer` \| `require` \| `verify-ca` \| `verify-full`. Only consulted when the connection string carries no `sslmode` of its own. |
 
-- Put database env vars on the app service, not only on the Postgres service.
-- Railway internal hosts (`*.railway.internal`) default to `sslmode=disable`.
-- Non-internal hosts default to `sslmode=prefer` if not explicitly set.
+There is no `APP_DEBUG`. The old PHP flag could expose exception detail and
+reset URLs; the Node backend has no such switch — errors go to the server log
+and the client always gets a generic message.
 
-## Database Schema
+### Database TLS
 
-Schema file:
+`sslmode` is read from the `DATABASE_URL` query string first, then `PGSSLMODE`.
+The default (matching what the PHP did) encrypts without validating the
+certificate chain. Append `?sslmode=verify-full` to `DATABASE_URL` to turn on
+real chain verification. There is no host-specific special-casing — the URL
+decides.
 
-- `db/schema.sql`
+## Database schema
 
-Tables currently used by the backend:
+Schema file: `db/schema.sql`. Never web-served (`.vercelignore` excludes `db/`).
+
+Tables used by the backend:
 
 - `journal_users`
 - `password_reset_requests`
@@ -72,49 +86,83 @@ Tables currently used by the backend:
 - `symbol_prices`
 - `login_info`
 
-`trade_screenshots` is the source of truth for stored screenshot blobs. `trades.payload` keeps the trade records leaner and the backend merges screenshots back in on load.
+`trade_screenshots` is the source of truth for stored screenshot blobs.
+`trades.payload` keeps the trade records leaner and the backend merges
+screenshots back in on load.
 
-Apply the schema manually if needed:
+**The backend issues no DDL, ever.** The PHP re-ran ~30 guarded
+`CREATE TABLE` / `ADD COLUMN` statements on every request; the Node port issues
+none — no `CREATE`, no `ALTER`, no `DROP`. The existing database is left exactly
+as it is. A *brand new* database is set up once, by hand:
 
 ```bash
 psql "$DATABASE_URL" -f db/schema.sql
 ```
 
-The handler also creates missing tables on first request.
+That is for a fresh database. Do not run it against the live one.
 
-## Run Locally
+## Deploy
+
+Full step-by-step, including verification and rollback: **`docs/DEPLOY.md`**.
+
+Short version: import the repo into Vercel, framework preset **Other**, no build
+command, add `DATABASE_URL` (plus `SESSION_SECRET` and `APP_URL`), deploy.
+`vercel.json` does the rest — `/trade_handler.php?action=…` rewrites to
+`/api/handler`.
+
+## Run locally
+
+Needs Node 22 and the Vercel CLI:
 
 ```bash
-php -S 127.0.0.1:8000
+npm install
+npm i -g vercel        # once
+vercel link            # once, connects this folder to the Vercel project
+vercel env pull        # once, writes a gitignored .env.local — never commit it
+vercel dev             # http://localhost:3000
 ```
 
-Then open `http://127.0.0.1:8000`. Plain-HTTP localhost skips auth and runs on local storage only (no DB needed) — the local preview mode. On any other origin, append `?preview=1` once to opt into preview mode for that tab session; server endpoints always require a real session regardless.
+`vercel dev` serves the static front-end *and* runs `api/handler.js`, applying
+the same `vercel.json` rewrite, so `trade_handler.php?action=…` resolves locally
+exactly as it does in production.
+
+**The old `php -S 127.0.0.1:8000` flow is gone** — there is no PHP left to run.
+For a pure front-end look with no backend at all, any static server works
+(`npx serve .`, `python3 -m http.server 8000`); the app detects plain-HTTP
+localhost and runs in **local preview mode**: auth is bypassed and everything
+lives in browser storage, no database needed.
+
+That auto-preview also applies under `vercel dev`, because it too is plain-HTTP
+localhost. To exercise the real API locally, call it directly:
+
+```bash
+curl -i 'http://localhost:3000/trade_handler.php?action=session'
+```
+
+or open the deployed Vercel preview URL, which is HTTPS and therefore takes the
+real session path.
+
+Run the test suite (no database required — the router is driven against a fake
+db object):
+
+```bash
+npm test
+```
 
 ## Security model
 
-- Every session POST requires an `X-CSRF-Token` header (token issued by the `session`/`login`/`register` responses)
-- Session cookies are `SameSite=Lax` + `httponly` (+ `secure` on HTTPS); session id rotates on login
-- Login/register/forgot-password/reset are rate limited (6 failures per 10 minutes → HTTP 429), backed by the `login_info` table
+- Every session POST requires an `X-CSRF-Token` header; the token is issued by the `session`/`login`/`register` responses and bound to the session cookie
+- Session cookie is HMAC-signed, `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS; reissued on login, revoked by logout or password reset
+- Passwords are bcrypt. Existing PHP `$2y$` hashes verify unchanged, and new hashes are written back with the `$2y$` prefix so the column stays uniform
+- Login / register / forgot-password / reset are rate limited (6 failures per 10 minutes → HTTP 429), backed by the `login_info` table
 - `update_prices` requires auth; `public_recent_trades` returns only symbol/date/direction/status/result, capped at 20 rows
-- `.dockerignore` keeps `db/`, `scripts/`, `docs/`, and legacy `data/` out of the deployed image
+- Admin actions (`login_logs`, `users_admin`) are gated on `ADMIN_USERNAMES`
+- No debug leakage: exceptions go to the server log, never to the client, and a reset URL is never returned in a response
+- `.vercelignore` keeps `db/`, `docs/`, `tests/` and any `.php` file out of the deployment; `vercel.json` routes every `*.php` path to the function, so no PHP path can ever return source text
 
-## Railway Deploy
+## API endpoints
 
-1. Add a PostgreSQL service in Railway.
-2. Ensure the app service has `DATABASE_URL`.
-3. Set `APP_URL`, email env vars, and optional admin/public feed env vars.
-4. Deploy this repo.
-5. Run through the checklist in `docs/launch-checklist.md`.
-
-## Migrate Legacy JSON Data
-
-If you already have file-based users or trades in legacy JSON files, import them into PostgreSQL:
-
-```bash
-php scripts/migrate_legacy_json.php
-```
-
-## API Endpoints
+All served by `api/handler.js` behind the `vercel.json` rewrite:
 
 - `trade_handler.php?action=session`
 - `trade_handler.php?action=register`
@@ -129,9 +177,9 @@ php scripts/migrate_legacy_json.php
 - `trade_handler.php?action=public_recent_trades`
 - `trade_handler.php?action=live_prices&symbols=BTCUSD,XAUUSD`
 - `trade_handler.php?action=update_prices`
-- `trade_handler.php?action=login_logs` (admin-only login audit feed)
-- `trade_handler.php?action=users_admin` (admin-only users view)
+- `trade_handler.php?action=login_logs` (admin only)
+- `trade_handler.php?action=users_admin` (admin only)
 
-## Launch Checklist
+## Launch checklist
 
 - `docs/launch-checklist.md`
