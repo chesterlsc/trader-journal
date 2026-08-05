@@ -711,3 +711,15 @@ background override cannot keep the label legible in both.
 
 New check: `tests/systemFeatures.check.mjs` (rule ids through a rename, the
 asked≠ticked split, all four cooldown triggers, the override log).
+
+## Full redesign verification pass (2026-08-09)
+
+Browser-verified all six shipped sections. Two defects found and fixed.
+
+**1. Boot-aborting temporal-dead-zone error (critical).** `QUICK_FILTER_LABELS` was declared as a module-level `const` below the top-level `init()` call, so `describeJournalFilters()` → `renderReviewHeader()` → `renderJournalTable()` → `renderAll()` threw `ReferenceError: Cannot access 'QUICK_FILTER_LABELS' before initialization` on every page load. This aborted `init()` mid-render, which silently disabled everything bound after it — most visibly the ⌘K command bar's live parse readout, which stayed stuck on its empty-state help text no matter what was typed. Hoisted above `init()` next to `dashSparkHash`/`METRIC_DELTA_SPECS` with a comment naming the trap.
+
+This is the FOURTH time this exact failure mode has shipped in this codebase (`getClosedTrades`, `METRIC_DELTA_SPECS`, `dashSparkHash`, now `QUICK_FILTER_LABELS`). The pattern is documented in the workflow brief and in memory; it keeps recurring because the file is large and new module state is naturally appended at the bottom.
+
+**2. Unsigned expectancy on losing playbook tiles.** The sunk tile rendered `▼ $210.00/trade` — the arrow, colour and the signed `Net −$420.00` line carried the loss, but the headline figure itself read as a positive per-trade expectancy at a glance. The design source signs it (`Reversal -$68`), so the minus was restored.
+
+**Verified working:** compact TJ top bar with unjournalled badge and overflow menu; greeting with real per-venue session countdown; LIVE ticker; balance card with 1M/3M/ALL re-scoping; risk dial (78% LEFT, SAFE) with the computed consequence line; four edge tiles; playbook raised/sunk tiles from real setupStats; unjournalled queue; ⌘K live parse (`btc long 118400 sl 117900 1%` → BTCUSDT / LONG / entry 118,400 / stop 117,900 / risk 1% = $140.30 / size 0.2806 BTC / no target — R:R unknown); the five-field sheet with live SIZE/AT RISK/BUDGET AFTER and the pre-trade rules checklist; Trade Review filter chips with real counts and the reduced 8-column table; calendar with computed month net; landing with the honest tape counter, raised/sunk rows and the fake dashboard mock removed. Zero console errors; all nine test files green.

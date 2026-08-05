@@ -532,6 +532,16 @@ const { renderCharts } = createChartsModule({ ui, state, prefersReducedMotion })
 let dashSparkHash = "";
 let dashSparkFrame = 0;
 
+// Declared above init() on purpose: describeJournalFilters() runs inside the
+// first renderAll(), and a module-level const declared further down the file
+// is in the temporal dead zone at that point and throws, aborting boot.
+const QUICK_FILTER_LABELS = {
+  wins: "wins",
+  losses: "losses",
+  rules: "rule broken",
+  nonote: "not journalled"
+};
+
 // 1a balance-card range toggle. Declared here (above the module-level init()
 // call) like every other module const: anything below it is in the temporal
 // dead zone during the first render.
@@ -6604,7 +6614,7 @@ function renderPlaybook(analytics) {
       return `
         <article class="dash-play-tile ${positive ? "is-raised" : "is-sunk"}">
           <p class="dash-play-name">${escapeHtml(row.setup)}</p>
-          <p class="dash-play-value ${positive ? "pnl-positive" : "pnl-negative"}">${positive ? "▲" : "▼"} ${formatCurrency(Math.abs(row.expectancy))}<span class="dash-play-unit">/trade</span></p>
+          <p class="dash-play-value ${positive ? "pnl-positive" : "pnl-negative"}">${positive ? "▲" : "▼"} ${positive ? "" : "−"}${formatCurrency(Math.abs(row.expectancy))}<span class="dash-play-unit">/trade</span></p>
           <p class="dash-play-meta">Net ${positive ? "+" : "−"}${formatCurrency(Math.abs(row.netPnl))}</p>
           <p class="dash-play-meta">${row.trades} trade${row.trades === 1 ? "" : "s"} · ${row.winRate.toFixed(0)}% win</p>
           <div class="dash-play-bar" aria-hidden="true"><span style="width:${width.toFixed(0)}%"></span></div>
@@ -7479,13 +7489,6 @@ function formatIsoShort(iso) {
     ? String(iso || "—")
     : new Intl.DateTimeFormat("en-US", { month: "short", day: "2-digit" }).format(date);
 }
-
-const QUICK_FILTER_LABELS = {
-  wins: "wins",
-  losses: "losses",
-  rules: "rule broken",
-  nonote: "not journalled"
-};
 
 // What the header line after "filtered to" says. Every clause is read off a
 // filter that is actually applied — never a fixed "last 30 days".
