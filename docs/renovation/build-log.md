@@ -962,3 +962,85 @@ All five are step 5 of `docs/DEPLOY.md`.
 **Rollback** is code-only — no schema changed, no row was rewritten, and new
 hashes are still written with the `$2y$` prefix, so restoring `trade_handler.php`
 from `880750e` re-authenticates every account including ones created on Vercel.
+
+---
+
+## Phase M1 — Trade Review mobile
+
+The user said "most are bugging" and the audit measured `#journal` at **852px
+wide inside a 375px viewport**. Seven elements were listed as overflowing —
+`.rev-chips` 864, `.rev-head` 840, `.rev-head-tools` 840, `.rev-search` 744,
+`#filterSearch` 657, `details.rev-more` 840, `table` 820. Six of those seven are
+not bugs. They are `width: 100%` of an 852px parent, and the parent was 852px
+because of exactly one rule.
+
+**Root cause:** `clay-v2.css` §13d shipped `#journal table { min-width: 820px }`
+unconditionally. `styles.css` turns rows into cards at `max-width: 900px` and
+that transform depends on `table { min-width: 0 }` — but `#journal table` scores
+`(1,0,1)` against `table`'s `(0,0,1)`, so the desktop 820px floor survived into
+the card layout on every phone, inflated `.table-wrap` (820 + 2×10px well
+padding + 12px = 852), and dragged the whole `#journal` grid — header, tools,
+search, chips, details — out to match. Fixing the header elements individually
+would have been six patches on one bug.
+
+**The fix is three rules.**
+
+1. `#journal table { min-width: 820px }` moved inside `@media (min-width: 901px)`
+   — the widths that still render a real table. Below that the `styles.css`
+   reset lands and the table is `min-width: 0`, so `#journal` is 363px wide
+   (`.app-layout` is `min(100%, 100vw - 12px)`) and every header element that
+   the audit flagged is now 363px with no rule of its own. The existing
+   `@media (max-width: 760px)` header rules were already correct; they had
+   nothing to do.
+
+2. `.rev-chips` lost a negative `margin-inline: calc(var(--space-3) * -1)`. That
+   bleed assumed a 12px page gutter; the phone layout has 6px per side, so the
+   strip was itself pushing the page 6px past the viewport on each edge. Its
+   padding is now `4px 0 10px` — vertical room the strip genuinely needs,
+   because `overflow-x: auto` computes `overflow-y` to `auto` too and was
+   clipping both the chips' clay shadow and their focus ring.
+
+3. `#journal tbody td { overflow-wrap: anywhere }` at ≤900px. With the table
+   floor gone, the last way a row could exceed the phone is one long unbroken
+   setup name or symbol in a `minmax(0, 1fr)` value column.
+
+**Chips: scroll strip, not wrap — and why.** Eight controls at the 44px touch
+floor wrap into four ragged rows at 375px: roughly 200px of an 812px screen
+spent on filters before a single trade is visible, on the one view whose entire
+job is showing trades. The strip keeps the table above the fold. The cost of
+scrolling is discoverability, so the strip now carries a right-edge
+`mask-image` fade as a permanent "there is more" signal — iOS renders overlay
+scrollbars invisibly and ignores `::-webkit-scrollbar`, so a styled scrollbar
+would have been an affordance that only exists on desktop. Also added
+`overscroll-behavior-x: contain` so a swipe past the last chip does not trigger
+the browser's back gesture, and `-webkit-overflow-scrolling: touch`, which is
+switched back to `auto` under `prefers-reduced-motion` — inertia is motion the
+user did not ask for, and the strip still scrolls without it.
+
+**`.table-wrap` deliberately stays `overflow: visible` at phone widths.** The
+phase brief asked for `overflow-x: auto`; that would be a regression here.
+`overflow-x: auto` forces `overflow-y` from `visible` to `auto`, and the row
+cards' win/loss depth is an *outer* `box-shadow` on `tr` — `.trade-row-win`
+lifts, `.trade-row-loss` sinks — which the resulting clip would cut off. With
+the table's `min-width` now `0` there is nothing left to scroll horizontally, so
+`visible` is both the correct value and the one that preserves "depth as data".
+The card contents are unchanged: Date, Symbol, Setup, Net, R, Pips and Mood all
+still carry `data-label`, so `td::before` still prints the column name, and the
+chevron cell and detail row still opt out of the label column.
+
+**Desktop is untouched by construction.** Every line added or changed sits
+inside `@media (max-width: 900px)`, `@media (max-width: 760px)`, or the new
+`@media (min-width: 901px)` gate. At 1400px only the third applies, and it
+restores precisely the declaration that was there before. Nothing at
+`min-width: 901px` and above evaluates differently than it did at `880750e`.
+
+**Verified:** `npm test` green, now 14/14 — `tests/reviewMobile.check.mjs` is
+new. It parses `clay-v2.css` with a brace walker, carries each rule's `@media`
+context, and fails if any rule declares a `min-width` above 375px without a
+`min-width` media guard; it also asserts `.rev-chips` has no negative
+`margin-inline` at phone widths, still scrolls, still has its fade, and that no
+phone-width `.table-wrap` rule sets `overflow-x: auto`. The regression was
+re-introduced by hand to confirm the check throws, then reverted. `node --check`
+clean on `app.js` (untouched this phase — no module state was added, so the
+top-level `init()` TDZ trap was not in play). Static server returns 200 for
+`clay-v2.css` and serves all four markers.
