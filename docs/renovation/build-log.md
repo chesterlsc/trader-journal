@@ -386,3 +386,60 @@ chart-well pairings, the status chip, both quiet actions and the move pill,
 plus a luminance assert that the chart well is darker than the card in both
 themes — all pass, worst text pairing unchanged at 4.57:1. Cache buster →
 `v=20260805-clay2`.
+
+---
+
+## Phase F — Mobile tab bar, centre "+" FAB, responsiveness pass (2026-08-05)
+
+**The headline ask lands.** A floating clay pill bar (research brief §7b, not
+the notch-cut §7c variant — a mask clips `box-shadow` and would force the whole
+elevation onto a `filter: drop-shadow` wrapper) with a 60px raised accent
+circle overlapping its top edge. Four destinations: Dashboard / Review /
+Calendar / Reflect; Trade Entry belongs to the FAB and Monthly Review stays
+behind the sidebar hamburger, which keeps working untouched.
+
+**Zero router changes.** The four tabs carry `class="nav-btn"` + `data-target`,
+which is exactly what `ui.navButtons` already collects — so `switchView()`, the
+hash router, the `is-active`/`aria-current` sync and the auth-gate `disabled`
+pass own them for free. app.js gained precisely two lines: `tabBarNewTradeBtn`
+in the `ui` map and one `?.addEventListener` next to `#journalNewTradeBtn`. No
+module-level state, so the init()/TDZ trap was not approached.
+
+**Geometry contract** (every number derives from four): bar inset 12px +
+safe-area, bar height 64px, FAB 60px centred on the bar's top edge (so it
+protrudes exactly 30px, `bottom: safe + 46`), clearance 12+64+30+18 = 124px.
+Clearance is `padding-bottom` on `.site-footer`, **not** on body — `html, body`
+are `height: 100%`, so body padding lands at the 100vh mark instead of after
+the overflowing content. `scroll-padding-bottom` matches. Landscape phones
+(`max-height: 480px`) get a 52/52 compact set at 108px clearance with labels
+clipped screen-reader-only (never `display:none` — that strips the accessible
+name). Viewport meta finally gained `viewport-fit=cover,
+interactive-widget=resizes-content`; a `:has(input:focus)` rule slides both bar
+and FAB out while a text field is focused so the keyboard cannot trap them.
+
+**A11y.** FAB is a `<button>` sibling OUTSIDE the `<nav>` landmark (inside it
+screen readers announce "5 of 5, tab"); its non-circular route is the sidebar's
+Trade Entry item, and `#journalNewTradeBtn` from 900px up. Active tab is never
+colour-only — accent + a 3px indicator rail + `aria-current`. Pressed states
+pair the squish with a fill change, never shadow alone. `:not(:focus-visible)`
+guards the active tab's `box-shadow: none` or it would outrank the global focus
+ring. Icons are inline SVG, `stroke: currentColor`, no external assets.
+
+**Responsive pass.** 44px floor on `.btn`, `.mini-btn`, `.nav-toggle`,
+`.direction-btn`, `.strategy-toggle-btn`, `.tag-set label`, `.row-actions
+.mini-btn` and the sidebar list under `(max-width: 899px), (pointer: coarse)`.
+Last sub-11px type in the app (`.dash-rail-item .metric-delta`, 10.5px) → 11px
+with tighter padding. `.dash-quad-card .metric-value` floor went
+viewport-relative below 560px: "-$1,234.56" at the 24px desktop floor needs
+144px and a 360px phone gives the cell 128. `#journalNewTradeBtn` hides below
+900 — a second New Trade button 40px from the FAB is noise.
+
+**Verified.** `node --check app.js`; CSS braces balanced; served page,
+stylesheet and module greped for `tabBarNewTradeBtn` / `.tabbar-fab` /
+`viewport-fit=cover`; 16 `.nav-btn` all carrying `data-target`. Contrast
+harness extended with four pairings (FAB glyph on the accent gradient top, tab
+label, active tab + indicator, tab hover) — all pass both themes, worst new
+pairing 5.03:1 (DARK accent on `--surface-2`), global worst unchanged at
+4.57:1. Overflow reasoned at 360/375/414/768: table is card-mode ≤900, calendar
+is agenda ≤760, canvases size from `clientWidth`, every grid resolves to
+`minmax(0, 1fr)`. Cache buster → `v=20260805-clay3`.

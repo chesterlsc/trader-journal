@@ -278,6 +278,9 @@ const ui = {
   clearFiltersBtn: document.getElementById("clearFiltersBtn"),
   journalSortHeaders: Array.from(document.querySelectorAll("#journal th[data-sort]")),
   journalNewTradeBtn: document.getElementById("journalNewTradeBtn"),
+  // Mobile tab-bar FAB. The four tab destinations need no wiring — they carry
+  // .nav-btn + data-target, so ui.navButtons above already owns them.
+  tabBarNewTradeBtn: document.getElementById("tabBarNewTradeBtn"),
   exportCsvBtn: document.getElementById("exportCsvBtn"),
   progressTradeSummary: document.getElementById("progressTradeSummary"),
   progressTradeLabel: document.getElementById("progressTradeLabel"),
@@ -749,6 +752,7 @@ function bindEvents() {
   ui.tradesBody.addEventListener("click", handleTradeTableClick);
 
   ui.journalNewTradeBtn.addEventListener("click", openFreshTradeEntry);
+  ui.tabBarNewTradeBtn?.addEventListener("click", openFreshTradeEntry);
   ui.dashboardEmptyCta?.addEventListener("click", openFreshTradeEntry);
   ui.exportCsvBtn.addEventListener("click", exportTradesCsv);
   ui.backupJsonBtn.addEventListener("click", exportBackupJson);

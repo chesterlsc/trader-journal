@@ -2,7 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover hands us env(safe-area-inset-*) for the bottom tab
+         bar; interactive-widget=resizes-content keeps the fixed bar from
+         riding up over the iOS keyboard. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <title>Trader Journal | Trading Analytics</title>
     <meta
       name="description"
@@ -37,7 +43,7 @@
       href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260805-clay2" />
+    <link rel="stylesheet" href="styles.css?v=20260805-clay3" />
   </head>
   <body>
     <section class="auth-shell" id="authShell" aria-label="Login">
@@ -1417,6 +1423,63 @@
       </main>
     </div>
 
+    <!-- PHASE F: mobile tab bar + centre "+" FAB (research brief §7b, the
+         floating-pill variant — no mask, so the clay box-shadow survives).
+         Shown below 900px only, and only once the app shell is on screen.
+
+         The four tabs carry class .nav-btn + data-target, which is exactly
+         what app.js's ui.navButtons already collects — so switchView(),
+         the hash router, the is-active/aria-current sync and the auth-gate
+         disable all pick them up with no router changes. Reflections and
+         Monthly Review stay behind the sidebar hamburger.
+
+         The FAB is an ACTION, not a destination: it is a <button> sibling
+         OUTSIDE the <nav> landmark so screen readers do not announce it as
+         "5 of 5, tab". Its second, non-circular route is the sidebar's
+         "Trade Entry" item (and #journalNewTradeBtn from 900px up). -->
+    <nav class="tabbar" id="tabBar" aria-label="Primary sections">
+      <button class="nav-btn tabbar-btn is-active" type="button" data-target="dashboard" aria-current="page">
+        <span class="tabbar-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M4.75 19.25v-6.5M9.75 19.25V6.75M14.25 19.25v-9.5M19.25 19.25v-14.5" />
+          </svg>
+        </span>
+        <span class="tabbar-label">Dashboard</span>
+      </button>
+      <button class="nav-btn tabbar-btn" type="button" data-target="journal">
+        <span class="tabbar-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M4.75 5.75h14.5v12.5H4.75zM4.75 10h14.5M4.75 14.25h14.5M10 10v8.25" />
+          </svg>
+        </span>
+        <span class="tabbar-label">Review</span>
+      </button>
+      <button class="nav-btn tabbar-btn" type="button" data-target="calendar">
+        <span class="tabbar-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M4.75 6.75h14.5v12.5H4.75zM4.75 11h14.5M8.75 4v4M15.25 4v4" />
+          </svg>
+        </span>
+        <span class="tabbar-label">Calendar</span>
+      </button>
+      <button class="nav-btn tabbar-btn" type="button" data-target="reflections">
+        <span class="tabbar-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M4.75 5.75h14.5v10.5h-8.5l-4.5 3.5v-3.5h-1.5zM8.75 9.5h6.5M8.75 12.75h4" />
+          </svg>
+        </span>
+        <span class="tabbar-label">Reflect</span>
+      </button>
+    </nav>
+    <button id="tabBarNewTradeBtn" class="tabbar-fab" type="button">
+      <span class="tabbar-fab-glyph" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M12 5.75v12.5M5.75 12h12.5" />
+        </svg>
+      </span>
+      <span class="visually-hidden">Log a new trade</span>
+    </button>
+
     <dialog id="scoreInfoDialog" class="score-info-dialog" aria-labelledby="scoreInfoTitle">
       <div class="score-info-head">
         <h3 id="scoreInfoTitle">How the scores are calculated</h3>
@@ -1471,6 +1534,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260805-clay2"></script>
+    <script type="module" src="app.js?v=20260805-clay3"></script>
   </body>
 </html>

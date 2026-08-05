@@ -7387,3 +7387,357 @@ summary:focus-visible {
     animation: none;
   }
 }
+
+/* ==========================================================================
+   PHASE F — MOBILE TAB BAR + CENTRE "+" FAB, RESPONSIVE PASS
+   Research brief §7b: the floating-pill bar, not the notch-cut variant. A
+   mask would clip box-shadow and force the whole elevation onto a
+   filter: drop-shadow wrapper (no insets, more expensive). A detached pill
+   IS a clay blob, so the recipe and the token layer already agree.
+
+   Geometry contract — every number below derives from these four:
+     bar inset from the viewport bottom .... 12px + safe-area
+     bar height ........................... 64px  (48px tab + 2x8 padding)
+     FAB diameter ......................... 60px, centred on the bar's top
+                                            edge -> protrudes exactly 30px
+     content clearance .................... 12 + 64 + 30 + 18 = 124px
+                                            + safe-area, applied as footer
+                                            padding (see §5 for why not body)
+   ========================================================================== */
+
+/* --- 1. Visibility -------------------------------------------------------- */
+/* Chrome, not content: the bar exists below 900px and only once the app shell
+   is on screen. Before auth-ready the body carries neither class, so the
+   logged-out landing page never renders it — not even for a frame. */
+.tabbar,
+.tabbar-fab {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  body.is-authenticated .tabbar,
+  body.is-preview .tabbar {
+    display: grid;
+  }
+
+  body.is-authenticated .tabbar-fab,
+  body.is-preview .tabbar-fab {
+    display: grid;
+  }
+}
+
+/* --- 2. The bar ----------------------------------------------------------- */
+.tabbar {
+  position: fixed;
+  left: max(12px, env(safe-area-inset-left, 0px));
+  right: max(12px, env(safe-area-inset-right, 0px));
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  height: 64px;
+  /* Two tabs, the FAB gutter, two tabs. The gutter is 68px: a 60px FAB plus a
+     4px clear ring either side. Every px here is label width — at 360 the
+     four tabs get 64px each, and "Dashboard" in 11px mono needs 60 of them,
+     so the gutter, the gaps and the padding are all cut to the bone. */
+  grid-template-columns: repeat(2, minmax(0, 1fr)) 68px repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 0;
+  padding: 8px 4px;
+  border-radius: var(--radius-clay-lg);
+  background: var(--surface-2);
+  box-shadow: var(--clay-float);
+  z-index: var(--z-nav);
+  /* transform/opacity only — never the shadow (4-layer, large-blur). */
+  transition: transform var(--dur-base) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+
+/* Dark-only structural edge: the drop shadow is invisible against a dark
+   page, so the barely-there hairline is what separates bar from background
+   and what holds the 3:1 non-text bar (WCAG 1.4.11). */
+:root:not([data-theme="light"]) .tabbar {
+  border: 1px solid var(--clay-edge-strong);
+}
+
+/* --- 3. Tabs -------------------------------------------------------------- */
+/* These are .nav-btn, so they inherit the app-wide nav rules and then undo
+   the ones written for a horizontal desktop rail / full-width sidebar list. */
+.tabbar .nav-btn {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto;
+  justify-items: center;
+  align-content: center;
+  gap: 4px;
+  width: auto;
+  min-width: 0;
+  min-height: 48px;      /* Material 48dp / Apple 44pt — take the larger */
+  padding: 4px 1px;
+  border-radius: var(--radius-clay-sm);
+  background: transparent;
+  color: var(--text-soft);
+  text-align: center;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  transition: color var(--dur-fast) var(--ease-out), transform var(--dur-squish) var(--ease-squish);
+}
+
+.tabbar .nav-btn:hover {
+  background: transparent;
+  color: var(--text);
+}
+
+.tabbar .nav-btn:active {
+  transform: scale(0.94);
+}
+
+.tabbar-icon {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.tabbar-icon svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.tabbar-label {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+}
+
+/* Active is never colour-only (WCAG 1.4.1): colour + a 3px indicator rail
+   above the icon. The Phase D accent-muted pill is dropped here — a filled
+   chip inside a 60px slot swallows the icon. */
+.tabbar .nav-btn.is-active {
+  background: transparent;
+  color: var(--accent);
+}
+
+/* :not(:focus-visible) is load-bearing — this selector outranks the global
+   button:focus-visible ring, so clearing the Phase D active shadow
+   unconditionally would leave the current tab with no visible focus at all
+   (WCAG 2.4.7). Same guard the desktop nav rail uses. */
+.tabbar .nav-btn.is-active:not(:focus-visible) {
+  box-shadow: none;
+}
+
+.tabbar .nav-btn.is-active::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  translate: -50% 0;
+  width: 24px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+}
+
+/* --- 4. The "+" FAB ------------------------------------------------------- */
+/* An action, not a destination — it lives outside the <nav> landmark. Its
+   centre sits exactly on the bar's top edge:
+     bar top edge = safe + 12 + 64 = safe + 76 from the viewport bottom
+     FAB bottom   = safe + 76 - 30 = safe + 46 */
+.tabbar-fab {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 46px);
+  translate: -50% 0;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  background-image: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 100%);
+  color: var(--text-inverse);
+  cursor: pointer;
+  box-shadow: var(--clay-accent);
+  z-index: calc(var(--z-nav) + 1);
+  transition: transform var(--dur-squish) var(--ease-squish), opacity var(--dur-fast) var(--ease-out);
+}
+
+.tabbar-fab-glyph {
+  display: block;
+  width: 28px;
+  height: 28px;
+}
+
+.tabbar-fab-glyph svg {
+  display: block;
+  width: 28px;
+  height: 28px;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  fill: none;
+}
+
+/* The squish. Paired with a fill change so the pressed state is never
+   carried by shadow alone (WCAG 1.4.1) — clay's depth flip is invisible on a
+   dimmed screen and to a screen reader. */
+.tabbar-fab:active {
+  transform: scale(0.92);
+  background-image: none;
+  background: var(--accent-strong);
+  box-shadow: var(--clay-pressed);
+}
+
+/* --- 5. Keyboard + content clearance -------------------------------------- */
+/* iOS: interactive-widget=resizes-content stops the bar riding the keyboard
+   up, but a fixed bar directly above the keyboard still eats the field under
+   it. Drop both out of the way while a text field has focus. :has is a
+   progressive enhancement — where it is unsupported the whole rule is
+   dropped and the bar simply stays put. */
+body:has(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus) .tabbar,
+body:has(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus) .tabbar-fab,
+body:has(textarea:focus) .tabbar,
+body:has(textarea:focus) .tabbar-fab {
+  transform: translateY(150px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Clearance goes on the footer, not on the body: html/body are height:100%,
+   so body padding-bottom would land at the 100vh mark rather than after the
+   overflowing content. Footer padding always grows the document. */
+@media (max-width: 899px) {
+  body.is-authenticated .site-footer,
+  body.is-preview .site-footer {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 124px);
+  }
+
+  /* Anchor jumps and calendar/journal deep links must not land under the bar. */
+  html {
+    scroll-padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 124px);
+  }
+}
+
+/* Landscape phone: 124px of reserved bottom on a 400px-tall viewport is a
+   third of the screen. Compact geometry — 52px bar, 52px FAB, labels clipped
+   to screen-reader-only (never display:none, that would strip the button's
+   accessible name). Bar top edge = safe + 12 + 52 = safe + 64, so the FAB
+   sits at safe + 64 - 26 = safe + 38. Clearance 12 + 52 + 26 + 18 = 108. */
+@media (max-width: 899px) and (max-height: 480px) {
+  .tabbar {
+    height: 52px;
+    padding: 4px;
+  }
+
+  .tabbar .nav-btn {
+    min-height: 44px;
+  }
+
+  .tabbar-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .tabbar .nav-btn.is-active::before {
+    top: -2px;
+  }
+
+  .tabbar-fab {
+    width: 52px;
+    height: 52px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 38px);
+  }
+
+  body.is-authenticated .site-footer,
+  body.is-preview .site-footer {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 108px);
+  }
+
+  html {
+    scroll-padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 108px);
+  }
+}
+
+/* From 900px up the FAB is gone, so the command bar keeps the full-size
+   "New Trade" button; below it the button would be a second, redundant copy
+   of the FAB sitting 40px away. The + keeps a non-circular route either way:
+   the sidebar's "Trade Entry" destination. */
+@media (max-width: 899px) {
+  #journalNewTradeBtn {
+    display: none;
+  }
+
+  .journal-action-buttons {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --- 6. Touch targets ----------------------------------------------------- */
+/* 44px floor on every control a thumb can reach. Coarse pointers get it at
+   any width — a touch laptop is still a thumb. Inputs, selects and textareas
+   already carry min-height: 44px from the Phase D control pass. */
+@media (max-width: 899px), (pointer: coarse) {
+  .btn,
+  .mini-btn,
+  .nav-toggle,
+  .direction-btn,
+  .strategy-toggle-btn,
+  .tag-set label {
+    min-height: 44px;
+  }
+
+  /* Below 900px the journal table is card-mode, so row actions no longer sit
+     inside a 40px row and are free to grow. */
+  .row-actions .mini-btn {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+
+  .strategy-toggle-btn {
+    padding: 0 14px;
+  }
+
+  /* Sidebar list items are full-width rows at this width. */
+  .main-nav .nav-btn,
+  .nav-logout-mobile {
+    min-height: 44px;
+  }
+}
+
+/* --- 7. Small-screen type floor ------------------------------------------- */
+/* --fs-micro (11px) is the floor. The rail's delta chip was the last holdout
+   at 10.5px; it tightens its padding instead of its type. */
+.dash-rail-item .metric-delta {
+  font-size: var(--fs-micro);
+  padding: 1px 4px;
+}
+
+/* The edge quad goes 2-up below 900px. Its widest value is Expectancy, which
+   can read "-$1,234.56" — 10 mono glyphs. The desktop clamp floor (24px)
+   needs 144px and a 360px phone only gives the cell 128px, so the floor goes
+   viewport-relative rather than letting the numeral run past the card. */
+@media (max-width: 560px) {
+  .dash-quad-card .metric-value {
+    font-size: clamp(19px, 5.6vw, 24px);
+  }
+}
+
+/* --- 8. Reduced motion ---------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  /* The press squish dies; the fill flip and the pressed shadow still say
+     "held". Never leaves anything invisible or mid-animation. */
+  .tabbar .nav-btn:active,
+  .tabbar-fab:active {
+    transform: none;
+  }
+}
