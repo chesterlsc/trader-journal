@@ -37,11 +37,14 @@
       href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260805-phase7" />
+    <link rel="stylesheet" href="styles.css?v=20260805-elevation" />
   </head>
   <body>
     <section class="auth-shell" id="authShell" aria-label="Login">
       <header class="auth-shell-topbar">
+        <button id="previewAppBtn" class="btn nav-preview-landing preview-back-btn" type="button" hidden>
+          &larr; Back to app
+        </button>
         <div class="auth-shell-brand">
           <p class="brand-kicker">Execution analytics</p>
           <h1 class="brand-mark" data-brand-title>
@@ -53,6 +56,7 @@
       </header>
 
       <div class="auth-hero">
+        <canvas id="landingAtmos" class="landing-atmos" aria-hidden="true"></canvas>
         <section class="auth-hero-copy">
           <p class="hero-preheadline"><span class="live-pulse-dot" aria-hidden="true"></span>Live desk &middot; execution journal</p>
           <h2>
@@ -60,16 +64,28 @@
             <span class="hero-line">mistakes, and emotions</span>
             <span class="hero-line">in one place.</span>
           </h2>
-          <p class="auth-hero-text">Log your trades fast. Review screenshots. Track psychology.</p>
+          <p class="auth-hero-text">
+            Log the whole trade in seconds, then let the numbers tell you where your edge actually is —
+            and where your discipline breaks.
+          </p>
           <div class="hero-cta-row">
+            <button id="heroRegisterBtn" class="btn primary hero-cta-btn" type="button">Get Started</button>
             <button id="heroLoginBtn" class="btn hero-cta-btn hero-cta-btn-secondary" type="button">Log In</button>
-            <button id="heroRegisterBtn" class="btn hero-cta-btn hero-cta-btn-secondary" type="button">Get Started</button>
           </div>
-          <div class="recent-trades-board" id="recentTradesList" aria-label="Public recent trades"></div>
-          <button id="landingScrollHint" class="landing-scroll-hint" type="button">
-            <span class="landing-scroll-hint-label">View trades</span>
-            <span class="landing-scroll-hint-arrow">&darr;</span>
-          </button>
+          <dl class="hero-stats">
+            <div class="hero-stat">
+              <dt>Execution metrics</dt>
+              <dd>12</dd>
+            </div>
+            <div class="hero-stat">
+              <dt>Analytics reports</dt>
+              <dd>7</dd>
+            </div>
+            <div class="hero-stat">
+              <dt>Dependencies</dt>
+              <dd>0</dd>
+            </div>
+          </dl>
         </section>
 
         <div id="authOverlay" class="auth-overlay"></div>
@@ -140,6 +156,127 @@
           <p id="authMessage" class="form-message" aria-live="polite"></p>
         </section>
       </div>
+
+      <!-- Product showcase: the mock is built from the real design system —
+           same tokens, same type — so it can never misrepresent the product. -->
+      <section class="landing-section landing-showcase" data-landing-reveal>
+        <header class="landing-section-head">
+          <p class="landing-kicker">The dashboard</p>
+          <h2>Your edge, on one screen.</h2>
+          <p class="landing-lede">
+            Balance and today's P&amp;L up top, risk budget beside it, edge quality underneath — then seven
+            reports that break down where the money actually comes from.
+          </p>
+        </header>
+
+        <div class="showcase-frame" aria-hidden="true">
+          <div class="showcase-chrome">
+            <span class="showcase-dot"></span><span class="showcase-dot"></span><span class="showcase-dot"></span>
+            <span class="showcase-chrome-label">Performance Dashboard</span>
+          </div>
+          <div class="showcase-body">
+            <div class="showcase-hero">
+              <p class="showcase-label">Account balance</p>
+              <p class="showcase-value">$14,030.00</p>
+              <p class="showcase-chip">Today +$420.00</p>
+              <svg class="showcase-spark" viewBox="0 0 320 60" preserveAspectRatio="none" focusable="false">
+                <path
+                  d="M0 48 L32 44 L64 46 L96 34 L128 36 L160 26 L192 30 L224 16 L256 20 L288 8 L320 10"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
+            <div class="showcase-side">
+              <p class="showcase-label">Risk budget</p>
+              <p class="showcase-side-value">$300.00 left</p>
+              <div class="showcase-track"><span style="width: 26%"></span></div>
+              <p class="showcase-label">Weekly</p>
+              <p class="showcase-side-value">$620.00 left</p>
+              <div class="showcase-track"><span style="width: 22%"></span></div>
+            </div>
+            <div class="showcase-cell"><p class="showcase-label">Win rate</p><p class="showcase-cell-value">63.6%</p></div>
+            <div class="showcase-cell"><p class="showcase-label">Profit factor</p><p class="showcase-cell-value">4.84</p></div>
+            <div class="showcase-cell"><p class="showcase-label">Expectancy</p><p class="showcase-cell-value is-pos">$366.36</p></div>
+            <div class="showcase-cell"><p class="showcase-label">Avg R:R</p><p class="showcase-cell-value">2.19</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="landing-section landing-features" data-landing-reveal>
+        <header class="landing-section-head">
+          <p class="landing-kicker">What it does</p>
+          <h2>Capture. Analyze. Control.</h2>
+        </header>
+        <div class="feature-grid">
+          <article class="feature-card">
+            <span class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 5.5h16M4 12h10M4 18.5h7" />
+                <circle cx="18.5" cy="17.5" r="3.2" />
+              </svg>
+            </span>
+            <p class="feature-kicker">Capture</p>
+            <h3>Log the whole trade</h3>
+            <p>
+              Entry, stop, target, size, session, setup, timeframe — plus the psychology rating, execution
+              grade, and a screenshot. Bulk-import from Vantage, Binance, or a spreadsheet.
+            </p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3.5 3.5v17h17" />
+                <path d="M7.5 15l4-4.5 3.5 3 4.5-6" />
+              </svg>
+            </span>
+            <p class="feature-kicker">Analyze</p>
+            <h3>See where the edge is</h3>
+            <p>
+              Equity and drawdown curves, expectancy by setup, R-multiple distribution, and P&amp;L broken
+              down by trading session and by the mood you were in when you clicked.
+            </p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3.2 4.5 6.4v5.3c0 4.4 3.1 8.1 7.5 9.1 4.4-1 7.5-4.7 7.5-9.1V6.4Z" />
+                <path d="M9.3 12.2l2 2 3.4-3.8" />
+              </svg>
+            </span>
+            <p class="feature-kicker">Control</p>
+            <h3>Stay inside your rules</h3>
+            <p>
+              Daily and weekly loss budgets that count down as you trade, discipline scoring, and a
+              violations log that tells you the truth about the days you overrode your own plan.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="landing-section landing-tape" data-landing-reveal>
+        <header class="landing-section-head landing-section-head-inline">
+          <div>
+            <p class="landing-kicker">Live feed</p>
+            <h2>Trades, as they happen.</h2>
+          </div>
+          <button id="landingScrollHint" class="landing-scroll-hint" type="button">
+            <span class="landing-scroll-hint-label">View trades</span>
+            <span class="landing-scroll-hint-arrow">&darr;</span>
+          </button>
+        </header>
+        <div class="recent-trades-board" id="recentTradesList" aria-label="Public recent trades"></div>
+      </section>
+
+      <section class="landing-cta" data-landing-reveal>
+        <p class="landing-kicker">Start today</p>
+        <h2>Your next trade is worth journaling.</h2>
+        <p class="landing-lede">Free to use. Your data stays yours — export it as CSV or JSON whenever you want.</p>
+        <button id="ctaRegisterBtn" class="btn primary landing-cta-btn" type="button">Create your account</button>
+      </section>
     </section>
 
     <div class="app-layout">
@@ -174,6 +311,9 @@
           <button class="nav-btn" type="button" data-target="calendar">Calendar P&amp;L</button>
           <button class="nav-btn" type="button" data-target="monthly">Monthly Review</button>
           <button class="btn theme-toggle" type="button" data-theme-toggle aria-label="Switch to light theme">Light</button>
+          <button id="previewLandingBtnMobile" class="btn nav-preview-landing" type="button" data-preview-landing hidden>
+            View landing
+          </button>
           <button id="mobileLogoutBtn" class="btn nav-logout-mobile" type="button" hidden>Logout</button>
         </nav>
 
@@ -205,6 +345,9 @@
             <button class="nav-btn nav-btn-top" type="button" data-target="monthly">Monthly Review</button>
           </div>
           <div class="desktop-nav-actions">
+            <button id="previewLandingBtnDesktop" class="btn nav-preview-landing" type="button" data-preview-landing hidden>
+              View landing
+            </button>
             <button class="btn theme-toggle" type="button" data-theme-toggle aria-label="Switch to light theme">Light</button>
             <button id="desktopLogoutBtn" class="btn nav-logout-desktop" type="button" hidden>Logout</button>
           </div>
@@ -240,92 +383,119 @@
 
         <section class="view is-active" id="dashboard" aria-labelledby="dashboardHeading">
           <header class="view-head view-head-dashboard">
-            <h2 id="dashboardHeading">Performance Dashboard</h2>
-            <p>Track equity growth, drawdown pressure, and edge quality at a glance.</p>
+            <div class="view-head-copy">
+              <p class="view-kicker">Execution overview</p>
+              <h2 id="dashboardHeading">Performance Dashboard</h2>
+            </div>
+            <p class="view-head-support">Equity growth, drawdown pressure, and edge quality at a glance.</p>
           </header>
 
-          <section class="risk-strip" id="riskStrip" hidden aria-label="Risk budget">
-            <div class="risk-strip-item" data-risk-strip="day">
-              <span class="risk-strip-label">Daily loss budget</span>
-              <div class="risk-strip-track" aria-hidden="true"><span class="risk-strip-fill"></span></div>
-              <span class="risk-strip-value">$0.00 today / $0.00 limit</span>
-            </div>
-            <div class="risk-strip-item" data-risk-strip="week">
-              <span class="risk-strip-label">Weekly loss budget</span>
-              <div class="risk-strip-track" aria-hidden="true"><span class="risk-strip-fill"></span></div>
-              <span class="risk-strip-value">$0.00 this week / $0.00 limit</span>
-            </div>
-          </section>
+          <!-- Bento stats: command deck (balance hero + risk meters), edge quad,
+               dense rail. #dashboardMetricGrid stays the id JS toggles against
+               the empty state; every [data-metric] node is preserved. -->
+          <div class="dash-stats" id="dashboardMetricGrid" aria-label="Performance metrics">
+            <section class="dash-deck">
+              <article class="metric-card metric-card-balance dash-hero dash-reveal" style="--i: 0">
+                <div class="dash-hero-top">
+                  <p class="metric-label">Account Balance</p>
+                  <span
+                    class="metric-note"
+                    id="balanceOverrideNote"
+                    title="This balance is set manually in Risk Controls and may differ from the computed equity curve."
+                    hidden
+                    >Manual override</span
+                  >
+                </div>
+                <p class="metric-value dash-hero-value" data-metric="accountBalance">$0.00</p>
+                <div class="dash-hero-meta">
+                  <span class="metric-delta" data-metric-delta="accountBalance" hidden></span>
+                  <span class="dash-hero-today" id="dashHeroToday" hidden></span>
+                </div>
+                <div class="dash-spark-wrap" aria-hidden="true">
+                  <canvas id="dashSparkline" class="dash-spark" width="1000" height="180"></canvas>
+                </div>
+              </article>
 
-          <section class="metric-grid" id="dashboardMetricGrid" aria-label="Performance metrics">
-            <article class="metric-card metric-card-balance">
-              <p class="metric-label">Account Balance (Custom)</p>
-              <p class="metric-value" data-metric="accountBalance">$0.00</p>
-              <span class="metric-delta" data-metric-delta="accountBalance" hidden></span>
-              <span
-                class="metric-note"
-                id="balanceOverrideNote"
-                title="This balance is set manually in Risk Controls and may differ from the computed equity curve."
-                hidden
-                >Manual override active</span
-              >
-            </article>
-            <article class="metric-card">
-              <p class="metric-label">Total Trades</p>
-              <p class="metric-value" data-metric="totalTrades">0</p>
-              <span class="metric-delta" data-metric-delta="totalTrades" hidden></span>
-            </article>
-            <article class="metric-card">
-              <p class="metric-label">Win Rate</p>
-              <p class="metric-value" data-metric="winRate">0%</p>
-              <span class="metric-delta" data-metric-delta="winRate" hidden></span>
-            </article>
-            <article class="metric-card">
-              <p class="metric-label">Average R:R</p>
-              <p class="metric-value" data-metric="avgRR">0.00</p>
-              <span class="metric-delta" data-metric-delta="avgRR" hidden></span>
-            </article>
-            <article class="metric-card">
-              <p class="metric-label">Profit Factor</p>
-              <p class="metric-value" data-metric="profitFactor">0.00</p>
-              <span class="metric-delta" data-metric-delta="profitFactor" hidden></span>
-            </article>
-            <article class="metric-card">
-              <p class="metric-label">Current Drawdown</p>
-              <p class="metric-value" data-metric="currentDrawdown">$0.00</p>
-              <span class="metric-delta" data-metric-delta="currentDrawdown" hidden></span>
-            </article>
-            <article class="metric-card">
-              <p class="metric-label">Max Drawdown</p>
-              <p class="metric-value" data-metric="maxDrawdown">$0.00</p>
-              <span class="metric-delta" data-metric-delta="maxDrawdown" hidden></span>
-            </article>
-            <article class="metric-card">
-              <p class="metric-label">Best Day</p>
-              <p class="metric-value" data-metric="bestDay">$0.00</p>
-              <span class="metric-delta" data-metric-delta="bestDay" hidden></span>
-            </article>
-            <article class="metric-card">
-              <p class="metric-label">Worst Day</p>
-              <p class="metric-value" data-metric="worstDay">$0.00</p>
-              <span class="metric-delta" data-metric-delta="worstDay" hidden></span>
-            </article>
-            <article class="metric-card">
-              <p class="metric-label">Expectancy</p>
-              <p class="metric-value" data-metric="expectancy">$0.00</p>
-              <span class="metric-delta" data-metric-delta="expectancy" hidden></span>
-            </article>
-            <article class="metric-card">
-              <p class="metric-label">Winning Streak</p>
-              <p class="metric-value" data-metric="winningStreak">0</p>
-              <span class="metric-delta" data-metric-delta="winningStreak" hidden></span>
-            </article>
-            <article class="metric-card">
-              <p class="metric-label">Losing Streak</p>
-              <p class="metric-value" data-metric="losingStreak">0</p>
-              <span class="metric-delta" data-metric-delta="losingStreak" hidden></span>
-            </article>
-          </section>
+              <section class="risk-strip dash-risk dash-reveal" id="riskStrip" style="--i: 1" hidden aria-label="Risk budget">
+                <p class="dash-risk-kicker">Risk budget</p>
+                <div class="risk-strip-item" data-risk-strip="day">
+                  <span class="risk-strip-label">Daily loss budget</span>
+                  <span class="risk-strip-remain">$0.00 left</span>
+                  <div class="risk-strip-track" aria-hidden="true"><span class="risk-strip-fill"></span></div>
+                  <span class="risk-strip-value">$0.00 today / $0.00 limit</span>
+                </div>
+                <div class="risk-strip-item" data-risk-strip="week">
+                  <span class="risk-strip-label">Weekly loss budget</span>
+                  <span class="risk-strip-remain">$0.00 left</span>
+                  <div class="risk-strip-track" aria-hidden="true"><span class="risk-strip-fill"></span></div>
+                  <span class="risk-strip-value">$0.00 this week / $0.00 limit</span>
+                </div>
+              </section>
+            </section>
+
+            <section class="dash-quad" aria-label="Edge quality">
+              <article class="metric-card dash-quad-card dash-reveal" style="--i: 2">
+                <p class="metric-label">Win Rate</p>
+                <p class="metric-value" data-metric="winRate">0%</p>
+                <span class="metric-delta" data-metric-delta="winRate" hidden></span>
+              </article>
+              <article class="metric-card dash-quad-card dash-reveal" style="--i: 3">
+                <p class="metric-label">Profit Factor</p>
+                <p class="metric-value" data-metric="profitFactor">0.00</p>
+                <span class="metric-delta" data-metric-delta="profitFactor" hidden></span>
+              </article>
+              <article class="metric-card dash-quad-card dash-reveal" style="--i: 4">
+                <p class="metric-label">Expectancy</p>
+                <p class="metric-value" data-metric="expectancy">$0.00</p>
+                <span class="metric-delta" data-metric-delta="expectancy" hidden></span>
+              </article>
+              <article class="metric-card dash-quad-card dash-reveal" style="--i: 5">
+                <p class="metric-label">Average R:R</p>
+                <p class="metric-value" data-metric="avgRR">0.00</p>
+                <span class="metric-delta" data-metric-delta="avgRR" hidden></span>
+              </article>
+            </section>
+
+            <section class="dash-rail dash-reveal" style="--i: 6" aria-label="Secondary metrics">
+              <article class="metric-card dash-rail-item">
+                <p class="metric-label">Total Trades</p>
+                <p class="metric-value" data-metric="totalTrades">0</p>
+                <span class="metric-delta" data-metric-delta="totalTrades" hidden></span>
+              </article>
+              <article class="metric-card dash-rail-item">
+                <p class="metric-label">Current Drawdown</p>
+                <p class="metric-value" data-metric="currentDrawdown">$0.00</p>
+                <span class="metric-delta" data-metric-delta="currentDrawdown" hidden></span>
+              </article>
+              <article class="metric-card dash-rail-item">
+                <p class="metric-label">Max Drawdown</p>
+                <p class="metric-value" data-metric="maxDrawdown">$0.00</p>
+                <span class="metric-delta" data-metric-delta="maxDrawdown" hidden></span>
+              </article>
+              <article class="metric-card dash-rail-item">
+                <p class="metric-label">Best Day</p>
+                <p class="metric-value" data-metric="bestDay">$0.00</p>
+                <span class="metric-sub" data-metric-sub="bestDay" hidden></span>
+                <span class="metric-delta" data-metric-delta="bestDay" hidden></span>
+              </article>
+              <article class="metric-card dash-rail-item">
+                <p class="metric-label">Worst Day</p>
+                <p class="metric-value" data-metric="worstDay">$0.00</p>
+                <span class="metric-sub" data-metric-sub="worstDay" hidden></span>
+                <span class="metric-delta" data-metric-delta="worstDay" hidden></span>
+              </article>
+              <article class="metric-card dash-rail-item">
+                <p class="metric-label">Winning Streak</p>
+                <p class="metric-value" data-metric="winningStreak">0</p>
+                <span class="metric-delta" data-metric-delta="winningStreak" hidden></span>
+              </article>
+              <article class="metric-card dash-rail-item">
+                <p class="metric-label">Losing Streak</p>
+                <p class="metric-value" data-metric="losingStreak">0</p>
+                <span class="metric-delta" data-metric-delta="losingStreak" hidden></span>
+              </article>
+            </section>
+          </div>
 
           <section class="dashboard-empty" id="dashboardEmptyState" hidden aria-label="No trades yet">
             <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -340,14 +510,14 @@
           </section>
 
           <section class="panel-grid panel-grid-analytics">
-            <article class="panel panel-chart">
+            <article class="panel panel-chart panel-span-8">
               <div class="panel-head">
                 <h3>Equity Curve</h3>
                 <p>Starting balance + trade sequence</p>
               </div>
               <canvas id="equityChart" width="900" height="280" data-height="240" aria-label="Equity curve chart"></canvas>
             </article>
-            <article class="panel panel-chart">
+            <article class="panel panel-chart panel-span-4">
               <div class="panel-head">
                 <h3>Drawdown Curve</h3>
                 <p>Peak to trough pressure</p>
@@ -360,7 +530,7 @@
                 aria-label="Drawdown curve chart"
               ></canvas>
             </article>
-            <article class="panel panel-chart panel-strategy-performance">
+            <article class="panel panel-chart panel-strategy-performance panel-span-8">
               <div class="panel-head panel-head-inline">
                 <div>
                   <h3>Strategy Performance</h3>
@@ -388,7 +558,7 @@
                 aria-label="Strategy performance chart"
               ></canvas>
             </article>
-            <article class="panel panel-chart panel-trader-score">
+            <article class="panel panel-chart panel-trader-score panel-span-4">
               <div class="panel-head panel-head-inline">
                 <div>
                   <h3>Trader Score</h3>
@@ -405,7 +575,7 @@
                 <p id="traderScoreCaption" class="trader-score-caption">Add more trade data to build the score.</p>
               </div>
             </article>
-            <article class="panel panel-chart">
+            <article class="panel panel-chart panel-span-4">
               <div class="panel-head">
                 <h3>Psychology Report</h3>
                 <p>P&amp;L and win rate by psychology rating.</p>
@@ -418,7 +588,7 @@
                 aria-label="P&L and win rate by psychology rating chart"
               ></canvas>
             </article>
-            <article class="panel panel-chart">
+            <article class="panel panel-chart panel-span-4">
               <div class="panel-head">
                 <h3>Session Report</h3>
                 <p>P&amp;L by trading session.</p>
@@ -431,7 +601,7 @@
                 aria-label="P&L by trading session chart"
               ></canvas>
             </article>
-            <article class="panel panel-chart">
+            <article class="panel panel-chart panel-span-4">
               <div class="panel-head">
                 <h3>R-Multiple Distribution</h3>
                 <p>How closed trades spread across R outcomes.</p>
@@ -446,7 +616,8 @@
             </article>
           </section>
 
-          <section class="panel">
+          <div class="panel-grid panel-grid-bottom">
+          <section class="panel panel-span-5">
             <div class="panel-head panel-head-inline">
               <div>
                 <h3>Discipline Monitor</h3>
@@ -473,7 +644,7 @@
             </ul>
           </section>
 
-          <section class="panel">
+          <section class="panel panel-span-7">
             <div class="panel-head">
               <h3>Edge Detection by Setup</h3>
               <p>Find which setups actually produce positive expectancy.</p>
@@ -496,6 +667,8 @@
               </table>
             </div>
           </section>
+
+          </div>
 
           <section class="panel">
             <div class="panel-head">
@@ -1170,6 +1343,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260805-phase7"></script>
+    <script type="module" src="app.js?v=20260805-elevation"></script>
   </body>
 </html>

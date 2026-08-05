@@ -157,6 +157,10 @@ const ui = {
   forgotPasswordBtn: document.getElementById("forgotPasswordBtn"),
   heroRegisterBtn: document.getElementById("heroRegisterBtn"),
   heroLoginBtn: document.getElementById("heroLoginBtn"),
+  ctaRegisterBtn: document.getElementById("ctaRegisterBtn"),
+  landingAtmos: document.getElementById("landingAtmos"),
+  previewLandingBtns: Array.from(document.querySelectorAll("[data-preview-landing]")),
+  previewAppBtn: document.getElementById("previewAppBtn"),
   resetPasswordView: document.getElementById("resetPasswordView"),
   resetPassword: document.getElementById("resetPassword"),
   resetPasswordConfirm: document.getElementById("resetPasswordConfirm"),
@@ -168,6 +172,8 @@ const ui = {
   metricNodes: Array.from(document.querySelectorAll("[data-metric]")),
   metricDeltaNodes: Array.from(document.querySelectorAll("[data-metric-delta]")),
   metricGrid: document.getElementById("dashboardMetricGrid"),
+  dashSparkline: document.getElementById("dashSparkline"),
+  dashHeroToday: document.getElementById("dashHeroToday"),
   balanceCard: document.querySelector(".metric-card-balance"),
   balanceOverrideNote: document.getElementById("balanceOverrideNote"),
   riskStrip: document.getElementById("riskStrip"),
@@ -343,8 +349,13 @@ const {
 
 const { renderCharts } = createChartsModule({ ui, state, prefersReducedMotion });
 
-// Declared before init() so first-render code can reach it (module-level
-// consts below init() are in the temporal dead zone during the first render).
+// Declared before init() so first-render code can reach them (module-level
+// let/const below init() are in the temporal dead zone during the first
+// render). Equity-sparkline draw-in state: the hash guard replays the
+// animation only when the dataset changes, so live ticks never restart it.
+let dashSparkHash = "";
+let dashSparkFrame = 0;
+
 const METRIC_DELTA_SPECS = {
   accountBalance: { read: (a) => a.totalPnl, format: formatCurrency },
   totalTrades: { read: (a) => a.totalTrades, format: (v) => String(Math.round(v)), neutral: true },
@@ -397,6 +408,9 @@ function init() {
   renderAdminUsers();
   renderAll();
   renderLastSaved();
+  setupScrollReveals();
+  setupLandingReveals();
+  setupLandingAtmos();
   startLivePriceLoop();
   // Hash router: restore the deep-linked view for preview sessions; the
   // authenticated flow restores in checkAuthSession once the gate opens.
@@ -483,6 +497,26 @@ function bindEvents() {
     button.addEventListener("click", toggleTheme);
   });
 
+  // The sparkline is canvas: it must be repainted when the palette flips and
+  // resized when the hero's width changes (charts.js handles its own).
+  window.addEventListener("themechange", () => {
+    dashSparkHash = "";
+    renderDashSparkline(state.analytics);
+  });
+  let sparkResizeTimer = 0;
+  window.addEventListener("resize", () => {
+    window.clearTimeout(sparkResizeTimer);
+    sparkResizeTimer = window.setTimeout(() => {
+      if (ui.dashSparkline) {
+        drawDashSparkline(
+          ui.dashSparkline,
+          Array.isArray(state.analytics.equity) ? state.analytics.equity.filter(Number.isFinite) : [],
+          1
+        );
+      }
+    }, 150);
+  });
+
   if (ui.authPassword) {
     ui.authPassword.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
@@ -556,6 +590,25 @@ function bindEvents() {
   if (ui.heroLoginBtn) {
     ui.heroLoginBtn.addEventListener("click", () => {
       setAuthIntent("login", { focus: true });
+    });
+  }
+  if (ui.ctaRegisterBtn) {
+    ui.ctaRegisterBtn.addEventListener("click", () => {
+      setAuthIntent("register", { focus: true });
+    });
+  }
+  // Local preview only: real sessions get the Logout button instead, so this
+  // never gives a signed-in user a way out that skips logging out.
+  ui.previewLandingBtns.forEach((button) => {
+    button.hidden = !state.auth.previewMode;
+    button.addEventListener("click", () => {
+      window.location.href = `${window.location.pathname}?landing=1`;
+    });
+  });
+  if (ui.previewAppBtn) {
+    ui.previewAppBtn.hidden = !state.auth.landingPreviewMode;
+    ui.previewAppBtn.addEventListener("click", () => {
+      window.location.href = window.location.pathname;
     });
   }
   if (ui.resetPasswordBtn) {
@@ -4108,8 +4161,9 @@ function renderDashboardMetrics(analytics) {
     profitFactor: analytics.profitFactor >= 999 ? "∞" : analytics.profitFactor.toFixed(2),
     currentDrawdown: formatCurrency(analytics.currentDrawdown),
     maxDrawdown: formatCurrency(analytics.maxDrawdown),
-    bestDay: analytics.bestDay.day === "-" ? "-" : `${formatCurrency(analytics.bestDay.pnl)} (${analytics.bestDay.day})`,
-    worstDay: analytics.worstDay.day === "-" ? "-" : `${formatCurrency(analytics.worstDay.pnl)} (${analytics.worstDay.day})`,
+    // The date rides in a .metric-sub caption so the rail numeral stays short.
+    bestDay: analytics.bestDay.day === "-" ? "-" : formatCurrency(analytics.bestDay.pnl),
+    worstDay: analytics.worstDay.day === "-" ? "-" : formatCurrency(analytics.worstDay.pnl),
     expectancy: formatCurrency(analytics.expectancy),
     winningStreak: String(analytics.maxWinStreak),
     losingStreak: String(analytics.maxLossStreak)
@@ -4172,7 +4226,19 @@ function renderDashboardMetrics(analytics) {
     );
   }
 
+  // Best/worst-day dates as captions under their (now short) numerals.
+  const subs = { bestDay: analytics.bestDay.day, worstDay: analytics.worstDay.day };
+  Object.entries(subs).forEach(([key, day]) => {
+    const node = document.querySelector(`[data-metric-sub="${key}"]`);
+    if (node) {
+      node.hidden = !day || day === "-";
+      node.textContent = node.hidden ? "" : day;
+    }
+  });
+
   renderMetricDeltas();
+  renderDashHeroToday(analytics);
+  renderDashSparkline(analytics);
 
   // Reconcile balanceOverride vs the equity curve: when the override is set,
   // the balance card says so instead of silently contradicting the chart.
@@ -4192,6 +4258,286 @@ function renderDashboardMetrics(analytics) {
   if (ui.traderScoreCaption) {
     ui.traderScoreCaption.textContent = analytics.traderScore.caption;
   }
+}
+
+// Balance hero: today's realized P&L as a toned chip beside the delta.
+function renderDashHeroToday(analytics) {
+  if (!ui.dashHeroToday) {
+    return;
+  }
+
+  const hasTrades = state.trades.length > 0;
+  ui.dashHeroToday.hidden = !hasTrades;
+  if (!hasTrades) {
+    return;
+  }
+
+  // A flat day reads "$0.00", not the ± sentinel formatSignedCurrency returns.
+  const todayText = analytics.todayPnl === 0 ? formatCurrency(0) : formatSignedCurrency(analytics.todayPnl);
+  ui.dashHeroToday.textContent = `Today ${todayText}`;
+  ui.dashHeroToday.classList.toggle("is-pos", analytics.todayPnl > 0);
+  ui.dashHeroToday.classList.toggle("is-neg", analytics.todayPnl < 0);
+}
+
+function drawDashSparkline(canvas, points, progress) {
+  const ratio = window.devicePixelRatio || 1;
+  const width = canvas.clientWidth || 600;
+  const height = canvas.clientHeight || 96;
+  canvas.width = Math.floor(width * ratio);
+  canvas.height = Math.floor(height * ratio);
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return;
+  }
+
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+  if (points.length < 2) {
+    return;
+  }
+
+  const styles = getComputedStyle(document.documentElement);
+  const rising = points[points.length - 1] >= points[0];
+  const stroke = (styles.getPropertyValue(rising ? "--pnl-pos" : "--pnl-neg") || "").trim() || "#2fd18c";
+
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const span = max - min || 1;
+  const padTop = 12;
+  const usable = Math.max(height - padTop - 2, 1);
+  const stepX = width / (points.length - 1);
+  const yFor = (value) => padTop + (1 - (value - min) / span) * usable;
+
+  // Partial reveal: draw the first `progress` fraction of the series.
+  const lastIndex = Math.max(1, Math.round((points.length - 1) * clamp(progress, 0, 1)));
+  const drawn = points.slice(0, lastIndex + 1);
+
+  ctx.beginPath();
+  drawn.forEach((value, index) => {
+    const x = index * stepX;
+    const y = yFor(value);
+    if (index === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  });
+
+  // Area wash under the line, then the line itself.
+  const areaPath = new Path2D();
+  drawn.forEach((value, index) => {
+    const x = index * stepX;
+    const y = yFor(value);
+    if (index === 0) {
+      areaPath.moveTo(x, height);
+      areaPath.lineTo(x, y);
+    } else {
+      areaPath.lineTo(x, y);
+    }
+  });
+  areaPath.lineTo((drawn.length - 1) * stepX, height);
+  areaPath.closePath();
+
+  const gradient = ctx.createLinearGradient(0, padTop, 0, height);
+  ctx.save();
+  ctx.globalAlpha = 0.16;
+  gradient.addColorStop(0, stroke);
+  gradient.addColorStop(1, "transparent");
+  ctx.fillStyle = gradient;
+  ctx.fill(areaPath);
+  ctx.restore();
+
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = 1.75;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.stroke();
+}
+
+function renderDashSparkline(analytics) {
+  const canvas = ui.dashSparkline;
+  if (!canvas) {
+    return;
+  }
+
+  const points = Array.isArray(analytics.equity) ? analytics.equity.filter(Number.isFinite) : [];
+  const hash = `${points.length}:${points[points.length - 1]}:${points[0]}`;
+  const changed = hash !== dashSparkHash;
+  dashSparkHash = hash;
+
+  if (dashSparkFrame) {
+    cancelAnimationFrame(dashSparkFrame);
+    dashSparkFrame = 0;
+  }
+
+  if (!changed || prefersReducedMotion() || points.length < 2) {
+    drawDashSparkline(canvas, points, 1);
+    return;
+  }
+
+  const startTime = performance.now();
+  const step = (now) => {
+    const t = Math.min((now - startTime) / 640, 1);
+    drawDashSparkline(canvas, points, 1 - Math.pow(1 - t, 3));
+    dashSparkFrame = t < 1 ? requestAnimationFrame(step) : 0;
+  };
+  dashSparkFrame = requestAnimationFrame(step);
+}
+
+// Landing hero atmosphere: a deterministic equity-shaped curve that draws
+// itself once behind the headline. Deterministic (no RNG) so the landing
+// looks identical on every visit; theme colours come from the tokens.
+function drawLandingAtmos(canvas, progress) {
+  const ratio = window.devicePixelRatio || 1;
+  const width = canvas.clientWidth || 1200;
+  const height = canvas.clientHeight || 420;
+  canvas.width = Math.floor(width * ratio);
+  canvas.height = Math.floor(height * ratio);
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return;
+  }
+
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+
+  const styles = getComputedStyle(document.documentElement);
+  const line = (styles.getPropertyValue("--chart-line") || "").trim() || "#5b8def";
+
+  // A rising walk with a mid-course drawdown — the shape of a real curve.
+  const steps = 72;
+  const points = [];
+  for (let i = 0; i <= steps; i += 1) {
+    const t = i / steps;
+    const trend = Math.pow(t, 1.08);
+    const wobble = Math.sin(t * 11.4) * 0.05 + Math.sin(t * 4.1) * 0.035;
+    const dip = Math.exp(-Math.pow((t - 0.46) / 0.11, 2)) * 0.16;
+    points.push(trend + wobble - dip);
+  }
+
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const span = max - min || 1;
+  const padTop = height * 0.3;
+  const usable = height - padTop - height * 0.12;
+  const stepX = width / steps;
+  const yFor = (value) => padTop + (1 - (value - min) / span) * usable;
+  const lastIndex = Math.max(1, Math.round(steps * clamp(progress, 0, 1)));
+
+  ctx.beginPath();
+  for (let i = 0; i <= lastIndex; i += 1) {
+    const x = i * stepX;
+    const y = yFor(points[i]);
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+
+  ctx.save();
+  ctx.globalAlpha = 0.22;
+  ctx.strokeStyle = line;
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = "round";
+  ctx.stroke();
+
+  ctx.lineTo(lastIndex * stepX, height);
+  ctx.lineTo(0, height);
+  ctx.closePath();
+  const gradient = ctx.createLinearGradient(0, padTop, 0, height);
+  gradient.addColorStop(0, line);
+  gradient.addColorStop(1, "transparent");
+  ctx.globalAlpha = 0.07;
+  ctx.fillStyle = gradient;
+  ctx.fill();
+  ctx.restore();
+}
+
+function setupLandingAtmos() {
+  const canvas = ui.landingAtmos;
+  if (!canvas) {
+    return;
+  }
+
+  const paint = (progress) => drawLandingAtmos(canvas, progress);
+
+  if (prefersReducedMotion()) {
+    paint(1);
+  } else {
+    const startTime = performance.now();
+    const step = (now) => {
+      const t = Math.min((now - startTime) / 1400, 1);
+      paint(1 - Math.pow(1 - t, 3));
+      if (t < 1) {
+        requestAnimationFrame(step);
+      }
+    };
+    requestAnimationFrame(step);
+  }
+
+  window.addEventListener("themechange", () => paint(1));
+  let resizeTimer = 0;
+  window.addEventListener("resize", () => {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(() => paint(1), 150);
+  });
+}
+
+// Landing sections fade up as they enter the viewport (same contract as the
+// dashboard panels: reduced motion opts out of the mechanism entirely).
+function setupLandingReveals() {
+  const targets = Array.from(document.querySelectorAll("[data-landing-reveal]"));
+  if (!targets.length || prefersReducedMotion() || !("IntersectionObserver" in window)) {
+    targets.forEach((section) => section.classList.add("is-revealed"));
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-revealed");
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { rootMargin: "0px 0px -10% 0px", threshold: 0.08 }
+  );
+
+  targets.forEach((section) => observer.observe(section));
+}
+
+// Scroll-revealed dashboard panels. Reduced motion (or no IntersectionObserver)
+// skips the mechanism entirely — the panels are simply visible.
+function setupScrollReveals() {
+  const targets = Array.from(
+    document.querySelectorAll("#dashboard .panel-grid-analytics > .panel, #dashboard .panel-grid-bottom > .panel")
+  );
+  if (!targets.length || prefersReducedMotion() || !("IntersectionObserver" in window)) {
+    return;
+  }
+
+  targets.forEach((panel, index) => {
+    panel.dataset.reveal = "";
+    panel.style.transitionDelay = `${Math.min(index, 4) * 60}ms`;
+  });
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-revealed");
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { rootMargin: "0px 0px -8% 0px", threshold: 0.04 }
+  );
+
+  targets.forEach((panel) => observer.observe(panel));
 }
 
 // Daily/weekly risk-budget strip: how much of the configured loss limits
@@ -4237,6 +4583,12 @@ function renderRiskStrip(analytics) {
     const value = item.querySelector(".risk-strip-value");
     if (value) {
       value.textContent = `${formatCurrency(entry.pnl)} ${entry.period} / ${formatCurrency(entry.limit)} limit`;
+    }
+    // Headline numeral: budget still available — the actionable number.
+    const remain = item.querySelector(".risk-strip-remain");
+    if (remain) {
+      const left = Math.max(entry.limit - used, 0);
+      remain.textContent = breached ? "Limit breached" : `${formatCurrency(left)} left`;
     }
   });
 }
