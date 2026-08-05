@@ -522,3 +522,23 @@ landing-glass pairings (the glass values changed, so every hero-terminal and
 showcase numeral moved). All pass both themes; worst new pairing **4.92:1**
 (LIGHT, `--warn` on `--surface-inset`), global worst unchanged at **4.57:1**.
 Cache buster → `v=20260805-clay4`.
+
+## Clay V2 — imported from claude.ai/design (2026-08-06)
+
+Imported the "Fable 5 trading redesign" project via the DesignSync MCP and implemented `Redesign.dc.html`'s handoff, `handoff/clay-v2.css`, as `clay-v2.css` — a drop-in layer loaded after `styles.css` that retones tokens rather than restructuring markup.
+
+**What changed.** Palette moves off blue-graphite onto a warm bone ground (`--surface-0: #e2dace`) with a violet accent (`#6b3ed8` light / `#9e7bf0` dark); light becomes the primary theme and dark is re-derived warm rather than inverted; Sora → Space Grotesk (JetBrains Mono stays, since swapping the numeral face would move every journal column width); radii go up one rung (clay stops reading as moulded below ~14px). Charts needed zero JS: `charts.js` reads its palette from `getComputedStyle` and re-reads on `themechange`, so retoning the tokens retoned all seven canvases plus the sparkline.
+
+**Depth as data** is the rule that carries the redesign: raised = profit, pressed = loss, travel scaling with `--day-intensity`. Applied to calendar cells (grid becomes a pressed well with air between tiles), losing metric cards, and journal rows. The money colour and the result pill still carry the state, so depth is never the sole signal (WCAG 1.4.1).
+
+**Two "REQUIRES MARKUP" items from the handoff were implemented:**
+- Journal rows now get `.trade-row-win` / `.trade-row-loss` from `renderJournalTable`; open rows stay flat since the outcome is not yet known.
+- The `⌘K` hint span was added to `#journalNewTradeBtn` — and the shortcut was actually wired (`mod+K` → `openFreshTradeEntry`), because a keycap that does nothing is a worse affordance than none. The sidebar shortcut list was updated to match.
+
+**Two corrections to the handoff, both measured:**
+- Light `--text-faint` shipped as `#6f6659`, tuned against `--surface-1`. It also lands on `--surface-inset` (table heads, wells) where it measured **4.27:1**, under the 4.5:1 body floor. Darkened to `#6a6154` — 4.61:1 on inset, 5.36:1 on `--surface-1`. Worst surviving pairing across both themes is now 4.61:1.
+- §7 grows `.dash-spark-wrap` from 74px to 118px, but the mobile hero reserved only 82px of padding-bottom for it (tuned to the old height), so the delta and "Today" chips fell inside the carved well. Re-reserved at 126px in a §9 block appended on import.
+
+**Not implemented, deliberately.** The design doc's sections 1b (natural-language quick capture), 1c (unjournalled-trade queue) and 1f (six proposed features — playbooks, setup pages, equity-curve scrubbing, voice notes, drafted weekly review, loss-budget speed bump) all change application logic. The instruction was "change the whole design but keep the same logic", so they are catalogued here as the next build, not shipped.
+
+**Verified:** both themes at 375 and 1400px; all seven canvases plus the sparkline repainting on the violet retone; journal rows 7 raised / 4 pressed / 1 flat-open; calendar loss tile pressed; ⌘K opens trade entry; FAB at 66px with no tab overlap; no horizontal overflow; charts smoke test green; CSS braces balanced.

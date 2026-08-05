@@ -506,11 +506,13 @@ function init() {
   checkAuthSession();
 }
 
+// Clay V2: light is the primary theme, dark is the stored opt-out. Must stay
+// in agreement with the FOUC guard in index.html <head> or the page flashes.
 function getStoredTheme() {
   try {
-    return localStorage.getItem(THEME_STORAGE_KEY) === "light" ? "light" : "dark";
+    return localStorage.getItem(THEME_STORAGE_KEY) === "dark" ? "dark" : "light";
   } catch (error) {
-    return "dark";
+    return "light";
   }
 }
 
@@ -907,6 +909,16 @@ function bindEvents() {
         event.preventDefault();
         ui.tradeForm.requestSubmit();
       }
+    }
+
+    // Clay V2 §6: the New Trade button advertises ⌘K, so the shortcut has to
+    // exist — a keycap that does nothing is a worse affordance than none.
+    if (mod && event.key.toLowerCase() === "k") {
+      if (!canAccessApp()) {
+        return;
+      }
+      event.preventDefault();
+      openFreshTradeEntry();
     }
 
     if (!mod && event.key === "/") {
@@ -5554,9 +5566,20 @@ function renderJournalTable() {
           ? "pnl-positive"
           : "pnl-negative";
       const pipClass = isOpen ? "" : trade.pips > 0 ? "pnl-positive" : trade.pips < 0 ? "pnl-negative" : "";
+      // Clay V2 §5c: depth as data — a winning row is raised, a losing row is
+      // pressed. Open rows stay flat (the outcome is not known yet). The money
+      // colour and the Result pill still carry the state, so the depth flip is
+      // never the sole signal (WCAG 1.4.1).
+      const rowClass = isOpen
+        ? ""
+        : trade.netPnl > 0
+          ? " class=\"trade-row-win\""
+          : trade.netPnl < 0
+            ? " class=\"trade-row-loss\""
+            : "";
 
       return `
-        <tr>
+        <tr${rowClass}>
           <td data-label="Date">${escapeHtml(trade.date)}</td>
           <td data-label="Asset">${escapeHtml(trade.asset)}</td>
           <td data-label="Market">${escapeHtml(trade.market)}</td>

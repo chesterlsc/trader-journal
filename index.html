@@ -14,8 +14,9 @@
       name="description"
       content="Trader Journal — log trades fast, review screenshots, track psychology, and measure your edge with execution analytics and risk control."
     />
-    <meta name="theme-color" content="#08090b" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)" />
+    <!-- Clay V2 grounds: warm bone (light, primary) and warm ink (dark). -->
+    <meta name="theme-color" content="#14110f" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#e2dace" media="(prefers-color-scheme: light)" />
     <meta property="og:title" content="Trader Journal | Trading Analytics" />
     <meta
       property="og:description"
@@ -23,15 +24,16 @@
     />
     <meta property="og:type" content="website" />
     <script>
-      // FOUC guard: set the theme attribute before first paint. Dark is the
-      // default (:root, no attribute); light is opt-in via data-theme.
+      // FOUC guard: set the theme attribute before first paint. Clay V2 makes
+      // LIGHT the primary theme (clay needs a mid-tone warm ground to read as
+      // moulded), so light is the default and dark is the stored opt-out.
       (function () {
         try {
-          if (localStorage.getItem("axiom_journal_theme_v1") === "light") {
+          if (localStorage.getItem("axiom_journal_theme_v1") !== "dark") {
             document.documentElement.setAttribute("data-theme", "light");
           }
         } catch (error) {
-          /* private mode — fall through to dark */
+          document.documentElement.setAttribute("data-theme", "light");
         }
       })();
     </script>
@@ -40,10 +42,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260805-clay4" />
+    <link rel="stylesheet" href="styles.css?v=20260806-clayv2" />
+    <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
+         AFTER styles.css; it overrides tokens rather than restructuring. -->
+    <link rel="stylesheet" href="clay-v2.css?v=20260806-clayv2" />
   </head>
   <body>
     <section class="auth-shell" id="authShell" aria-label="Login">
@@ -467,7 +472,7 @@
 
         <div class="sidebar-foot">
           <p id="lastSaved">Autosave: waiting for first update</p>
-          <p class="shortcut-hint">Shortcuts: <kbd>Cmd/Ctrl + S</kbd> save trade, <kbd>/</kbd> focus search</p>
+          <p class="shortcut-hint">Shortcuts: <kbd>Cmd/Ctrl + K</kbd> new trade, <kbd>Cmd/Ctrl + S</kbd> save trade, <kbd>/</kbd> focus search</p>
         </div>
       </aside>
 
@@ -529,6 +534,7 @@
                 </svg>
               </span>
               <span>New Trade</span>
+              <span class="kbd-hint" aria-hidden="true">&#8984;K</span>
             </button>
             <button id="exportCsvBtn" class="btn journal-action-btn journal-action-btn-secondary" type="button">
               <span class="journal-action-icon" aria-hidden="true">
@@ -1487,6 +1493,9 @@
         </span>
         <span class="tabbar-label">Review</span>
       </button>
+      <!-- Reserved slot: the FAB is centred over this gap, so it never lands on
+           a real tab and steal its taps. -->
+      <span class="tabbar-slot" aria-hidden="true"></span>
       <button class="nav-btn tabbar-btn" type="button" data-target="calendar">
         <span class="tabbar-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" focusable="false">

@@ -1,0 +1,560 @@
+/* ==========================================================================
+   Trader Journal — CLAY V2
+   Drop-in layer. Load AFTER styles.css, nothing else changes:
+
+     <link rel="stylesheet" href="styles.css?v=..." />
+     <link rel="stylesheet" href="clay-v2.css?v=20260806-clayv2" />
+
+   Source: claude.ai/design project "Fable 5 trading redesign",
+   handoff/clay-v2.css. Imported verbatim.
+
+   What changes, and why:
+     1. The palette moves off blue-graphite onto a warm bone ground with a
+        violet accent. Clay depends on a mid-tone, warm-cast surface: on a
+        near-black page the drop shadow is invisible and the whole style
+        collapses into the hairline you were trying to delete.
+     2. Light becomes the primary theme; dark is re-derived warm, not
+        inverted.
+     3. Depth becomes information. Raised = profit, pressed = loss, and the
+        travel scales with size. Calendar days, metric cards and journal rows
+        all read at a glance with your eyes out of focus.
+     4. Radii go up one rung and the primary action gets physically bigger.
+
+   Charts need no JS change: charts.js reads its colours off
+   getComputedStyle(document.documentElement) and re-reads on 'themechange',
+   so retoning the tokens retones every canvas.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. TYPE
+   Sora → Space Grotesk. One token, and it lands everywhere --font-ui is
+   spent. JetBrains Mono stays: it is the right numeral face and swapping it
+   would move every column width in the journal.
+   -------------------------------------------------------------------------- */
+:root {
+  --font-ui: "Space Grotesk", "Sora", system-ui, sans-serif;
+}
+
+/* --------------------------------------------------------------------------
+   2. GEOMETRY
+   Clay stops reading as moulded below ~14px; V2 pushes the top of the scale
+   so the big surfaces (hero, modal, sheet) read as objects rather than
+   panels. Nested chips keep the small scale — 26 inside 26 is mush.
+   -------------------------------------------------------------------------- */
+:root {
+  --radius-clay-sm: 18px;
+  --radius-clay-md: 26px;
+  --radius-clay-lg: 34px;
+  --radius-clay-xl: 44px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: var(--radius-clay-sm);
+  --radius-xl: var(--radius-clay-lg);
+}
+
+/* --------------------------------------------------------------------------
+   3. LIGHT THEME — the primary surface now
+   Warm bone ground, violet accent, money colours re-derived to hold 4.5:1 on
+   bone (the old #0a6e46 / #c02a4f were tuned against #fbfbff).
+   -------------------------------------------------------------------------- */
+[data-theme="light"] {
+  --surface-0: #e2dace;        /* page */
+  --surface-1: #f5f0e8;        /* cards, panels */
+  --surface-2: #fbf8f3;        /* nav, modal, raised */
+  --surface-3: #efe9e1;        /* hover */
+  --surface-inset: #e7dfd3;    /* wells, inputs, table heads */
+
+  --line: #dcd3c6;
+  --line-strong: #c9bfaf;
+  --line-accent: rgba(107, 62, 216, 0.45);
+
+  --text: #241f1a;
+  --text-soft: #6b6259;
+  /* Handoff shipped #6f6659, tuned against --surface-1. But --text-faint also
+     lands on --surface-inset (table heads, wells), where it measured 4.27:1 —
+     under the 4.5:1 body floor. Darkened one step: 4.61:1 on inset,
+     5.36:1 on --surface-1, 5.05:1 on --surface-3. */
+  --text-faint: #6a6154;
+  --text-inverse: #ffffff;
+
+  --accent: #6b3ed8;
+  --accent-strong: #5730b5;
+  --accent-muted: rgba(107, 62, 216, 0.10);
+
+  --pnl-pos: #146b49;
+  --pnl-pos-soft: rgba(20, 107, 73, 0.12);
+  --pnl-pos-line: rgba(20, 107, 73, 0.38);
+  --pnl-neg: #b32b4f;
+  --pnl-neg-soft: rgba(179, 43, 79, 0.11);
+  --pnl-neg-line: rgba(179, 43, 79, 0.38);
+
+  --warn: #8a5a0c;
+  --warn-soft: rgba(138, 90, 12, 0.12);
+  --info: #0c6b8a;
+  --info-soft: rgba(12, 107, 138, 0.11);
+
+  --chart-grid: #dbd2c5;
+  --chart-axis: #6f6659;
+
+  /* Accent-derived chart tokens were hard-coded blue; re-derive on violet. */
+  --chart-line-deep: #3d1f88;
+  --chart-glow: rgba(107, 62, 216, 0.32);
+  --chart-halo: rgba(107, 62, 216, 0.18);
+  --chart-halo-fade: rgba(107, 62, 216, 0);
+  --chart-area-top: rgba(107, 62, 216, 0.26);
+  --chart-area-mid: rgba(107, 62, 216, 0.08);
+  --chart-area-bottom: rgba(107, 62, 216, 0);
+  --chart-canvas-glow: rgba(107, 62, 216, 0.05);
+  --chart-pos-deep: #0d4a32;
+  --chart-pos-glow: rgba(20, 107, 73, 0.32);
+  --chart-neg-deep: #7d1c37;
+  --chart-neg-glow: rgba(179, 43, 79, 0.32);
+  --chart-halo-neg: rgba(179, 43, 79, 0.18);
+  --chart-halo-neg-fade: rgba(179, 43, 79, 0);
+  --chart-neg-area-top: rgba(179, 43, 79, 0.03);
+  --chart-neg-area-bottom: rgba(179, 43, 79, 0.30);
+  --chart-highlight: rgba(255, 255, 255, 0.6);
+  --chart-shade: rgba(36, 31, 26, 0.2);
+  --chart-shade-fade: rgba(36, 31, 26, 0);
+  --chart-track: rgba(111, 102, 89, 0.12);
+  --chart-crosshair: rgba(107, 98, 89, 0.55);
+  --chart-tooltip-bg: rgba(251, 248, 243, 0.98);
+  --chart-tooltip-line: #c9bfaf;
+  --chart-tooltip-shadow: rgba(36, 31, 26, 0.2);
+  --chart-ring-wash: rgba(111, 102, 89, 0.05);
+  --chart-radar-core: rgba(12, 107, 138, 0.24);
+  --chart-radar-edge: rgba(12, 107, 138, 0.03);
+  --chart-radar-glow: rgba(12, 107, 138, 0.32);
+  --chart-canvas-top: #ece4d8;
+  --chart-canvas-bottom: #e5dccf;
+  --chart-canvas-shadow: rgba(36, 31, 26, 0.14);
+  --spark-pos-fade: rgba(20, 107, 73, 0);
+  --spark-neg-fade: rgba(179, 43, 79, 0);
+
+  /* Clay elevation, warm. The hue moves 245 → 35 so the drop belongs to the
+     surface it falls from; a cool grey shadow under a warm card is the tell
+     that kills the moulded read. */
+  --clay-raised:
+    0 18px 32px -18px hsl(35 30% 40% / 0.45),
+    0 6px 12px -8px hsl(35 30% 40% / 0.30),
+    inset 0 -8px 16px -8px hsl(35 35% 45% / 0.22),
+    inset 0 8px 14px -8px hsl(40 60% 100% / 0.95);
+  --clay-float:
+    0 26px 44px -18px hsl(35 30% 38% / 0.50),
+    0 8px 16px -8px hsl(35 30% 40% / 0.35),
+    inset 0 -9px 18px -9px hsl(35 35% 45% / 0.26),
+    inset 0 10px 16px -9px hsl(40 60% 100% / 1);
+  --clay-soft: 0 12px 24px -16px hsl(35 30% 40% / 0.38);
+  --clay-accent:
+    0 20px 34px -16px hsl(265 60% 40% / 0.55),
+    0 6px 14px -7px hsl(265 60% 35% / 0.40),
+    inset 0 -7px 14px -7px hsl(265 70% 30% / 0.45),
+    inset 0 8px 14px -7px hsl(0 0% 100% / 0.40);
+  --clay-pressed:
+    inset 0 5px 12px -3px hsl(35 35% 40% / 0.36),
+    inset 0 -3px 6px -3px hsl(40 60% 100% / 0.90);
+
+  --clay-edge: hsl(35 25% 25% / 0.06);
+  --clay-edge-strong: hsl(35 25% 25% / 0.11);
+  --control-edge: #a89a86;
+
+  --shadow: var(--clay-raised);
+  --shadow-modal:
+    0 40px 70px -24px hsl(35 30% 35% / 0.45),
+    0 12px 24px -10px hsl(35 30% 38% / 0.28),
+    inset 0 -8px 16px -8px hsl(35 35% 45% / 0.20),
+    inset 0 9px 15px -8px hsl(40 60% 100% / 1);
+  --edge-highlight: inset 0 1px 0 hsl(40 60% 100% / 0.9);
+  --focus-ring: 0 0 0 3px var(--surface-1), 0 0 0 6px var(--accent);
+
+  --halo-accent: rgba(107, 62, 216, 0.28);
+  --aurora-a: rgba(107, 62, 216, 0.15);
+  --aurora-b: rgba(20, 107, 73, 0.10);
+  --aurora-c: rgba(208, 138, 31, 0.12);
+  --aurora-fade: rgba(107, 62, 216, 0);
+  --landing-grid-line: rgba(107, 62, 216, 0.12);
+  --floor-glow: rgba(107, 62, 216, 0.14);
+
+  --glass-top: #fbf8f3;
+  --glass-bottom: #f2ece2;
+  --deck-top: #fbf8f3;
+  --deck-bottom: #f2ece2;
+  --deck-edge: hsl(40 60% 100% / 0.9);
+  --deck-wash: rgba(107, 62, 216, 0.05);
+  --deck-groove: hsl(35 35% 40% / 0.28);
+}
+
+/* --------------------------------------------------------------------------
+   4. DARK THEME — re-derived warm, not inverted
+   Same violet family, lifted for contrast on ink. Money colours brighten
+   because the eye loses saturation on a dark ground.
+   -------------------------------------------------------------------------- */
+:root:not([data-theme="light"]) {
+  --surface-0: #14110f;
+  --surface-1: #1f1b18;
+  --surface-2: #272220;
+  --surface-3: #2f2926;
+  --surface-inset: #171412;
+
+  --line: #322c28;
+  --line-strong: #443c36;
+  --line-accent: rgba(158, 123, 240, 0.45);
+
+  --text: #f2ede6;
+  --text-soft: #a9a096;
+  --text-faint: #a49b90;
+  --text-inverse: #14110f;
+
+  --accent: #9e7bf0;
+  --accent-strong: #b69af5;
+  --accent-muted: rgba(158, 123, 240, 0.14);
+
+  --pnl-pos: #3dd08f;
+  --pnl-pos-soft: rgba(61, 208, 143, 0.13);
+  --pnl-pos-line: rgba(61, 208, 143, 0.38);
+  --pnl-neg: #f5637f;
+  --pnl-neg-soft: rgba(245, 99, 127, 0.13);
+  --pnl-neg-line: rgba(245, 99, 127, 0.38);
+
+  --chart-grid: #2b2521;
+  --chart-axis: #a49b90;
+  --chart-line-deep: #5a3aa0;
+  --chart-glow: rgba(158, 123, 240, 0.5);
+  --chart-halo: rgba(158, 123, 240, 0.24);
+  --chart-halo-fade: rgba(158, 123, 240, 0);
+  --chart-area-top: rgba(158, 123, 240, 0.4);
+  --chart-area-mid: rgba(158, 123, 240, 0.12);
+  --chart-area-bottom: rgba(158, 123, 240, 0);
+  --chart-canvas-top: #1b1815;
+  --chart-canvas-bottom: #161311;
+  --chart-canvas-glow: rgba(158, 123, 240, 0.07);
+  --chart-pos-deep: #1c8058;
+  --chart-pos-glow: rgba(61, 208, 143, 0.5);
+  --chart-neg-deep: #8f2a44;
+  --chart-neg-glow: rgba(245, 99, 127, 0.5);
+  --chart-halo-neg: rgba(245, 99, 127, 0.24);
+  --chart-halo-neg-fade: rgba(245, 99, 127, 0);
+  --chart-tooltip-bg: rgba(31, 27, 24, 0.96);
+  --chart-tooltip-line: #443c36;
+  --spark-pos-fade: rgba(61, 208, 143, 0);
+  --spark-neg-fade: rgba(245, 99, 127, 0);
+
+  --clay-raised:
+    0 16px 30px -16px hsl(30 40% 3% / 0.80),
+    0 5px 11px -6px hsl(30 40% 3% / 0.55),
+    inset 0 -7px 14px -7px hsl(30 35% 3% / 0.55),
+    inset 0 8px 13px -7px hsl(35 25% 78% / 0.11);
+  --clay-float:
+    0 24px 42px -16px hsl(30 40% 3% / 0.85),
+    0 7px 15px -7px hsl(30 40% 3% / 0.60),
+    inset 0 -8px 16px -8px hsl(30 35% 3% / 0.60),
+    inset 0 9px 15px -8px hsl(35 25% 80% / 0.16);
+  --clay-soft: 0 12px 26px -18px hsl(30 40% 3% / 0.70);
+  --clay-accent:
+    0 20px 34px -14px hsl(265 55% 14% / 0.90),
+    0 6px 13px -6px hsl(265 55% 11% / 0.62),
+    inset 0 -7px 14px -7px hsl(265 60% 10% / 0.50),
+    inset 0 8px 14px -7px hsl(0 0% 100% / 0.24);
+  --clay-pressed:
+    inset 0 4px 9px -2px hsl(30 40% 3% / 0.70),
+    inset 0 -2px 5px -3px hsl(35 25% 78% / 0.06);
+
+  --clay-edge: hsl(35 25% 80% / 0.08);
+  --clay-edge-strong: hsl(35 25% 82% / 0.13);
+  --control-edge: #6a5f56;
+
+  --halo-accent: rgba(158, 123, 240, 0.4);
+  --aurora-a: rgba(158, 123, 240, 0.16);
+  --aurora-b: rgba(61, 208, 143, 0.09);
+  --aurora-c: rgba(240, 179, 78, 0.10);
+  --aurora-fade: rgba(158, 123, 240, 0);
+  --landing-grid-line: rgba(158, 123, 240, 0.13);
+  --deck-groove: hsl(30 40% 3% / 0.7);
+}
+
+/* ==========================================================================
+   5. DEPTH AS DATA — the one rule that carries the redesign
+   Raised = you made money, pressed = you lost it, and the travel scales with
+   how much. Never shadow alone: the money colour and the sign glyph still
+   carry the state for anyone who cannot see the depth flip (WCAG 1.4.1).
+   ========================================================================== */
+
+/* --- 5a. Calendar ---------------------------------------------------------
+   app.js already stamps .calendar-cell-positive / -negative and a clamped
+   --day-intensity (0…1) per cell, so this is pure CSS. The 1px-gap hairline
+   grid has to go: clay tiles need air between them or the shadows merge. */
+.calendar-grid {
+  gap: 10px;
+  padding: 14px;
+  background: var(--surface-inset);
+  border-radius: var(--radius-clay-md);
+  box-shadow: var(--clay-pressed);
+}
+
+.calendar-weekday {
+  background: transparent;
+  padding-bottom: 2px;
+}
+
+.calendar-cell {
+  border-radius: var(--radius-md);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.calendar-cell-positive {
+  box-shadow:
+    0 calc(8px + var(--day-intensity, 0) * 14px) calc(16px + var(--day-intensity, 0) * 16px) -14px
+      hsl(155 40% 25% / calc(0.3 + var(--day-intensity, 0) * 0.3)),
+    inset 0 -6px 12px -6px hsl(35 35% 45% / 0.18),
+    inset 0 7px 12px -7px hsl(40 60% 100% / 1);
+}
+
+.calendar-cell-negative {
+  box-shadow:
+    inset 0 calc(4px + var(--day-intensity, 0) * 6px) calc(10px + var(--day-intensity, 0) * 8px) -3px
+      hsl(345 40% 35% / calc(0.22 + var(--day-intensity, 0) * 0.22)),
+    inset 0 -3px 6px -3px hsl(40 60% 100% / 0.75);
+}
+
+.calendar-cell-flat,
+.calendar-cell-empty {
+  background: var(--surface-3);
+  box-shadow: inset 0 3px 7px -3px hsl(35 35% 40% / 0.2);
+}
+
+.calendar-cell-empty {
+  min-height: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+button.calendar-cell:hover {
+  transform: translateY(-2px);
+}
+
+button.calendar-cell.calendar-cell-negative:hover {
+  transform: translateY(1px);
+}
+
+/* Dark theme: the light-source insets have to be re-derived or the tiles
+   look shrink-wrapped. */
+:root:not([data-theme="light"]) .calendar-cell-positive {
+  box-shadow:
+    0 calc(8px + var(--day-intensity, 0) * 14px) calc(16px + var(--day-intensity, 0) * 16px) -14px
+      hsl(155 60% 8% / calc(0.5 + var(--day-intensity, 0) * 0.3)),
+    inset 0 -6px 12px -6px hsl(30 35% 3% / 0.5),
+    inset 0 7px 12px -7px hsl(35 25% 78% / 0.12);
+}
+
+:root:not([data-theme="light"]) .calendar-cell-negative {
+  box-shadow:
+    inset 0 calc(4px + var(--day-intensity, 0) * 6px) calc(10px + var(--day-intensity, 0) * 8px) -3px
+      hsl(345 50% 6% / calc(0.5 + var(--day-intensity, 0) * 0.25)),
+    inset 0 -2px 5px -3px hsl(35 25% 78% / 0.05);
+}
+
+/* --- 5b. Metric cards -----------------------------------------------------
+   .is-pos / .is-neg are already stamped by renderMetrics. A losing metric
+   sinks instead of rising; the money rail stays, so the tone is never
+   carried by depth alone. */
+.metric-card:not(.dash-rail-item).is-neg {
+  background: var(--surface-inset);
+  box-shadow:
+    inset var(--money-rail-w) 0 0 var(--money-rail),
+    var(--clay-pressed);
+}
+
+/* --- 5c. Journal rows -----------------------------------------------------
+   The table stays flat by default: clay on a repeating row is how this style
+   ruins a data product. These two classes are the exception, and they only
+   move shadow + background, never padding — row height is unchanged. */
+#journal .table-wrap {
+  padding: 10px;
+  background: var(--surface-inset);
+  border-radius: var(--radius-clay-md);
+}
+
+#journal table {
+  border-collapse: separate;
+  border-spacing: 0 7px;
+}
+
+#journal tbody td {
+  border-bottom: 0;
+}
+
+#journal tbody tr.trade-row-win td {
+  background: var(--surface-2);
+}
+
+#journal tbody tr.trade-row-loss td {
+  background: var(--surface-inset);
+}
+
+#journal tbody tr td:first-child {
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+#journal tbody tr td:last-child {
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+#journal tbody tr.trade-row-win {
+  box-shadow: var(--clay-raised);
+}
+
+#journal tbody tr.trade-row-loss {
+  box-shadow: var(--clay-pressed);
+}
+
+/* ==========================================================================
+   6. THE PRIMARY ACTION
+   "Easy access to a new trade" is mostly a size and a position problem. The
+   New Trade button was a 44px pill the same shape as Export sitting beside
+   it; here it is physically the biggest control on the page and it is the
+   only violet object in the command bar.
+   ========================================================================== */
+#journalNewTradeBtn {
+  min-height: 60px;
+  padding: 0 26px;
+  gap: 11px;
+  font-size: 15px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+#journalNewTradeBtn .journal-action-icon,
+#journalNewTradeBtn .journal-action-icon svg {
+  width: 22px;
+  height: 22px;
+  flex-basis: 22px;
+}
+
+#journalNewTradeBtn .journal-action-icon svg {
+  stroke-width: 2.4;
+}
+
+/* The ⌘K hint. */
+.kbd-hint {
+  padding: 4px 8px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.22);
+  font: 600 10.5px/1 var(--font-mono);
+}
+
+/* Export drops to a quiet secondary — two equally-weighted buttons is why
+   neither of them reads as the thing to press. */
+#exportCsvBtn {
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-soft);
+}
+
+#exportCsvBtn:hover {
+  background: var(--surface-3);
+  box-shadow: var(--clay-raised);
+}
+
+/* Mobile FAB grows to match and keeps the accent clay. */
+.tabbar-fab {
+  width: 66px;
+  height: 66px;
+}
+
+/* ==========================================================================
+   7. SURFACE POLISH
+   Radii went up, so padding follows — a 34px corner eats a 20px pad. Nothing
+   here changes layout structure.
+   ========================================================================== */
+.panel,
+.view-head {
+  padding: var(--space-6) var(--space-6);
+}
+
+.dash-hero {
+  border-radius: var(--radius-clay-xl);
+}
+
+.dash-hero-value {
+  font-family: var(--font-mono);
+  font-size: clamp(42px, 4.8vw, 66px);
+  letter-spacing: -0.045em;
+}
+
+/* The equity sparkline reads as carved into the card rather than painted on
+   top of it — same trick as the chart wells, applied to the hero. */
+.dash-spark-wrap {
+  height: 118px;
+  border-radius: 0 0 var(--radius-clay-xl) var(--radius-clay-xl);
+  background: color-mix(in srgb, var(--surface-inset) 70%, var(--surface-1));
+  box-shadow: inset 0 8px 18px -6px hsl(35 35% 40% / 0.34);
+  overflow: hidden;
+}
+
+:root:not([data-theme="light"]) .dash-spark-wrap {
+  box-shadow: inset 0 8px 18px -6px hsl(30 40% 3% / 0.6);
+}
+
+/* Inputs sink a little deeper — the form is the one place the surface should
+   invite you to put something into it. */
+input,
+select,
+textarea {
+  border-radius: var(--radius-clay-sm);
+  padding: 14px 16px;
+  min-height: 48px;
+}
+
+/* Nav: the six-item rail keeps working, but the active item becomes a
+   properly moulded pill instead of a tint plus an underline. */
+.desktop-nav {
+  border: 0;
+  border-radius: var(--radius-clay-lg);
+  padding: var(--space-3) var(--space-4);
+  box-shadow: inset 0 1px 0 var(--clay-edge), var(--clay-raised);
+}
+
+.desktop-nav-links .nav-btn.is-active {
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: var(--clay-raised);
+}
+
+.desktop-nav-links .nav-btn {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* The sliding accent rail is redundant once the active item is a raised
+   object, and two active affordances read as a bug. */
+.desktop-nav-links::after {
+  opacity: 0;
+}
+
+/* --------------------------------------------------------------------------
+   8. Reduced motion — the calendar hover travel is decoration.
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  button.calendar-cell:hover,
+  button.calendar-cell.calendar-cell-negative:hover {
+    transform: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   9. Mobile reconciliation (added on import, not in the handoff)
+   §7 grows .dash-spark-wrap from 74px to 118px. The mobile hero reserved only
+   82px of padding-bottom for it (styles.css, tuned to the old height), so the
+   delta and "Today" chips fell inside the carved well. Re-reserve to match.
+   Specificity must beat `.metric-card:not(.dash-rail-item)` in styles.css.
+   -------------------------------------------------------------------------- */
+@media (max-width: 720px) {
+  .metric-card.dash-hero {
+    padding-bottom: 126px;
+  }
+}

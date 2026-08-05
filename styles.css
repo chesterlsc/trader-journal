@@ -7348,6 +7348,10 @@ summary:focus-visible {
 
   .progress-trade-summary {
     margin-left: 0;
+    /* The bar is flex-direction: column here, so flex-basis is measured on the
+       VERTICAL axis — the desktop `flex: 1 1 460px` was being read as a 460px
+       height, which is what inflated the ticker into a tall empty card. */
+    flex: 0 0 auto;
   }
 }
 
@@ -7950,3 +7954,18 @@ body:has(textarea:focus) .tabbar-fab {
    it down, so the journal survives until submitAuth decides what to carry.
    Escape or an overlay click returns to the app. The display swap itself lives
    in the access-gate rules near the top of this file. */
+
+/* ==========================================================================
+   Mobile fixes — must sit last in the cascade to beat the clay component
+   rules above, which re-set .dash-hero padding.
+   ========================================================================== */
+@media (max-width: 720px) {
+  /* The sparkline is absolutely positioned into the hero's lower 74px. Without
+     reserving that band in flow, the curve runs straight through the delta and
+     "Today" chips. Reserve it so the meta row always sits clear of the art.
+     Selector must be .metric-card.dash-hero: the hero is also a .metric-card,
+     and `.metric-card:not(.dash-rail-item)` (0,2,0) outranks a bare .dash-hero. */
+  .metric-card.dash-hero {
+    padding-bottom: 82px;
+  }
+}
