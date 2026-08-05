@@ -443,3 +443,82 @@ pairing 5.03:1 (DARK accent on `--surface-2`), global worst unchanged at
 4.57:1. Overflow reasoned at 360/375/414/768: table is card-mode ≤900, calendar
 is agenda ≤760, canvases size from `clientWidth`, every grid resolves to
 `minmax(0, 1fr)`. Cache buster → `v=20260805-clay3`.
+
+---
+
+## Phase G — Guest (demo) mode + the landing's clay finish (2026-08-05)
+
+**The complaint was a trust problem.** "Create an account to see anything"
+undercuts a free product. So the app is now fully usable without one, and the
+ONLY thing an account buys is persistence — which the whole design says out
+loud rather than discovering at the moment of loss.
+
+**Storage-target indirection, not a second code path.** `readStorageJson` /
+`writeStorageJson` in `src/lib/core.js` grew an optional third `store`
+argument (defaults to `localStorage`), and `loadState` / `persistState` /
+`renderLastSaved` route through two new one-line helpers, `journalStore()` and
+`journalKey()`. Demo mode resolves to `sessionStorage` under a `demo:` prefix:
+dies with the tab, cannot collide with a real key name, cannot be read back
+into a real session. `state.auth.isAuthenticated` stays **false** throughout,
+so `queueServerAutosave()`, `saveToPhpStorage()`, `loadFromPhpStorage()` and
+the CSRF/session logic exclude the demo *by construction* — not by a new
+guard that could rot. `tests/guestStorage.check.mjs` drives the real helpers
+against fake Storage objects and asserts localStorage is untouched.
+
+**Sample journal, generated not shipped.** `buildDemoJournal()` derives 16
+closed trades + 1 open XAUUSD position + 2 reflections from a spec of four
+instruments, a fixed 16-entry R sequence and index-cycled context fields.
+Sizes are tuned so every trade risks ~1% of the $10k starting balance, giving
+9W/6L/1BE, +12.6R = **+$1,260** over 27 days — a believable month, not a
+highlight reel. `tests/demoJournal.check.mjs` runs the real generator through
+the real `calculateTradeMetrics`/`getPipSpec` and asserts each R-multiple.
+Every row is labelled `SAMPLE DATA —` in its notes and stamped with
+`importBatchId: "demo-sample-journal"` (a field `normalizeTrades` already
+preserves), which is what makes honest carry-over possible.
+
+**Carry-over that cannot destroy a journal.** `takeGuestCarryOver()` runs in
+`submitAuth` only *after* the server confirms the account — a failed login
+leaves the demo intact. It keeps only non-sample work, tears the demo down and
+reloads the real localStorage journal so the rest of the auth path is the
+ordinary one. **Register** carries over automatically (a new account has
+nothing to lose). **Login** appends, never replaces, and only after an
+explicit `confirm()` naming the count — an existing journal is never silently
+overwritten.
+
+**Honesty surface.** A sticky `.demo-notice` lives outside every `.view`, so
+it is on all six screens; Hide dismisses it for the current view and
+`switchView` brings it back. `nudgeGuest()` re-shows it and writes the same
+sentence at the three moments persistence would have mattered — saving a
+trade, exporting CSV/JSON, and the server Save/Load buttons (which now say
+"the server journal needs an account" instead of "login first"). A third
+message tone, `.form-message.notice` on `--warn`, exists because red says
+"it failed" (it did not) and green says "all good" (it will not persist).
+Logout becomes **Exit demo**: no request is sent, sessionStorage is wiped, the
+real journal reloads.
+
+**Landing in clay.** `--depth-shadow`/`--depth-shadow-sm` now resolve to
+`--clay-float`/`--clay-raised` and `--glass-top/-bottom` became opaque whisper
+gradients, which converted the hero terminal, showcase frame and closing CTA
+in two token edits. Then targeted work: radii to the clay scale (32 on hero
+surfaces, 26 on cards, 20 on nested cells), every container border dropped to
+`--clay-edge`, the proof strip from two hairlines to a `--clay-soft` tray, the
+feature icon and tape cards to pressed wells, the showcase money rail from
+`border-left` to an inset (a 2px edge tapers into a wedge against a 20px
+radius), and step/feature hover to **transform only** — a 4-layer large-blur
+stack must never be transitioned.
+
+**Not touched, deliberately:** `.dash-rail-item` (fifth phase running — its
+nth-child separator shadows), the ledger/tape/showcase rows and the auth
+modal, all of which stay flat. No new module-level state below `init()`; every
+demo constant sits beside `STORAGE_KEYS`, far above the call.
+
+**Verified.** `node --check` on app.js and core.js; `php -l` clean;
+`tests/charts.smoke.mjs` green (12,206 ops); the two new check scripts green;
+CSS braces 1170/1170 with no undefined `var()` beyond the five JS-driven ones;
+served page/stylesheet/module greped for the new markers. Contrast harness
+extended with 16 pairings — the demo chip, notice copy, Hide, the notice tone
+on two surfaces, the "See inside first" label, the CTA fine print and eight
+landing-glass pairings (the glass values changed, so every hero-terminal and
+showcase numeral moved). All pass both themes; worst new pairing **4.92:1**
+(LIGHT, `--warn` on `--surface-inset`), global worst unchanged at **4.57:1**.
+Cache buster → `v=20260805-clay4`.

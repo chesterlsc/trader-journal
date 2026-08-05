@@ -43,7 +43,7 @@
       href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260805-clay3" />
+    <link rel="stylesheet" href="styles.css?v=20260805-clay4" />
   </head>
   <body>
     <section class="auth-shell" id="authShell" aria-label="Login">
@@ -93,8 +93,17 @@
             </p>
             <div class="hero-cta-row">
               <button id="heroRegisterBtn" class="btn primary hero-cta-btn" type="button">Create your free account</button>
+              <!-- Guest mode. Framed as a tour, never as a way to skip signing
+                   up: the label says sample data and the fine print below says
+                   nothing is saved. -->
+              <button id="heroDemoBtn" class="btn hero-cta-btn hero-cta-btn-demo" type="button" data-start-demo>
+                See inside first
+              </button>
               <button id="heroLoginBtn" class="btn hero-cta-btn hero-cta-btn-secondary" type="button">Log in</button>
             </div>
+            <p class="hero-cta-fine">
+              &ldquo;See inside first&rdquo; opens the whole app on a sample journal &mdash; no account, nothing saved.
+            </p>
             <!-- Trust ledger: every line is verifiable in the product itself. -->
             <ul class="hero-trust" aria-label="What you get">
               <li><span class="hero-trust-tick" aria-hidden="true"></span>Free to use &mdash; no card, no trial clock</li>
@@ -407,8 +416,13 @@
         <p class="landing-kicker">Start today</p>
         <h2>Your next trade is worth journaling.</h2>
         <p class="landing-lede">Free to use. Your data stays yours — export it as CSV or JSON whenever you want.</p>
-        <button id="ctaRegisterBtn" class="btn primary landing-cta-btn" type="button">Create your free account</button>
-        <p class="landing-cta-fine">No card. No trial clock. Log in from any browser.</p>
+        <div class="landing-cta-row">
+          <button id="ctaRegisterBtn" class="btn primary landing-cta-btn" type="button">Create your free account</button>
+          <button id="ctaDemoBtn" class="btn landing-cta-btn landing-cta-btn-demo" type="button" data-start-demo>
+            Explore with sample data
+          </button>
+        </div>
+        <p class="landing-cta-fine">No card. No trial clock. An account is only needed to save your journal.</p>
       </section>
     </section>
 
@@ -486,6 +500,25 @@
             <button id="desktopLogoutBtn" class="btn nav-logout-desktop" type="button" hidden>Logout</button>
           </div>
         </nav>
+
+        <!-- Demo notice. Sits outside every .view, so it is honest on all six
+             screens. Dismiss hides it for the current view only — navigating
+             or hitting a moment where saving would have mattered brings it
+             back (app.js syncDemoNotice / nudgeGuest). -->
+        <aside class="demo-notice" id="demoBanner" role="status" hidden>
+          <span class="demo-notice-mark" aria-hidden="true">demo</span>
+          <p class="demo-notice-copy">
+            <strong>Nothing here is saved.</strong>
+            You are exploring a sample journal &mdash; add, edit and export freely, but it all disappears
+            when you close this tab.
+          </p>
+          <div class="demo-notice-actions">
+            <button id="demoBannerRegisterBtn" class="btn primary demo-notice-btn" type="button">
+              Create free account
+            </button>
+            <button id="demoBannerDismissBtn" class="demo-notice-dismiss" type="button">Hide</button>
+          </div>
+        </aside>
 
         <div class="journal-action-bar" aria-label="Quick trade actions">
           <div class="journal-action-buttons">
@@ -1534,6 +1567,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260805-clay3"></script>
+    <script type="module" src="app.js?v=20260805-clay4"></script>
   </body>
 </html>

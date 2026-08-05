@@ -246,15 +246,19 @@
   --aurora-fade: rgba(91, 141, 239, 0);
   --landing-grid-line: rgba(91, 141, 239, 0.16);
 
-  --glass-top: rgba(27, 31, 40, 0.92);
-  --glass-bottom: rgba(9, 11, 15, 0.96);
-  --glass-edge: rgba(255, 255, 255, 0.10);
+  /* Clay pass: the "glass" is now opaque moulded clay. The gradient drops to
+     a whisper (volume comes from the insets — a strong plane gradient fights
+     them) and both depth tokens resolve to the clay stacks, which converts
+     every landing consumer without rewriting its rule. */
+  --glass-top: #1a1d27;
+  --glass-bottom: #15181f;
+  --glass-edge: var(--clay-edge);
   --glass-sheen: rgba(255, 255, 255, 0.08);
   --glass-sheen-fade: rgba(255, 255, 255, 0);
   --halo-accent: rgba(91, 141, 239, 0.42);
   --floor-glow: rgba(91, 141, 239, 0.24);
-  --depth-shadow: 0 44px 96px -34px rgba(0, 0, 0, 0.88), 0 10px 34px -14px rgba(0, 0, 0, 0.62);
-  --depth-shadow-sm: 0 22px 46px -24px rgba(0, 0, 0, 0.75);
+  --depth-shadow: var(--clay-float);
+  --depth-shadow-sm: var(--clay-raised);
 
   /* Deck depth kit (Phase C) — the dashboard's card surfaces. Same authoring
      rule as the landing kit: colours and scalars only, gradients composed at
@@ -409,15 +413,15 @@
   --aurora-fade: rgba(38, 88, 199, 0);
   --landing-grid-line: rgba(38, 88, 199, 0.13);
 
-  --glass-top: rgba(255, 255, 255, 0.97);
-  --glass-bottom: rgba(244, 246, 250, 0.98);
-  --glass-edge: rgba(23, 26, 33, 0.10);
+  --glass-top: #ffffff;
+  --glass-bottom: #f6f7fd;
+  --glass-edge: var(--clay-edge);
   --glass-sheen: rgba(255, 255, 255, 0.9);
   --glass-sheen-fade: rgba(255, 255, 255, 0);
   --halo-accent: rgba(38, 88, 199, 0.30);
   --floor-glow: rgba(38, 88, 199, 0.16);
-  --depth-shadow: 0 38px 78px -32px rgba(23, 26, 33, 0.32), 0 10px 26px -12px rgba(23, 26, 33, 0.16);
-  --depth-shadow-sm: 0 20px 40px -22px rgba(23, 26, 33, 0.24);
+  --depth-shadow: var(--clay-float);
+  --depth-shadow-sm: var(--clay-raised);
 
   /* Deck depth kit, light. On paper the card gradient is a whisper and the
      specular is white-on-white — anything stronger reads as a smudge over
@@ -527,12 +531,18 @@ td,
   margin: 18px auto;
 }
 
-body:not(.is-authenticated):not(.is-preview) .app-layout {
+/* .is-guest (demo mode) joins .is-authenticated/.is-preview everywhere the CSS
+   decides "the app shell is on screen". body.demo-signup is the one exception:
+   a demo visitor reaching for the account form gets the landing back WITHOUT
+   the demo being torn down, so nothing they logged is lost. */
+body:not(.is-authenticated):not(.is-preview):not(.is-guest) .app-layout,
+body.demo-signup .app-layout {
   display: none;
 }
 
 body.is-authenticated .auth-shell,
-body.is-preview .auth-shell {
+body.is-preview .auth-shell,
+body.is-guest:not(.demo-signup) .auth-shell {
   display: none;
 }
 
@@ -2257,6 +2267,13 @@ button.is-pending {
   color: var(--pnl-neg);
 }
 
+/* Third tone, for the demo-mode nudges. Neither red (nothing failed — the
+   trade really did save into the demo) nor green (it will not persist).
+   Amber, matching the demo notice's own mark. */
+.form-message.notice {
+  color: var(--warn);
+}
+
 .panel-collapsible {
   padding: 0;
   overflow: hidden;
@@ -2748,10 +2765,11 @@ body.auth-locked .view {
 }
 
 .trust-item {
-  padding: 13px 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  border: 1px solid var(--clay-edge);
+  border-radius: var(--radius-clay-md);
   background: var(--surface-1);
+  box-shadow: var(--clay-soft);
   color: var(--text-soft);
   text-align: center;
   font: 600 var(--fs-label)/1.35 var(--font-mono);
@@ -2763,7 +2781,8 @@ body.is-authenticated .trust-row {
 }
 
 body.auth-locked .trust-row,
-body.is-preview .trust-row {
+body.is-preview .trust-row,
+body.is-guest:not(.demo-signup) .trust-row {
   display: none;
 }
 
@@ -4466,7 +4485,8 @@ th[aria-sort] {
 
 /* The page dot-grid steps back on the landing so the aurora + grid floor
    below own the atmosphere. */
-body:not(.is-authenticated):not(.is-preview)::before {
+body:not(.is-authenticated):not(.is-preview):not(.is-guest)::before,
+body.demo-signup::before {
   opacity: 0.26;
 }
 
@@ -4770,12 +4790,17 @@ body:not(.is-authenticated):not(.is-preview)::before {
   --tilt-y: 0deg;
   position: relative;
   z-index: 1;
-  border: 1px solid var(--glass-edge);
-  border-radius: var(--radius-xl);
+  border: 1px solid var(--clay-edge);
+  border-radius: var(--radius-clay-xl);
   background-image: linear-gradient(168deg, var(--glass-top), var(--glass-bottom));
-  box-shadow: var(--depth-shadow), inset 0 1px 0 var(--glass-edge);
+  /* --depth-shadow is a clay stack now, so its own top inset carries the lit
+     edge — the extra `inset 0 1px 0` that used to sell the glass would read as
+     a hard seam on a moulded surface. Transform-only transition: re-blurring a
+     4-layer large-blur stack on every pointer frame is the repaint mobile
+     Safari cannot pay. */
+  box-shadow: var(--depth-shadow);
   overflow: hidden;
-  transition: transform var(--dur-slow) var(--ease-out), box-shadow var(--dur-slow) var(--ease-out);
+  transition: transform var(--dur-slow) var(--ease-out);
 }
 
 /* Ground shadow: sells the tilt without a second box-shadow pass. */
@@ -4816,8 +4841,8 @@ body:not(.is-authenticated):not(.is-preview)::before {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: 11px var(--space-4);
-  border-bottom: 1px solid var(--glass-edge);
+  padding: 13px var(--space-5);
+  border-bottom: 1px solid var(--clay-edge);
   background-image: linear-gradient(180deg, var(--surface-inset), transparent);
 }
 
@@ -4870,9 +4895,10 @@ body:not(.is-authenticated):not(.is-preview)::before {
 }
 
 .hero-terminal .recent-trades-card {
-  border-color: var(--line);
-  background: var(--surface-1);
-  box-shadow: var(--edge-highlight), var(--depth-shadow-sm);
+  border: 0;
+  border-radius: var(--radius-clay-md);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
 }
 
 /* The rail already carries the live badge — the per-card duplicate goes. */
@@ -4884,7 +4910,7 @@ body:not(.is-authenticated):not(.is-preview)::before {
    sees whenever the public endpoint returns nothing. */
 .hero-terminal .recent-trade-empty {
   border: 1px dashed var(--line-strong);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-clay-sm);
   background: var(--surface-inset);
   text-align: center;
   letter-spacing: 0.04em;
@@ -4912,8 +4938,8 @@ body:not(.is-authenticated):not(.is-preview)::before {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: 10px var(--space-4) 12px;
-  border-top: 1px solid var(--glass-edge);
+  padding: 12px var(--space-5) 14px;
+  border-top: 1px solid var(--clay-edge);
   background-image: linear-gradient(0deg, var(--surface-inset), transparent);
 }
 
@@ -4937,8 +4963,9 @@ body:not(.is-authenticated):not(.is-preview)::before {
     animation: tiltSettle 1100ms var(--ease-out) 160ms backwards;
   }
 
+  /* Hover lifts, it does not re-blur: the shadow swap is instant. */
   .hero-terminal:hover {
-    box-shadow: var(--depth-shadow), inset 0 1px 0 var(--glass-edge), 0 0 0 1px var(--line-accent);
+    box-shadow: var(--depth-shadow), 0 0 0 1px var(--line-accent);
   }
 
   /* Keyboard users read the tape straight-on. */
@@ -5034,9 +5061,13 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
 /* --- Proof strip --------------------------------------------------------- */
 .landing-proof {
   width: 100%;
-  padding: var(--space-6) 0;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  padding: var(--space-8) var(--space-6);
+  border: 1px solid var(--clay-edge);
+  border-radius: var(--radius-clay-xl);
+  background: var(--surface-1);
+  /* --clay-soft = outer drop only. This tray is read-only, and the full
+     three-shadow stack would make four facts look like four buttons. */
+  box-shadow: var(--clay-soft);
 }
 
 .landing-proof-row {
@@ -5057,10 +5088,10 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
   content: "";
   position: absolute;
   left: calc(var(--space-4) / -2);
-  top: 12%;
-  bottom: 12%;
+  top: 16%;
+  bottom: 16%;
   width: 1px;
-  background: var(--line);
+  background: var(--clay-edge-strong);
 }
 
 .landing-proof-item dd {
@@ -5089,8 +5120,8 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
 .showcase-frame {
   position: relative;
   z-index: 1;
-  border: 1px solid var(--glass-edge);
-  border-radius: var(--radius-xl);
+  border: 1px solid var(--clay-edge);
+  border-radius: var(--radius-clay-xl);
   background-image: linear-gradient(168deg, var(--glass-top), var(--glass-bottom));
   box-shadow: var(--depth-shadow);
   overflow: hidden;
@@ -5121,8 +5152,8 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--glass-edge);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--clay-edge);
   background-image: linear-gradient(180deg, var(--surface-inset), transparent);
 }
 
@@ -5158,13 +5189,14 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
   grid-column: span 3;
   min-height: 156px;
   padding: var(--space-4);
-  border: 1px solid var(--line);
-  border-left: 2px solid var(--pnl-pos-line);
-  border-radius: var(--radius-lg);
+  border: 0;
+  border-radius: var(--radius-clay-md);
   background:
     radial-gradient(120% 90% at 0% 0%, var(--pnl-pos-soft), transparent 62%),
-    var(--surface-1);
-  box-shadow: var(--edge-highlight);
+    var(--surface-2);
+  /* Money rail as an inset, not a border-left: a 2px edge tapers into a wedge
+     against a 20px radius. Same fix the dashboard metric cards took. */
+  box-shadow: inset 3px 0 0 var(--pnl-pos-line), var(--clay-soft);
   overflow: hidden;
 }
 
@@ -5214,10 +5246,10 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
   align-content: start;
   gap: 5px;
   padding: var(--space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface-1);
-  box-shadow: var(--edge-highlight);
+  border: 0;
+  border-radius: var(--radius-clay-md);
+  background: var(--surface-2);
+  box-shadow: var(--clay-soft);
 }
 
 .showcase-side-value {
@@ -5227,11 +5259,12 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
 }
 
 .showcase-track {
-  height: 5px;
+  height: 6px;
   margin-bottom: var(--space-3);
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: var(--radius-pill);
   background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
   overflow: hidden;
 }
 
@@ -5242,11 +5275,11 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
 }
 
 .showcase-cell {
-  padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface-1);
-  box-shadow: var(--edge-highlight);
+  padding: var(--space-4);
+  border: 0;
+  border-radius: var(--radius-clay-md);
+  background: var(--surface-2);
+  box-shadow: var(--clay-soft);
 }
 
 .showcase-cell-value {
@@ -5273,28 +5306,28 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
   position: relative;
   display: grid;
   align-content: start;
-  gap: var(--space-2);
-  padding: var(--space-6);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
-  background-image: linear-gradient(168deg, var(--surface-2), var(--surface-1));
-  box-shadow: var(--edge-highlight);
+  gap: var(--space-3);
+  padding: var(--space-8);
+  border: 1px solid var(--clay-edge);
+  border-radius: var(--radius-clay-lg);
+  background: var(--surface-1);
+  box-shadow: var(--clay-raised);
   overflow: hidden;
-  transition: border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+  transition: transform var(--dur-base) var(--ease-clay);
 }
 
 .step-card::before {
   content: "";
   position: absolute;
   inset: 0 0 auto 0;
-  height: 2px;
+  height: 3px;
   background-image: linear-gradient(90deg, var(--accent), transparent 72%);
   opacity: 0.7;
 }
 
+/* Transform only. Never transition a clay stack. */
 .step-card:hover {
-  border-color: var(--line-accent);
-  box-shadow: var(--depth-shadow-sm);
+  transform: translateY(-3px);
 }
 
 .step-index {
@@ -5327,17 +5360,14 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
   position: relative;
   display: grid;
   align-content: start;
-  gap: var(--space-2);
-  padding: var(--space-6);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
-  background-image: linear-gradient(168deg, var(--surface-2), var(--surface-1));
-  box-shadow: var(--edge-highlight);
+  gap: var(--space-3);
+  padding: var(--space-8);
+  border: 1px solid var(--clay-edge);
+  border-radius: var(--radius-clay-lg);
+  background: var(--surface-1);
+  box-shadow: var(--clay-raised);
   text-align: left;
-  transition:
-    transform var(--dur-base) var(--ease-out),
-    border-color var(--dur-base) var(--ease-out),
-    box-shadow var(--dur-base) var(--ease-out);
+  transition: transform var(--dur-base) var(--ease-clay);
 }
 
 .feature-card::after {
@@ -5353,9 +5383,7 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
 
 .feature-card:hover,
 .feature-card:focus-within {
-  transform: perspective(1000px) translateY(-6px) rotateX(3deg);
-  border-color: var(--line-accent);
-  box-shadow: var(--depth-shadow-sm);
+  transform: translateY(-4px);
 }
 
 .feature-card:hover::after,
@@ -5368,19 +5396,19 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   margin-bottom: var(--space-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background-image: linear-gradient(160deg, var(--surface-3), var(--surface-inset));
+  border: 0;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-inset);
   color: var(--accent);
-  box-shadow: inset 0 1px 0 var(--glass-edge);
+  box-shadow: var(--clay-pressed);
 }
 
 .feature-icon svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 
 .feature-kicker {
@@ -5405,12 +5433,15 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
 }
 
 /* --- Capability ledger --------------------------------------------------- */
+/* Container is clay; the rows inside stay flat with hairlines. A clay row
+   costs ~28px of vertical padding and reads as a button — the one rule this
+   style breaks hardest in a data product. */
 .ledger-wrap {
   overflow-x: auto;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
+  border: 1px solid var(--clay-edge);
+  border-radius: var(--radius-clay-lg);
   background: var(--surface-1);
-  box-shadow: var(--edge-highlight);
+  box-shadow: var(--clay-soft);
 }
 
 .ledger-table {
@@ -5468,9 +5499,9 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
   display: grid;
   justify-items: center;
   gap: var(--space-3);
-  padding: var(--space-16) var(--space-6);
-  border: 1px solid var(--glass-edge);
-  border-radius: var(--radius-xl);
+  padding: var(--space-16) var(--space-8);
+  border: 1px solid var(--clay-edge);
+  border-radius: var(--radius-clay-xl);
   background-image:
     radial-gradient(120% 130% at 50% 0%, var(--halo-accent), transparent 58%),
     linear-gradient(168deg, var(--glass-top), var(--glass-bottom));
@@ -7416,12 +7447,14 @@ summary:focus-visible {
 
 @media (max-width: 899px) {
   body.is-authenticated .tabbar,
-  body.is-preview .tabbar {
+  body.is-preview .tabbar,
+  body.is-guest:not(.demo-signup) .tabbar {
     display: grid;
   }
 
   body.is-authenticated .tabbar-fab,
-  body.is-preview .tabbar-fab {
+  body.is-preview .tabbar-fab,
+  body.is-guest:not(.demo-signup) .tabbar-fab {
     display: grid;
   }
 }
@@ -7612,7 +7645,8 @@ body:has(textarea:focus) .tabbar-fab {
    overflowing content. Footer padding always grows the document. */
 @media (max-width: 899px) {
   body.is-authenticated .site-footer,
-  body.is-preview .site-footer {
+  body.is-preview .site-footer,
+  body.is-guest:not(.demo-signup) .site-footer {
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 124px);
   }
 
@@ -7659,7 +7693,8 @@ body:has(textarea:focus) .tabbar-fab {
   }
 
   body.is-authenticated .site-footer,
-  body.is-preview .site-footer {
+  body.is-preview .site-footer,
+  body.is-guest:not(.demo-signup) .site-footer {
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 108px);
   }
 
@@ -7741,3 +7776,177 @@ body:has(textarea:focus) .tabbar-fab {
     transform: none;
   }
 }
+
+/* ==========================================================================
+   PHASE G — GUEST (DEMO) MODE + LANDING CLAY FINISH
+   Guest mode is the whole app on an ephemeral journal; the ONLY thing an
+   account buys is persistence. So the chrome has exactly one job: be honest
+   about that on every screen without shouting.
+   ========================================================================== */
+
+/* --- 1. The demo notice --------------------------------------------------- */
+/* Sticky, not fixed: it rides the content column so it clears the tab bar and
+   the FAB on mobile without a second geometry contract to keep in sync.
+   Surface-2 + a warn rail, never a warn FILL — a full amber bar on every
+   screen of a financial product reads as an error state, and this is not one.
+   Interactive (it holds the sign-up CTA), so it earns the full clay stack. */
+.demo-notice {
+  position: sticky;
+  top: var(--space-2);
+  z-index: var(--z-dropdown);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--clay-edge);
+  border-radius: var(--radius-clay-lg);
+  background: var(--surface-2);
+  box-shadow: inset 3px 0 0 var(--warn), var(--clay-raised);
+}
+
+.demo-notice[hidden] {
+  display: none;
+}
+
+/* Redundant coding: the state is named in words, not carried by colour. */
+.demo-notice-mark {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--warn-soft);
+  color: var(--warn);
+  font: 700 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.demo-notice-copy {
+  flex: 1 1 260px;
+  margin: 0;
+  color: var(--text-soft);
+  font-size: var(--fs-body);
+  line-height: 1.55;
+}
+
+.demo-notice-copy strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.demo-notice-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.demo-notice-btn {
+  white-space: nowrap;
+}
+
+/* Quiet by design — dismissing is per-view, and switchView brings the notice
+   straight back, so this control never needs to compete with the CTA. */
+.demo-notice-dismiss {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+
+.demo-notice-dismiss:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+@media (max-width: 720px) {
+  .demo-notice {
+    padding: var(--space-3) var(--space-4);
+    gap: var(--space-2) var(--space-3);
+  }
+
+  .demo-notice-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .demo-notice-btn {
+    flex: 1 1 auto;
+  }
+}
+
+/* --- 2. "See inside first" ------------------------------------------------ */
+/* A deliberate second path, not a way around signing up: accent text on the
+   normal control surface, so it reads as the same weight class as Log in
+   while the primary CTA keeps the only saturated fill above the fold. */
+.hero-cta-btn-demo,
+.landing-cta-btn-demo {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.hero-cta-btn-demo:hover,
+.landing-cta-btn-demo:hover {
+  background: var(--surface-3);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.hero-cta-fine {
+  margin: var(--space-3) 0 0;
+  max-width: 52ch;
+  color: var(--text-faint);
+  font: 500 var(--fs-label)/1.5 var(--font-mono);
+}
+
+.landing-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.landing-cta-row .landing-cta-btn {
+  margin-top: 0;
+}
+
+@media (max-width: 760px) {
+  .landing-cta-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .landing-cta-row .landing-cta-btn {
+    padding-inline: var(--space-4);
+  }
+}
+
+/* Stacked hero: the demo CTA sits between Create account and Log in, so the
+   free-account path is always first and the demo never looks like the default.
+   (Overrides the two earlier landing blocks that only ordered two buttons.) */
+/* .hero-claim is display:contents in the stacked hero, so .hero-cta-fine is a
+   flex item of .auth-hero-copy and needs an explicit order or it jumps to the
+   top. Sharing order 4 with .hero-cta-row puts it directly after, by DOM
+   order — the terminal (5) and trust ledger (6) are unchanged. */
+@media (max-width: 979px) {
+  #heroDemoBtn { order: 2; }
+  #heroLoginBtn { order: 3; }
+  .hero-cta-fine { order: 4; }
+}
+
+/* --- 3. Demo sign-up hand-off -------------------------------------------- */
+/* body.demo-signup shows the landing shell OVER a live demo instead of tearing
+   it down, so the journal survives until submitAuth decides what to carry.
+   Escape or an overlay click returns to the app. The display swap itself lives
+   in the access-gate rules near the top of this file. */

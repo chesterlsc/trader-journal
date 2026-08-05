@@ -46,6 +46,45 @@ const DEFAULT_SETTINGS = {
   equityGoal: 15000
 };
 
+/* ---- DEMO (guest) MODE ----------------------------------------------------
+   Try-before-signup. The ONLY thing an account buys is persistence, so demo
+   mode is a full app with an ephemeral storage target: sessionStorage, under
+   a distinct key prefix, never the localStorage keys a real user writes and
+   never the server. state.auth.isAuthenticated stays false throughout, so
+   queueServerAutosave()/saveToPhpStorage()/loadFromPhpStorage() and the CSRF
+   session logic are untouched by construction.
+   Declared here (far above the module-level init() call) — anything below it
+   is in the temporal dead zone during the first render. */
+const GUEST_MODE_KEY = "axiom_journal_demo_v1";
+const GUEST_KEY_PREFIX = "demo:";
+// Sample rows ride the existing importBatchId field (normalizeTrades keeps it)
+// so they can be told apart from anything the visitor logs themselves — that
+// is what makes an honest carry-over on sign-up possible.
+const DEMO_BATCH_ID = "demo-sample-journal";
+const DEMO_REFLECTION_TAG = "sample";
+const DEMO_NOTICE =
+  "Demo mode — nothing here is saved. Create a free account to keep it.";
+const DEMO_TRADE_NOTE_PREFIX = "SAMPLE DATA —";
+
+// Sample journal spec. Deterministic and generated, not a shipped blob: four
+// instruments, a fixed R-outcome sequence and index-cycled context fields.
+const DEMO_INSTRUMENTS = [
+  // asset, market, entry, stop distance (price), lots, price decimals
+  { asset: "EURUSD", market: "Forex", entry: 1.085, stopDistance: 0.002, size: 0.5, decimals: 5 },
+  { asset: "GBPUSD", market: "Forex", entry: 1.272, stopDistance: 0.0025, size: 0.4, decimals: 5 },
+  { asset: "XAUUSD", market: "Metals", entry: 3312, stopDistance: 5, size: 0.2, decimals: 2 },
+  { asset: "BTCUSD", market: "Crypto", entry: 64200, stopDistance: 400, size: 0.25, decimals: 2 }
+];
+// R-multiple per closed sample trade. 9 wins / 6 losses / 1 break-even,
+// +12.6R total — a believable month, not a highlight reel.
+const DEMO_OUTCOMES_R = [2, -1, 1.6, 2.4, -1, 0, 2.2, -1, 1.4, 3, -1, -0.6, 1.8, 2.6, -1, 1.2];
+const DEMO_DAYS_AGO = [27, 26, 25, 22, 21, 20, 19, 15, 14, 13, 12, 8, 7, 6, 5, 2];
+const DEMO_SESSIONS = ["London", "New York", "Asia"];
+const DEMO_SETUPS = ["Breakout", "Liquidity Grab", "Trend Continuation", "Reversal", "Scalp"];
+const DEMO_TIMEFRAMES = ["M15", "H1", "M5", "H4"];
+const DEMO_PSYCHOLOGY = ["Focused", "Perfect Execution", "Hesitant", "Focused", "Emotional"];
+const DEMO_EXECUTION = ["A+", "A", "B", "A", "C"];
+
 const SERVER_AUTOSAVE_DEBOUNCE_MS = 900;
 const LIVE_PRICE_REFRESH_MS = 5000;
 const LOCAL_PREVIEW_STORAGE_KEY = "axiom_local_preview";
@@ -91,6 +130,9 @@ const state = {
     isAdmin: false,
     previewMode: false,
     landingPreviewMode: false,
+    // Demo mode: full app, ephemeral storage. NEVER implies authentication.
+    guestMode: false,
+    guestNoticeDismissed: false,
     intent: "register",
     mobileAuthVisible: false,
     sessionCheckVersion: 0,
@@ -158,6 +200,10 @@ const ui = {
   heroRegisterBtn: document.getElementById("heroRegisterBtn"),
   heroLoginBtn: document.getElementById("heroLoginBtn"),
   ctaRegisterBtn: document.getElementById("ctaRegisterBtn"),
+  demoStartBtns: Array.from(document.querySelectorAll("[data-start-demo]")),
+  demoBanner: document.getElementById("demoBanner"),
+  demoBannerRegisterBtn: document.getElementById("demoBannerRegisterBtn"),
+  demoBannerDismissBtn: document.getElementById("demoBannerDismissBtn"),
   landingAtmos: document.getElementById("landingAtmos"),
   previewLandingBtns: Array.from(document.querySelectorAll("[data-preview-landing]")),
   previewAppBtn: document.getElementById("previewAppBtn"),
@@ -384,6 +430,14 @@ function init() {
   const localPreview = isLocalPreviewMode();
   state.auth.landingPreviewMode = localPreview && isLocalLandingPreviewRequested();
   state.auth.previewMode = localPreview && !state.auth.landingPreviewMode;
+  // Demo mode survives a reload (sessionStorage) but never a new tab. Set
+  // before loadState() so the journal is read from the right storage target.
+  state.auth.guestMode = !state.auth.previewMode && !state.auth.landingPreviewMode && isGuestSessionStored();
+  if (state.auth.guestMode) {
+    // mobileAuthVisible is settled two lines down by the reset-token check —
+    // a demo tab carrying a password-reset link should still show that flow.
+    state.auth.checked = true;
+  }
   state.auth.resetToken = getResetTokenFromUrl();
   state.auth.resetTokenStatus = state.auth.resetToken ? "pending" : "idle";
   state.auth.mobileAuthVisible = Boolean(state.auth.resetToken);
@@ -396,6 +450,11 @@ function init() {
   }
   applyTheme(getStoredTheme());
   loadState();
+  // Reload inside a demo tab: sessionStorage still holds the journal. If it
+  // somehow does not, re-seed rather than dropping the visitor into an empty app.
+  if (state.auth.guestMode && state.trades.length === 0) {
+    seedDemoJournal();
+  }
   applyInitialDates();
   hydrateRiskForm();
   hydrateReviewMonth();
@@ -428,7 +487,7 @@ function init() {
       switchView(initialView);
     }
   }
-  if (state.auth.previewMode) {
+  if (state.auth.previewMode || state.auth.guestMode) {
     state.recentTrades = normalizeRecentTrades(state.trades);
     renderHeroRecentTrades();
     refreshLivePrices({ immediate: true });
@@ -606,6 +665,24 @@ function bindEvents() {
     ui.ctaRegisterBtn.addEventListener("click", () => {
       setAuthIntent("register", { focus: true });
     });
+  }
+  // "See inside first" — every landing entry point into demo mode.
+  ui.demoStartBtns.forEach((button) => {
+    button.addEventListener("click", () => {
+      enterGuestMode();
+    });
+  });
+  if (ui.demoBannerRegisterBtn) {
+    ui.demoBannerRegisterBtn.addEventListener("click", () => {
+      // body.demo-signup swaps the app shell for the landing + auth modal
+      // WITHOUT leaving demo mode, so the journal survives until submitAuth
+      // decides what to carry over. Escape / overlay click returns to the app.
+      setAuthIntent("register", { focus: true });
+      window.scrollTo({ top: 0, behavior: "auto" });
+    });
+  }
+  if (ui.demoBannerDismissBtn) {
+    ui.demoBannerDismissBtn.addEventListener("click", dismissDemoNotice);
   }
   // Local preview only: real sessions get the Logout button instead, so this
   // never gives a signed-in user a way out that skips logging out.
@@ -909,6 +986,13 @@ function switchView(id) {
     toggleMobileNav(false);
   }
 
+  // Dismissing the demo notice hides it for the view you are on, not forever —
+  // it has to be honest on every screen, so navigation brings it back.
+  if (state.auth.guestMode) {
+    state.auth.guestNoticeDismissed = false;
+    syncDemoNotice();
+  }
+
   positionNavRail();
 }
 
@@ -982,7 +1066,279 @@ function isLocalLandingPreviewRequested() {
 }
 
 function canAccessApp() {
-  return state.auth.previewMode || (state.auth.checked && state.auth.isAuthenticated);
+  return state.auth.previewMode || state.auth.guestMode || (state.auth.checked && state.auth.isAuthenticated);
+}
+
+/* ---- Demo mode lifecycle -------------------------------------------------
+   Enter → seed (or rehydrate) an ephemeral journal and open the app.
+   Exit   → wipe sessionStorage, reload the real localStorage journal, land
+            back on the marketing shell. isAuthenticated is never touched. */
+
+function isGuestSessionStored() {
+  try {
+    return window.sessionStorage.getItem(GUEST_MODE_KEY) === "1";
+  } catch (error) {
+    return false;
+  }
+}
+
+function enterGuestMode() {
+  state.auth.guestMode = true;
+  state.auth.guestNoticeDismissed = false;
+  state.auth.checked = true;
+  state.auth.mobileAuthVisible = false;
+  state.auth.landingPreviewMode = false;
+  cancelServerAutosave();
+  try {
+    window.sessionStorage.setItem(GUEST_MODE_KEY, "1");
+  } catch (error) {
+    // Private mode: demo still runs, it just cannot survive a reload.
+  }
+
+  // Re-entering an existing demo tab keeps whatever the visitor already logged.
+  loadState();
+  if (state.trades.length === 0) {
+    seedDemoJournal();
+  }
+
+  state.recentTrades = normalizeRecentTrades(state.trades);
+  state.publicRecentTrades = [];
+  state.loginLogs = [];
+  state.adminUsers = [];
+  hydrateRiskForm();
+  hydrateReviewMonth();
+  resetTradeForm(false);
+  clearFilters();
+  updateBranding();
+  updateAuthUi();
+  updateAccessGate();
+  syncDemoNotice();
+  renderAll();
+  renderLastSaved();
+  renderHeroRecentTrades();
+  switchView("dashboard");
+  window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  refreshLivePrices({ immediate: true });
+}
+
+// Drops the demo flag and every ephemeral key. Does NOT re-render — callers
+// decide what happens next (exit to landing, or continue into an auth flow).
+function clearGuestMode() {
+  state.auth.guestMode = false;
+  state.auth.guestNoticeDismissed = false;
+  try {
+    window.sessionStorage.removeItem(GUEST_MODE_KEY);
+    Object.values(STORAGE_KEYS).forEach((key) => {
+      window.sessionStorage.removeItem(`${GUEST_KEY_PREFIX}${key}`);
+    });
+  } catch (error) {
+    // Nothing to clear.
+  }
+  syncDemoNotice();
+}
+
+function exitGuestMode() {
+  clearGuestMode();
+  loadState();
+  state.auth.checked = true;
+  state.auth.mobileAuthVisible = false;
+  state.recentTrades = [];
+  state.marketData.currentPrices = {};
+  hydrateRiskForm();
+  hydrateReviewMonth();
+  clearFilters();
+  updateAuthUi();
+  updateAccessGate();
+  renderAll();
+  renderLastSaved();
+  loadPublicRecentTrades({ silent: true });
+  window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+// Everything the visitor added themselves — the seeded sample rows are
+// filtered out by batch id / tag so a new account never inherits fabricated
+// trading history.
+function collectGuestOwnWork() {
+  return {
+    trades: state.trades.filter((trade) => trade.importBatchId !== DEMO_BATCH_ID),
+    reflections: state.reflections.filter((entry) => !entry.tags.includes(DEMO_REFLECTION_TAG))
+  };
+}
+
+// Called from submitAuth BEFORE the account exists: takes the visitor's own
+// work out of the demo, tears the demo down, and restores whatever real
+// journal was in localStorage so the normal auth path behaves as usual.
+function takeGuestCarryOver() {
+  if (!state.auth.guestMode) {
+    return null;
+  }
+  const carry = collectGuestOwnWork();
+  clearGuestMode();
+  loadState();
+  return carry;
+}
+
+function applyGuestCarryOver(carry) {
+  if (!carry || (carry.trades.length === 0 && carry.reflections.length === 0)) {
+    return 0;
+  }
+  const existingIds = new Set(state.trades.map((trade) => trade.id));
+  const added = carry.trades.filter((trade) => !existingIds.has(trade.id));
+  state.trades = state.trades.concat(added);
+  const existingReflectionIds = new Set(state.reflections.map((entry) => entry.id));
+  state.reflections = state.reflections.concat(
+    carry.reflections.filter((entry) => !existingReflectionIds.has(entry.id))
+  );
+  return added.length;
+}
+
+/* ---- The persistent, honest demo notice ---------------------------------- */
+
+function syncDemoNotice() {
+  if (!ui.demoBanner) {
+    return;
+  }
+  ui.demoBanner.hidden = !state.auth.guestMode || state.auth.guestNoticeDismissed;
+}
+
+function dismissDemoNotice() {
+  state.auth.guestNoticeDismissed = true;
+  syncDemoNotice();
+}
+
+// Surfaced at the moments persistence would have mattered: saving a trade,
+// exporting, or reaching for the server Save/Load buttons. Brings the banner
+// back even if it was dismissed — dismissal is per-moment, not forever.
+function nudgeGuest(target, message) {
+  state.auth.guestNoticeDismissed = false;
+  syncDemoNotice();
+  if (target) {
+    setMessage(target, message ? `${message} ${DEMO_NOTICE}` : DEMO_NOTICE, "notice");
+  }
+}
+
+/* ---- Sample journal ------------------------------------------------------
+   Generated from DEMO_* specs above: 16 closed trades over four weeks plus
+   one open XAUUSD position so the live ticker has something to price, and two
+   reflections. Every row is labelled SAMPLE DATA in its notes and carries the
+   DEMO_BATCH_ID so it can never be mistaken for — or carried over as — real
+   trading history. */
+function seedDemoJournal() {
+  const demo = buildDemoJournal();
+  state.settings = normalizeSettings(DEFAULT_SETTINGS);
+  state.trades = normalizeTrades(demo.trades);
+  state.reflections = normalizeReflections(demo.reflections);
+  state.replayNotes = {};
+  persistState({ skipServerSync: true });
+}
+
+function buildDemoJournal() {
+  const roundTo = (value, decimals) => Number(value.toFixed(decimals));
+  const dayIso = (daysAgo) => {
+    const date = new Date();
+    date.setHours(12, 0, 0, 0);
+    date.setDate(date.getDate() - daysAgo);
+    return toDateInputValue(date);
+  };
+
+  const trades = DEMO_OUTCOMES_R.map((outcomeR, index) => {
+    const instrument = DEMO_INSTRUMENTS[index % DEMO_INSTRUMENTS.length];
+    const isBuy = index % 3 !== 1;
+    const dir = isBuy ? 1 : -1;
+    // A little deterministic drift so 16 rows are not all at one price.
+    const entry = roundTo(
+      instrument.entry * (1 + ((index % 7) - 3) * 0.0025),
+      instrument.decimals
+    );
+    const stop = roundTo(entry - dir * instrument.stopDistance, instrument.decimals);
+    const target = roundTo(entry + dir * instrument.stopDistance * 2.2, instrument.decimals);
+    const exit = roundTo(entry + dir * instrument.stopDistance * outcomeR, instrument.decimals);
+    const date = dayIso(DEMO_DAYS_AGO[index]);
+
+    return {
+      id: `${DEMO_BATCH_ID}-${index}`,
+      createdAt: `${date}T09:00:00.000Z`,
+      closedAt: `${date}T14:30:00.000Z`,
+      updatedAt: `${date}T14:30:00.000Z`,
+      date,
+      session: DEMO_SESSIONS[index % DEMO_SESSIONS.length],
+      market: instrument.market,
+      asset: instrument.asset,
+      direction: isBuy ? "Buy" : "Sell",
+      entryPrice: entry,
+      stopLoss: stop,
+      takeProfit: target,
+      exitPrice: exit,
+      riskPercent: 1,
+      positionSize: instrument.size,
+      tradeResult: "Auto",
+      status: "closed",
+      setupType: DEMO_SETUPS[index % DEMO_SETUPS.length],
+      timeframe: DEMO_TIMEFRAMES[index % DEMO_TIMEFRAMES.length],
+      psychology: DEMO_PSYCHOLOGY[index % DEMO_PSYCHOLOGY.length],
+      executionQuality: DEMO_EXECUTION[index % DEMO_EXECUTION.length],
+      importBatchId: DEMO_BATCH_ID,
+      notes:
+        outcomeR > 0
+          ? `${DEMO_TRADE_NOTE_PREFIX} plan followed, target hit at ${outcomeR}R.`
+          : outcomeR === 0
+            ? `${DEMO_TRADE_NOTE_PREFIX} scratched at break even when momentum stalled.`
+            : `${DEMO_TRADE_NOTE_PREFIX} stop taken cleanly, no averaging down.`
+    };
+  });
+
+  const openDate = dayIso(0);
+  const openInstrument = DEMO_INSTRUMENTS[2];
+  trades.push({
+    id: `${DEMO_BATCH_ID}-open`,
+    createdAt: `${openDate}T08:15:00.000Z`,
+    closedAt: "",
+    updatedAt: `${openDate}T08:15:00.000Z`,
+    date: openDate,
+    session: "London",
+    market: openInstrument.market,
+    asset: openInstrument.asset,
+    direction: "Buy",
+    entryPrice: openInstrument.entry,
+    stopLoss: openInstrument.entry - openInstrument.stopDistance,
+    takeProfit: openInstrument.entry + openInstrument.stopDistance * 3,
+    exitPrice: 0,
+    riskPercent: 1,
+    positionSize: 0.05,
+    tradeResult: "Auto",
+    status: "open",
+    setupType: "Trend Continuation",
+    timeframe: "H1",
+    psychology: "Focused",
+    executionQuality: "A",
+    importBatchId: DEMO_BATCH_ID,
+    notes: `${DEMO_TRADE_NOTE_PREFIX} open position, priced live so you can watch the P&L move.`
+  });
+
+  const reflections = [
+    {
+      id: `${DEMO_BATCH_ID}-reflection-1`,
+      date: dayIso(6),
+      wentWell: "Waited for the London sweep instead of chasing the Asia range.",
+      mistake: "Moved the stop up too early on the second GBPUSD entry.",
+      followRules: "Yes",
+      improveTomorrow: "Let the runner breathe until the session high is taken.",
+      tags: [DEMO_REFLECTION_TAG],
+      createdAt: `${dayIso(6)}T18:00:00.000Z`
+    },
+    {
+      id: `${DEMO_BATCH_ID}-reflection-2`,
+      date: dayIso(2),
+      wentWell: "Stopped after the daily loss limit instead of trading it back.",
+      mistake: "Took an unplanned scalp out of boredom in the New York lull.",
+      followRules: "Partially",
+      improveTomorrow: "One setup per session. Close the platform after the second loss.",
+      tags: [DEMO_REFLECTION_TAG],
+      createdAt: `${dayIso(2)}T18:00:00.000Z`
+    }
+  ];
+
+  return { trades, reflections };
 }
 
 function setAuthIntent(intent, options = {}) {
@@ -1111,7 +1467,8 @@ async function validateResetToken() {
 
 function updateAccessGate() {
   const previewMode = state.auth.previewMode;
-  const locked = !previewMode && state.auth.checked && !state.auth.isAuthenticated;
+  const guestMode = state.auth.guestMode;
+  const locked = !previewMode && !guestMode && state.auth.checked && !state.auth.isAuthenticated;
   const disableNavigation = !canAccessApp();
   const authenticated = state.auth.checked && state.auth.isAuthenticated;
 
@@ -1119,6 +1476,13 @@ function updateAccessGate() {
   document.body.classList.add("auth-ready");
   document.body.classList.toggle("is-authenticated", authenticated);
   document.body.classList.toggle("is-preview", previewMode);
+  // .is-guest joins .is-authenticated/.is-preview everywhere the CSS decides
+  // "the app shell is on screen" — layout, tab bar, footer clearance.
+  document.body.classList.toggle("is-guest", guestMode);
+  // Demo visitor reaching for the account form: show the landing shell over
+  // the demo instead of tearing it down, so nothing they logged is lost.
+  document.body.classList.toggle("demo-signup", guestMode && state.auth.mobileAuthVisible);
+  syncDemoNotice();
 
   ui.navButtons.forEach((btn) => {
     btn.disabled = disableNavigation;
@@ -1301,6 +1665,13 @@ async function handleRegister() {
 }
 
 async function handleLogout() {
+  // In demo mode the same control is "Exit demo": there is no session to end,
+  // so nothing is sent to the server — the ephemeral journal is just dropped.
+  if (state.auth.guestMode) {
+    exitGuestMode();
+    return;
+  }
+
   state.auth.sessionCheckVersion += 1;
   try {
     const response = await fetch("trade_handler.php?action=logout", {
@@ -1338,6 +1709,7 @@ async function handleLogout() {
 
 async function submitAuth(action, password, successMessage, identifier = "") {
   state.auth.sessionCheckVersion += 1;
+  let carryOver = null;
   try {
     const response = await fetch(`trade_handler.php?action=${action}`, {
       method: "POST",
@@ -1354,6 +1726,12 @@ async function submitAuth(action, password, successMessage, identifier = "") {
       csrfToken = String(body.csrfToken);
     }
 
+    // Only once the account genuinely exists: pull the visitor's own demo
+    // work aside (sample rows excluded), tear the demo down and restore the
+    // real localStorage journal, so from here this is the ordinary auth path.
+    // Doing it after the response means a failed login leaves the demo intact.
+    carryOver = takeGuestCarryOver();
+
     state.auth.checked = true;
     state.auth.isAuthenticated = true;
     state.auth.username = String(body.username || identifier);
@@ -1365,18 +1743,42 @@ async function submitAuth(action, password, successMessage, identifier = "") {
 
     if (action === "register") {
       resetJournalState();
+      // A brand-new account has nothing to lose, so demo work carries over
+      // automatically. Sample rows were already filtered out.
+      const kept = applyGuestCarryOver(carryOver);
+      if (kept > 0) {
+        persistState({ skipServerSync: true });
+        renderAll();
+      }
       const saved = await saveToPhpStorage({ silent: true });
+      const keptNote = kept > 0 ? ` Kept the ${kept} trade(s) you logged in the demo.` : "";
       if (saved) {
-        setMessage(ui.authMessage, `${successMessage} Fresh journal ready.`, "success");
+        setMessage(ui.authMessage, `${successMessage} Fresh journal ready.${keptNote}`, "success");
       } else {
-        setMessage(ui.authMessage, `${successMessage} Fresh journal created locally.`, "success");
+        setMessage(ui.authMessage, `${successMessage} Fresh journal created locally.${keptNote}`, "success");
       }
     } else {
       const loaded = await loadFromPhpStorage({ silent: true, source: "auth", preferLocalIfServerEmpty: true });
+      // Logging in can land on an account that already has a journal, so the
+      // demo work is APPENDED and only after an explicit yes — never a
+      // silent overwrite of an existing journal.
+      let kept = 0;
+      if (carryOver && carryOver.trades.length > 0) {
+        const confirmed = window.confirm(
+          `Add the ${carryOver.trades.length} trade(s) you logged in demo mode to this account's journal? ` +
+            "Nothing already in this journal will be replaced. Choose Cancel to discard the demo trades."
+        );
+        if (confirmed) {
+          kept = applyGuestCarryOver(carryOver);
+          persistState();
+          renderAll();
+        }
+      }
+      const keptNote = kept > 0 ? ` Added ${kept} trade(s) from your demo.` : "";
       if (loaded) {
-        setMessage(ui.authMessage, `${successMessage} Server journal loaded.`, "success");
+        setMessage(ui.authMessage, `${successMessage} Server journal loaded.${keptNote}`, "success");
       } else {
-        setMessage(ui.authMessage, `${successMessage} Using local journal until server load succeeds.`, "error");
+        setMessage(ui.authMessage, `${successMessage} Using local journal until server load succeeds.${keptNote}`, "error");
       }
     }
 
@@ -1492,6 +1894,35 @@ function updateAuthUi() {
     updateAccessGate();
     return;
   }
+
+  // Demo mode never fakes a session: the account controls become an explicit
+  // exit, not a logout, because there is nothing logged in to log out of.
+  if (state.auth.guestMode) {
+    ui.authStatus.textContent = "Demo mode — not signed in";
+    ui.authStatus.classList.add("is-off");
+    ui.loginBtn.hidden = false;
+    ui.registerBtn.hidden = false;
+    ui.desktopLogoutBtn.hidden = false;
+    ui.mobileLogoutBtn.hidden = false;
+    ui.desktopLogoutBtn.textContent = "Exit demo";
+    ui.mobileLogoutBtn.textContent = "Exit demo";
+    if (ui.authIdentifier) {
+      ui.authIdentifier.disabled = false;
+    }
+    if (ui.authPassword) {
+      ui.authPassword.disabled = false;
+    }
+    if (ui.authPanel) {
+      ui.authPanel.hidden = false;
+      ui.authPanel.style.display = "grid";
+    }
+    renderAdminUsers();
+    updateAccessGate();
+    return;
+  }
+
+  ui.desktopLogoutBtn.textContent = "Logout";
+  ui.mobileLogoutBtn.textContent = "Logout";
 
   if (state.auth.previewMode) {
     ui.authStatus.textContent = "";
@@ -1749,6 +2180,12 @@ function handleTradeSubmit(event) {
   persistState();
   renderAll();
   resetTradeForm(true);
+  // The moment persistence matters most: the trade is in the journal and
+  // fully usable, but it will not survive the tab.
+  if (state.auth.guestMode) {
+    nudgeGuest(ui.tradeFormMessage, existingId ? "Trade updated in the demo." : "Trade added to the demo.");
+    return;
+  }
   setMessage(ui.tradeFormMessage, existingId ? "Trade updated." : "Trade saved.", "success");
 }
 
@@ -2952,6 +3389,10 @@ function exportTradesCsv() {
 
   const csv = [headers.join(","), ...rows].join("\n");
   triggerDownload(new Blob([csv], { type: "text/csv;charset=utf-8" }), `trading-journal-${Date.now()}.csv`);
+  if (state.auth.guestMode) {
+    nudgeGuest(ui.journalMessage, "CSV exported — it includes the sample rows.");
+    return;
+  }
   setMessage(ui.journalMessage, "CSV exported.", "success");
 }
 
@@ -2966,6 +3407,10 @@ function exportBackupJson() {
 
   const payload = JSON.stringify(backup, null, 2);
   triggerDownload(new Blob([payload], { type: "application/json" }), `trading-journal-backup-${Date.now()}.json`);
+  if (state.auth.guestMode) {
+    nudgeGuest(ui.journalMessage, "JSON backup exported — it includes the sample rows.");
+    return;
+  }
   setMessage(ui.journalMessage, "JSON backup exported.", "success");
 }
 
@@ -3014,7 +3459,11 @@ async function saveToPhpStorage(options = {}) {
 
   if (!state.auth.isAuthenticated) {
     if (!silent) {
-      setMessage(ui.journalMessage, "Login first to save on server database.", "error");
+      if (state.auth.guestMode) {
+        nudgeGuest(ui.journalMessage, "The server journal needs an account.");
+      } else {
+        setMessage(ui.journalMessage, "Login first to save on server database.", "error");
+      }
     }
     return;
   }
@@ -3064,7 +3513,11 @@ async function loadFromPhpStorage(options = {}) {
 
   if (!state.auth.isAuthenticated) {
     if (!silent) {
-      setMessage(ui.journalMessage, "Login first to load server database.", "error");
+      if (state.auth.guestMode) {
+        nudgeGuest(ui.journalMessage, "There is no server journal to load in the demo.");
+      } else {
+        setMessage(ui.journalMessage, "Login first to load server database.", "error");
+      }
     }
     return false;
   }
@@ -5256,21 +5709,34 @@ function renderMonthlyReview() {
   ui.replayNotes.value = state.replayNotes[month] || "";
 }
 
+// The one place that decides WHERE the journal lives. Demo mode gets
+// sessionStorage (dies with the tab) under a prefixed key, so a demo can
+// never read, overwrite or leak into a real user's localStorage journal.
+function journalStore() {
+  return state.auth.guestMode ? window.sessionStorage : window.localStorage;
+}
+
+function journalKey(key) {
+  return state.auth.guestMode ? `${GUEST_KEY_PREFIX}${key}` : key;
+}
+
 function loadState() {
-  state.settings = normalizeSettings(readStorageJson(STORAGE_KEYS.settings, DEFAULT_SETTINGS));
-  state.trades = normalizeTrades(readStorageJson(STORAGE_KEYS.trades, []));
-  state.reflections = normalizeReflections(readStorageJson(STORAGE_KEYS.reflections, []));
-  state.replayNotes = normalizeReplayNotes(readStorageJson(STORAGE_KEYS.replay, {}));
+  const store = journalStore();
+  state.settings = normalizeSettings(readStorageJson(journalKey(STORAGE_KEYS.settings), DEFAULT_SETTINGS, store));
+  state.trades = normalizeTrades(readStorageJson(journalKey(STORAGE_KEYS.trades), [], store));
+  state.reflections = normalizeReflections(readStorageJson(journalKey(STORAGE_KEYS.reflections), [], store));
+  state.replayNotes = normalizeReplayNotes(readStorageJson(journalKey(STORAGE_KEYS.replay), {}, store));
 }
 
 function persistState(options = {}) {
   const { skipServerSync = false } = options;
-  writeStorageJson(STORAGE_KEYS.settings, state.settings);
-  writeStorageJson(STORAGE_KEYS.trades, state.trades);
-  writeStorageJson(STORAGE_KEYS.reflections, state.reflections);
-  writeStorageJson(STORAGE_KEYS.replay, state.replayNotes);
+  const store = journalStore();
+  writeStorageJson(journalKey(STORAGE_KEYS.settings), state.settings, store);
+  writeStorageJson(journalKey(STORAGE_KEYS.trades), state.trades, store);
+  writeStorageJson(journalKey(STORAGE_KEYS.reflections), state.reflections, store);
+  writeStorageJson(journalKey(STORAGE_KEYS.replay), state.replayNotes, store);
   try {
-    localStorage.setItem(STORAGE_KEYS.lastSaved, new Date().toISOString());
+    store.setItem(journalKey(STORAGE_KEYS.lastSaved), new Date().toISOString());
   } catch (error) {
     console.error("Storage write failed:", error);
   }
@@ -5310,14 +5776,16 @@ function cancelServerAutosave() {
 function renderLastSaved() {
   let iso = null;
   try {
-    iso = localStorage.getItem(STORAGE_KEYS.lastSaved);
+    iso = journalStore().getItem(journalKey(STORAGE_KEYS.lastSaved));
   } catch (error) {
     ui.lastSaved.textContent = "Autosave: browser storage unavailable";
     return;
   }
 
   if (!iso) {
-    ui.lastSaved.textContent = "Autosave: waiting for first update";
+    ui.lastSaved.textContent = state.auth.guestMode
+      ? "Demo mode: nothing is saved"
+      : "Autosave: waiting for first update";
     return;
   }
 
@@ -5327,7 +5795,9 @@ function renderLastSaved() {
     return;
   }
 
-  ui.lastSaved.textContent = `Autosave: ${date.toLocaleString()}`;
+  ui.lastSaved.textContent = state.auth.guestMode
+    ? `Demo mode: not saved (${date.toLocaleTimeString()})`
+    : `Autosave: ${date.toLocaleString()}`;
 }
 
 function normalizeSettings(input) {

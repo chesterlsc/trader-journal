@@ -1,6 +1,10 @@
-export function readStorageJson(key, fallback) {
+// `store` is the storage-target indirection guest/demo mode routes through:
+// a real session writes localStorage, a demo session writes sessionStorage so
+// the journal dies with the tab. Everything else about the read/write path is
+// identical, which is the point — no duplicated persistence logic.
+export function readStorageJson(key, fallback, store = localStorage) {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = store.getItem(key);
     if (!raw) {
       return fallback;
     }
@@ -11,9 +15,9 @@ export function readStorageJson(key, fallback) {
   }
 }
 
-export function writeStorageJson(key, value) {
+export function writeStorageJson(key, value, store = localStorage) {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    store.setItem(key, JSON.stringify(value));
   } catch (error) {
     console.error("Storage write failed:", error);
   }
@@ -89,7 +93,7 @@ export function setMessage(node, text, kind) {
   }
 
   node.textContent = text;
-  node.classList.remove("success", "error");
+  node.classList.remove("success", "error", "notice");
   if (kind) {
     node.classList.add(kind);
   }
