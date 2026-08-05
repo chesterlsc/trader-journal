@@ -1405,11 +1405,6 @@ body.auth-locked .topnav {
   background: var(--pnl-neg);
 }
 
-/* Journal row the unjournalled chevron jumped to. */
-#journal tbody tr.is-flagged td {
-  background: var(--accent-muted);
-}
-
 /* --- 10f. Mobile --------------------------------------------------------- */
 @media (max-width: 900px) {
   .dash-boards {
@@ -2133,4 +2128,376 @@ body.auth-locked .topnav {
   .sheet::backdrop {
     backdrop-filter: none;
   }
+}
+
+/* ==========================================================================
+   12. 1c — CLOSE & JOURNAL
+   design-source/1c-journaling.html. Step 2 of the same <dialog> as 1b, so
+   "open → close → journal" stays one object and the focus trap, Escape and
+   inert background still come from the platform.
+
+   The read: printed facts on the left/top, one-tap inputs below. Unchosen
+   controls are pressed INTO the sheet, the chosen one lifts out of it —
+   which is the same depth-as-data rule the calendar and the metric cards
+   use, never load-bearing on its own (colour, text and aria-pressed all
+   carry the same state).
+   ========================================================================== */
+
+/* Two forms share the dialog; .sheet-body sets display:grid, which out-ranks
+   the UA [hidden] rule, so it has to be restated. */
+.sheet-body[hidden] { display: none; }
+
+/* The journalling half is two columns wide where 1b is one. Guarded above the
+   bottom-sheet breakpoint: below it the sheet is full-bleed and this must not
+   out-specify §11e's width. */
+@media (min-width: 621px) {
+  .sheet:has(.journal-sheet:not([hidden])) {
+    width: min(680px, calc(100vw - 32px));
+  }
+}
+
+.sheet-step.is-done { color: var(--text-soft); }
+
+/* The number becomes a tick: step 1 is behind you, not a destination. */
+.sheet-step.is-done .sheet-step-num {
+  background: var(--accent-muted);
+  color: var(--accent-strong);
+  box-shadow: none;
+  font-size: 0;
+}
+
+.sheet-step.is-done .sheet-step-num::after {
+  content: "\2713";
+  font-size: 13px;
+}
+
+/* --- 12a. The printed header --------------------------------------------- */
+.jrn-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.jrn-id { flex: 1 1 220px; min-width: 0; }
+
+.jrn-kicker {
+  margin: 0;
+  font: 600 10.5px/1 var(--font-mono, "JetBrains Mono", monospace);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.jrn-symbol {
+  margin: 6px 0 0;
+  font: 700 26px/1.1 var(--font-ui);
+  color: var(--text);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.jrn-meta {
+  font: 600 14px/1.2 var(--font-mono, "JetBrains Mono", monospace);
+  color: var(--text-faint);
+}
+
+.jrn-result { text-align: right; margin-left: auto; }
+
+.jrn-net {
+  margin: 0;
+  font: 700 32px/1 var(--font-mono, "JetBrains Mono", monospace);
+  color: var(--text);
+}
+
+.jrn-net.is-pos { color: var(--pnl-pos); }
+.jrn-net.is-neg { color: var(--pnl-neg); }
+
+.jrn-sub {
+  margin: 5px 0 0;
+  font: 600 12px/1 var(--font-mono, "JetBrains Mono", monospace);
+  color: var(--text-faint);
+}
+
+/* --- 12b. Blocks + labels ------------------------------------------------- */
+.jrn-block {
+  display: grid;
+  gap: 11px;
+  align-content: start;
+  min-width: 0;
+}
+
+.jrn-label {
+  margin: 0;
+  font: 600 10.5px/1.2 var(--font-mono, "JetBrains Mono", monospace);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* The mockup fades this; --text-faint is already at the 4.5:1 floor, so the
+   distinction is carried by case and weight instead of by opacity. */
+.jrn-hint {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+.jrn-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.jrn-split-note { grid-template-columns: minmax(0, 1fr) 232px; }
+
+/* --- 12c. One-tap chips --------------------------------------------------- */
+.jrn-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.jrn-chip {
+  min-height: 44px;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-inset);
+  color: var(--text-soft);
+  font: 600 14px/1 var(--font-ui);
+  cursor: pointer;
+  box-shadow: var(--clay-pressed);
+}
+
+.jrn-chip[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--text-inverse);
+  font-weight: 700;
+  box-shadow: var(--clay-accent);
+}
+
+.jrn-chips-sm { gap: 8px; }
+
+.jrn-chips-sm .jrn-chip {
+  padding: 11px 15px;
+  font-size: 12.5px;
+}
+
+/* A ticked mistake is a loss marker, not a preference: it sinks, and it goes
+   red. The check glyph is the third, non-colour signal. */
+.jrn-chips-sm .jrn-chip[aria-pressed="true"] {
+  background: var(--pnl-neg-soft);
+  color: var(--pnl-neg);
+  box-shadow: var(--clay-pressed);
+}
+
+.jrn-chips-sm .jrn-chip[aria-pressed="true"]::before {
+  content: "\2713\00a0";
+  font-weight: 700;
+}
+
+.jrn-chip-add {
+  min-height: 44px;
+  padding: 11px 15px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--accent-strong);
+  font: 600 12.5px/1 var(--font-ui);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1.5px var(--line-strong);
+}
+
+.jrn-new-tag {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-inset);
+  color: var(--text);
+  font: 500 13.5px/1 var(--font-ui);
+  box-shadow: var(--clay-pressed);
+}
+
+.jrn-new-tag[hidden] { display: none; }
+
+.jrn-grades {
+  display: flex;
+  gap: 8px;
+}
+
+.jrn-grade {
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  color: var(--text-faint);
+  font: 600 15px/1 var(--font-mono, "JetBrains Mono", monospace);
+  cursor: pointer;
+  box-shadow: var(--clay-pressed);
+}
+
+.jrn-grade[aria-pressed="true"] {
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 700;
+  box-shadow: var(--clay-raised);
+}
+
+/* --- 12d. Note + chart ---------------------------------------------------- */
+.jrn-note {
+  width: 100%;
+  min-height: 132px;
+  padding: 16px 18px;
+  border: 0;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-inset);
+  color: var(--text);
+  font: 400 14px/1.55 var(--font-ui);
+  resize: vertical;
+  box-shadow: var(--clay-pressed);
+}
+
+.jrn-note::placeholder { color: var(--text-faint); }
+
+.jrn-note-actions {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.jrn-mini {
+  min-height: 44px;
+  padding: 11px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-soft);
+  font: 600 12.5px/1 var(--font-ui);
+  cursor: pointer;
+  box-shadow: var(--clay-soft);
+}
+
+.jrn-mini[hidden] { display: none; }
+
+.jrn-drop {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 132px;
+  padding: 14px;
+  border: 0;
+  border-radius: var(--radius-clay-sm);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--surface-inset) 0 9px,
+    var(--surface-3) 9px 18px
+  );
+  color: var(--text-faint);
+  font: 500 11px/1.5 var(--font-mono, "JetBrains Mono", monospace);
+  text-align: center;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: var(--clay-pressed);
+}
+
+.jrn-drop.is-over {
+  background: var(--accent-muted);
+  color: var(--accent-strong);
+}
+
+.jrn-drop.is-filled { background: var(--surface-inset); padding: 0; }
+
+.jrn-drop img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 180px;
+  object-fit: cover;
+}
+
+/* --- 12e. Actions --------------------------------------------------------- */
+.jrn-actions { align-items: center; }
+
+.jrn-foot {
+  flex: 1 1 180px;
+  margin: 0;
+  max-width: 26ch;
+  font: 400 12.5px/1.4 var(--font-ui);
+  color: var(--text-faint);
+}
+
+/* --- 12f. The mobile route in --------------------------------------------- */
+.dash-unj-cta {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: var(--radius-clay-sm);
+  background: var(--text);
+  color: var(--surface-1);
+  font: 600 12.5px/1.2 var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+
+.dash-unj-cta[hidden] { display: none; }
+
+.dash-unj-cta-count {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--pnl-neg);
+  /* --text-inverse, not white: the dark theme's --pnl-neg is a bright rose
+     that white sits at ~2.4:1 on. */
+  color: var(--text-inverse);
+  font: 700 12px/1 var(--font-mono, "JetBrains Mono", monospace);
+}
+
+.dash-unj-cta-label { flex: 1; }
+.dash-unj-cta-chevron { font: 700 16px/1 var(--font-ui); }
+
+@media (max-width: 620px) {
+  .dash-unj-cta:not([hidden]) { display: flex; }
+  .dash-unjournalled .dash-unj-list { display: none; }
+
+  .jrn-split,
+  .jrn-split-note { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+
+  .jrn-symbol { font-size: 22px; }
+  .jrn-net { font-size: 26px; }
+  .jrn-head { gap: var(--space-3); }
+  .jrn-result { text-align: left; margin-left: 0; }
+  .jrn-grade { min-height: 48px; }
+  .jrn-actions { flex-direction: column; align-items: stretch; }
+  .jrn-foot { max-width: none; text-align: center; }
+}
+
+/* --- 12g. Focus rings -----------------------------------------------------
+   The clay box-shadows out-specify the global :focus-visible ring, so it is
+   restored explicitly on every control this section introduces. Nothing here
+   animates, so there is no reduced-motion branch to add. */
+.jrn-chip:focus-visible,
+.jrn-chip-add:focus-visible,
+.jrn-grade:focus-visible,
+.jrn-mini:focus-visible,
+.jrn-drop:focus-visible,
+.jrn-new-tag:focus-visible,
+.jrn-note:focus-visible,
+.dash-unj-cta:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }

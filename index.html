@@ -45,10 +45,10 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260807-capture1b" />
+    <link rel="stylesheet" href="styles.css?v=20260808-journal1c" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260807-capture1b" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260808-journal1c" />
   </head>
   <body>
     <section class="auth-shell" id="authShell" aria-label="Login">
@@ -719,6 +719,15 @@
                 </div>
                 <p class="dash-unj-lede">Closed, but you never said why. Two minutes each.</p>
                 <div class="dash-unj-list" id="dashUnjournalledList"></div>
+                <!-- 1c: the mobile route into the close sheet. The row list is
+                     too wide for 375px, so under the breakpoint it is replaced
+                     by this single pill, which opens the sheet for the oldest
+                     trade still waiting. Saving advances the queue. -->
+                <button class="dash-unj-cta" type="button" id="dashJournalCta" hidden>
+                  <span class="dash-unj-cta-count" id="dashJournalCtaCount">0</span>
+                  <span class="dash-unj-cta-label">Trades to journal</span>
+                  <span class="dash-unj-cta-chevron" aria-hidden="true">&rsaquo;</span>
+                </button>
                 <div class="dash-unj-foot">
                   <div>
                     <p class="dash-unj-streak-label">Journal streak</p>
@@ -1770,6 +1779,103 @@
           <button class="sheet-detail" type="button" id="sheetDetailBtn">Add detail</button>
         </div>
       </form>
+
+      <!-- ══ 1c CLOSE & JOURNAL ═════════════════════════════════════════════
+           Step 2 of the same sheet. Fires when a trade closes — from the
+           journal table, from the dashboard ticker's Close, or from the
+           unjournalled queue. Everything the trade already knows is printed,
+           not asked; the only inputs are the ones a database cannot infer.
+           Everything except the note is one tap. -->
+      <form class="sheet-body journal-sheet" id="journalSheetForm" novalidate hidden>
+        <div class="sheet-head">
+          <ol class="sheet-steps">
+            <li class="sheet-step is-done">
+              <span class="sheet-step-num" aria-hidden="true">1</span>
+              <span>Open</span>
+            </li>
+            <li class="sheet-step is-current" aria-current="step">
+              <span class="sheet-step-num" aria-hidden="true">2</span>
+              <span id="journalSheetTitle">Close &amp; journal</span>
+            </li>
+          </ol>
+          <button class="sheet-close" type="button" id="journalSheetCloseBtn" aria-label="Close">&times;</button>
+        </div>
+
+        <header class="jrn-head">
+          <div class="jrn-id">
+            <p class="jrn-kicker" id="journalClosedAt">Closed</p>
+            <h3 class="jrn-symbol">
+              <span id="journalSymbol">&mdash;</span>
+              <span class="jrn-meta" id="journalMeta"></span>
+            </h3>
+          </div>
+          <div class="jrn-result">
+            <p class="jrn-net" id="journalNet">&mdash;</p>
+            <p class="jrn-sub" id="journalSub"></p>
+          </div>
+        </header>
+
+        <div class="jrn-block">
+          <p class="jrn-label" id="journalMoodLabel">How did that feel? <span class="jrn-hint">one tap</span></p>
+          <div class="jrn-chips" id="journalMoodChips" role="group" aria-labelledby="journalMoodLabel"></div>
+        </div>
+
+        <div class="jrn-split">
+          <div class="jrn-block">
+            <p class="jrn-label" id="journalGradeLabel">Execution</p>
+            <div class="jrn-grades" id="journalGradeChips" role="group" aria-labelledby="journalGradeLabel"></div>
+          </div>
+          <div class="jrn-block">
+            <p class="jrn-label" id="journalTagLabel">What went wrong <span class="jrn-hint">optional</span></p>
+            <div class="jrn-chips jrn-chips-sm" id="journalTagChips" role="group" aria-labelledby="journalTagLabel"></div>
+            <input
+              id="journalNewTagInput"
+              class="jrn-new-tag"
+              type="text"
+              maxlength="28"
+              autocomplete="off"
+              placeholder="Name it, then Enter"
+              aria-label="New mistake tag"
+              hidden
+            />
+          </div>
+        </div>
+
+        <div class="jrn-split jrn-split-note">
+          <div class="jrn-block">
+            <label class="jrn-label" for="journalNote">Note</label>
+            <textarea
+              id="journalNote"
+              class="jrn-note"
+              rows="4"
+              maxlength="600"
+              placeholder="What actually happened in your head?"
+            ></textarea>
+            <div class="jrn-note-actions">
+              <button class="jrn-mini" type="button" id="journalPasteBtn" hidden>&#8984;V paste chart</button>
+            </div>
+          </div>
+          <div class="jrn-block">
+            <p class="jrn-label" id="journalChartLabel">Chart</p>
+            <button
+              class="jrn-drop"
+              type="button"
+              id="journalDrop"
+              aria-label="Chart screenshot — drop a file here, paste one, or press to pick one"
+            >
+              <span>drop, paste<br />or pick a screenshot</span>
+            </button>
+            <input id="journalShotInput" class="visually-hidden" type="file" accept="image/*" />
+          </div>
+        </div>
+
+        <p class="sheet-message" id="journalSheetMessage" role="status" aria-live="polite"></p>
+
+        <div class="sheet-actions jrn-actions">
+          <button class="sheet-submit" type="submit" id="journalSaveBtn">Save &amp; close</button>
+          <p class="jrn-foot">Skipping puts it in the unjournalled queue, not the bin.</p>
+        </div>
+      </form>
     </dialog>
 
     <!-- Capture confirmation. The command bar closes with no screen change, so
@@ -1830,6 +1936,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260807-capture1b"></script>
+    <script type="module" src="app.js?v=20260808-journal1c"></script>
   </body>
 </html>

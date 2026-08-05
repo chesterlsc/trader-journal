@@ -308,6 +308,27 @@ const ui = {
   sheetSubmitBtn: document.getElementById("sheetSubmitBtn"),
   sheetDetailBtn: document.getElementById("sheetDetailBtn"),
 
+  // 1c close & journal — step 2 of the same <dialog>.
+  journalSheetForm: document.getElementById("journalSheetForm"),
+  journalSheetCloseBtn: document.getElementById("journalSheetCloseBtn"),
+  journalClosedAt: document.getElementById("journalClosedAt"),
+  journalSymbol: document.getElementById("journalSymbol"),
+  journalMeta: document.getElementById("journalMeta"),
+  journalNet: document.getElementById("journalNet"),
+  journalSub: document.getElementById("journalSub"),
+  journalMoodChips: document.getElementById("journalMoodChips"),
+  journalGradeChips: document.getElementById("journalGradeChips"),
+  journalTagChips: document.getElementById("journalTagChips"),
+  journalNewTagInput: document.getElementById("journalNewTagInput"),
+  journalNote: document.getElementById("journalNote"),
+  journalPasteBtn: document.getElementById("journalPasteBtn"),
+  journalDrop: document.getElementById("journalDrop"),
+  journalShotInput: document.getElementById("journalShotInput"),
+  journalSheetMessage: document.getElementById("journalSheetMessage"),
+  journalSaveBtn: document.getElementById("journalSaveBtn"),
+  dashJournalCta: document.getElementById("dashJournalCta"),
+  dashJournalCtaCount: document.getElementById("dashJournalCtaCount"),
+
   tradeForm: document.getElementById("tradeForm"),
   tradeSubmitBtn: document.getElementById("tradeSubmitBtn"),
   tradeResetBtn: document.getElementById("tradeResetBtn"),
@@ -487,6 +508,41 @@ const sheetState = {
 };
 
 let captureToastTimer = 0;
+
+/* ── 1c close & journal ────────────────────────────────────────────────────
+   Also above init(), same temporal-dead-zone rule.
+
+   The mood chips are the mockup's five words; `value` is the string the
+   record has always stored, so the psychology filter, the psychology chart
+   and every historic trade keep working untouched. Label ≠ value on purpose
+   for the last two. */
+const JOURNAL_MOODS = [
+  { value: "Focused", label: "Focused" },
+  { value: "Hesitant", label: "Hesitant" },
+  { value: "Emotional", label: "Emotional" },
+  { value: "Revenge Trade", label: "Revenge" },
+  { value: "Perfect Execution", label: "Perfect" }
+];
+
+const JOURNAL_GRADES = ["A+", "A", "B", "C", "F"];
+
+// Seed vocabulary for "what went wrong". Anything the trader adds themselves
+// persists by riding on the trades that carry it — see getKnownMistakeTags().
+const DEFAULT_MISTAKE_TAGS = ["Entered early", "Moved stop", "Oversized", "Off-playbook"];
+
+// localStorage is the storage target in preview mode and sessionStorage in
+// demo mode; both are ~5MB for the WHOLE journal. One shared ceiling for
+// every inline image, used by the trade form and the close sheet alike.
+const MAX_INLINE_IMAGE_BYTES = 350 * 1024;
+
+const journalState = {
+  tradeId: "",
+  psychology: "Focused",
+  executionQuality: "B",
+  tags: new Set(),
+  screenshotName: "",
+  screenshotData: ""
+};
 
 const METRIC_DELTA_SPECS = {
   accountBalance: { read: (a) => a.totalPnl, format: formatCurrency },
@@ -941,11 +997,18 @@ function bindEvents() {
     switchView("dashboard");
     scrollDashboardTo(ui.edgeRows?.closest(".panel"));
   });
+  // 1c: every route into the queue opens the same close sheet for that trade.
   ui.dashUnjournalledList?.addEventListener("click", (event) => {
     const row = event.target.closest("[data-unjournalled-trade]");
     if (row) {
-      focusTradeInJournal(row.dataset.unjournalledTrade);
+      openJournalSheet(row.dataset.unjournalledTrade);
     }
+  });
+  // Mobile: one pill instead of the row list, pointed at the oldest trade
+  // still waiting. Saving advances the queue, so repeated taps clear it.
+  ui.dashJournalCta?.addEventListener("click", () => {
+    const pending = getUnjournalledTrades();
+    openJournalSheet(pending[pending.length - 1]?.id);
   });
   // Overflow menu is a <details>; close it on outside click and on Escape.
   if (ui.topnavMore) {
@@ -2526,6 +2589,14 @@ function buildTradeRecord(tradeInput, options = {}) {
       : Array.isArray(existingTrade?.preTradeRules)
         ? existingTrade.preTradeRules.map(String)
         : [],
+    // 1c: same carry rule. Only the close sheet asks for these, so an edit
+    // through the full form must not silently drop them.
+    mistakeTags: Array.isArray(tradeInput.mistakeTags)
+      ? tradeInput.mistakeTags.map(String)
+      : Array.isArray(existingTrade?.mistakeTags)
+        ? existingTrade.mistakeTags.map(String)
+        : [],
+    journalledAt: String(tradeInput.journalledAt || existingTrade?.journalledAt || ""),
     exitPrice: status === "open" ? 0 : tradeInput.exitPrice,
     status,
     closedAt,
@@ -3224,7 +3295,34 @@ function isCryptoMarketSymbol(asset, market) {
   return knownCryptoUsdPairs.has(asset);
 }
 
-function handleScreenshotUpload(event) {
+/* The one place an image becomes a storable data URL. Resolves
+   { name, data, tooLarge } — data is "" when the file is over the inline
+   ceiling, so the caller can still keep the filename — or null when the file
+   is not an image or could not be read at all. Shared by the trade form and
+   the 1c close sheet so there is exactly one size cap in the app. */
+function readInlineImage(file) {
+  return new Promise((resolve) => {
+    if (!file || !String(file.type || "").startsWith("image/")) {
+      resolve(null);
+      return;
+    }
+
+    const name = file.name || `chart-${Date.now()}.png`;
+    if (file.size > MAX_INLINE_IMAGE_BYTES) {
+      resolve({ name, data: "", tooLarge: true });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve({ name, data: typeof reader.result === "string" ? reader.result : "", tooLarge: false });
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleScreenshotUpload(event) {
   const file = event.target.files?.[0];
   if (!file) {
     clearScreenshotPreview();
@@ -3232,9 +3330,15 @@ function handleScreenshotUpload(event) {
   }
 
   ui.tradeFields.screenshotLabel.textContent = file.name;
+  const image = await readInlineImage(file);
 
-  const maxInlineBytes = 350 * 1024;
-  if (file.size > maxInlineBytes) {
+  if (!image) {
+    ui.tradeFields.screenshotData.value = "";
+    setMessage(ui.tradeFormMessage, "Failed to read screenshot file.", "error");
+    return;
+  }
+
+  if (image.tooLarge) {
     ui.tradeFields.screenshotData.value = "";
     ui.tradeFields.screenshotPreview.textContent = "Screenshot attached (too large for inline storage).";
     setMessage(
@@ -3245,18 +3349,9 @@ function handleScreenshotUpload(event) {
     return;
   }
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    const result = typeof reader.result === "string" ? reader.result : "";
-    ui.tradeFields.screenshotData.value = result;
-    ui.tradeFields.screenshotPreview.innerHTML = `<img src="${result}" alt="Trade screenshot preview" />`;
-    setMessage(ui.tradeFormMessage, "Screenshot embedded with this trade.", "success");
-  };
-  reader.onerror = () => {
-    ui.tradeFields.screenshotData.value = "";
-    setMessage(ui.tradeFormMessage, "Failed to read screenshot file.", "error");
-  };
-  reader.readAsDataURL(file);
+  ui.tradeFields.screenshotData.value = image.data;
+  ui.tradeFields.screenshotPreview.innerHTML = `<img src="${image.data}" alt="Trade screenshot preview" />`;
+  setMessage(ui.tradeFormMessage, "Screenshot embedded with this trade.", "success");
 }
 
 function clearScreenshotPreview() {
@@ -3612,6 +3707,7 @@ function openTradeSheet(prefill = null) {
     return;
   }
 
+  setSheetStep(1);
   ui.sheetSymbol.value = prefill?.symbol || "";
   ui.sheetEntry.value = prefill?.entryPrice ? String(prefill.entryPrice) : "";
   ui.sheetStop.value = prefill?.stopLoss ? String(prefill.stopLoss) : "";
@@ -3817,7 +3913,344 @@ function handleSheetAddDetail() {
   setMessage(ui.tradeFormMessage, "Carried over from the sheet. Fill the rest and save.", "success");
 }
 
+/* ── 1c: step 2 — close & journal ─────────────────────────────────────────
+   design-source/1c-journaling.html. The same <dialog> as step 1: the two
+   halves are two forms and only one is ever visible, so "open → close →
+   journal" is one object and the step indicator is honest.
+
+   Everything the trade already knows is printed. The four inputs are the
+   ones no database can infer, and only the note needs a keyboard. */
+
+function setSheetStep(step) {
+  ui.tradeSheetForm.hidden = step !== 1;
+  ui.journalSheetForm.hidden = step !== 2;
+}
+
+function openJournalSheet(id) {
+  const trade = getExistingTrade(id);
+  if (!ui.journalSheetForm || !canAccessApp() || !trade || trade.status === "open") {
+    return;
+  }
+
+  journalState.tradeId = trade.id;
+  journalState.psychology = trade.psychology || "Focused";
+  journalState.executionQuality = trade.executionQuality || "B";
+  journalState.tags = new Set(Array.isArray(trade.mistakeTags) ? trade.mistakeTags : []);
+  journalState.screenshotName = trade.screenshotName || "";
+  journalState.screenshotData = trade.screenshotData || "";
+
+  ui.journalNote.value = trade.notes || "";
+  ui.journalNewTagInput.hidden = true;
+  setMessage(ui.journalSheetMessage, "", "");
+  renderJournalHeader(trade);
+  renderJournalChips();
+  renderJournalChart();
+
+  setSheetStep(2);
+  if (!ui.tradeSheet.open) {
+    ui.tradeSheet.showModal();
+  }
+  ui.journalMoodChips.querySelector(".jrn-chip")?.focus();
+}
+
+function renderJournalHeader(trade) {
+  const closed = parseIsoDate(trade.closedAt || trade.updatedAt || trade.createdAt);
+  const time = closed
+    ? new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false }).format(closed)
+    : "";
+  // "Closed · 14:22 · London" — the session is the trade's own, not a guess.
+  ui.journalClosedAt.textContent = ["Closed", time, String(trade.session || "").trim()]
+    .filter(Boolean)
+    .join(" · ");
+
+  ui.journalSymbol.textContent = trade.asset || "—";
+  ui.journalMeta.textContent = [
+    trade.direction === "Sell" ? "SHORT" : "LONG",
+    trade.timeframe,
+    trade.setupType
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const net = Number(trade.netPnl) || 0;
+  ui.journalNet.textContent = formatSignedCurrency(net);
+  ui.journalNet.className = `jrn-net ${net > 0 ? "is-pos" : net < 0 ? "is-neg" : ""}`.trim();
+
+  const rMultiple = Number(trade.rMultiple);
+  const rLabel = Number.isFinite(rMultiple)
+    ? `${rMultiple > 0 ? "+" : ""}${rMultiple.toFixed(2)}R`
+    : "—";
+  // The result word carries win/loss as text, so colour and depth are never
+  // the only signal (WCAG 1.4.1).
+  ui.journalSub.textContent = `${trade.result || "—"} · ${rLabel} · ${formatSignedPips(Number(trade.pips))}`;
+}
+
+function journalChipHtml(kind, value, label, active, className) {
+  return `<button class="${className}" type="button" data-journal-${kind}="${escapeHtml(value)}" aria-pressed="${active}">${escapeHtml(label)}</button>`;
+}
+
+// The tag vocabulary IS the trades: the four seeds plus every tag any trade
+// already carries. A custom tag therefore persists the moment the trade it
+// was added to is saved, with no second store to migrate or keep in sync.
+function getKnownMistakeTags() {
+  const seen = new Map();
+  const add = (tag) => {
+    const clean = String(tag || "").trim();
+    if (clean && !seen.has(clean.toLowerCase())) {
+      seen.set(clean.toLowerCase(), clean);
+    }
+  };
+  DEFAULT_MISTAKE_TAGS.forEach(add);
+  state.trades.forEach((trade) => (trade.mistakeTags || []).forEach(add));
+  journalState.tags.forEach(add);
+  return Array.from(seen.values());
+}
+
+function renderJournalChips() {
+  ui.journalMoodChips.innerHTML = JOURNAL_MOODS.map((mood) =>
+    journalChipHtml("mood", mood.value, mood.label, journalState.psychology === mood.value, "jrn-chip")
+  ).join("");
+
+  ui.journalGradeChips.innerHTML = JOURNAL_GRADES.map((grade) =>
+    journalChipHtml("grade", grade, grade, journalState.executionQuality === grade, "jrn-grade")
+  ).join("");
+
+  ui.journalTagChips.innerHTML =
+    getKnownMistakeTags()
+      .map((tag) => journalChipHtml("tag", tag, tag, journalState.tags.has(tag), "jrn-chip"))
+      .join("") +
+    `<button class="jrn-chip-add" type="button" data-journal-add-tag>+ new tag</button>`;
+}
+
+function renderJournalChart() {
+  if (journalState.screenshotData) {
+    ui.journalDrop.classList.add("is-filled");
+    ui.journalDrop.innerHTML = `<img src="${journalState.screenshotData}" alt="Chart screenshot attached to this trade" />`;
+    return;
+  }
+
+  ui.journalDrop.classList.remove("is-filled");
+  ui.journalDrop.innerHTML = journalState.screenshotName
+    ? `<span>${escapeHtml(journalState.screenshotName)}<br />filename only — too large to store</span>`
+    : "<span>drop, paste<br />or pick a screenshot</span>";
+}
+
+async function acceptJournalImage(file) {
+  const image = await readInlineImage(file);
+  if (!image) {
+    setMessage(ui.journalSheetMessage, "That is not an image this browser can read.", "error");
+    return;
+  }
+
+  journalState.screenshotName = image.name;
+  journalState.screenshotData = image.data;
+  renderJournalChart();
+  setMessage(
+    ui.journalSheetMessage,
+    image.tooLarge
+      ? `Over ${Math.round(MAX_INLINE_IMAGE_BYTES / 1024)}KB — the filename is stored, the image is not.`
+      : "Chart attached.",
+    image.tooLarge ? "error" : "success"
+  );
+}
+
+function isJournalSheetOpen() {
+  return Boolean(ui.tradeSheet?.open) && ui.journalSheetForm && !ui.journalSheetForm.hidden;
+}
+
+// ⌘V anywhere in the sheet. The textarea keeps text pastes; only an image on
+// the clipboard is intercepted.
+function handleJournalPaste(event) {
+  if (!isJournalSheetOpen()) {
+    return;
+  }
+  const item = Array.from(event.clipboardData?.items || []).find((entry) =>
+    String(entry.type || "").startsWith("image/")
+  );
+  if (!item) {
+    return;
+  }
+  event.preventDefault();
+  acceptJournalImage(item.getAsFile());
+}
+
+// The button is a convenience for pointer users; it is hidden outright where
+// navigator.clipboard.read() does not exist (Firefox), because the keyboard
+// paste and the drop zone already cover that case.
+async function handleJournalPasteButton() {
+  try {
+    const items = await navigator.clipboard.read();
+    for (const item of items) {
+      const type = item.types.find((entry) => entry.startsWith("image/"));
+      if (type) {
+        acceptJournalImage(new File([await item.getType(type)], "pasted-chart.png", { type }));
+        return;
+      }
+    }
+    setMessage(ui.journalSheetMessage, "No image on the clipboard.", "error");
+  } catch {
+    setMessage(
+      ui.journalSheetMessage,
+      "The browser blocked clipboard access. Press ⌘V with the sheet focused, or drop the file on the chart box.",
+      "error"
+    );
+  }
+}
+
+function commitNewMistakeTag(focusChip) {
+  const raw = ui.journalNewTagInput.value.trim().replace(/\s+/g, " ").slice(0, 28);
+  ui.journalNewTagInput.hidden = true;
+  ui.journalNewTagInput.value = "";
+  if (!raw) {
+    return;
+  }
+  // Fold onto an existing tag when it only differs by case, so the vocabulary
+  // does not grow "Moved stop" AND "moved stop".
+  const existing = getKnownMistakeTags().find((tag) => tag.toLowerCase() === raw.toLowerCase());
+  const tag = existing || raw;
+  journalState.tags.add(tag);
+  renderJournalChips();
+  if (focusChip) {
+    ui.journalTagChips.querySelector(`[data-journal-tag="${CSS.escape(tag)}"]`)?.focus();
+  }
+}
+
+// Single-choice group: exactly one chip pressed, and the pressed state is
+// flipped IN PLACE rather than by re-rendering — a keyboard user who presses
+// Enter on a chip must not have the focused element yanked out from under
+// them.
+function setJournalGroupPressed(group, chosen) {
+  group.querySelectorAll("button").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button === chosen));
+  });
+}
+
+function handleJournalChipClick(event) {
+  const chip = event.target.closest("button");
+  if (!chip) {
+    return;
+  }
+
+  if (chip.dataset.journalMood) {
+    journalState.psychology = chip.dataset.journalMood;
+    setJournalGroupPressed(ui.journalMoodChips, chip);
+  } else if (chip.dataset.journalGrade) {
+    journalState.executionQuality = chip.dataset.journalGrade;
+    setJournalGroupPressed(ui.journalGradeChips, chip);
+  } else if (chip.dataset.journalTag) {
+    const tag = chip.dataset.journalTag;
+    const pressed = !journalState.tags.has(tag);
+    if (pressed) {
+      journalState.tags.add(tag);
+    } else {
+      journalState.tags.delete(tag);
+    }
+    chip.setAttribute("aria-pressed", String(pressed));
+  } else if (chip.hasAttribute("data-journal-add-tag")) {
+    ui.journalNewTagInput.hidden = false;
+    ui.journalNewTagInput.focus();
+  }
+}
+
+function handleJournalSubmit(event) {
+  event.preventDefault();
+  const trade = getExistingTrade(journalState.tradeId);
+  if (!trade) {
+    closeTradeSheet();
+    return;
+  }
+
+  // Same shape as closeTradeAtMarket: strip the audit fields so
+  // buildTradeRecord re-stamps them, and let the rest ride the spread.
+  const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, closedAt: _closedAt, ...tradeInput } = trade;
+  const journalled = buildTradeRecord(
+    {
+      ...tradeInput,
+      psychology: journalState.psychology,
+      executionQuality: journalState.executionQuality,
+      mistakeTags: Array.from(journalState.tags),
+      notes: ui.journalNote.value.trim(),
+      screenshotName: journalState.screenshotName,
+      screenshotData: journalState.screenshotData,
+      journalledAt: new Date().toISOString()
+    },
+    { id: trade.id, createdAt: trade.createdAt, closedAt: trade.closedAt, existingTrade: trade }
+  );
+
+  state.trades = state.trades.map((item) => (item.id === trade.id ? journalled : item));
+  persistState();
+  renderAll();
+  closeTradeSheet();
+
+  const remaining = getUnjournalledTrades().length;
+  showCaptureToast(
+    remaining
+      ? `${journalled.asset} journalled · ${remaining} left in the queue.`
+      : `${journalled.asset} journalled — the queue is clear.`
+  );
+}
+
+function bindJournalSheet() {
+  if (!ui.journalSheetForm) {
+    return;
+  }
+
+  ui.journalSheetForm.addEventListener("submit", handleJournalSubmit);
+  ui.journalSheetCloseBtn.addEventListener("click", closeTradeSheet);
+  ui.journalMoodChips.addEventListener("click", handleJournalChipClick);
+  ui.journalGradeChips.addEventListener("click", handleJournalChipClick);
+  ui.journalTagChips.addEventListener("click", handleJournalChipClick);
+
+  ui.journalNewTagInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitNewMistakeTag(true);
+    } else if (event.key === "Escape") {
+      // Stop <dialog> from reading this as "close the sheet".
+      event.stopPropagation();
+      event.preventDefault();
+      ui.journalNewTagInput.value = "";
+      ui.journalNewTagInput.hidden = true;
+    }
+  });
+  // Blur commits too, but never steals focus back — the click that caused the
+  // blur has to be allowed to land.
+  ui.journalNewTagInput.addEventListener("blur", () => commitNewMistakeTag(false));
+
+  ui.journalDrop.addEventListener("click", () => ui.journalShotInput.click());
+  ui.journalShotInput.addEventListener("change", (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      acceptJournalImage(file);
+    }
+    event.target.value = "";
+  });
+
+  ["dragenter", "dragover"].forEach((type) => {
+    ui.journalDrop.addEventListener(type, (event) => {
+      event.preventDefault();
+      ui.journalDrop.classList.add("is-over");
+    });
+  });
+  ["dragleave", "dragend", "drop"].forEach((type) => {
+    ui.journalDrop.addEventListener(type, () => ui.journalDrop.classList.remove("is-over"));
+  });
+  ui.journalDrop.addEventListener("drop", (event) => {
+    event.preventDefault();
+    const file = event.dataTransfer?.files?.[0];
+    if (file) {
+      acceptJournalImage(file);
+    }
+  });
+
+  document.addEventListener("paste", handleJournalPaste);
+  ui.journalPasteBtn.hidden = typeof navigator.clipboard?.read !== "function";
+  ui.journalPasteBtn.addEventListener("click", handleJournalPasteButton);
+}
+
 function bindQuickCapture() {
+  bindJournalSheet();
+
   if (ui.captureBarForm) {
     ui.captureBarForm.addEventListener("submit", handleCaptureSubmit);
     ui.captureInput.addEventListener("input", renderCaptureReadout);
@@ -3898,6 +4331,13 @@ function handleTradeTableClick(event) {
     return;
   }
 
+  // 1c: re-open the close sheet for any closed trade — the queue is not the
+  // only way back to it, and a journal entry stays editable.
+  if (button.dataset.action === "journal") {
+    openJournalSheet(id);
+    return;
+  }
+
   if (button.dataset.action === "edit") {
     loadTradeIntoForm(id);
   }
@@ -3936,6 +4376,10 @@ function closeTradeAtMarket(id) {
   persistState();
   renderAll();
   setMessage(ui.journalMessage, `Closed ${trade.asset} at ${price} (${formatCurrency(closedTrade.netPnl)}).`, "success");
+  // 1c: closing IS the trigger. Every close route in the app lands here —
+  // the journal table's Close button and the dashboard ticker's alike — so
+  // this is the single place the journalling sheet has to fire from.
+  openJournalSheet(id);
 }
 
 function deleteTrade(id) {
@@ -4089,6 +4533,10 @@ function exportTradesCsv() {
     "netPnl",
     "rMultiple",
     "rrRatio",
+    // 1c: the close sheet's own fields. escapeCsvValue quotes every cell, so
+    // the comma-joined tag array is safe as-is.
+    "mistakeTags",
+    "journalledAt",
     "notes"
   ];
 
@@ -6222,13 +6670,19 @@ function renderSetupAlert() {
 }
 
 /* ── 1a unjournalled ─────────────────────────────────────────────────────────
-   RULE: a trade is unjournalled when it is CLOSED and its notes field is
-   empty. Notes are the one field the app cannot infer — psychology ships with
-   a populated default in the form, so testing it would flag nothing. One rule,
-   used by the card, the streak, the bars and the nav badge. */
+   RULE: a CLOSED trade is journalled once it has been through the 1c close
+   sheet (journalledAt) or it carries a note. Notes were the only test before
+   1c existed, and they stay in the rule so every trade written before this
+   ships keeps its status — psychology ships with a populated default, so
+   testing that instead would flag nothing. One predicate, used by the card,
+   the mobile pill, the streak, the bars and the nav badge. */
+function isTradeJournalled(trade) {
+  return Boolean(trade.journalledAt) || Boolean(String(trade.notes || "").trim());
+}
+
 function getUnjournalledTrades() {
   return getClosedTrades()
-    .filter((trade) => !String(trade.notes || "").trim())
+    .filter((trade) => !isTradeJournalled(trade))
     .sort(sortTradesDesc);
 }
 
@@ -6253,6 +6707,12 @@ function renderUnjournalled() {
   // is visible — hiding it would hide the reward for keeping it.
   const hasClosed = getClosedTrades().length > 0;
   ui.dashUnjournalled.hidden = !hasClosed;
+  if (ui.dashJournalCta) {
+    ui.dashJournalCta.hidden = !hasClosed || pending.length === 0;
+    if (ui.dashJournalCtaCount) {
+      ui.dashJournalCtaCount.textContent = String(pending.length);
+    }
+  }
   if (!hasClosed) {
     ui.dashUnjournalledList.innerHTML = "";
     return;
@@ -6299,7 +6759,7 @@ function buildJournalDays() {
   getClosedTrades().forEach((trade) => {
     const day = byDate.get(trade.date) || { date: trade.date, total: 0, journalled: 0 };
     day.total += 1;
-    if (String(trade.notes || "").trim()) {
+    if (isTradeJournalled(trade)) {
       day.journalled += 1;
     }
     byDate.set(trade.date, day);
@@ -6344,33 +6804,6 @@ function renderJournalStreak() {
       ? `Last ${recent.length} trading day${recent.length === 1 ? "" : "s"}: ${recent.filter((day) => day.journalled === day.total).length} fully journalled`
       : "No trading days yet"
   );
-}
-
-// Chevron target: the trade's row in the journal view. Phase 3 replaces this
-// with the journalling sheet.
-function focusTradeInJournal(id) {
-  if (!id) {
-    return;
-  }
-  switchView("journal");
-
-  const reveal = () => {
-    const row = ui.tradesBody?.querySelector(`[data-trade-id="${CSS.escape(id)}"]`);
-    if (!row) {
-      return false;
-    }
-    row.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
-    row.classList.add("is-flagged");
-    window.setTimeout(() => row.classList.remove("is-flagged"), 2400);
-    return true;
-  };
-
-  // An active filter can hide the row; clearing is the only way to show it.
-  // clearFilters() re-renders the table synchronously, so one retry is enough.
-  if (!reveal()) {
-    clearFilters();
-    reveal();
-  }
 }
 
 function scrollDashboardTo(node) {
@@ -6693,7 +7126,9 @@ function renderJournalTable() {
           <td data-label="Psychology">${escapeHtml(trade.psychology)}</td>
           <td data-label="Execution">${escapeHtml(trade.executionQuality)}</td>
           <td class="row-actions">
-            ${isOpen ? `<button class="mini-btn mini-btn-close" data-action="close" data-id="${trade.id}" type="button">Close</button>` : ""}
+            ${isOpen
+              ? `<button class="mini-btn mini-btn-close" data-action="close" data-id="${trade.id}" type="button">Close</button>`
+              : `<button class="mini-btn" data-action="journal" data-id="${trade.id}" type="button">Journal</button>`}
             <button class="mini-btn" data-action="edit" data-id="${trade.id}" type="button">Edit</button>
             <button class="mini-btn danger" data-action="delete" data-id="${trade.id}" type="button">Delete</button>
           </td>
@@ -6973,6 +7408,12 @@ function normalizeTrades(input) {
         // ships and on every imported row — an empty array is "not asked",
         // not "ticked nothing", and nothing scores off it yet.
         preTradeRules: Array.isArray(item.preTradeRules) ? item.preTradeRules.map(String) : [],
+        // 1c close sheet. Absent on every trade saved before this ships: an
+        // empty tag list is "never asked", and an empty journalledAt on a
+        // trade that already has notes still counts as journalled — see
+        // isTradeJournalled().
+        mistakeTags: Array.isArray(item.mistakeTags) ? item.mistakeTags.map(String) : [],
+        journalledAt: String(item.journalledAt || ""),
         notes: String(item.notes || "")
       };
 
