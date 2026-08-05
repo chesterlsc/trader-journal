@@ -37,7 +37,7 @@
       href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260805-landing3d" />
+    <link rel="stylesheet" href="styles.css?v=20260805-deck3d" />
   </head>
   <body>
     <section class="auth-shell" id="authShell" aria-label="Login">
@@ -524,7 +524,7 @@
                the empty state; every [data-metric] node is preserved. -->
           <div class="dash-stats" id="dashboardMetricGrid" aria-label="Performance metrics">
             <section class="dash-deck">
-              <article class="metric-card metric-card-balance dash-hero dash-reveal" style="--i: 0">
+              <article class="metric-card metric-card-balance dash-hero dash-reveal" data-tilt style="--i: 0">
                 <div class="dash-hero-top">
                   <p class="metric-label">Account Balance</p>
                   <span
@@ -545,7 +545,7 @@
                 </div>
               </article>
 
-              <section class="risk-strip dash-risk dash-reveal" id="riskStrip" style="--i: 1" hidden aria-label="Risk budget">
+              <section class="risk-strip dash-risk dash-reveal" id="riskStrip" data-tilt style="--i: 1" hidden aria-label="Risk budget">
                 <p class="dash-risk-kicker">Risk budget</p>
                 <div class="risk-strip-item" data-risk-strip="day">
                   <span class="risk-strip-label">Daily loss budget</span>
@@ -563,22 +563,22 @@
             </section>
 
             <section class="dash-quad" aria-label="Edge quality">
-              <article class="metric-card dash-quad-card dash-reveal" style="--i: 2">
+              <article class="metric-card dash-quad-card dash-reveal" data-tilt style="--i: 2">
                 <p class="metric-label">Win Rate</p>
                 <p class="metric-value" data-metric="winRate">0%</p>
                 <span class="metric-delta" data-metric-delta="winRate" hidden></span>
               </article>
-              <article class="metric-card dash-quad-card dash-reveal" style="--i: 3">
+              <article class="metric-card dash-quad-card dash-reveal" data-tilt style="--i: 3">
                 <p class="metric-label">Profit Factor</p>
                 <p class="metric-value" data-metric="profitFactor">0.00</p>
                 <span class="metric-delta" data-metric-delta="profitFactor" hidden></span>
               </article>
-              <article class="metric-card dash-quad-card dash-reveal" style="--i: 4">
+              <article class="metric-card dash-quad-card dash-reveal" data-tilt style="--i: 4">
                 <p class="metric-label">Expectancy</p>
                 <p class="metric-value" data-metric="expectancy">$0.00</p>
                 <span class="metric-delta" data-metric-delta="expectancy" hidden></span>
               </article>
-              <article class="metric-card dash-quad-card dash-reveal" style="--i: 5">
+              <article class="metric-card dash-quad-card dash-reveal" data-tilt style="--i: 5">
                 <p class="metric-label">Average R:R</p>
                 <p class="metric-value" data-metric="avgRR">0.00</p>
                 <span class="metric-delta" data-metric-delta="avgRR" hidden></span>
@@ -1472,6 +1472,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260805-landing3d"></script>
+    <script type="module" src="app.js?v=20260805-deck3d"></script>
   </body>
 </html>

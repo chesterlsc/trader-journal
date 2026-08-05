@@ -412,7 +412,10 @@ function init() {
   setupLandingReveals();
   setupLandingAtmos();
   setupHeroTilt();
+  setupDeckTilt();
   setupLandingParallax();
+  // One frame late so the nav has a laid-out box to measure.
+  requestAnimationFrame(positionNavRail);
   startLivePriceLoop();
   // Hash router: restore the deep-linked view for preview sessions; the
   // authenticated flow restores in checkAuthSession once the gate opens.
@@ -516,6 +519,8 @@ function bindEvents() {
           1
         );
       }
+      // Piggybacks the existing debounce: the nav rail is a measured box too.
+      positionNavRail();
     }, 150);
   });
 
@@ -899,6 +904,8 @@ function switchView(id) {
   if (isMobileViewport()) {
     toggleMobileNav(false);
   }
+
+  positionNavRail();
 }
 
 function getViewFromHash() {
@@ -1117,6 +1124,8 @@ function updateAccessGate() {
   if (locked) {
     toggleMobileNav(false);
   }
+
+  positionNavRail();
 }
 
 function readAuthForm(forRegister = false) {
@@ -4534,62 +4543,78 @@ function setupLandingAtmos() {
   });
 }
 
-// Hero terminal 3D tilt. The resting rotation is pure CSS (scoped to
-// >=980px there); this only adds the pointer response, and only for a real
-// mouse on a hover-capable device with motion allowed. Touch and reduced
-// motion never bind a listener at all, so the panel simply sits still.
-function setupHeroTilt() {
-  const panel = document.querySelector("[data-hero-tilt]");
-  if (!panel || prefersReducedMotion()) {
-    return;
-  }
-
+// Pointer-tracked 3D tilt, shared by the landing hero terminal and the
+// dashboard deck cards. `stage` receives the pointer (it may be a wrapper),
+// `panel` is what rotates. Writes five custom properties and nothing else:
+// --tilt-x / --tilt-y (rotation, degrees), --px / --py (specular centre, %)
+// and --sheen (specular opacity). All the visuals live in CSS.
+//
+// Only a real mouse on a hover-capable, wide viewport ever gets a rotation:
+// callers refuse to bind at all under reduced motion, and the fine-pointer
+// query gates every handler so a touch drag can never rotate a card. The
+// matching CSS drops `perspective` and the specular below 980px / on coarse
+// pointers, so those users see a still, flat, fully-rendered card.
+function bindPointerTilt(stage, panel, maxTilt) {
   const finePointer = window.matchMedia("(hover: hover) and (pointer: fine) and (min-width: 980px)");
-  const stage = panel.closest(".hero-terminal-stage") || panel;
-  const MAX_TILT = 5;
   let rect = null;
   let frame = 0;
-  let nextX = 0;
-  let nextY = 0;
+  let tiltX = 0;
+  let tiltY = 0;
+  let sheenX = 50;
+  let sheenY = 0;
+  let sheen = 0;
 
   const commit = () => {
     frame = 0;
-    panel.style.setProperty("--tilt-x", `${nextX.toFixed(2)}deg`);
-    panel.style.setProperty("--tilt-y", `${nextY.toFixed(2)}deg`);
+    panel.style.setProperty("--tilt-x", `${tiltX.toFixed(2)}deg`);
+    panel.style.setProperty("--tilt-y", `${tiltY.toFixed(2)}deg`);
+    panel.style.setProperty("--px", `${sheenX.toFixed(1)}%`);
+    panel.style.setProperty("--py", `${sheenY.toFixed(1)}%`);
+    panel.style.setProperty("--sheen", sheen.toFixed(2));
   };
 
-  const reset = () => {
-    rect = null;
-    nextX = 0;
-    nextY = 0;
+  const schedule = () => {
     if (!frame) {
       frame = requestAnimationFrame(commit);
     }
   };
 
+  const reset = () => {
+    rect = null;
+    tiltX = 0;
+    tiltY = 0;
+    sheenX = 50;
+    sheenY = 0;
+    sheen = 0;
+    schedule();
+  };
+
+  const engaged = (event) => event.pointerType === "mouse" && finePointer.matches;
+
   // Rect is cached on enter (and dropped on leave/resize) so the pointer
   // handler never forces a synchronous layout while the tape is repainting.
   stage.addEventListener("pointerenter", (event) => {
-    if (event.pointerType !== "mouse" || !finePointer.matches) {
+    if (!engaged(event)) {
       return;
     }
     rect = stage.getBoundingClientRect();
   });
 
   stage.addEventListener("pointermove", (event) => {
-    if (event.pointerType !== "mouse" || !finePointer.matches) {
+    if (!engaged(event)) {
       return;
     }
     if (!rect) {
       rect = stage.getBoundingClientRect();
     }
-    const px = (event.clientX - rect.left) / (rect.width || 1) - 0.5;
-    const py = (event.clientY - rect.top) / (rect.height || 1) - 0.5;
-    nextY = clamp(px, -0.5, 0.5) * 2 * MAX_TILT;
-    nextX = clamp(-py, -0.5, 0.5) * 2 * MAX_TILT;
-    if (!frame) {
-      frame = requestAnimationFrame(commit);
-    }
+    const nx = (event.clientX - rect.left) / (rect.width || 1) - 0.5;
+    const ny = (event.clientY - rect.top) / (rect.height || 1) - 0.5;
+    tiltY = clamp(nx, -0.5, 0.5) * 2 * maxTilt;
+    tiltX = clamp(-ny, -0.5, 0.5) * 2 * maxTilt;
+    sheenX = clamp((nx + 0.5) * 100, 0, 100);
+    sheenY = clamp((ny + 0.5) * 100, 0, 100);
+    sheen = 1;
+    schedule();
   });
 
   stage.addEventListener("pointerleave", reset);
@@ -4597,6 +4622,51 @@ function setupHeroTilt() {
   // Older Safari only has the deprecated addListener; optional call keeps the
   // tilt working there instead of throwing during init.
   finePointer.addEventListener?.("change", reset);
+}
+
+// Hero terminal 3D tilt. The resting rotation is pure CSS (scoped to
+// >=980px there); this only adds the pointer response.
+function setupHeroTilt() {
+  const panel = document.querySelector("[data-hero-tilt]");
+  if (!panel || prefersReducedMotion()) {
+    return;
+  }
+
+  bindPointerTilt(panel.closest(".hero-terminal-stage") || panel, panel, 5);
+}
+
+// Dashboard deck cards (balance hero, risk meters, edge quad). The tilt is
+// deliberately half the hero's: these cards carry the numerals a trader
+// reads, and anything past ~3.5deg starts to soften the type.
+function setupDeckTilt() {
+  if (prefersReducedMotion()) {
+    return;
+  }
+
+  document.querySelectorAll("[data-tilt]").forEach((card) => bindPointerTilt(card, card, 3.5));
+}
+
+// Sliding nav underline. One rail, positioned from the active button's box
+// instead of six underlines blinking on and off. Measured only on view
+// switch, gate change and a debounced resize — never inside the 5s
+// live-price loop.
+function positionNavRail() {
+  const rail = document.querySelector(".desktop-nav-links");
+  if (!rail) {
+    return;
+  }
+
+  const active = rail.querySelector(".nav-btn.is-active");
+  // offsetParent is null while the nav is display:none (logged out) — the
+  // measurement would be zeros, so hide the rail instead of parking it at 0.
+  if (!active || !active.offsetParent) {
+    rail.style.setProperty("--nav-rail-o", "0");
+    return;
+  }
+
+  rail.style.setProperty("--nav-rail-x", `${active.offsetLeft}px`);
+  rail.style.setProperty("--nav-rail-w", `${active.offsetWidth}px`);
+  rail.style.setProperty("--nav-rail-o", "1");
 }
 
 // Landing parallax: one passive scroll listener writing a single custom

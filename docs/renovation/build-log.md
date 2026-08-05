@@ -220,3 +220,48 @@ The logged-out shell became a scrolling sales page built around the real feed. B
 **`drawLandingAtmos` restyled** to Phase A's language: `traceSmoothPath` instead of raw `lineTo`, a 3-stop area gradient and a two-pass glow stroke with a lit head marker, all reading `--chart-*` tokens.
 
 **Verified.** `node --check` on app.js, charts.js, recentTradesView.js; `tests/charts.smoke.mjs` (12,206 ops) green; `php -l trade_handler.php`; balanced braces and zero unresolved `var()` in styles.css (`--i` / `--day-intensity` come from inline styles); HTML tag balance parsed clean; served markup and CSS greped for the new markers. Contrast checked by script for every new colour pairing including the composited aurora peaks. Cache buster → `20260805-landing3d`.
+
+## Phase C — Dashboard: depth, tilt, choreography
+
+The bento stopped being flat cards on a flat page. Three layers were added on
+top of Phase A's chart engine, without moving a single node.
+
+**Surfaces.** `.panel`, `.metric-card`, `.dashboard-empty`, `.dash-risk` and
+`.dash-rail` now paint a 178deg two-stop plane (`--deck-top` → `--deck-bottom`)
+with an inset top highlight and a real drop shadow (`--deck-shadow`). The two
+tall deck cards get an accent radial wash at their top edge. The balance hero
+gained a left bloom in the day's P&L colour whose opacity rides the existing
+`--pl-intensity` scalar, and its numeral carries a tone-matched text glow.
+`.metric-card:not(.dash-rail-item)` is a load-bearing exclusion — the rail's
+inset hairline separators (and their nth-child rewrites in the responsive
+blocks) would be clobbered by a later box-shadow.
+
+**3D.** `.dash-deck` / `.dash-quad` are perspective containers; the six
+`[data-tilt]` cards (hero, risk meters, four quad cards) rotate up to 3.5deg
+toward the pointer and carry a specular that follows it. `setupHeroTilt` was
+refactored into a shared `bindPointerTilt(stage, panel, maxTilt)` that both the
+landing terminal (5deg) and the deck (3.5deg) use — it writes `--tilt-x/-y`,
+`--px/--py`, `--sheen` and nothing else. Binding is refused under reduced
+motion, and every handler is gated on `pointerType === "mouse"` plus
+`(hover: hover) and (pointer: fine) and (min-width: 980px)`. The matching CSS
+drops `perspective` and the specular entirely below 980px / on coarse pointers.
+`isolation: isolate` + a `z-index: -1` pseudo keeps the sheen on the surface and
+under every numeral without touching a child's position — `.dash-spark-wrap`
+keeps its own absolute layout.
+
+**Motion.** `dashReveal` is now rise + scale + fade on a `--stagger-dash` tier
+ladder (deck 760ms, quad 520ms, rail 700ms). Risk meters fill from zero via a
+`scaleX` keyframe, so JS keeps writing `width` and the animation works at any
+data value. Delta chips, the today chip and the override note pop in on the
+`[hidden]` → visible transition. `tickUp`/`tickDown` keep their names (app.js
+matches them on `animationend`) but gained a ring and a glow. Open positions
+carry a pulsing status dot. The command bar got gradient press-depth buttons and
+the ticker strip became a lit plane with an accent edge and a hover lift. The
+desktop nav's six blinking underlines became one rail that slides between items,
+positioned by `positionNavRail()` from the active button's box — called on view
+switch, gate change and the existing debounced resize, never in the 5s live
+loop.
+
+Verified: `node --check` on app.js, `node tests/charts.smoke.mjs` green, CSS
+braces balanced, served output greps for `deck3d` + `PHASE C` + six `data-tilt`
+hooks. Cache busters bumped to `v=20260805-deck3d`.
