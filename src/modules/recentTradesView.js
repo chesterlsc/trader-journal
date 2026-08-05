@@ -1,5 +1,20 @@
 import { ensureNumber, ensurePositiveNumber, escapeHtml, sortTradesDesc } from "../lib/core.js";
 
+/* 1d landing — the live tape.
+   One row per CLOSED trade, no sections, no Show/Hide. The public feed is
+   whitelisted server-side to symbol / direction / status / result / date
+   (trade_handler.php `public_recent_trades`), so a row can only ever print
+   what is in that whitelist — no prices, sizes, R-multiples or P&L. The
+   mockup's "+2.4R" column is therefore not rendered: it cannot be produced
+   truthfully for a logged-out visitor.
+
+   Depth as data (clay-v2 §5): a winning row is RAISED, a losing row is
+   SUNK. Colour and the result word carry the same state so depth is never
+   the only signal (WCAG 1.4.1). */
+
+const TAPE_ROW_LIMIT = 7;
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
 export function createRecentTradesView(deps) {
   const {
     state,
@@ -7,8 +22,6 @@ export function createRecentTradesView(deps) {
     canAccessApp,
     switchView,
     setAuthIntent,
-    syncLandingExpandedLayout,
-    isMobileViewport,
     formatCompactTradeDate,
     sortRecentTradeRowsDesc
   } = deps;
@@ -18,62 +31,46 @@ export function createRecentTradesView(deps) {
       return;
     }
 
-    const trades = getRecentTradesSource();
-    if (!trades.length) {
-      ui.recentTradesList.innerHTML = '<p class="recent-trade-empty">No trades yet.</p>';
-      if (ui.landingScrollHint) {
-        ui.landingScrollHint.style.display = "none";
-      }
-      syncLandingExpandedLayout();
+    // Demo, local preview and an authenticated session all read the tape off
+    // the journal in this browser, not the public feed — the caption has to
+    // say which, or the landing claims someone else's rows as public ones.
+    const isOwnJournal = canAccessApp();
+    const closedTrades = getRecentTradesSource().filter((trade) => trade.status !== "open");
+
+    ui.recentTradesList.innerHTML = closedTrades.length
+      ? closedTrades.slice(0, TAPE_ROW_LIMIT).map(renderTapeRow).join("")
+      : `<p class="lnd-tape-empty">${
+          isOwnJournal ? "No closed trades in this journal yet." : "No closed trades on the public feed yet."
+        }</p>`;
+
+    if (ui.lndTapeNote) {
+      ui.lndTapeNote.textContent = isOwnJournal
+        ? "Raised rows made money. Sunk rows lost it. These are closed trades from the journal open in this browser."
+        : "Raised rows made money. Sunk rows lost it. Nothing here is a mock-up — it is the public feed, one row per closed trade.";
+    }
+
+    renderTapeWeekCount(closedTrades);
+  }
+
+  // The mockup's "1,284 trades journalled this week" has no backend counter
+  // behind it. This counts the rows actually on the tape — nothing else — and
+  // says so in the label. Hidden at zero rather than printing "0".
+  function renderTapeWeekCount(closedTrades) {
+    if (!ui.lndTapeCount || !ui.lndTapeCountText) {
       return;
     }
 
-    const closedTrades = trades.filter((trade) => trade.status !== "open").slice(0, 10);
-    const openTrades = trades.filter((trade) => trade.status === "open").slice(0, 10);
+    const cutoff = Date.now() - WEEK_MS;
+    const count = closedTrades.filter((trade) => {
+      const stamp = Date.parse(trade.closedAt || trade.date || "");
+      return Number.isFinite(stamp) && stamp >= cutoff;
+    }).length;
 
-    ui.recentTradesList.innerHTML = [
-      renderTradeFeedSection({
-        key: "open",
-        title: "Open Positions",
-        trades: openTrades,
-        emptyLabel: "No in progress trades yet.",
-        sectionOrder: 0,
-        showLiveTag: true
-      }),
-      renderTradeFeedSection({
-        key: "closed",
-        title: "Closed Trades",
-        trades: closedTrades,
-        emptyLabel: "No closed trades yet.",
-        sectionOrder: 1
-      })
-    ].join("");
-
-    if (ui.landingScrollHint) {
-      const hasHiddenMobileContent = isMobileViewport() && closedTrades.length > 0;
-      ui.landingScrollHint.style.display = hasHiddenMobileContent ? "" : "none";
-      ui.landingScrollHint.classList.toggle("is-open", ui.recentTradesList.classList.contains("is-preview-expanded"));
-      const labelNode = ui.landingScrollHint.querySelector(".landing-scroll-hint-label");
-      if (labelNode) {
-        labelNode.textContent = ui.recentTradesList.classList.contains("is-preview-expanded") ? "Hide trades" : "View trades";
-      }
-    }
-
-    syncLandingExpandedLayout();
+    ui.lndTapeCount.hidden = count === 0;
+    ui.lndTapeCountText.textContent = `${count} ${count === 1 ? "trade" : "trades"} on the tape this week`;
   }
 
   function handleRecentTradesClick(event) {
-    const toggle = event.target.closest("[data-trade-feed-toggle]");
-    if (toggle) {
-      const key = String(toggle.dataset.tradeFeedToggle || "");
-      if (key === "closed" || key === "open") {
-        const stateKey = key === "closed" ? "closedExpanded" : "openExpanded";
-        state.landingFeed[stateKey] = !state.landingFeed[stateKey];
-        renderHeroRecentTrades();
-      }
-      return;
-    }
-
     const row = event.target.closest("[data-trade-id]");
     if (!row) {
       return;
@@ -99,58 +96,29 @@ export function createRecentTradesView(deps) {
     return canAccessApp() && Array.isArray(state.recentTrades) ? [...state.recentTrades].sort(sortTradesDesc) : [];
   }
 
-  function renderTradeFeedSection({ key, title, trades, emptyLabel, sectionOrder = 0, showLiveTag = false }) {
-    const expanded = key === "closed" ? state.landingFeed.closedExpanded : state.landingFeed.openExpanded;
-    const firstTrade = trades[0];
-    const remainingTrades = trades.slice(1, 10);
-    const canExpand = remainingTrades.length > 0;
-
-    return `
-      <section class="recent-trades-card recent-trades-card-${escapeHtml(key)}" aria-label="${escapeHtml(title)}" style="--trade-section-order:${Number(sectionOrder)};">
-        <div class="recent-trades-header">
-          <p class="recent-trades-label">${escapeHtml(title)}</p>
-          <div class="recent-trades-header-actions">
-            ${showLiveTag ? '<span class="recent-trades-live-tag">Live Feed &middot; Delayed</span>' : ""}
-            ${canExpand ? `<button class="recent-trades-toggle" type="button" data-trade-feed-toggle="${escapeHtml(key)}">${expanded ? "Hide Trades" : "Show Trades"}</button>` : ""}
-          </div>
-        </div>
-        <div class="recent-trades-list">
-          ${firstTrade ? renderTradeTapeRow(firstTrade, 0) : `<p class="recent-trade-empty">${escapeHtml(emptyLabel)}</p>`}
-        </div>
-        ${expanded && remainingTrades.length ? `<div class="recent-trades-list recent-trades-list-expanded">${remainingTrades.map((trade, index) => renderTradeTapeRow(trade, index + 1)).join("")}</div>` : ""}
-      </section>
-    `;
-  }
-
   // Result comes from the whitelisted public feed (win/loss/flat) or, for an
   // authenticated preview of own trades, from the stored netPnl sign.
-  function renderTradeResultBadge(trade) {
-    if (trade.status === "open") {
-      return '<span class="recent-trade-status recent-trade-status-open"><span class="live-pulse-dot" aria-hidden="true"></span>Open</span>';
-    }
-
+  function getTradeOutcome(trade) {
     const result = String(trade.result || "").toLowerCase();
-    if (result === "win" || (result !== "loss" && ensureNumber(trade.netPnl, 0) > 0)) {
-      return '<span class="recent-trade-status recent-trade-status-positive">Win</span>';
+    if (result === "win" || (result !== "loss" && result !== "flat" && ensureNumber(trade.netPnl, 0) > 0)) {
+      return { key: "win", label: "Win" };
     }
-
     if (result === "loss" || ensureNumber(trade.netPnl, 0) < 0) {
-      return '<span class="recent-trade-status recent-trade-status-negative">Loss</span>';
+      return { key: "loss", label: "Loss" };
     }
-
-    return '<span class="recent-trade-status recent-trade-status-flat">Flat</span>';
+    return { key: "flat", label: "Flat" };
   }
 
-  // Terminal tape row: symbol | direction | result | date. The public feed is
-  // whitelisted to those fields — no prices or P&L leave the server.
-  function renderTradeTapeRow(trade, cardOrder = 0) {
+  function renderTapeRow(trade, order = 0) {
     const isSell = String(trade.direction || "").toLowerCase() === "sell";
+    const outcome = getTradeOutcome(trade);
+    const meta = `${isSell ? "Short" : "Long"} · ${formatCompactTradeDate(trade)}`;
+
     return `
-      <button class="recent-trade-row" type="button" data-trade-id="${escapeHtml(String(trade.id || ""))}" style="--trade-row-order:${Number(cardOrder)};">
-        <span class="recent-trade-symbol">${escapeHtml(trade.asset)}</span>
-        <span class="recent-trade-direction ${isSell ? "recent-trade-direction-sell" : "recent-trade-direction-buy"}">${isSell ? "Short" : "Long"}</span>
-        ${renderTradeResultBadge(trade)}
-        <span class="recent-trade-time">${escapeHtml(formatCompactTradeDate(trade))}</span>
+      <button class="lnd-row is-${outcome.key}" type="button" data-trade-id="${escapeHtml(String(trade.id || ""))}" style="--row-order:${Number(order)};">
+        <span class="lnd-row-symbol">${escapeHtml(trade.asset)}</span>
+        <span class="lnd-row-meta">${escapeHtml(meta)}</span>
+        <span class="lnd-row-result">${outcome.label}</span>
       </button>
     `;
   }

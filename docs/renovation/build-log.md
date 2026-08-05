@@ -625,3 +625,42 @@ now opens the More-filters disclosure so the applied range is visible.
 
 New: `state.filters.quick` + `state.filters.session` (the Result `<select>` was
 deleted and folded into the chips). New check: `tests/reviewFilters.check.mjs`.
+
+## Phase 1d — Landing
+
+The logged-out shell is replaced end to end: top bar (TJ mark + Trader Journal,
+Log in, Start free) → hero → "What you get back" → closing CTA. Deleted with it:
+the aurora/grid-floor/scanline atmosphere, the `#landingAtmos` equity canvas and
+its 132-line renderer, the landing parallax rAF, the hero-terminal 3D tilt, the
+proof strip, the fake dashboard showcase (1f says the live tape does that job
+honestly), the how-it-works rail, the feature triptych and the capability
+ledger. ~1,380 lines of landing CSS replaced by ~640; 57 dead selectors stripped
+from the rest of styles.css. `setupHeroTilt` / `setupLandingAtmos` /
+`setupLandingParallax` / `drawLandingAtmos` / `toggleLandingTradePreview` /
+`syncLandingExpandedLayout` and `state.landingFeed` all deleted.
+
+**The tape.** Rewritten to one row per CLOSED trade (7 max), no Open/Closed
+sections, no Show/Hide. Depth as data: a winning row is raised, a losing row is
+sunk — and the WIN/LOSS/FLAT word plus its money colour ship with it, so depth
+is never the only signal.
+
+**Honesty.** (1) The mockup's "1,284 trades journalled this week" has no
+backend; the badge counts the rows actually on the tape inside a real 7-day
+window and hides itself at zero. (2) The mockup's `+2.4R` tape column is not
+rendered — the public feed is whitelisted server-side to symbol/direction/
+result/date, so R cannot be produced truthfully. (3) "delayed 2s" became
+"delayed": the feed loads once, there is no 2s figure to claim. (4) The
+Expectancy-by-setup panel is labelled Example in the tag, the accessible name
+and a footnote — a logged-out visitor has no journal to draw it from. (5) The
+tape caption re-stamps itself when the rows come from a demo/preview journal
+instead of the public feed.
+
+The hero email field is real: it is handed to the auth panel's identifier input
+(username OR email) and focus moves to the password. Auth modal, reset flow,
+guest/demo entry (`[data-start-demo]`, two entry points) and the dev preview
+chip all still work. AA verified for all 13 new text/background pairs in both
+themes — the pill tints and the Example tag had to come off `--pnl-*-soft` /
+`--warn-soft`, and `--text-soft`/`--text-faint` are darkened one step inside the
+shell (light only) because the page ground measured 4.3:1.
+
+New check: `tests/landingTape.check.mjs`.

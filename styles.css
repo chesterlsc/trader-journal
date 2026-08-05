@@ -238,7 +238,6 @@
   --space-20: 80px;
   --space-24: 96px;
   --stagger-reveal: 70ms;
-  --landing-scroll: 0;            /* px, written by the parallax rAF */
 
   --aurora-a: rgba(91, 141, 239, 0.32);
   --aurora-b: rgba(47, 209, 140, 0.17);
@@ -563,64 +562,6 @@ body.is-guest:not(.demo-signup) .auth-shell {
   justify-content: center;
 }
 
-.auth-shell.is-trades-expanded {
-  justify-content: flex-start;
-}
-
-.auth-shell-topbar {
-  position: relative;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  margin-bottom: 10px;
-  padding: 10px 0 8px;
-  background: transparent;
-  backdrop-filter: none;
-}
-
-.auth-shell-brand {
-  display: grid;
-  gap: 4px;
-  justify-items: center;
-  text-align: center;
-}
-
-.auth-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-  justify-items: center;
-  width: 100%;
-  max-width: 980px;
-  margin: auto;
-}
-
-.auth-shell.is-trades-expanded .auth-hero {
-  margin: 0 auto;
-}
-
-.auth-hero-copy {
-  padding: 0;
-  animation: fadeUp var(--dur-slow) var(--ease-out);
-  width: 100%;
-  max-width: 860px;
-  text-align: center;
-}
-
-.hero-preheadline {
-  margin: 0 0 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-soft);
-  font: 600 var(--fs-micro)/1.3 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 /* live-pulse (graft): the only infinite animation in the product; the global
    reduced-motion block freezes it into a static dot. */
 .live-pulse-dot {
@@ -643,235 +584,15 @@ body.is-guest:not(.demo-signup) .auth-shell {
   }
 }
 
-.auth-hero-copy h2 {
-  margin: 0;
-  max-width: 920px;
-  font: 700 var(--fs-hero)/1.12 var(--font-ui);
-  letter-spacing: -0.015em;
-}
-
-.hero-line {
-  display: block;
-}
-
-.auth-hero-text {
-  max-width: 620px;
-  margin: 10px auto 0;
-  color: var(--text-soft);
-  font-size: 1rem;
-  line-height: 1.56;
-  letter-spacing: 0.012em;
-}
-
-.hero-cta-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(180px, 220px));
-  gap: 10px;
-  margin-top: 14px;
-  justify-content: center;
-}
-
 /* Hero CTAs: the primary button is the single accent use above the fold;
    the secondary stays a hairline .btn. */
-.hero-cta-btn {
-  width: 100%;
-  min-width: 0;
-  padding-inline: 18px;
-  min-height: 48px;
-}
-
-
-.recent-trades-board {
-  width: 100%;
-  max-width: 1120px;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-  margin: 8px auto 0;
-  animation: fadeUp var(--dur-slow) var(--ease-out);
-  justify-items: center;
-}
-
-.recent-trades-card {
-  width: 100%;
-  display: grid;
-  gap: 10px;
-  padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface-1);
-  box-shadow: var(--edge-highlight);
-}
-
-.recent-trades-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.recent-trades-header-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-left: auto;
-}
-
-.recent-trades-label {
-  margin: 0;
-  color: var(--text-faint);
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
 
 /* Honest feed tag — replaces the unbacked "Verified" pill. */
-.recent-trades-live-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 7px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
-  color: var(--text-soft);
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.recent-trades-toggle {
-  appearance: none;
-  border: 1px solid var(--line-strong);
-  background: var(--surface-2);
-  color: var(--text-soft);
-  border-radius: var(--radius-sm);
-  padding: 5px 9px;
-  cursor: pointer;
-  font: 600 var(--fs-micro)/1 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  transition: border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
-}
-
-.recent-trades-toggle:hover {
-  border-color: var(--accent);
-  color: var(--text);
-}
 
 /* Terminal tape: hairline-separated rows inside one bordered track. */
-.recent-trades-list {
-  display: grid;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-
-.recent-trade-row {
-  width: 100%;
-  appearance: none;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  border-radius: 0;
-  background: var(--surface-1);
-  color: var(--text);
-  font: 500 var(--fs-data)/1.3 var(--font-mono);
-  text-align: left;
-  cursor: pointer;
-  transition: background-color var(--dur-fast) var(--ease-out);
-}
-
-.recent-trade-row:last-child {
-  border-bottom: 0;
-}
-
-.recent-trade-row:hover {
-  background: var(--surface-3);
-}
-
-.recent-trade-symbol {
-  font: 600 var(--fs-data)/1.2 var(--font-mono);
-  letter-spacing: 0.02em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 /* Direction tag — Long/Short is money-adjacent, so it may wear P&L color
    (shared with the in-progress cards on the journal action bar). */
-.recent-trade-direction {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 7px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line-strong);
-  font: 600 var(--fs-micro)/1 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.recent-trade-direction-buy {
-  color: var(--pnl-pos);
-  background: var(--pnl-pos-soft);
-  border-color: var(--pnl-pos-line);
-}
-
-.recent-trade-direction-sell {
-  color: var(--pnl-neg);
-  background: var(--pnl-neg-soft);
-  border-color: var(--pnl-neg-line);
-}
-
-.recent-trade-time {
-  color: var(--text-faint);
-  font: 500 var(--fs-micro)/1.35 var(--font-mono);
-}
-
-.recent-trade-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 20px;
-  padding: 3px 7px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
-  color: var(--text-soft);
-  font: 600 var(--fs-micro)/1 var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.recent-trade-status-positive {
-  color: var(--pnl-pos);
-  background: var(--pnl-pos-soft);
-  border-color: var(--pnl-pos-line);
-}
-
-.recent-trade-status-negative {
-  color: var(--pnl-neg);
-  background: var(--pnl-neg-soft);
-  border-color: var(--pnl-neg-line);
-}
-
-.recent-trade-status-open,
-.recent-trade-status-flat {
-  color: var(--text-soft);
-  background: var(--surface-2);
-}
-
-.recent-trade-empty {
-  margin: 0;
-  padding: 14px;
-  background: var(--surface-inset);
-  color: var(--text-soft);
-  font: 500 var(--fs-label)/1.4 var(--font-mono);
-}
 
 /* Modal treatment (§4): flat dim overlay (no blur), panel fades and settles
    from scale(0.98). The public trades board keeps ticking underneath. */
@@ -945,14 +666,6 @@ body.is-guest:not(.demo-signup) .auth-shell {
   display: block;
 }
 
-.brand-kicker {
-  margin: 0;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.13em;
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-}
-
 .brand-mark {
   margin: 6px 0 0;
   display: inline-flex;
@@ -970,29 +683,10 @@ body.is-guest:not(.demo-signup) .auth-shell {
   color: var(--text);
 }
 
-.auth-shell-brand .brand-mark {
-  font-size: clamp(1.7rem, 2.6vw, 2.25rem);
-  gap: 0.04rem;
-}
-
-.brand-support {
-  margin: 0;
-  color: var(--text-soft);
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 h1 {
   margin: 10px 0 8px;
   font-size: 1.6rem;
   line-height: 1.1;
-}
-
-.brand-copy {
-  margin: 0;
-  color: var(--text-soft);
-  font-size: 0.92rem;
 }
 
 .nav-toggle {
@@ -1143,36 +837,6 @@ h1 {
   line-height: 1.42;
 }
 
-.landing-scroll-hint {
-  display: none;
-  margin: 0 auto;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text-soft);
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  text-align: center;
-  cursor: pointer;
-}
-
-.landing-scroll-hint-label {
-  display: block;
-}
-
-.landing-scroll-hint-arrow {
-  display: block;
-  margin-top: 2px;
-  color: var(--text);
-  font: 700 1.7rem/1 var(--font-ui);
-  transition: transform var(--dur-fast) var(--ease-out);
-}
-
-.landing-scroll-hint.is-open .landing-scroll-hint-arrow {
-  transform: rotate(180deg);
-}
-
 #resetPasswordView {
   display: none;
   gap: 12px;
@@ -1232,19 +896,9 @@ body.is-authenticated .auth-panel {
   display: none !important;
 }
 
-
-
-
-
-
-
-
-
-
 .brand-block .brand-mark {
   font-size: 1.48rem;
 }
-
 
 .nav-logout-mobile {
   width: 100%;
@@ -1956,26 +1610,6 @@ textarea.is-invalid {
   gap: 8px;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .journal-action-icon {
   display: inline-flex;
   width: 16px;
@@ -2611,20 +2245,6 @@ body.is-guest:not(.demo-signup) .trust-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .auth-hero {
-    grid-template-columns: minmax(0, 1fr);
-    min-height: auto;
-  }
-
-  .auth-hero-copy {
-    padding: 0;
-    text-align: center;
-  }
-
-  .auth-hero-text {
-    margin-left: auto;
-    margin-right: auto;
-  }
 }
 
 @media (max-width: 1024px) {
@@ -2650,33 +2270,6 @@ body.is-guest:not(.demo-signup) .trust-row {
     border-radius: 0;
   }
 
-  .auth-shell-topbar {
-    justify-content: center;
-    margin-bottom: 10px;
-  }
-
-  .auth-hero-copy h2 {
-    font-size: clamp(2.2rem, 8vw, 3.7rem);
-    line-height: 0.93;
-  }
-
-  .auth-hero {
-    grid-template-columns: 1fr;
-    gap: 14px;
-    min-height: auto;
-  }
-
-  .auth-hero-copy {
-    max-width: none;
-    padding: 0;
-    text-align: center;
-  }
-
-  .recent-trades-card {
-    max-width: none;
-    padding: 12px;
-  }
-
   .trust-row {
     width: min(100%, calc(100vw - 12px));
   }
@@ -2686,7 +2279,6 @@ body.is-guest:not(.demo-signup) .trust-row {
     width: min(100%, calc(100vw - 12px));
     margin: 8px auto 18px;
   }
-
 
   .sidebar {
     min-height: auto;
@@ -2957,17 +2549,8 @@ body.is-guest:not(.demo-signup) .trust-row {
     grid-column: auto;
   }
 
-  .brand-kicker {
-    font-size: 10px;
-  }
-
   h1 {
     font-size: 1.25rem;
-  }
-
-  .auth-shell-brand .brand-mark {
-    font-size: 1.65rem;
-    gap: 0.28rem;
   }
 
   .brand-block .brand-mark {
@@ -2975,20 +2558,10 @@ body.is-guest:not(.demo-signup) .trust-row {
     gap: 0.2rem;
   }
 
-  .brand-copy {
-    display: none;
-  }
-
   .nav-btn,
   .nav-logout-mobile {
     width: 100%;
     text-align: center;
-  }
-
-  .auth-shell-topbar {
-    align-items: center;
-    justify-content: center;
-    padding-bottom: 4px;
   }
 
   .auth-shell {
@@ -2999,129 +2572,6 @@ body.is-guest:not(.demo-signup) .trust-row {
     flex-direction: column;
     justify-content: center;
   }
-
-  .auth-hero {
-    gap: 6px;
-    margin: auto;
-  }
-
-  .auth-hero-copy {
-    padding: 0;
-    text-align: center;
-  }
-
-  .auth-hero-copy h2 {
-    font-size: clamp(1.4rem, 6.6vw, 2rem);
-    line-height: 1.08;
-    letter-spacing: -0.01em;
-  }
-
-  .hero-preheadline {
-    display: none;
-  }
-
-  .auth-hero-text {
-    margin-top: 6px;
-    font-size: 0.86rem;
-    line-height: 1.52;
-    letter-spacing: 0.01em;
-  }
-
-  .hero-cta-row {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 14px;
-  }
-
-  .hero-cta-btn {
-    width: 100%;
-    min-width: 0;
-    padding-inline: 10px;
-  }
-
-  #heroLoginBtn {
-    order: 1;
-  }
-
-  #heroRegisterBtn {
-    order: 2;
-  }
-
-
-  .auth-shell-brand {
-    width: 100%;
-    justify-items: center;
-    text-align: center;
-  }
-
-  .recent-trades-board {
-    grid-template-columns: 1fr;
-    gap: 8px;
-    margin-top: 8px;
-    max-height: none;
-    overflow: visible;
-    position: relative;
-  }
-
-  .recent-trades-board:not(.is-preview-expanded) .recent-trades-card-closed {
-    display: none;
-  }
-
-  .recent-trades-board:not(.is-preview-expanded) .recent-trades-card-open .recent-trades-toggle {
-    display: none;
-  }
-
-  .recent-trades-board.is-preview-expanded {
-    max-height: none;
-    overflow: visible;
-  }
-
-  .recent-trades-board::after {
-    display: none;
-  }
-
-  .recent-trades-board.is-preview-expanded::after {
-    display: none;
-  }
-
-  .recent-trades-card {
-    margin-top: 0;
-    padding: 12px 10px;
-  }
-
-  .recent-trades-header {
-    align-items: flex-start;
-  }
-
-  .recent-trades-header-actions {
-    width: 100%;
-    justify-content: space-between;
-    margin-left: 0;
-  }
-
-  .recent-trade-row {
-    gap: 8px;
-    padding: 9px 10px;
-  }
-
-  .landing-scroll-hint {
-    display: block;
-    margin-top: 6px;
-    font-size: 10px;
-  }
-
-
-
-
-
-
-
-
-
-
-
-
 
   body:not(.auth-ready):not(.is-authenticated) .auth-panel,
   body:not(.auth-ready):not(.is-authenticated) #resetPasswordView {
@@ -3650,7 +3100,6 @@ th[aria-sort] {
   transform: none;
 }
 
-
 .view-kicker {
   margin: 0 0 6px;
   color: var(--text-faint);
@@ -3658,7 +3107,6 @@ th[aria-sort] {
   letter-spacing: 0.13em;
   font: 600 var(--fs-micro)/1.2 var(--font-mono);
 }
-
 
 .view-head-support {
   margin: 0;
@@ -3955,7 +3403,6 @@ th[aria-sort] {
 
 @media (max-width: 720px) {
 
-
   .dash-hero {
     min-height: 172px;
     padding: var(--space-4) var(--space-4) 0;
@@ -4042,12 +3489,6 @@ th[aria-sort] {
   margin-top: var(--space-1);
 }
 
-
-
-
-
-
-
 @media (max-width: 1180px) {
   .dash-risk {
     min-height: 0;
@@ -4055,14 +3496,17 @@ th[aria-sort] {
 }
 
 /* ==========================================================================
-   LANDING — Live Terminal Poster (Phase B)
-   The logged-out shell is a scrolling sales narrative:
-     atmosphere → hero (claim 7 : live terminal 5) → proof strip →
-     dashboard showcase → how it works → feature triptych → capability
-     ledger → closing CTA.
-   The auth panel and overlay stay position:fixed, so the modal still opens
-   over everything and the tape keeps ticking behind it. Every id and
-   [data-*] the JS queries is untouched — only wrappers were added.
+   LANDING (design-source/1d) — the tape is the pitch
+   The logged-out shell is four bands stacked in one column:
+     top bar → hero (claim + the real public tape + three facts) →
+     what you get back → closing CTA.
+   Everything is Clay V2: warm bone ground, violet accent, large radii, and
+   the depth rule carried into the tape (raised row = the trade made money,
+   sunk row = it lost). Colour and the result word carry the same state, so
+   depth is never the only signal (WCAG 1.4.1).
+
+   The auth panel and overlay stay position:fixed (defined far above), so the
+   modal still opens over everything and the tape stays behind it.
    ========================================================================== */
 
 .visually-hidden {
@@ -4077,1068 +3521,673 @@ th[aria-sort] {
   border: 0;
 }
 
-/* The page dot-grid steps back on the landing so the aurora + grid floor
-   below own the atmosphere. */
+/* The page dot-grid steps back: the landing is clay on bone now, and a grid
+   showing through the shadows kills the moulded read. */
 body:not(.is-authenticated):not(.is-preview):not(.is-guest)::before,
 body.demo-signup::before {
-  opacity: 0.26;
+  opacity: 0.22;
+}
+
+/* --text-soft and --text-faint were tuned against --surface-1 and
+   --surface-inset. The landing's body copy sits on --surface-0 (the page
+   ground), where both measure ~4.3:1 — under the 4.5:1 floor. One darker step
+   of the same warm hue, scoped to the shell, takes it to 4.9:1 on the ground
+   and 6.0:1 on the cards. Light only: dark already measures 7.3:1. */
+[data-theme="light"] .auth-shell {
+  --text-soft: #635a51;
+  --text-faint: #635a51;
 }
 
 .auth-shell {
+  width: min(1200px, 94vw);
   justify-content: flex-start;
-  gap: var(--space-20);
-  padding-bottom: var(--space-16);
-  isolation: isolate;
-}
-
-.auth-shell.is-trades-expanded {
-  justify-content: flex-start;
-}
-
-/* --- Atmosphere ---------------------------------------------------------- */
-/* Anchored to the TOP of the shell, not the viewport, and masked out before
-   the proof strip. That is a contrast requirement, not a taste call: the wash
-   composites over the page surface, and --text-faint / --landing-kicker sit
-   exactly on the AA floor there. Above the fold the only text over the wash
-   is --text (huge) and --text-soft, both of which stay >= 4.5:1 at the peak
-   alpha in either theme; everything below the fold reads on clean surface.
-   Radial gradients only — no filter: blur — so mobile Safari keeps the whole
-   layer on the compositor. All motion is transform/opacity. */
-.landing-atmosphere {
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: min(900px, 112vh);
-  z-index: -1;
-  overflow: hidden;
-  pointer-events: none;
-  contain: layout paint;
-  -webkit-mask-image: linear-gradient(to bottom, #000 46%, rgba(0, 0, 0, 0.4) 68%, transparent 84%);
-  mask-image: linear-gradient(to bottom, #000 46%, rgba(0, 0, 0, 0.4) 68%, transparent 84%);
-}
-
-.landing-aurora {
-  position: absolute;
-  display: block;
-  border-radius: 50%;
-}
-
-.landing-aurora-a {
-  top: -28%;
-  left: -16%;
-  width: 66%;
-  height: 96%;
-  background: radial-gradient(closest-side, var(--aurora-a), var(--aurora-fade) 72%);
-  animation: auroraDriftA 26s var(--ease-in-out) infinite alternate;
-}
-
-.landing-aurora-b {
-  top: -18%;
-  right: -20%;
-  width: 62%;
-  height: 92%;
-  background: radial-gradient(closest-side, var(--aurora-b), var(--aurora-fade) 72%);
-  animation: auroraDriftB 32s var(--ease-in-out) infinite alternate;
-}
-
-.landing-aurora-c {
-  top: 22%;
-  left: 8%;
-  width: 76%;
-  height: 84%;
-  background: radial-gradient(closest-side, var(--aurora-c), var(--aurora-fade) 70%);
-  animation: auroraDriftC 38s var(--ease-in-out) infinite alternate;
-}
-
-@keyframes auroraDriftA {
-  from { transform: translate3d(0, 0, 0) scale(1); }
-  to { transform: translate3d(9%, 8%, 0) scale(1.14); }
-}
-
-@keyframes auroraDriftB {
-  from { transform: translate3d(0, 0, 0) scale(1.08); }
-  to { transform: translate3d(-11%, 12%, 0) scale(0.94); }
-}
-
-@keyframes auroraDriftC {
-  from { transform: translate3d(0, 0, 0) scale(0.96); }
-  to { transform: translate3d(-8%, -10%, 0) scale(1.12); }
-}
-
-/* Perspective grid floor — the trading-terminal horizon. Parallaxes on
-   --landing-scroll (a plain number written by the rAF in app.js), so the
-   only per-scroll work is one custom-property write and a composite. */
-.landing-grid-floor {
-  position: absolute;
-  inset: auto -30% -6% -30%;
-  height: 56%;
-  background-image:
-    linear-gradient(to right, var(--landing-grid-line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--landing-grid-line) 1px, transparent 1px);
-  background-size: 72px 72px;
-  transform-origin: 50% 100%;
-  transform: perspective(460px) rotateX(66deg) translateY(calc(var(--landing-scroll, 0) * -0.09px));
-  -webkit-mask-image: linear-gradient(to top, #000, rgba(0, 0, 0, 0.35) 42%, transparent 82%);
-  mask-image: linear-gradient(to top, #000, rgba(0, 0, 0, 0.35) 42%, transparent 82%);
-  opacity: 0.7;
-}
-
-/* A single slow light band crossing the field — transform-only, 18s. */
-.landing-scanline {
-  position: absolute;
-  inset: -46% -20% auto -20%;
-  height: 42%;
-  background: linear-gradient(180deg, var(--aurora-fade), var(--halo-accent), var(--aurora-fade));
-  opacity: 0.16;
-  animation: scanDrift 18s linear infinite;
-}
-
-@keyframes scanDrift {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(0, 350%, 0); }
+  gap: var(--space-16);
+  padding: 0 0 var(--space-16);
 }
 
 /* --- Top bar ------------------------------------------------------------- */
-.auth-shell-topbar {
-  position: relative;
-  padding-top: var(--space-6);
+.lnd-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding: var(--space-5) 0 0;
+}
+
+.lnd-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lnd-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 100%);
+  color: var(--text-inverse);
+  font: 700 15px/1 var(--font-ui);
+  letter-spacing: 0.01em;
+  box-shadow: var(--clay-accent);
+}
+
+.lnd-brand-name {
+  font: 700 19px/1 var(--font-ui);
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.lnd-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* --- Buttons ------------------------------------------------------------- */
+.lnd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  font: 600 13.5px/1 var(--font-ui);
+  cursor: pointer;
+  transition: transform var(--dur-squish) var(--ease-squish),
+    box-shadow var(--dur-squish) var(--ease-squish);
+}
+
+.lnd-btn-quiet {
+  background: var(--surface-1);
+  color: var(--text);
+  box-shadow: var(--clay-raised);
+}
+
+.lnd-btn-accent {
+  min-height: 56px;
+  padding: 0 28px;
+  background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 100%);
+  color: var(--text-inverse);
+  font: 700 15px/1 var(--font-ui);
+  box-shadow: var(--clay-accent);
+}
+
+.lnd-btn-lg {
+  min-height: 62px;
+  padding: 0 34px;
+  font-size: 17px;
+}
+
+.lnd-btn:active {
+  transform: translateY(2px) scale(0.99);
+  box-shadow: var(--clay-pressed);
+}
+
+.lnd-btn-accent:active {
+  background: var(--accent-strong);
+  box-shadow: var(--clay-pressed);
+}
+
+/* The clay stacks out-specify the global button:focus-visible ring, so it is
+   restated here together with the elevation it must not delete. */
+.lnd-btn-quiet:focus-visible {
+  box-shadow: var(--focus-ring), var(--clay-raised);
+}
+
+.lnd-btn-accent:focus-visible {
+  box-shadow: var(--focus-ring), var(--clay-accent);
+}
+
+.lnd-textlink {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-soft);
+  font: 600 12.5px/1.3 var(--font-ui);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--line-strong);
+  cursor: pointer;
+}
+
+.lnd-textlink:hover {
+  color: var(--text);
+  text-decoration-color: var(--accent);
+}
+
+.lnd-textlink-inline {
+  padding: 0;
+  font-size: 12.5px;
 }
 
 /* --- Hero ---------------------------------------------------------------- */
-.auth-hero {
-  position: relative;
-  max-width: none;
-  width: 100%;
-  min-height: min(76vh, 660px);
-  padding: var(--space-8) 0 var(--space-10);
-  align-content: center;
-  justify-items: stretch;
-}
-
-.landing-atmos {
-  position: absolute;
-  inset: auto 0 0 0;
-  width: 100%;
-  height: min(58%, 320px);
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.85;
-  transform: translate3d(0, calc(var(--landing-scroll, 0) * 0.12px), 0);
-  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 62%, transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 62%, transparent 100%);
-}
-
-.auth-hero-copy {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0;
-  text-align: left;
+.lnd-hero {
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 500px);
   gap: var(--space-10);
   align-items: center;
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 
-.hero-claim {
+.lnd-hero-copy {
   display: grid;
-  align-content: center;
-  gap: 0;
-  animation: fadeUp var(--dur-slow) var(--ease-out);
+  gap: var(--space-5);
+  justify-items: start;
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  text-align: left;
 }
 
-.hero-preheadline {
-  padding: 5px 12px 5px 10px;
-  border: 1px solid var(--line);
+/* Counted from the rows on the tape below — app.js hides it at zero rather
+   than printing a nought, and the label names exactly what it counted. */
+.lnd-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 9px 16px;
   border-radius: var(--radius-pill);
   background: var(--surface-1);
-  box-shadow: var(--edge-highlight);
-  justify-self: start;
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  box-shadow: var(--clay-soft), var(--edge-highlight);
 }
 
-.auth-hero-copy h2 {
-  max-width: 15ch;
-  font-size: var(--fs-hero-xl);
-  line-height: 1.02;
-  letter-spacing: -0.035em;
+.lnd-hero-badge[hidden] {
+  display: none;
 }
 
-/* Gradient sign-off line. Guarded by @supports so a browser without
-   background-clip:text still gets a solid accent line, never invisible text.
-   Large display type, so the 3:1 large-text floor applies in both themes. */
-.hero-line-accent {
+.lnd-hero-title {
+  margin: 0;
+  font: 700 clamp(2.5rem, 5.6vw, 4.75rem) / 1.02 var(--font-ui);
+  letter-spacing: -0.045em;
+  color: var(--text);
+}
+
+.lnd-hero-title-accent {
   color: var(--accent);
 }
 
-@supports ((-webkit-background-clip: text) or (background-clip: text)) {
-  .hero-line-accent {
-    background-image: linear-gradient(96deg, var(--accent) 12%, var(--pnl-pos) 96%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
+.lnd-hero-lede {
+  margin: 0;
+  max-width: 44ch;
+  color: var(--text-soft);
+  font: 400 clamp(1rem, 1.2vw, 1.125rem) / 1.55 var(--font-ui);
 }
 
-.auth-hero-text {
-  max-width: 46ch;
-  margin: var(--space-4) 0 0;
-  font-size: var(--fs-md);
-  line-height: 1.62;
-}
-
-.hero-cta-row {
+/* One real step of sign-up: the value is handed to the auth panel's
+   identifier field, which accepts a username or an email. */
+.lnd-hero-form {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  gap: var(--space-3);
-  margin-top: var(--space-6);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 500px;
+  padding: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  box-shadow: var(--clay-float);
 }
 
-.hero-cta-btn {
+.lnd-hero-input {
+  flex: 1 1 auto;
   width: auto;
   min-width: 0;
-  padding-inline: var(--space-6);
-  min-height: 50px;
-}
-
-/* The single primary action on the page above the fold. Accent gradient +
-   accent halo so nothing else can compete with it. */
-#heroRegisterBtn.btn.primary,
-#ctaRegisterBtn.btn.primary {
-  background-image: linear-gradient(140deg, var(--accent-strong), var(--accent));
-  box-shadow: 0 10px 30px -12px var(--halo-accent), inset 0 1px 0 var(--glass-sheen);
-  transition:
-    transform var(--dur-fast) var(--ease-out),
-    box-shadow var(--dur-base) var(--ease-out),
-    background-color var(--dur-fast) var(--ease-out);
-}
-
-#heroRegisterBtn.btn.primary:hover,
-#ctaRegisterBtn.btn.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 18px 42px -14px var(--halo-accent), inset 0 1px 0 var(--glass-sheen);
-}
-
-#heroRegisterBtn.btn.primary:active,
-#ctaRegisterBtn.btn.primary:active {
-  transform: translateY(0);
-}
-
-/* Trust ledger — every line verifiable inside the product. */
-.hero-trust {
-  list-style: none;
-  display: grid;
-  gap: 9px;
-  margin: var(--space-6) 0 0;
-  padding: 0;
-}
-
-.hero-trust li {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  color: var(--text-soft);
-  font: 500 var(--fs-body)/1.5 var(--font-ui);
-}
-
-.hero-trust-tick {
-  position: relative;
-  flex: 0 0 17px;
-  width: 17px;
-  height: 17px;
-  margin-top: 2px;
-  border: 1px solid var(--pnl-pos-line);
-  border-radius: 50%;
-  background: var(--pnl-pos-soft);
-}
-
-.hero-trust-tick::after {
-  content: "";
-  position: absolute;
-  left: 4px;
-  top: 4.5px;
-  width: 6px;
-  height: 3px;
-  border-left: 1.5px solid var(--pnl-pos);
-  border-bottom: 1.5px solid var(--pnl-pos);
-  transform: rotate(-45deg);
-}
-
-/* --- Hero terminal (the live tape, in device chrome) --------------------- */
-.hero-terminal-stage {
-  position: relative;
-  perspective: 1500px;
-  animation: heroRise 760ms var(--ease-out) 120ms backwards;
-}
-
-@keyframes heroRise {
-  from {
-    opacity: 0;
-    transform: translateY(28px) scale(0.96);
-  }
-}
-
-.hero-terminal {
-  --tilt-x: 0deg;
-  --tilt-y: 0deg;
-  position: relative;
-  z-index: 1;
-  border: 1px solid var(--clay-edge);
-  border-radius: var(--radius-clay-xl);
-  background-image: linear-gradient(168deg, var(--glass-top), var(--glass-bottom));
-  /* --depth-shadow is a clay stack now, so its own top inset carries the lit
-     edge — the extra `inset 0 1px 0` that used to sell the glass would read as
-     a hard seam on a moulded surface. Transform-only transition: re-blurring a
-     4-layer large-blur stack on every pointer frame is the repaint mobile
-     Safari cannot pay. */
-  box-shadow: var(--depth-shadow);
-  overflow: hidden;
-  transition: transform var(--dur-slow) var(--ease-out);
-}
-
-/* Ground shadow: sells the tilt without a second box-shadow pass. */
-.hero-terminal-floor {
-  position: absolute;
-  inset: auto 8% -34px 8%;
-  height: 60px;
-  border-radius: 50%;
-  background: radial-gradient(ellipse at 50% 50%, var(--floor-glow), var(--aurora-fade) 70%);
-  opacity: 0.9;
-  pointer-events: none;
-}
-
-.hero-terminal-shine {
-  position: absolute;
-  inset: -20% -40%;
-  z-index: 3;
-  pointer-events: none;
-  opacity: 0;
-  background: linear-gradient(
-    102deg,
-    var(--glass-sheen-fade) 38%,
-    var(--glass-sheen) 50%,
-    var(--glass-sheen-fade) 62%
-  );
-  animation: shineSweep 1500ms var(--ease-out) 820ms 1;
-}
-
-@keyframes shineSweep {
-  0% { opacity: 0; transform: translate3d(-60%, 0, 0); }
-  30% { opacity: 1; }
-  100% { opacity: 0; transform: translate3d(60%, 0, 0); }
-}
-
-.hero-terminal-rail {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: 13px var(--space-5);
-  border-bottom: 1px solid var(--clay-edge);
-  background-image: linear-gradient(180deg, var(--surface-inset), transparent);
-}
-
-.hero-terminal-dots {
-  display: inline-flex;
-  gap: 6px;
-}
-
-.hero-terminal-dots i {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--line-strong);
-}
-
-.hero-terminal-dots i:first-child {
-  background: var(--accent);
-}
-
-.hero-terminal-title {
-  flex: 1 1 auto;
-  color: var(--text-faint);
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.hero-terminal-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--pnl-pos);
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-/* The real feed, in place. The renderer is untouched — these rules only
-   reseat #recentTradesList inside the chrome. */
-.hero-terminal .recent-trades-board {
-  position: relative;
-  z-index: 2;
-  max-width: none;
-  width: 100%;
-  margin: 0;
-  padding: var(--space-3);
-  gap: var(--space-3);
-  animation: none;
-}
-
-.hero-terminal .recent-trades-card {
+  min-height: 44px;
+  padding: 0 20px;
+  /* The global input recipe is a pressed well on --surface-inset; inside this
+     pill it has to be nothing at all, so all three are reset explicitly. */
   border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font: 500 15px/1 var(--font-ui);
+}
+
+.lnd-hero-input::placeholder {
+  color: var(--text-faint);
+}
+
+.lnd-hero-input:focus,
+.lnd-hero-input:focus-visible {
+  outline: none;
+  background: transparent;
+  box-shadow: var(--focus-ring);
+}
+
+.lnd-hero-fine {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 0;
+  color: var(--text-faint);
+  font: 400 13px/1.5 var(--font-ui);
+}
+
+/* --- Hero side: the live tape + three facts ------------------------------ */
+.lnd-hero-side {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  width: 100%;
+}
+
+.lnd-tape {
+  padding: 8px;
+  border-radius: var(--radius-clay-lg);
+  background: var(--surface-1);
+  box-shadow: var(--clay-float);
+}
+
+.lnd-tape-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px 16px;
+}
+
+.lnd-tape-title {
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lnd-tape-delay {
+  margin-left: auto;
+  color: var(--text-faint);
+  font: 500 var(--fs-micro)/1 var(--font-mono);
+}
+
+.lnd-tape-list {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
   border-radius: var(--radius-clay-md);
   background: var(--surface-inset);
   box-shadow: var(--clay-pressed);
 }
 
-/* The rail already carries the live badge — the per-card duplicate goes. */
-.hero-terminal .recent-trades-live-tag {
-  display: none;
+.lnd-tape-note {
+  margin: 0;
+  padding: 16px 18px 12px;
+  color: var(--text-faint);
+  font: 400 12.5px/1.45 var(--font-ui);
 }
 
-/* Empty feed still has to look deliberate — it is the first thing a visitor
-   sees whenever the public endpoint returns nothing. */
-.hero-terminal .recent-trade-empty {
-  border: 1px dashed var(--line-strong);
+.lnd-tape-empty {
+  margin: 0;
+  padding: 18px 16px;
+  color: var(--text-soft);
+  font: 500 var(--fs-label)/1.4 var(--font-mono);
+}
+
+/* Depth as data. The row is raised when the trade made money and sunk when it
+   lost — and the result word plus its money colour say the same thing, so the
+   state never depends on seeing the shadow. */
+.lnd-row {
+  display: grid;
+  grid-template-columns: minmax(72px, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 13px 16px;
+  border: 0;
   border-radius: var(--radius-clay-sm);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.lnd-row.is-win {
+  background: var(--surface-1);
+  box-shadow: var(--clay-raised);
+}
+
+.lnd-row.is-loss {
   background: var(--surface-inset);
-  text-align: center;
-  letter-spacing: 0.04em;
+  box-shadow: var(--clay-pressed);
 }
 
-.hero-terminal .recent-trade-row {
-  position: relative;
-  background: transparent;
-  transition:
-    background-color var(--dur-fast) var(--ease-out),
-    padding-left var(--dur-fast) var(--ease-out),
-    box-shadow var(--dur-fast) var(--ease-out);
+.lnd-row.is-flat {
+  background: var(--surface-1);
+  box-shadow: var(--clay-soft), var(--edge-highlight);
 }
 
-.hero-terminal .recent-trade-row:hover {
-  background: var(--surface-3);
-  padding-left: 16px;
-  box-shadow: inset 2px 0 0 var(--accent);
+.lnd-row:hover {
+  transform: translateX(2px);
 }
 
-.hero-terminal-foot {
-  position: relative;
-  z-index: 2;
+.lnd-row:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.lnd-row-symbol {
+  font: 700 14px/1 var(--font-ui);
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lnd-row-meta {
+  color: var(--text-faint);
+  font: 500 11.5px/1.2 var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The pill sits on --surface-2, not on the tinted --pnl-*-soft: at 10.5px the
+   money colours measure 4.0:1 on their own soft tint over the sunk row, under
+   the 4.5:1 body floor. On --surface-2 they measure 5.9 / 6.1 in light and
+   5.2 / 8.0 in dark, and the money-coloured hairline keeps the tint reading. */
+.lnd-row-result {
+  padding: 5px 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  font: 700 10.5px/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.lnd-row.is-win .lnd-row-result {
+  border-color: var(--pnl-pos-line);
+  color: var(--pnl-pos);
+}
+
+.lnd-row.is-loss .lnd-row-result {
+  border-color: var(--pnl-neg-line);
+  color: var(--pnl-neg);
+}
+
+.lnd-row.is-flat .lnd-row-result {
+  color: var(--text-soft);
+}
+
+/* Three facts, each checkable inside the product. */
+.lnd-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+
+.lnd-stat {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  padding: 20px;
+  border-radius: var(--radius-clay-md);
+  background: var(--surface-1);
+  box-shadow: var(--clay-raised);
+}
+
+.lnd-stat-value {
+  margin: 0;
+  font: 700 clamp(1.5rem, 2.4vw, 1.875rem) / 1 var(--font-mono);
+  font-feature-settings: "tnum";
+  color: var(--text);
+}
+
+.lnd-stat-unit {
+  font-size: 0.55em;
+  color: var(--text-faint);
+}
+
+.lnd-stat-label {
+  margin: 6px 0 0;
+  color: var(--text-soft);
+  font: 500 11.5px/1.3 var(--font-ui);
+}
+
+/* --- What you get back --------------------------------------------------- */
+.lnd-value {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: var(--space-12);
+  align-items: center;
+  padding: var(--space-12);
+  border-radius: var(--radius-clay-xl);
+  background: var(--surface-1);
+  box-shadow: var(--clay-raised);
+}
+
+.lnd-value-copy {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+}
+
+.lnd-kicker {
+  margin: 0;
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.lnd-value-title {
+  margin: 0;
+  font: 700 clamp(1.75rem, 3.2vw, 2.875rem) / 1.08 var(--font-ui);
+  letter-spacing: -0.035em;
+  color: var(--text);
+}
+
+.lnd-value-lede {
+  margin: 0;
+  max-width: 46ch;
+  color: var(--text-soft);
+  font: 400 var(--fs-md)/1.6 var(--font-ui);
+}
+
+.lnd-ticks {
+  display: grid;
+  gap: 12px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lnd-ticks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--text);
+  font: 400 14.5px/1.5 var(--font-ui);
+}
+
+.lnd-tick {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 9px;
+  background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 100%);
+  color: var(--text-inverse);
+  font: 700 12px/1 var(--font-ui);
+  box-shadow: var(--clay-soft);
+}
+
+/* --- Expectancy panel — ILLUSTRATIVE ------------------------------------- */
+/* A logged-out visitor has no journal, and the public feed carries no setup
+   or P&L, so these bars cannot be anyone's real numbers. The Example tag, the
+   accessible name and the footnote all say so. */
+.lnd-expect {
+  margin: 0;
+  padding: 22px;
+  border-radius: var(--radius-clay-lg);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+}
+
+.lnd-expect-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  padding: 12px var(--space-5) 14px;
-  border-top: 1px solid var(--clay-edge);
-  background-image: linear-gradient(0deg, var(--surface-inset), transparent);
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 0;
 }
 
-.hero-terminal-note {
+.lnd-expect-title {
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Raised on --surface-1, not on --warn-soft: this label is the honesty of the
+   whole panel, so it has to clear 4.5:1 (it measures 5.2 light / 9.2 dark). */
+.lnd-expect-tag {
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  box-shadow: var(--clay-soft);
+  color: var(--warn);
+  font: 700 10.5px/1.3 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lnd-expect-rows {
+  display: grid;
+  gap: 12px;
+}
+
+.lnd-expect-row {
+  display: grid;
+  grid-template-columns: minmax(0, 118px) minmax(0, 1fr) 68px;
+  align-items: center;
+  gap: 12px;
+}
+
+.lnd-expect-name {
+  font: 600 13px/1.2 var(--font-ui);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lnd-expect-row.is-neg .lnd-expect-name {
+  color: var(--pnl-neg);
+}
+
+.lnd-expect-track {
+  display: flex;
+  height: 26px;
+  border-radius: var(--radius-pill);
+  background: var(--line);
+  overflow: hidden;
+  box-shadow: inset 0 3px 7px -2px var(--clay-edge-strong);
+}
+
+.lnd-expect-row.is-neg .lnd-expect-track {
+  justify-content: flex-end;
+}
+
+.lnd-expect-fill {
+  display: block;
+  width: var(--w, 0%);
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--pnl-pos);
+  box-shadow: var(--edge-highlight);
+}
+
+.lnd-expect-row.is-neg .lnd-expect-fill {
+  background: var(--pnl-neg);
+}
+
+.lnd-expect-value {
+  text-align: right;
+  font: 700 13px/1.2 var(--font-mono);
+  font-feature-settings: "tnum";
+  color: var(--pnl-pos);
+}
+
+.lnd-expect-row.is-neg .lnd-expect-value {
+  color: var(--pnl-neg);
+}
+
+.lnd-expect-insight {
+  margin: 18px 0 0;
+  padding: 14px 16px;
+  border-radius: var(--radius-clay-sm);
+  background: var(--pnl-neg-soft);
+  color: var(--text);
+  font: 400 13px/1.45 var(--font-ui);
+}
+
+.lnd-expect-foot {
+  margin: 12px 0 0;
+  color: var(--text-faint);
+  font: 400 12px/1.45 var(--font-ui);
+}
+
+/* --- Closing CTA --------------------------------------------------------- */
+.lnd-close {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-5);
+  padding: var(--space-12) var(--space-6);
+  text-align: center;
+}
+
+.lnd-close-title {
+  margin: 0;
+  max-width: 20ch;
+  font: 700 clamp(1.75rem, 3.1vw, 2.75rem) / 1.1 var(--font-ui);
+  letter-spacing: -0.035em;
+  color: var(--text);
+}
+
+.lnd-close-lede {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--text-soft);
+  font: 400 var(--fs-md)/1.55 var(--font-ui);
+}
+
+.lnd-close-fine {
   margin: 0;
   color: var(--text-faint);
-  font: 500 var(--fs-micro)/1.35 var(--font-mono);
-  letter-spacing: 0.04em;
-}
-
-.landing-scroll-hint {
-  margin: 0;
-}
-
-/* Tilt is desktop-only: pointer response is bound behind a
-   (hover: hover) and (pointer: fine) check in app.js, and the resting
-   rotation itself is scoped here so touch layouts stay flat. */
-@media (min-width: 980px) {
-  .hero-terminal {
-    transform: rotateX(calc(4deg + var(--tilt-x))) rotateY(calc(-9deg + var(--tilt-y)));
-    animation: tiltSettle 1100ms var(--ease-out) 160ms backwards;
-  }
-
-  /* Hover lifts, it does not re-blur: the shadow swap is instant. */
-  .hero-terminal:hover {
-    box-shadow: var(--depth-shadow), 0 0 0 1px var(--line-accent);
-  }
-
-  /* Keyboard users read the tape straight-on. */
-  .hero-terminal:focus-within {
-    transform: rotateX(0deg) rotateY(0deg);
-  }
-
-  @keyframes tiltSettle {
-    from { transform: rotateX(13deg) rotateY(-26deg); }
-    to { transform: rotateX(4deg) rotateY(-9deg); }
-  }
+  font: 500 12.5px/1.4 var(--font-mono);
 }
 
 /* --- Reveal choreography ------------------------------------------------- */
 /* Gated on body.auth-ready (stamped in init()) so a visitor with JS disabled
-   never gets a page of invisible sections. The stagger delays are killed by
-   the reduced-motion block at the top of this file. */
+   never gets a permanently invisible section. Reduced motion is handled by
+   the global kill block plus setupLandingReveals()'s own opt-out. */
 body.auth-ready [data-landing-reveal] {
   opacity: 0;
-  transform: translateY(26px);
-  transition: opacity var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out);
+  transform: translateY(18px);
+  transition: opacity var(--dur-reveal) var(--ease-clay), transform var(--dur-reveal) var(--ease-clay);
 }
 
 body.auth-ready [data-landing-reveal].is-revealed {
   opacity: 1;
   transform: none;
-}
-
-body.auth-ready [data-landing-reveal] .reveal-stagger > * {
-  opacity: 0;
-  transform: translateY(22px) scale(0.985);
-  transition: opacity var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out);
-}
-
-body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > * {
-  opacity: 1;
-  transform: none;
-}
-
-body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(1) { transition-delay: calc(var(--stagger-reveal) * 1); }
-body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(2) { transition-delay: calc(var(--stagger-reveal) * 2); }
-body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(3) { transition-delay: calc(var(--stagger-reveal) * 3); }
-body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(4) { transition-delay: calc(var(--stagger-reveal) * 4); }
-body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(5) { transition-delay: calc(var(--stagger-reveal) * 5); }
-body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(6) { transition-delay: calc(var(--stagger-reveal) * 6); }
-
-/* --- Shared section furniture -------------------------------------------- */
-.landing-section {
-  width: 100%;
-  display: grid;
-  gap: var(--space-8);
-}
-
-.landing-section-head {
-  display: grid;
-  gap: var(--space-2);
-  max-width: 62ch;
-}
-
-
-.landing-kicker {
-  margin: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-}
-
-.landing-kicker::before {
-  content: "";
-  width: 22px;
-  height: 1px;
-  background: var(--accent);
-  opacity: 0.6;
-}
-
-.landing-section h2 {
-  margin: 0;
-  font: 700 clamp(1.7rem, 3.4vw, 2.6rem)/1.12 var(--font-ui);
-  letter-spacing: -0.028em;
-}
-
-.landing-lede {
-  margin: 0;
-  color: var(--text-soft);
-  font-size: var(--fs-md);
-  line-height: 1.62;
-}
-
-/* --- Proof strip --------------------------------------------------------- */
-.landing-proof {
-  width: 100%;
-  padding: var(--space-8) var(--space-6);
-  border: 1px solid var(--clay-edge);
-  border-radius: var(--radius-clay-xl);
-  background: var(--surface-1);
-  /* --clay-soft = outer drop only. This tray is read-only, and the full
-     three-shadow stack would make four facts look like four buttons. */
-  box-shadow: var(--clay-soft);
-}
-
-.landing-proof-row {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-4);
-  margin: 0;
-}
-
-.landing-proof-item {
-  position: relative;
-  display: grid;
-  gap: 4px;
-  text-align: center;
-}
-
-.landing-proof-item + .landing-proof-item::before {
-  content: "";
-  position: absolute;
-  left: calc(var(--space-4) / -2);
-  top: 16%;
-  bottom: 16%;
-  width: 1px;
-  background: var(--clay-edge-strong);
-}
-
-.landing-proof-item dd {
-  order: 1;
-  margin: 0;
-  color: var(--accent);
-  font: 700 clamp(30px, 4vw, 44px)/1.02 var(--font-mono);
-  font-feature-settings: "tnum";
-  letter-spacing: -0.03em;
-}
-
-.landing-proof-item dt {
-  order: 2;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.11em;
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-}
-
-/* --- Product showcase ---------------------------------------------------- */
-.showcase-stage {
-  position: relative;
-  perspective: 1800px;
-}
-
-.showcase-frame {
-  position: relative;
-  z-index: 1;
-  border: 1px solid var(--clay-edge);
-  border-radius: var(--radius-clay-xl);
-  background-image: linear-gradient(168deg, var(--glass-top), var(--glass-bottom));
-  box-shadow: var(--depth-shadow);
-  overflow: hidden;
-  transform-origin: 50% 0%;
-  transform: rotateX(9deg);
-  transition: transform 700ms var(--ease-out), box-shadow var(--dur-slow) var(--ease-out);
-}
-
-[data-landing-reveal].is-revealed .showcase-frame {
-  transform: rotateX(2.5deg);
-}
-
-.showcase-stage:hover .showcase-frame,
-.showcase-frame:focus-within {
-  transform: rotateX(0deg);
-}
-
-.showcase-floor {
-  position: absolute;
-  inset: auto 10% -40px 10%;
-  height: 70px;
-  border-radius: 50%;
-  background: radial-gradient(ellipse at 50% 50%, var(--floor-glow), var(--aurora-fade) 70%);
-  pointer-events: none;
-}
-
-.showcase-chrome {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--clay-edge);
-  background-image: linear-gradient(180deg, var(--surface-inset), transparent);
-}
-
-.showcase-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--line-strong);
-}
-
-.showcase-dot:first-child {
-  background: var(--accent);
-}
-
-.showcase-chrome-label {
-  margin-left: var(--space-2);
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-}
-
-.showcase-body {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-3);
-  padding: var(--space-4);
-  background: transparent;
-}
-
-.showcase-hero {
-  position: relative;
-  grid-column: span 3;
-  min-height: 156px;
-  padding: var(--space-4);
-  border: 0;
-  border-radius: var(--radius-clay-md);
-  background:
-    radial-gradient(120% 90% at 0% 0%, var(--pnl-pos-soft), transparent 62%),
-    var(--surface-2);
-  /* Money rail as an inset, not a border-left: a 2px edge tapers into a wedge
-     against a 20px radius. Same fix the dashboard metric cards took. */
-  box-shadow: inset 3px 0 0 var(--pnl-pos-line), var(--clay-soft);
-  overflow: hidden;
-}
-
-.showcase-label {
-  margin: 0;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-}
-
-.showcase-value {
-  position: relative;
-  z-index: 1;
-  margin: var(--space-2) 0 0;
-  color: var(--pnl-pos);
-  font: 700 clamp(28px, 3.4vw, 42px)/1.05 var(--font-mono);
-  font-feature-settings: "tnum";
-  letter-spacing: -0.025em;
-}
-
-.showcase-chip {
-  position: relative;
-  z-index: 1;
-  display: inline-block;
-  margin: var(--space-2) 0 0;
-  padding: 2px 7px;
-  border: 1px solid var(--pnl-pos-line);
-  border-radius: var(--radius-sm);
-  background: var(--pnl-pos-soft);
-  color: var(--pnl-pos);
-  font: 600 var(--fs-micro)/1.4 var(--font-mono);
-}
-
-.showcase-spark {
-  position: absolute;
-  inset: auto 0 0 0;
-  width: 100%;
-  height: 62px;
-  color: var(--pnl-pos);
-  opacity: 0.65;
-  filter: drop-shadow(0 0 6px var(--pnl-pos-line));
-}
-
-.showcase-side {
-  display: grid;
-  align-content: start;
-  gap: 5px;
-  padding: var(--space-4);
-  border: 0;
-  border-radius: var(--radius-clay-md);
-  background: var(--surface-2);
-  box-shadow: var(--clay-soft);
-}
-
-.showcase-side-value {
-  margin: 0 0 2px;
-  font: 700 var(--fs-md)/1.2 var(--font-mono);
-  font-feature-settings: "tnum";
-}
-
-.showcase-track {
-  height: 6px;
-  margin-bottom: var(--space-3);
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--surface-inset);
-  box-shadow: var(--clay-pressed);
-  overflow: hidden;
-}
-
-.showcase-track span {
-  display: block;
-  height: 100%;
-  background-image: linear-gradient(90deg, var(--accent), var(--accent-strong));
-}
-
-.showcase-cell {
-  padding: var(--space-4);
-  border: 0;
-  border-radius: var(--radius-clay-md);
-  background: var(--surface-2);
-  box-shadow: var(--clay-soft);
-}
-
-.showcase-cell-value {
-  margin: 6px 0 0;
-  font: 700 var(--fs-lg)/1.2 var(--font-mono);
-  font-feature-settings: "tnum";
-}
-
-.showcase-cell-value.is-pos {
-  color: var(--pnl-pos);
-}
-
-/* --- How it works -------------------------------------------------------- */
-.steps-rail {
-  list-style: none;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-4);
-  margin: 0;
-  padding: 0;
-}
-
-.step-card {
-  position: relative;
-  display: grid;
-  align-content: start;
-  gap: var(--space-3);
-  padding: var(--space-8);
-  border: 1px solid var(--clay-edge);
-  border-radius: var(--radius-clay-lg);
-  background: var(--surface-1);
-  box-shadow: var(--clay-raised);
-  overflow: hidden;
-  transition: transform var(--dur-base) var(--ease-clay);
-}
-
-.step-card::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 3px;
-  background-image: linear-gradient(90deg, var(--accent), transparent 72%);
-  opacity: 0.7;
-}
-
-/* Transform only. Never transition a clay stack. */
-.step-card:hover {
-  transform: translateY(-3px);
-}
-
-.step-index {
-  color: var(--accent);
-  font: 700 var(--fs-lg)/1 var(--font-mono);
-  letter-spacing: 0.04em;
-}
-
-.step-card h3 {
-  margin: 0;
-  font: 600 var(--fs-lg)/1.3 var(--font-ui);
-  letter-spacing: -0.01em;
-}
-
-.step-card p {
-  margin: 0;
-  color: var(--text-soft);
-  font-size: var(--fs-body);
-  line-height: 1.62;
-}
-
-/* --- Feature triptych ---------------------------------------------------- */
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-4);
-}
-
-.feature-card {
-  position: relative;
-  display: grid;
-  align-content: start;
-  gap: var(--space-3);
-  padding: var(--space-8);
-  border: 1px solid var(--clay-edge);
-  border-radius: var(--radius-clay-lg);
-  background: var(--surface-1);
-  box-shadow: var(--clay-raised);
-  text-align: left;
-  transition: transform var(--dur-base) var(--ease-clay);
-}
-
-.feature-card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  opacity: 0;
-  background: radial-gradient(90% 70% at 20% 0%, var(--halo-accent), transparent 62%);
-  transition: opacity var(--dur-base) var(--ease-out);
-}
-
-.feature-card:hover,
-.feature-card:focus-within {
-  transform: translateY(-4px);
-}
-
-.feature-card:hover::after,
-.feature-card:focus-within::after {
-  opacity: 0.14;
-}
-
-.feature-icon {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  margin-bottom: var(--space-2);
-  border: 0;
-  border-radius: var(--radius-clay-sm);
-  background: var(--surface-inset);
-  color: var(--accent);
-  box-shadow: var(--clay-pressed);
-}
-
-.feature-icon svg {
-  width: 22px;
-  height: 22px;
-}
-
-.feature-kicker {
-  margin: 0;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.11em;
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-}
-
-.feature-card h3 {
-  margin: 0;
-  font: 600 var(--fs-lg)/1.3 var(--font-ui);
-  letter-spacing: -0.01em;
-}
-
-.feature-card p {
-  margin: 0;
-  color: var(--text-soft);
-  font-size: var(--fs-body);
-  line-height: 1.62;
-}
-
-/* --- Capability ledger --------------------------------------------------- */
-/* Container is clay; the rows inside stay flat with hairlines. A clay row
-   costs ~28px of vertical padding and reads as a button — the one rule this
-   style breaks hardest in a data product. */
-.ledger-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--clay-edge);
-  border-radius: var(--radius-clay-lg);
-  background: var(--surface-1);
-  box-shadow: var(--clay-soft);
-}
-
-.ledger-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--fs-body);
-}
-
-.ledger-table th,
-.ledger-table td {
-  padding: var(--space-4);
-  border-bottom: 1px solid var(--line);
-  text-align: left;
-  vertical-align: top;
-}
-
-.ledger-table thead th {
-  background: var(--surface-inset);
-  color: var(--text-faint);
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.ledger-table tbody th {
-  width: 32%;
-  min-width: 150px;
-  color: var(--text);
-  font: 600 var(--fs-label)/1.4 var(--font-mono);
-  letter-spacing: 0.03em;
-}
-
-.ledger-table tbody td {
-  color: var(--text-soft);
-  line-height: 1.6;
-}
-
-.ledger-table tbody tr:last-child th,
-.ledger-table tbody tr:last-child td {
-  border-bottom: 0;
-}
-
-.ledger-table tbody tr {
-  transition: background-color var(--dur-fast) var(--ease-out);
-}
-
-.ledger-table tbody tr:hover {
-  background: var(--surface-3);
-}
-
-/* --- Closing CTA --------------------------------------------------------- */
-.landing-cta {
-  position: relative;
-  display: grid;
-  justify-items: center;
-  gap: var(--space-3);
-  padding: var(--space-16) var(--space-8);
-  border: 1px solid var(--clay-edge);
-  border-radius: var(--radius-clay-xl);
-  background-image:
-    radial-gradient(120% 130% at 50% 0%, var(--halo-accent), transparent 58%),
-    linear-gradient(168deg, var(--glass-top), var(--glass-bottom));
-  box-shadow: var(--depth-shadow);
-  text-align: center;
-  overflow: hidden;
-}
-
-.landing-cta::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: radial-gradient(var(--landing-grid-line) 1px, transparent 1px);
-  background-size: 22px 22px;
-  -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000, transparent 72%);
-  mask-image: radial-gradient(ellipse at 50% 40%, #000, transparent 72%);
-  opacity: 0.5;
-}
-
-.landing-cta > * {
-  position: relative;
-  z-index: 1;
-}
-
-.landing-cta h2 {
-  margin: 0;
-  font: 700 clamp(1.75rem, 3.8vw, 2.75rem)/1.12 var(--font-ui);
-  letter-spacing: -0.03em;
-}
-
-.landing-cta-btn {
-  margin-top: var(--space-3);
-  min-height: 52px;
-  padding-inline: var(--space-10);
-}
-
-.landing-cta-fine {
-  margin: 0;
-  color: var(--text-faint);
-  font: 500 var(--fs-micro)/1.4 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 /* --- Dev-only affordances ------------------------------------------------ */
@@ -5180,260 +4229,112 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
   text-transform: uppercase;
 }
 
-.preview-back-btn {
-  position: absolute;
-  right: 0;
-  top: var(--space-6);
-}
-
 .nav-preview-landing {
   justify-content: center;
 }
 
 /* --- Landing responsive -------------------------------------------------- */
-@media (max-width: 1180px) {
-  .auth-hero-copy {
+@media (max-width: 1080px) {
+  .lnd-hero {
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-8);
   }
 
-  .hero-terminal {
-    --tilt-x: 0deg;
-    --tilt-y: 0deg;
-  }
-}
-
-/* Stacked hero. .hero-claim becomes display:contents so its children join the
-   hero flex line directly — that lets the terminal sit right under the CTA
-   (high on the page, as the proof it is) with the trust ledger beneath it,
-   without any DOM reorder. */
-@media (max-width: 979px) {
-  .auth-shell {
-    gap: var(--space-12);
-  }
-
-  .auth-hero {
-    min-height: 0;
-    padding: var(--space-5) 0 var(--space-6);
-  }
-
-  .auth-hero-copy {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    max-width: 620px;
-    text-align: left;
-  }
-
-  .hero-claim {
-    display: contents;
-  }
-
-  /* display:contents above means these are flex items now — the pill needs
-     align-self or the default stretch blows it to full width. */
-  .hero-preheadline { order: 1; display: inline-flex; align-self: flex-start; }
-  .auth-hero-copy h2 { order: 2; max-width: none; }
-  .auth-hero-text { order: 3; max-width: none; margin-left: 0; margin-right: 0; }
-  .hero-terminal-stage { order: 5; margin-top: var(--space-6); perspective: none; }
-  .hero-trust { order: 6; }
-
-  /* Overrides the legacy ≤900px CTA rules (2-col grid, Log-in-first order)
-     that live earlier in this file — sign-up always leads. */
-  .hero-cta-row {
-    order: 4;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: var(--space-3);
-  }
-
-  #heroRegisterBtn { order: 1; }
-  #heroLoginBtn { order: 2; }
-
-  .hero-terminal {
-    transform: none;
-  }
-
-  .landing-section {
-    gap: var(--space-6);
-  }
-
-  .showcase-body {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .showcase-hero,
-  .showcase-side {
-    grid-column: span 2;
-  }
-
-  .showcase-frame,
-  [data-landing-reveal].is-revealed .showcase-frame {
-    transform: none;
-  }
-
-  .feature-grid,
-  .steps-rail {
+  .lnd-value {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .landing-proof-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-5) var(--space-4);
-  }
-
-  .landing-proof-item:nth-child(3)::before {
-    display: none;
+    gap: var(--space-8);
+    padding: var(--space-8);
   }
 }
 
 @media (max-width: 760px) {
   .auth-shell {
+    width: min(1200px, 100vw);
     gap: var(--space-10);
+    padding: 0 var(--space-4) var(--space-12);
   }
 
-  .auth-shell-topbar {
+  .lnd-topbar {
     padding-top: var(--space-4);
+  }
+
+  .lnd-hero-form {
     flex-wrap: wrap;
+    border-radius: var(--radius-clay-md);
   }
 
-  /* Own row at 375px — absolute placement would collide with the centred
-     brand mark. Still visually subordinate, still dev-only. */
-  .preview-back-btn {
-    position: static;
-    order: -1;
-    flex: 0 0 100%;
-    justify-content: center;
-    margin-bottom: var(--space-3);
+  .lnd-hero-input {
+    flex: 1 0 100%;
+    padding: 0 14px;
   }
 
-  .auth-hero-copy h2 {
-    font-size: clamp(1.95rem, 8.6vw, 2.9rem);
-    line-height: 1.04;
-    letter-spacing: -0.03em;
+  .lnd-hero-form .lnd-btn-accent {
+    flex: 1 0 100%;
   }
 
-  .hero-preheadline {
-    display: inline-flex;
-    font-size: 10px;
+  .lnd-stats {
+    gap: 10px;
   }
 
-  .auth-hero-text {
-    margin-top: var(--space-3);
-    font-size: var(--fs-body);
+  .lnd-stat {
+    padding: 14px 12px;
   }
 
-  .hero-cta-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-2);
-    margin-top: var(--space-5);
+  .lnd-value {
+    padding: var(--space-6);
+    border-radius: var(--radius-clay-lg);
   }
 
-  .hero-cta-btn {
+  .lnd-expect {
+    padding: 16px;
+  }
+
+  .lnd-expect-row {
+    grid-template-columns: minmax(0, 1fr) 62px;
+    gap: 6px 10px;
+  }
+
+  .lnd-expect-track {
+    grid-column: 1 / -1;
+    height: 20px;
+  }
+
+  .lnd-close {
+    padding: var(--space-8) 0;
+  }
+
+  .lnd-close .lnd-btn-lg {
     width: 100%;
-    padding-inline: var(--space-4);
-  }
-
-  #heroRegisterBtn { order: 1; }
-  #heroLoginBtn { order: 2; }
-
-  .hero-terminal-rail {
-    padding: 10px var(--space-3);
-  }
-
-  .hero-terminal-title {
-    display: none;
-  }
-
-  .hero-terminal .recent-trades-board {
-    padding: var(--space-2);
-    gap: var(--space-2);
-  }
-
-  .hero-terminal-foot {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 6px;
-    padding: 10px var(--space-3) 12px;
-    text-align: center;
-  }
-
-  .hero-terminal-note {
-    order: 2;
-  }
-
-  .landing-scroll-hint {
-    order: 1;
-  }
-
-  .step-card,
-  .feature-card {
-    padding: var(--space-4);
-  }
-
-  .feature-card:hover,
-  .feature-card:focus-within {
-    transform: none;
-  }
-
-  .ledger-table th,
-  .ledger-table td {
-    padding: var(--space-3);
-  }
-
-  .ledger-table tbody th {
-    width: auto;
-    min-width: 118px;
-  }
-
-  .landing-proof {
-    padding: var(--space-5) 0;
-  }
-
-  .landing-proof-item dd {
-    font-size: 28px;
-  }
-
-  .landing-proof-item dt {
-    font-size: 10px;
-    letter-spacing: 0.06em;
-  }
-
-  .showcase-body {
-    grid-template-columns: minmax(0, 1fr);
-    padding: var(--space-3);
-  }
-
-  .showcase-hero,
-  .showcase-side,
-  .showcase-cell {
-    grid-column: span 1;
-  }
-
-  .landing-cta {
-    padding: var(--space-10) var(--space-4);
-  }
-
-  .landing-cta-btn {
-    width: 100%;
-    padding-inline: var(--space-4);
-  }
-
-  .landing-grid-floor {
-    height: 42%;
-    background-size: 52px 52px;
-  }
-
-  .landing-scanline {
-    display: none;
   }
 }
 
-/* Fine-pointer only: the aurora field is heavy enough on low-power mobile
-   GPUs that the drift is not worth the battery. Layers stay, motion stops. */
-@media (hover: none) {
-  .landing-aurora {
-    animation: none;
+@media (max-width: 420px) {
+  .lnd-brand-name {
+    font-size: 17px;
+  }
+
+  /* Keep the bar on one line at 375px: brand + Log in + Start free. */
+  .lnd-topbar-actions {
+    gap: 4px;
+  }
+
+  .lnd-topbar .lnd-btn {
+    padding: 0 16px;
+    font-size: 12.5px;
+  }
+
+  .lnd-topbar .lnd-textlink {
+    padding: 0 4px;
+  }
+
+  .lnd-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 10px;
+    padding: 11px 13px;
+  }
+
+  .lnd-row-meta {
+    grid-column: 1 / -1;
   }
 }
 
@@ -5723,8 +4624,6 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
   border-radius: var(--radius-sm);
 }
 
-
-
 @keyframes livePulse {
   0% {
     box-shadow: 0 0 0 0 var(--pnl-pos-line);
@@ -5740,7 +4639,6 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
   }
 }
 
-
 .btn.primary {
   background-image: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 100%);
   box-shadow: 0 8px 20px -10px var(--halo-accent), inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -5755,15 +4653,6 @@ body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(
   transform: translateY(1px) scale(0.985);
   box-shadow: inset 0 2px 6px -2px var(--deck-groove);
 }
-
-
-
-
-
-
-
-
-
 
 /* --- 6. Focus with presence ---------------------------------------------- */
 button:focus-visible,
@@ -6383,18 +5272,6 @@ summary:focus-visible {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
 /* Tone-agnostic: the ring follows whatever colour the chip is wearing. */
 @keyframes livePulse {
   0% {
@@ -6410,24 +5287,6 @@ summary:focus-visible {
     opacity: 1;
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 .view-head-support {
   max-width: 44ch;
@@ -6576,7 +5435,6 @@ summary:focus-visible {
   animation-duration: 860ms;
 }
 
-
 @media (max-width: 720px) {
   /* The hero keeps a floor because the sparkline is absolutely positioned
      into its lower 74px — collapse it and the curve eats the numerals. */
@@ -6593,9 +5451,6 @@ summary:focus-visible {
 /* One column at phone width: the actions drop under the price instead of
    squeezing it to four characters. */
 @media (max-width: 560px) {
-
-
-
 
   .dash-stats,
   .dash-deck,
@@ -7077,67 +5932,6 @@ body:has(textarea:focus) .tabbar-fab {
   .demo-notice-btn {
     flex: 1 1 auto;
   }
-}
-
-/* --- 2. "See inside first" ------------------------------------------------ */
-/* A deliberate second path, not a way around signing up: accent text on the
-   normal control surface, so it reads as the same weight class as Log in
-   while the primary CTA keeps the only saturated fill above the fold. */
-.hero-cta-btn-demo,
-.landing-cta-btn-demo {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.hero-cta-btn-demo:hover,
-.landing-cta-btn-demo:hover {
-  background: var(--surface-3);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.hero-cta-fine {
-  margin: var(--space-3) 0 0;
-  max-width: 52ch;
-  color: var(--text-faint);
-  font: 500 var(--fs-label)/1.5 var(--font-mono);
-}
-
-.landing-cta-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--space-3);
-  margin-top: var(--space-3);
-}
-
-.landing-cta-row .landing-cta-btn {
-  margin-top: 0;
-}
-
-@media (max-width: 760px) {
-  .landing-cta-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    width: 100%;
-  }
-
-  .landing-cta-row .landing-cta-btn {
-    padding-inline: var(--space-4);
-  }
-}
-
-/* Stacked hero: the demo CTA sits between Create account and Log in, so the
-   free-account path is always first and the demo never looks like the default.
-   (Overrides the two earlier landing blocks that only ordered two buttons.) */
-/* .hero-claim is display:contents in the stacked hero, so .hero-cta-fine is a
-   flex item of .auth-hero-copy and needs an explicit order or it jumps to the
-   top. Sharing order 4 with .hero-cta-row puts it directly after, by DOM
-   order — the terminal (5) and trust ledger (6) are unchanged. */
-@media (max-width: 979px) {
-  #heroDemoBtn { order: 2; }
-  #heroLoginBtn { order: 3; }
-  .hero-cta-fine { order: 4; }
 }
 
 /* --- 3. Demo sign-up hand-off -------------------------------------------- */

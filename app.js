@@ -150,10 +150,6 @@ const state = {
     timerId: null,
     inFlight: false
   },
-  landingFeed: {
-    closedExpanded: false,
-    openExpanded: false
-  },
   filters: {
     dateFrom: "",
     dateTo: "",
@@ -199,7 +195,13 @@ const ui = {
   authStatus: document.getElementById("authStatus"),
   authMessage: document.getElementById("authMessage"),
   recentTradesList: document.getElementById("recentTradesList"),
-  landingScrollHint: document.getElementById("landingScrollHint"),
+  // 1d landing: the tape's honest "this week" counter, filled from the rows
+  // actually on the tape (see renderHeroRecentTrades) and hidden at zero.
+  lndTapeCount: document.getElementById("lndTapeCount"),
+  lndTapeCountText: document.getElementById("lndTapeCountText"),
+  lndTapeNote: document.getElementById("lndTapeNote"),
+  heroEmailForm: document.getElementById("heroEmailForm"),
+  heroEmail: document.getElementById("heroEmail"),
   authControls: document.getElementById("authControls"),
   authIdentifier: document.getElementById("authIdentifier"),
   authPassword: document.getElementById("authPassword"),
@@ -213,7 +215,6 @@ const ui = {
   demoBanner: document.getElementById("demoBanner"),
   demoBannerRegisterBtn: document.getElementById("demoBannerRegisterBtn"),
   demoBannerDismissBtn: document.getElementById("demoBannerDismissBtn"),
-  landingAtmos: document.getElementById("landingAtmos"),
   previewLandingBtns: Array.from(document.querySelectorAll("[data-preview-landing]")),
   previewAppBtn: document.getElementById("previewAppBtn"),
   resetPasswordView: document.getElementById("resetPasswordView"),
@@ -473,8 +474,6 @@ const recentTradesView = createRecentTradesView({
   canAccessApp,
   switchView,
   setAuthIntent,
-  syncLandingExpandedLayout,
-  isMobileViewport,
   formatCompactTradeDate,
   sortRecentTradeRowsDesc
 });
@@ -642,10 +641,7 @@ function init() {
   renderLastSaved();
   setupScrollReveals();
   setupLandingReveals();
-  setupLandingAtmos();
-  setupHeroTilt();
   setupDeckTilt();
-  setupLandingParallax();
   startLivePriceLoop();
   // Hash router: restore the deep-linked view for preview sessions; the
   // authenticated flow restores in checkAuthSession once the gate opens.
@@ -781,9 +777,18 @@ function bindEvents() {
   if (ui.forgotPasswordBtn) {
     ui.forgotPasswordBtn.addEventListener("click", handleForgotPassword);
   }
-  if (ui.landingScrollHint) {
-    ui.landingScrollHint.addEventListener("click", () => {
-      toggleLandingTradePreview();
+  // 1d hero: the email is handed to the auth panel's identifier field (it takes
+  // a username OR an email), so this is a real first step of sign-up rather
+  // than a decorative capture box. Empty submit just opens the panel.
+  if (ui.heroEmailForm) {
+    ui.heroEmailForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const email = String(ui.heroEmail?.value || "").trim();
+      setAuthIntent("register", { focus: !email });
+      if (email && ui.authIdentifier) {
+        ui.authIdentifier.value = email;
+        window.setTimeout(() => ui.authPassword?.focus(), 120);
+      }
     });
   }
   if (ui.authOverlay) {
@@ -1627,34 +1632,6 @@ function closeLandingAuthModal() {
   authModalTrigger = null;
 }
 
-function toggleLandingTradePreview(forceExpanded) {
-  if (!ui.recentTradesList || !ui.landingScrollHint) {
-    return;
-  }
-
-  const nextExpanded = typeof forceExpanded === "boolean"
-    ? forceExpanded
-    : !ui.recentTradesList.classList.contains("is-preview-expanded");
-
-  ui.recentTradesList.classList.toggle("is-preview-expanded", nextExpanded);
-  ui.landingScrollHint.classList.toggle("is-open", nextExpanded);
-  ui.landingScrollHint.querySelector(".landing-scroll-hint-label").textContent = nextExpanded ? "Hide trades" : "View trades";
-
-  if (nextExpanded) {
-    ui.recentTradesList.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }
-}
-
-function syncLandingExpandedLayout() {
-  if (!ui.authShell) {
-    return;
-  }
-
-  const layoutExpanded = state.landingFeed.closedExpanded || state.landingFeed.openExpanded
-    || ui.recentTradesList?.classList.contains("is-preview-expanded");
-  ui.authShell.classList.toggle("is-trades-expanded", Boolean(layoutExpanded));
-}
-
 function getResetTokenFromUrl() {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -2101,10 +2078,6 @@ function updateAuthUi() {
   }
   ui.registerBtn.classList.toggle("primary", !loginMode);
   ui.loginBtn.classList.toggle("primary", loginMode);
-  ui.heroRegisterBtn?.classList.add("primary");
-  ui.heroRegisterBtn?.classList.remove("hero-cta-btn-secondary");
-  ui.heroLoginBtn?.classList.remove("primary");
-  ui.heroLoginBtn?.classList.add("hero-cta-btn-secondary");
 
   if (ui.authControls) {
     ui.authControls.hidden = isResetMode || isResetPending;
@@ -6065,140 +6038,8 @@ function renderDashSparkline(analytics) {
   dashSparkFrame = requestAnimationFrame(step);
 }
 
-// Landing hero atmosphere: a deterministic equity-shaped curve that draws
-// itself once behind the headline. Deterministic (no RNG) so the landing
-// looks identical on every visit; theme colours come from the tokens.
-function drawLandingAtmos(canvas, progress) {
-  const ratio = window.devicePixelRatio || 1;
-  const width = canvas.clientWidth || 1200;
-  const height = canvas.clientHeight || 420;
-  canvas.width = Math.floor(width * ratio);
-  canvas.height = Math.floor(height * ratio);
-
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    return;
-  }
-
-  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-  ctx.clearRect(0, 0, width, height);
-
-  const styles = getComputedStyle(document.documentElement);
-  const read = (name, fallback) => (styles.getPropertyValue(name) || "").trim() || fallback;
-  const line = read("--chart-line", "#5b8def");
-  const glow = read("--chart-glow", "rgba(91, 141, 239, 0.55)");
-  const areaTop = read("--chart-area-top", "rgba(91, 141, 239, 0.42)");
-  const areaMid = read("--chart-area-mid", "rgba(91, 141, 239, 0.13)");
-  const areaBottom = read("--chart-area-bottom", "rgba(91, 141, 239, 0)");
-
-  // A rising walk with a mid-course drawdown — the shape of a real curve.
-  const steps = 72;
-  const values = [];
-  for (let i = 0; i <= steps; i += 1) {
-    const t = i / steps;
-    const trend = Math.pow(t, 1.08);
-    const wobble = Math.sin(t * 11.4) * 0.05 + Math.sin(t * 4.1) * 0.035;
-    const dip = Math.exp(-Math.pow((t - 0.46) / 0.11, 2)) * 0.16;
-    values.push(trend + wobble - dip);
-  }
-
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  const padTop = height * 0.3;
-  const usable = height - padTop - height * 0.12;
-  const stepX = width / steps;
-  const yFor = (value) => padTop + (1 - (value - min) / span) * usable;
-  const lastIndex = Math.max(1, Math.round(steps * clamp(progress, 0, 1)));
-  const points = [];
-  for (let i = 0; i <= lastIndex; i += 1) {
-    points.push({ x: i * stepX, y: yFor(values[i]) });
-  }
-
-  const head = points[points.length - 1];
-
-  // Area first, curve on top: same smoothing maths as the real equity chart
-  // (traceSmoothPath is charts.js's export) so the decoration cannot drift
-  // away from the product's own line language.
-  ctx.save();
-  ctx.beginPath();
-  traceSmoothPath(ctx, points);
-  ctx.lineTo(head.x, height);
-  ctx.lineTo(0, height);
-  ctx.closePath();
-  const area = ctx.createLinearGradient(0, padTop, 0, height);
-  area.addColorStop(0, areaTop);
-  area.addColorStop(0.55, areaMid);
-  area.addColorStop(1, areaBottom);
-  ctx.globalAlpha = 0.55;
-  ctx.fillStyle = area;
-  ctx.fill();
-  ctx.restore();
-
-  // Two-pass stroke: a wide shadow-blurred halo, then a crisp core.
-  ctx.save();
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-  ctx.globalAlpha = 0.42;
-  ctx.strokeStyle = glow;
-  ctx.lineWidth = 5;
-  ctx.shadowColor = glow;
-  ctx.shadowBlur = 22;
-  ctx.beginPath();
-  traceSmoothPath(ctx, points);
-  ctx.stroke();
-
-  ctx.shadowBlur = 0;
-  ctx.globalAlpha = 0.7;
-  ctx.strokeStyle = line;
-  ctx.lineWidth = 1.75;
-  ctx.beginPath();
-  traceSmoothPath(ctx, points);
-  ctx.stroke();
-
-  // Head marker rides the draw-in and settles as a lit dot.
-  ctx.globalAlpha = 0.9;
-  ctx.fillStyle = line;
-  ctx.shadowColor = glow;
-  ctx.shadowBlur = 16;
-  ctx.beginPath();
-  ctx.arc(head.x, head.y, 3.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function setupLandingAtmos() {
-  const canvas = ui.landingAtmos;
-  if (!canvas) {
-    return;
-  }
-
-  const paint = (progress) => drawLandingAtmos(canvas, progress);
-
-  if (prefersReducedMotion()) {
-    paint(1);
-  } else {
-    const startTime = performance.now();
-    const step = (now) => {
-      const t = Math.min((now - startTime) / 1400, 1);
-      paint(1 - Math.pow(1 - t, 3));
-      if (t < 1) {
-        requestAnimationFrame(step);
-      }
-    };
-    requestAnimationFrame(step);
-  }
-
-  window.addEventListener("themechange", () => paint(1));
-  let resizeTimer = 0;
-  window.addEventListener("resize", () => {
-    window.clearTimeout(resizeTimer);
-    resizeTimer = window.setTimeout(() => paint(1), 150);
-  });
-}
-
-// Pointer-tracked 3D tilt, shared by the landing hero terminal and the
-// dashboard deck cards. `stage` receives the pointer (it may be a wrapper),
+// Pointer-tracked 3D tilt for the dashboard deck cards. `stage` receives the
+// pointer (it may be a wrapper),
 // `panel` is what rotates. Writes five custom properties and nothing else:
 // --tilt-x / --tilt-y (rotation, degrees), --px / --py (specular centre, %)
 // and --sheen (specular opacity). All the visuals live in CSS.
@@ -6278,54 +6119,15 @@ function bindPointerTilt(stage, panel, maxTilt) {
   finePointer.addEventListener?.("change", reset);
 }
 
-// Hero terminal 3D tilt. The resting rotation is pure CSS (scoped to
-// >=980px there); this only adds the pointer response.
-function setupHeroTilt() {
-  const panel = document.querySelector("[data-hero-tilt]");
-  if (!panel || prefersReducedMotion()) {
-    return;
-  }
-
-  bindPointerTilt(panel.closest(".hero-terminal-stage") || panel, panel, 5);
-}
-
-// Dashboard deck cards (balance hero, risk meters, edge quad). The tilt is
-// deliberately half the hero's: these cards carry the numerals a trader
-// reads, and anything past ~3.5deg starts to soften the type.
+// Dashboard deck cards (balance hero, risk meters, edge quad). The 1d landing
+// no longer tilts anything — its tape is a flat clay card — so this is now the
+// only caller.
 function setupDeckTilt() {
   if (prefersReducedMotion()) {
     return;
   }
 
   document.querySelectorAll("[data-tilt]").forEach((card) => bindPointerTilt(card, card, 3.5));
-}
-
-// Landing parallax: one passive scroll listener writing a single custom
-// property on the shell. CSS consumes it (grid floor, hero canvas) with
-// transforms only, so scrolling stays a composite — no layout, no repaint of
-// the live tape. Reduced motion never binds.
-function setupLandingParallax() {
-  const shell = ui.authShell;
-  if (!shell || prefersReducedMotion()) {
-    return;
-  }
-
-  let frame = 0;
-  const commit = () => {
-    frame = 0;
-    shell.style.setProperty("--landing-scroll", String(Math.round(window.scrollY)));
-  };
-
-  window.addEventListener(
-    "scroll",
-    () => {
-      if (!frame) {
-        frame = requestAnimationFrame(commit);
-      }
-    },
-    { passive: true }
-  );
-  commit();
 }
 
 // Landing sections fade up as they enter the viewport (same contract as the

@@ -45,389 +45,253 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260808-review1e" />
+    <link rel="stylesheet" href="styles.css?v=20260808-landing1d" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260808-review1e" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260808-landing1d" />
   </head>
   <body>
-    <section class="auth-shell" id="authShell" aria-label="Login">
-      <!-- Atmosphere: three drifting radial washes + a perspective grid floor.
-           Pure CSS gradients (no filter: blur) so mobile Safari composites
-           them on the GPU; every layer is transform-only and dies under the
-           reduced-motion kill block. -->
-      <div class="landing-atmosphere" aria-hidden="true">
-        <span class="landing-aurora landing-aurora-a"></span>
-        <span class="landing-aurora landing-aurora-b"></span>
-        <span class="landing-aurora landing-aurora-c"></span>
-        <span class="landing-grid-floor"></span>
-        <span class="landing-scanline"></span>
-      </div>
-
-      <header class="auth-shell-topbar">
-        <div class="auth-shell-brand">
-          <p class="brand-kicker">Execution analytics</p>
-          <h1 class="brand-mark" data-brand-title>
-            <span class="brand-word-accent">Trader</span>
-            <span class="brand-word-primary">Journal</span>
-          </h1>
-          <p class="brand-support">Built for traders</p>
+    <!-- ══════════════════════════════════════════════════════════════════════
+         LANDING (design-source/1d) — the tape is the pitch.
+         Top bar → hero (claim + the real public tape + three facts) → what you
+         get back → closing CTA. The auth panel and overlay stay position:fixed
+         below, so the modal still opens over everything and every id the JS
+         queries is unchanged.
+         ═══════════════════════════════════════════════════════════════════ -->
+    <section class="auth-shell" id="authShell" aria-label="Trader Journal">
+      <header class="lnd-topbar">
+        <div class="lnd-brand">
+          <span class="lnd-mark" aria-hidden="true">TJ</span>
+          <span class="lnd-brand-name">Trader Journal</span>
         </div>
-        <!-- Dev-only affordance: only rendered visible in local preview mode
-             (app.js toggles [hidden]). Deliberately styled as a subordinate
-             debug chip so it can never read as a "skip the account" path. -->
-        <button id="previewAppBtn" class="dev-chip preview-back-btn" type="button" hidden>
-          <span class="dev-chip-tag">dev</span>
-          <span>Back to app</span>
-        </button>
-      </header>
-
-      <div class="auth-hero">
-        <canvas id="landingAtmos" class="landing-atmos" aria-hidden="true"></canvas>
-        <section class="auth-hero-copy">
-          <div class="hero-claim">
-            <p class="hero-preheadline"><span class="live-pulse-dot" aria-hidden="true"></span>Live desk &middot; execution journal</p>
-            <h2>
-              <span class="hero-line">Journal your trades,</span>
-              <span class="hero-line">mistakes, and emotions</span>
-              <span class="hero-line hero-line-accent">in one place.</span>
-            </h2>
-            <p class="auth-hero-text">
-              Log the whole trade in seconds, then let the numbers tell you where your edge actually is —
-              and where your discipline breaks.
-            </p>
-            <div class="hero-cta-row">
-              <button id="heroRegisterBtn" class="btn primary hero-cta-btn" type="button">Create your free account</button>
-              <!-- Guest mode. Framed as a tour, never as a way to skip signing
-                   up: the label says sample data and the fine print below says
-                   nothing is saved. -->
-              <button id="heroDemoBtn" class="btn hero-cta-btn hero-cta-btn-demo" type="button" data-start-demo>
-                See inside first
-              </button>
-              <button id="heroLoginBtn" class="btn hero-cta-btn hero-cta-btn-secondary" type="button">Log in</button>
-            </div>
-            <p class="hero-cta-fine">
-              &ldquo;See inside first&rdquo; opens the whole app on a sample journal &mdash; no account, nothing saved.
-            </p>
-            <!-- Trust ledger: every line is verifiable in the product itself. -->
-            <ul class="hero-trust" aria-label="What you get">
-              <li><span class="hero-trust-tick" aria-hidden="true"></span>Free to use &mdash; no card, no trial clock</li>
-              <li><span class="hero-trust-tick" aria-hidden="true"></span>Your journal exports to CSV or JSON anytime</li>
-              <li><span class="hero-trust-tick" aria-hidden="true"></span>Dark and light themes, built in</li>
-            </ul>
-          </div>
-
-          <!-- The live tape is the proof. Real rows from the public feed,
-               inside device chrome that tilts in 3D on desktop pointers. -->
-          <div class="hero-terminal-stage">
-            <div class="hero-terminal" data-hero-tilt>
-              <span class="hero-terminal-shine" aria-hidden="true"></span>
-              <div class="hero-terminal-rail">
-                <span class="hero-terminal-dots" aria-hidden="true">
-                  <i></i><i></i><i></i>
-                </span>
-                <span class="hero-terminal-title">recent_trades</span>
-                <span class="hero-terminal-live">
-                  <span class="live-pulse-dot" aria-hidden="true"></span>Live &middot; delayed
-                </span>
-              </div>
-              <div class="recent-trades-board" id="recentTradesList" aria-label="Public recent trades"></div>
-              <div class="hero-terminal-foot">
-                <p class="hero-terminal-note">Real rows from real journals, refreshed while you read.</p>
-                <button id="landingScrollHint" class="landing-scroll-hint" type="button">
-                  <span class="landing-scroll-hint-label">View trades</span>
-                  <span class="landing-scroll-hint-arrow">&darr;</span>
-                </button>
-              </div>
-            </div>
-            <span class="hero-terminal-floor" aria-hidden="true"></span>
-          </div>
-        </section>
-
-        <div id="authOverlay" class="auth-overlay"></div>
-        <section class="auth-panel" aria-label="Account access">
-          <p class="auth-title" id="authTitle">Create your account</p>
-          <p class="auth-status" id="authStatus"></p>
-          <p class="auth-copy" id="authCopy">Create your account with a username or email.</p>
-
-          <div id="authControls">
-            <label>
-              Username or Email
-              <input
-                id="authIdentifier"
-                type="text"
-                maxlength="190"
-                placeholder="username or you@example.com"
-                autocomplete="username"
-              />
-            </label>
-            <label>
-              Password
-              <input
-                id="authPassword"
-                type="password"
-                maxlength="72"
-                placeholder="Minimum 8 characters"
-                autocomplete="new-password"
-              />
-            </label>
-
-            <div class="form-actions auth-form-actions">
-              <button id="registerBtn" class="btn primary" type="button">Get Started</button>
-              <button id="loginBtn" class="btn" type="button">Log In</button>
-            </div>
-            <button id="forgotPasswordBtn" class="auth-link-btn" type="button">Forgot password?</button>
-          </div>
-
-          <div id="resetPasswordView" hidden>
-            <p class="auth-copy">
-              Set a new password for your account. Reset links expire automatically for security.
-            </p>
-            <label>
-              New Password
-              <input
-                id="resetPassword"
-                type="password"
-                maxlength="72"
-                placeholder="Minimum 8 characters"
-                autocomplete="new-password"
-              />
-            </label>
-            <label>
-              Confirm New Password
-              <input
-                id="resetPasswordConfirm"
-                type="password"
-                maxlength="72"
-                placeholder="Repeat your new password"
-                autocomplete="new-password"
-              />
-            </label>
-            <div class="form-actions auth-form-actions">
-              <button id="resetPasswordBtn" class="btn primary" type="button">Reset Password</button>
-              <button id="cancelResetBtn" class="btn" type="button">Back To Login</button>
-            </div>
-          </div>
-
-          <p id="authMessage" class="form-message" aria-live="polite"></p>
-        </section>
-      </div>
-
-      <!-- Proof strip: counted from the product, not invented. 12 =
-           METRIC_DELTA_SPECS keys, 7 = report canvases, 6 = nav sections,
-           0 = npm/CDN packages (vanilla JS + CSS + PHP). -->
-      <section class="landing-proof" data-landing-reveal aria-label="Product facts">
-        <dl class="landing-proof-row reveal-stagger">
-          <div class="landing-proof-item">
-            <dd>12</dd>
-            <dt>Execution metrics</dt>
-          </div>
-          <div class="landing-proof-item">
-            <dd>7</dd>
-            <dt>Analytics reports</dt>
-          </div>
-          <div class="landing-proof-item">
-            <dd>6</dd>
-            <dt>Journal views</dt>
-          </div>
-          <div class="landing-proof-item">
-            <dd>0</dd>
-            <dt>Dependencies</dt>
-          </div>
-        </dl>
-      </section>
-
-      <!-- Product showcase: the mock is built from the real design system —
-           same tokens, same type — so it can never misrepresent the product. -->
-      <section class="landing-section landing-showcase" data-landing-reveal>
-        <header class="landing-section-head">
-          <p class="landing-kicker">The dashboard</p>
-          <h2>Your edge, on one screen.</h2>
-          <p class="landing-lede">
-            Balance and today's P&amp;L up top, risk budget beside it, edge quality underneath — then seven
-            reports that break down where the money actually comes from.
-          </p>
-        </header>
-
-        <div class="showcase-stage">
-          <div class="showcase-frame" aria-hidden="true">
-            <div class="showcase-chrome">
-              <span class="showcase-dot"></span><span class="showcase-dot"></span><span class="showcase-dot"></span>
-              <span class="showcase-chrome-label">Performance Dashboard</span>
-            </div>
-            <div class="showcase-body">
-              <div class="showcase-hero">
-                <p class="showcase-label">Account balance</p>
-                <p class="showcase-value">$14,030.00</p>
-                <p class="showcase-chip">Today +$420.00</p>
-                <svg class="showcase-spark" viewBox="0 0 320 60" preserveAspectRatio="none" focusable="false">
-                  <path
-                    d="M0 48 L32 44 L64 46 L96 34 L128 36 L160 26 L192 30 L224 16 L256 20 L288 8 L320 10"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-              </div>
-              <div class="showcase-side">
-                <p class="showcase-label">Risk budget</p>
-                <p class="showcase-side-value">$300.00 left</p>
-                <div class="showcase-track"><span style="width: 26%"></span></div>
-                <p class="showcase-label">Weekly</p>
-                <p class="showcase-side-value">$620.00 left</p>
-                <div class="showcase-track"><span style="width: 22%"></span></div>
-              </div>
-              <div class="showcase-cell"><p class="showcase-label">Win rate</p><p class="showcase-cell-value">63.6%</p></div>
-              <div class="showcase-cell"><p class="showcase-label">Profit factor</p><p class="showcase-cell-value">4.84</p></div>
-              <div class="showcase-cell"><p class="showcase-label">Expectancy</p><p class="showcase-cell-value is-pos">$366.36</p></div>
-              <div class="showcase-cell"><p class="showcase-label">Avg R:R</p><p class="showcase-cell-value">2.19</p></div>
-            </div>
-          </div>
-          <span class="showcase-floor" aria-hidden="true"></span>
-        </div>
-      </section>
-
-      <section class="landing-section landing-steps" data-landing-reveal>
-        <header class="landing-section-head">
-          <p class="landing-kicker">How it works</p>
-          <h2>Three minutes a day.</h2>
-        </header>
-        <ol class="steps-rail reveal-stagger">
-          <li class="step-card">
-            <span class="step-index" aria-hidden="true">01</span>
-            <h3>Create your account</h3>
-            <p>A username or email and a password. No card, no plan picker, nothing to cancel.</p>
-          </li>
-          <li class="step-card">
-            <span class="step-index" aria-hidden="true">02</span>
-            <h3>Log the trade</h3>
-            <p>
-              Entry, stop, target, size, setup, session — plus how you felt and how well you executed.
-              Paste a whole broker statement if you would rather import.
-            </p>
-          </li>
-          <li class="step-card">
-            <span class="step-index" aria-hidden="true">03</span>
-            <h3>Read the verdict</h3>
-            <p>
-              Equity and drawdown curves, expectancy by setup, a discipline score, and a violations log
-              that does not flatter you.
-            </p>
-          </li>
-        </ol>
-      </section>
-
-      <section class="landing-section landing-features" data-landing-reveal>
-        <header class="landing-section-head">
-          <p class="landing-kicker">What it does</p>
-          <h2>Capture. Analyze. Control.</h2>
-        </header>
-        <div class="feature-grid reveal-stagger">
-          <article class="feature-card">
-            <span class="feature-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 5.5h16M4 12h10M4 18.5h7" />
-                <circle cx="18.5" cy="17.5" r="3.2" />
-              </svg>
-            </span>
-            <p class="feature-kicker">Capture</p>
-            <h3>Log the whole trade</h3>
-            <p>
-              Entry, stop, target, size, session, setup, timeframe — plus the psychology rating, execution
-              grade, and a screenshot. Bulk-import from Vantage, Binance, or a spreadsheet.
-            </p>
-          </article>
-          <article class="feature-card">
-            <span class="feature-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3.5 3.5v17h17" />
-                <path d="M7.5 15l4-4.5 3.5 3 4.5-6" />
-              </svg>
-            </span>
-            <p class="feature-kicker">Analyze</p>
-            <h3>See where the edge is</h3>
-            <p>
-              Equity and drawdown curves, expectancy by setup, R-multiple distribution, and P&amp;L broken
-              down by trading session and by the mood you were in when you clicked.
-            </p>
-          </article>
-          <article class="feature-card">
-            <span class="feature-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 3.2 4.5 6.4v5.3c0 4.4 3.1 8.1 7.5 9.1 4.4-1 7.5-4.7 7.5-9.1V6.4Z" />
-                <path d="M9.3 12.2l2 2 3.4-3.8" />
-              </svg>
-            </span>
-            <p class="feature-kicker">Control</p>
-            <h3>Stay inside your rules</h3>
-            <p>
-              Daily and weekly loss budgets that count down as you trade, discipline scoring, and a
-              violations log that tells you the truth about the days you overrode your own plan.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section class="landing-section landing-ledger" data-landing-reveal>
-        <header class="landing-section-head">
-          <p class="landing-kicker">The ledger</p>
-          <h2>Everything that ships, free.</h2>
-          <p class="landing-lede">
-            No paid tier is hiding behind any of these. If it is in the list, it is in the app.
-          </p>
-        </header>
-        <div class="ledger-wrap">
-          <table class="ledger-table">
-            <caption class="visually-hidden">Trader Journal capabilities</caption>
-            <thead>
-              <tr>
-                <th scope="col">Capability</th>
-                <th scope="col">What it does</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th scope="row">Trade entry</th>
-                <td>Full trade in one form — risk, setup, timeframe, psychology, execution grade, screenshot.</td>
-              </tr>
-              <tr>
-                <th scope="row">Live open positions</th>
-                <td>Open trades re-price on a rolling poll so unrealised P&amp;L moves while you watch.</td>
-              </tr>
-              <tr>
-                <th scope="row">Edge detection</th>
-                <td>Expectancy, profit factor and R-multiples split by setup, session and timeframe.</td>
-              </tr>
-              <tr>
-                <th scope="row">Calendar P&amp;L</th>
-                <td>A month of trading days, coloured by result, clickable straight into the filtered journal.</td>
-              </tr>
-              <tr>
-                <th scope="row">Discipline scoring</th>
-                <td>Daily and weekly loss budgets, rule-breach logging, and a score you cannot argue with.</td>
-              </tr>
-              <tr>
-                <th scope="row">Import &amp; export</th>
-                <td>Bulk paste from a broker statement or spreadsheet; export CSV or a full JSON backup.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="landing-cta" data-landing-reveal>
-        <p class="landing-kicker">Start today</p>
-        <h2>Your next trade is worth journaling.</h2>
-        <p class="landing-lede">Free to use. Your data stays yours — export it as CSV or JSON whenever you want.</p>
-        <div class="landing-cta-row">
-          <button id="ctaRegisterBtn" class="btn primary landing-cta-btn" type="button">Create your free account</button>
-          <button id="ctaDemoBtn" class="btn landing-cta-btn landing-cta-btn-demo" type="button" data-start-demo>
-            Explore with sample data
+        <div class="lnd-topbar-actions">
+          <button id="heroLoginBtn" class="lnd-textlink" type="button">Log in</button>
+          <button id="heroRegisterBtn" class="lnd-btn lnd-btn-quiet" type="button">Start free</button>
+          <!-- Dev-only affordance: only rendered visible in local preview mode
+               (app.js toggles [hidden]). Deliberately styled as a subordinate
+               debug chip so it can never read as a "skip the account" path. -->
+          <button id="previewAppBtn" class="dev-chip" type="button" hidden>
+            <span class="dev-chip-tag">dev</span>
+            <span>Back to app</span>
           </button>
         </div>
-        <p class="landing-cta-fine">No card. No trial clock. An account is only needed to save your journal.</p>
+      </header>
+
+      <div class="lnd-hero">
+        <section class="lnd-hero-copy">
+          <!-- Counted from the rows actually on the tape below — never a
+               hard-coded platform statistic. app.js hides it at zero. -->
+          <p class="lnd-hero-badge" id="lndTapeCount" hidden>
+            <span class="live-pulse-dot" aria-hidden="true"></span>
+            <span id="lndTapeCountText"></span>
+          </p>
+          <h1 class="lnd-hero-title">
+            Every trade<br />you'd rather<br /><span class="lnd-hero-title-accent">not remember.</span>
+          </h1>
+          <p class="lnd-hero-lede">
+            Log the position in eight seconds. Say what you were thinking when it closed. The journal does
+            the arithmetic and tells you which of your setups actually pays — and which one only feels like
+            it does.
+          </p>
+          <!-- The email is handed straight to the auth panel's identifier field
+               (it accepts a username or an email), so this is one real step of
+               sign-up, not a decorative capture box. -->
+          <form class="lnd-hero-form" id="heroEmailForm" novalidate>
+            <label class="visually-hidden" for="heroEmail">Email address</label>
+            <input
+              id="heroEmail"
+              name="heroEmail"
+              class="lnd-hero-input"
+              type="email"
+              inputmode="email"
+              maxlength="190"
+              autocomplete="email"
+              placeholder="you@email.com"
+            />
+            <button class="lnd-btn lnd-btn-accent" type="submit">Start journalling</button>
+          </form>
+          <p class="lnd-hero-fine">
+            Free, no card. Export to CSV or JSON whenever you want. Dark and light.
+            <button class="lnd-textlink lnd-textlink-inline" type="button" data-start-demo>
+              Or look around a sample journal first
+            </button>
+          </p>
+        </section>
+
+        <div class="lnd-hero-side">
+          <!-- The live tape is the proof: real rows from the public feed. -->
+          <section class="lnd-tape" aria-label="Recent closed trades">
+            <div class="lnd-tape-head">
+              <span class="live-pulse-dot" aria-hidden="true"></span>
+              <span class="lnd-tape-title">Live tape &middot; real journals</span>
+              <span class="lnd-tape-delay">delayed</span>
+            </div>
+            <div class="lnd-tape-list" id="recentTradesList"></div>
+            <!-- Copy is re-stamped by renderHeroRecentTrades: it must never
+                 call a demo/preview journal "the public feed". -->
+            <p class="lnd-tape-note" id="lndTapeNote">
+              Raised rows made money. Sunk rows lost it. Nothing here is a mock-up — it is the public feed,
+              one row per closed trade.
+            </p>
+          </section>
+
+          <!-- Every figure here is checkable inside the product: 12 =
+               METRIC_DELTA_SPECS keys, $0 = the whole price list. -->
+          <dl class="lnd-stats">
+            <!-- dt before dd (the <dl> grouping requires it); .lnd-stat is
+                 column-reverse so the numeral still reads first on screen. -->
+            <div class="lnd-stat">
+              <dt class="lnd-stat-label">to log a trade</dt>
+              <dd class="lnd-stat-value">8<span class="lnd-stat-unit">s</span></dd>
+            </div>
+            <div class="lnd-stat">
+              <dt class="lnd-stat-label">execution metrics</dt>
+              <dd class="lnd-stat-value">12</dd>
+            </div>
+            <div class="lnd-stat">
+              <dt class="lnd-stat-label">forever, no tier</dt>
+              <dd class="lnd-stat-value">$0</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
+      <section class="lnd-value" data-landing-reveal aria-labelledby="lndValueHeading">
+        <div class="lnd-value-copy">
+          <p class="lnd-kicker">What you get back</p>
+          <h2 id="lndValueHeading" class="lnd-value-title">
+            The setup you love is<br />the one costing you money.
+          </h2>
+          <p class="lnd-value-lede">
+            Expectancy per setup, per session, per mood. After about thirty trades the journal starts
+            telling you things you would not have volunteered about yourself.
+          </p>
+          <ul class="lnd-ticks">
+            <li><span class="lnd-tick" aria-hidden="true">&#10003;</span>Daily and weekly loss budgets that actually lock the desk</li>
+            <li><span class="lnd-tick" aria-hidden="true">&#10003;</span>Bulk import from Vantage, Binance or a spreadsheet</li>
+            <li><span class="lnd-tick" aria-hidden="true">&#10003;</span>Screenshots, notes and psychology attached to every row</li>
+          </ul>
+        </div>
+
+        <!-- ILLUSTRATIVE. A logged-out visitor has no journal, and the public
+             feed carries no setup or P&L (whitelisted to symbol/direction/
+             result/date), so these bars cannot be real. Labelled as an example
+             in the heading, in the tag, and in the caption underneath. -->
+        <figure class="lnd-expect" aria-label="Example expectancy report — illustrative figures, not live data">
+          <figcaption class="lnd-expect-head">
+            <span class="lnd-expect-title">Expectancy by setup</span>
+            <span class="lnd-expect-tag">Example</span>
+          </figcaption>
+          <div class="lnd-expect-rows">
+            <div class="lnd-expect-row is-pos">
+              <span class="lnd-expect-name">Liquidity Grab</span>
+              <span class="lnd-expect-track"><span class="lnd-expect-fill" style="--w: 88%"></span></span>
+              <span class="lnd-expect-value">+$229</span>
+            </div>
+            <div class="lnd-expect-row is-pos">
+              <span class="lnd-expect-name">Breakout</span>
+              <span class="lnd-expect-track"><span class="lnd-expect-fill" style="--w: 56%"></span></span>
+              <span class="lnd-expect-value">+$137</span>
+            </div>
+            <div class="lnd-expect-row is-pos">
+              <span class="lnd-expect-name">Scalp</span>
+              <span class="lnd-expect-track"><span class="lnd-expect-fill" style="--w: 22%"></span></span>
+              <span class="lnd-expect-value">+$42</span>
+            </div>
+            <div class="lnd-expect-row is-neg">
+              <span class="lnd-expect-name">Reversal</span>
+              <span class="lnd-expect-track"><span class="lnd-expect-fill" style="--w: 30%"></span></span>
+              <span class="lnd-expect-value">&minus;$68</span>
+            </div>
+          </div>
+          <p class="lnd-expect-insight">
+            In this example journal, Reversal is 33% of the volume and all of the drawdown.
+          </p>
+          <p class="lnd-expect-foot">
+            Illustrative figures — this is the shape of the report, not anyone's data. Your own numbers
+            replace them once you have logged a few dozen trades.
+          </p>
+        </figure>
+      </section>
+
+      <section class="lnd-close" data-landing-reveal>
+        <h2 class="lnd-close-title">Your next trade is worth journalling.</h2>
+        <p class="lnd-close-lede">
+          Free to use. Your data stays yours — export it as CSV or JSON whenever you want.
+        </p>
+        <button id="ctaRegisterBtn" class="lnd-btn lnd-btn-accent lnd-btn-lg" type="button">
+          Create your free account
+        </button>
+        <p class="lnd-close-fine">No card &middot; no trial clock &middot; log in from any browser</p>
+        <button class="lnd-textlink" type="button" data-start-demo>Explore a sample journal instead</button>
+      </section>
+
+      <div id="authOverlay" class="auth-overlay"></div>
+      <section class="auth-panel" aria-label="Account access">
+        <p class="auth-title" id="authTitle">Create your account</p>
+        <p class="auth-status" id="authStatus"></p>
+        <p class="auth-copy" id="authCopy">Create your account with a username or email.</p>
+
+        <div id="authControls">
+          <label>
+            Username or Email
+            <input
+              id="authIdentifier"
+              type="text"
+              maxlength="190"
+              placeholder="username or you@example.com"
+              autocomplete="username"
+            />
+          </label>
+          <label>
+            Password
+            <input
+              id="authPassword"
+              type="password"
+              maxlength="72"
+              placeholder="Minimum 8 characters"
+              autocomplete="new-password"
+            />
+          </label>
+
+          <div class="form-actions auth-form-actions">
+            <button id="registerBtn" class="btn primary" type="button">Get Started</button>
+            <button id="loginBtn" class="btn" type="button">Log In</button>
+          </div>
+          <button id="forgotPasswordBtn" class="auth-link-btn" type="button">Forgot password?</button>
+        </div>
+
+        <div id="resetPasswordView" hidden>
+          <p class="auth-copy">
+            Set a new password for your account. Reset links expire automatically for security.
+          </p>
+          <label>
+            New Password
+            <input
+              id="resetPassword"
+              type="password"
+              maxlength="72"
+              placeholder="Minimum 8 characters"
+              autocomplete="new-password"
+            />
+          </label>
+          <label>
+            Confirm New Password
+            <input
+              id="resetPasswordConfirm"
+              type="password"
+              maxlength="72"
+              placeholder="Repeat your new password"
+              autocomplete="new-password"
+            />
+          </label>
+          <div class="form-actions auth-form-actions">
+            <button id="resetPasswordBtn" class="btn primary" type="button">Reset Password</button>
+            <button id="cancelResetBtn" class="btn" type="button">Back To Login</button>
+          </div>
+        </div>
+
+        <p id="authMessage" class="form-message" aria-live="polite"></p>
       </section>
     </section>
 
@@ -1973,6 +1837,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260808-review1e"></script>
+    <script type="module" src="app.js?v=20260808-landing1d"></script>
   </body>
 </html>
