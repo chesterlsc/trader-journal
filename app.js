@@ -216,6 +216,11 @@ const state = {
     key: "",
     dir: 1
   },
+  // 1f #04 playbook pages. `setup` is the page you are on and the second hash
+  // segment; `curve`/`dates`/`key` are the series the charts module paints for
+  // it. They live on state (not in a module-local) so charts.js can hash them
+  // exactly like every other series and keep its draw-in guard honest.
+  playbook: { setup: "", curve: [], dates: [], key: "line" },
   analytics: null
 };
 
@@ -292,6 +297,20 @@ const ui = {
   dashPlaybookGrid: document.getElementById("dashPlaybookGrid"),
   dashSetupAlert: document.getElementById("dashSetupAlert"),
   dashSetupAlertText: document.getElementById("dashSetupAlertText"),
+  // 1f #04 playbook pages.
+  playbookHeading: document.getElementById("playbookHeading"),
+  playbookLede: document.getElementById("playbookLede"),
+  playbookPicker: document.getElementById("playbookPicker"),
+  playbookEmpty: document.getElementById("playbookEmpty"),
+  playbookStats: document.getElementById("playbookStats"),
+  playbookChartPanel: document.getElementById("playbookChartPanel"),
+  playbookChart: document.getElementById("playbookChart"),
+  playbookBreakdowns: document.getElementById("playbookBreakdowns"),
+  playbookShotsPanel: document.getElementById("playbookShotsPanel"),
+  playbookShotsLede: document.getElementById("playbookShotsLede"),
+  playbookShots: document.getElementById("playbookShots"),
+  playbookBackBtn: document.getElementById("playbookBackBtn"),
+  playbookJournalBtn: document.getElementById("playbookJournalBtn"),
   dashUnjournalled: document.getElementById("dashUnjournalled"),
   dashUnjournalledCount: document.getElementById("dashUnjournalledCount"),
   dashUnjournalledList: document.getElementById("dashUnjournalledList"),
@@ -631,6 +650,12 @@ const QUICK_FILTER_LABELS = {
 const BALANCE_RANGE_DAYS = { "1m": 30, "3m": 90, all: 0 };
 const BALANCE_RANGE_LABELS = { "1m": "past 30 days", "3m": "past 90 days", all: "all time" };
 
+// 1f #04 playbook pages. Below this many closed trades a setup's win rate,
+// profit factor, average R and expectancy are noise wearing a decimal point,
+// so the page withholds them and says the threshold out loud. Declared here,
+// above the module-level init() call, like every other module const.
+const PLAYBOOK_MIN_TRADES = 5;
+
 /* ── 1b quick capture ──────────────────────────────────────────────────────
    Declared here, above the module-level init() call, like every other module
    const — anything below it is in the temporal dead zone during first render.
@@ -841,7 +866,7 @@ function init() {
   // Hash router: restore the deep-linked view for preview sessions; the
   // authenticated flow restores in checkAuthSession once the gate opens.
   if (canAccessApp()) {
-    const initialView = getViewFromHash();
+    const initialView = restoreRouteFromHash();
     if (initialView && initialView !== "dashboard") {
       switchView(initialView);
     }
@@ -1092,7 +1117,17 @@ function bindEvents() {
       return;
     }
     const id = getViewFromHash() || (window.location.hash ? "" : "dashboard");
-    if (id && !isViewActive(id)) {
+    if (!id) {
+      return;
+    }
+    // #playbook/<setup>: two setup pages share one view, so back/forward
+    // between them is a hash change the isViewActive() guard would swallow.
+    const setup = id === "playbook" ? getPlaybookSetupFromHash() : "";
+    const setupChanged = Boolean(setup) && setup !== state.playbook.setup;
+    if (setupChanged) {
+      state.playbook.setup = setup;
+    }
+    if (setupChanged || !isViewActive(id)) {
       switchView(id);
     }
   });
@@ -1300,10 +1335,25 @@ function bindEvents() {
   ui.cooldownDialog?.addEventListener("close", () => {
     cooldownPrompt = null;
   });
+  // 1f #04: "All setups →" opens the playbook, landing on whichever setup is
+  // already selected (busiest one on a first visit). Every other door into a
+  // setup page — the playbook tiles, the Edge Detection rows, the picker chips
+  // — carries the same attribute, so one delegated listener covers them all,
+  // including the markup renderPlaybookPage() rebuilds on every pass.
   ui.allSetupsBtn?.addEventListener("click", () => {
-    switchView("dashboard");
-    scrollDashboardTo(ui.edgeRows?.closest(".panel"));
+    openPlaybook("");
   });
+  document.addEventListener("click", (event) => {
+    const link = event.target.closest("[data-playbook-setup]");
+    if (link) {
+      openPlaybook(link.dataset.playbookSetup);
+    }
+  });
+  ui.playbookBackBtn?.addEventListener("click", () => {
+    switchView("dashboard");
+    scrollDashboardTo(ui.dashPlaybook);
+  });
+  ui.playbookJournalBtn?.addEventListener("click", openPlaybookInJournal);
   // 1c: every route into the queue opens the same close sheet for that trade.
   ui.dashUnjournalledList?.addEventListener("click", (event) => {
     const row = event.target.closest("[data-unjournalled-trade]");
@@ -1488,17 +1538,30 @@ function switchView(id) {
     view.classList.toggle("is-active", view.id === id);
   });
 
+  // 1f #04: the playbook page IS its data, so render before it is shown — and
+  // force a chart repaint, because its canvas had no layout width while the
+  // view was hidden and would otherwise paint at the 900px fallback. Runs
+  // before the hash sync below: renderPlaybookPage() settles which setup is
+  // actually on screen, and that setup is half of the URL.
+  if (id === "playbook") {
+    renderPlaybookPage();
+    if (state.analytics) {
+      renderCharts(state.analytics, { force: true });
+    }
+  }
+
   // Hash router: keep location.hash in sync so refresh/back/forward restore
   // the view. The first programmatic set uses replaceState so page load does
   // not burn a history entry; later switches push normally.
-  if (window.location.hash !== `#${id}`) {
+  const target = viewHash(id);
+  if (window.location.hash !== `#${target}`) {
     if (window.location.hash) {
-      window.location.hash = id;
+      window.location.hash = target;
     } else {
       try {
-        window.history.replaceState(null, "", `#${id}`);
+        window.history.replaceState(null, "", `#${target}`);
       } catch (error) {
-        window.location.hash = id;
+        window.location.hash = target;
       }
     }
   }
@@ -1515,9 +1578,42 @@ function switchView(id) {
   }
 }
 
+// Two-segment hashes: "#playbook/<setup>" is a view id plus a page argument.
+// Every other route is still a bare view id, so the split is a no-op for them.
+function viewHash(id) {
+  return id === "playbook" && state.playbook.setup
+    ? `${id}/${encodeURIComponent(state.playbook.setup)}`
+    : id;
+}
+
 function getViewFromHash() {
-  const id = window.location.hash.replace(/^#/, "");
+  const id = window.location.hash.replace(/^#/, "").split("/")[0];
   return id && ui.views.some((view) => view.id === id) ? id : "";
+}
+
+function getPlaybookSetupFromHash() {
+  const parts = window.location.hash.replace(/^#/, "").split("/");
+  if (parts[0] !== "playbook") {
+    return "";
+  }
+  try {
+    // A setup name may legitimately contain "/", so the tail rejoins.
+    return decodeURIComponent(parts.slice(1).join("/"));
+  } catch (error) {
+    return "";
+  }
+}
+
+// The deep-link route: view id plus, for a playbook link, the setup segment,
+// so a pasted or refreshed #playbook/Breakout lands on Breakout's page rather
+// than on whichever setup happens to be busiest.
+function restoreRouteFromHash() {
+  const id = getViewFromHash();
+  const setup = id === "playbook" ? getPlaybookSetupFromHash() : "";
+  if (setup) {
+    state.playbook.setup = setup;
+  }
+  return id;
 }
 
 function isMobileViewport() {
@@ -2105,7 +2201,7 @@ async function checkAuthSession() {
     await loadLoginLogs({ silent: true });
     await loadAdminUsers({ silent: true });
     refreshLivePrices({ immediate: true });
-    switchView(getViewFromHash() || "dashboard");
+    switchView(restoreRouteFromHash() || "dashboard");
   } else {
     state.recentTrades = [];
     renderHeroRecentTrades();
@@ -5792,6 +5888,12 @@ function renderAll() {
   syncBulkUndoButton();
   renderRiskViolations(state.analytics);
   renderEdgeTable(state.analytics);
+  // 1f #04: only when the page is on screen — it is a detail view, and its
+  // series feed the chart hash, so refreshing it while hidden would replay
+  // every chart's draw-in for a page nobody is looking at.
+  if (isViewActive("playbook")) {
+    renderPlaybookPage();
+  }
   renderCharts(state.analytics);
   renderCalendarView();
   hydrateSetupFilter();
@@ -7064,14 +7166,17 @@ function renderPlaybook(analytics) {
     .map((row) => {
       const positive = row.expectancy >= 0;
       const width = clamp((Math.abs(row.expectancy) / peak) * 100, 6, 100);
+      // 1f #04: the tile is the door into that setup's playbook page. A button
+      // rather than a click handler on an <article> so it is keyboard-reachable
+      // and announced as the control it now is.
       return `
-        <article class="dash-play-tile ${positive ? "is-raised" : "is-sunk"}">
-          <p class="dash-play-name">${escapeHtml(row.setup)}</p>
-          <p class="dash-play-value ${positive ? "pnl-positive" : "pnl-negative"}">${positive ? "▲" : "▼"} ${positive ? "" : "−"}${formatCurrency(Math.abs(row.expectancy))}<span class="dash-play-unit">/trade</span></p>
-          <p class="dash-play-meta">Net ${positive ? "+" : "−"}${formatCurrency(Math.abs(row.netPnl))}</p>
-          <p class="dash-play-meta">${row.trades} trade${row.trades === 1 ? "" : "s"} · ${row.winRate.toFixed(0)}% win</p>
-          <div class="dash-play-bar" aria-hidden="true"><span style="width:${width.toFixed(0)}%"></span></div>
-        </article>
+        <button class="dash-play-tile ${positive ? "is-raised" : "is-sunk"}" type="button" data-playbook-setup="${escapeHtml(row.setup)}">
+          <span class="dash-play-name">${escapeHtml(row.setup)}</span>
+          <span class="dash-play-value ${positive ? "pnl-positive" : "pnl-negative"}"><span aria-hidden="true">${positive ? "▲" : "▼"}</span> ${positive ? "" : "−"}${formatCurrency(Math.abs(row.expectancy))}<span class="dash-play-unit">/trade</span></span>
+          <span class="dash-play-meta">Net ${positive ? "+" : "−"}${formatCurrency(Math.abs(row.netPnl))}</span>
+          <span class="dash-play-meta">${row.trades} trade${row.trades === 1 ? "" : "s"} · ${row.winRate.toFixed(0)}% win</span>
+          <span class="dash-play-bar" aria-hidden="true"><span style="width:${width.toFixed(0)}%"></span></span>
+        </button>
       `;
     })
     .join("");
@@ -7140,6 +7245,336 @@ function renderSetupAlert() {
   ui.dashSetupAlertText.textContent =
     `${failing.setup} has been negative for ${failing.streak} trades straight.${tagSentence}` +
     " Retire it, or gate it behind your checklist.";
+}
+
+/* ══ 1f #04 — PLAYBOOK PAGES ═══════════════════════════════════════════════
+   design-source/1f-features.html: "Each setup gets a page: its expectancy
+   curve, its best session, its screenshots side by side. The Edge Detection
+   table already computes every number — it just has nowhere to go."
+
+   Route: #playbook/<setup>. Every figure is recomputed here from the ACTIVE
+   account's closed trades in that setup (state.trades is already scoped), so
+   the page can never disagree with the dashboard or with Edge Detection.
+
+   The honesty rule: below PLAYBOOK_MIN_TRADES closed trades the win rate,
+   profit factor, average R and expectancy are withheld and the threshold is
+   stated. A 100% win rate over two trades is a lie with a percent sign on it.
+   Trade count, net P&L and the screenshots are still shown — those are facts,
+   not statistics. Profit factor with no losing trades is not "999": it is a
+   number that cannot be computed yet, and the tile says so.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+// Setups the active account has actually closed trades in, busiest first.
+function getPlaybookSetups() {
+  const counts = new Map();
+  getClosedTrades().forEach((trade) => {
+    const key = trade.setupType || "Unknown";
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([setup, trades]) => ({ setup, trades }));
+}
+
+// A stored screenshot is only ever an inline data: image. Anything else in
+// that field (a stale record, a hand-edited export) is not rendered as a src.
+function isInlineImage(value) {
+  return /^data:image\//i.test(String(value || ""));
+}
+
+function playbookGroup(trades, field) {
+  const map = new Map();
+  trades.forEach((trade) => {
+    const label = String(trade[field] || "").trim() || "Unknown";
+    const row = map.get(label) || { label, trades: 0, wins: 0, netPnl: 0 };
+    row.trades += 1;
+    row.netPnl = round(row.netPnl + trade.netPnl);
+    if (trade.result === "Win") {
+      row.wins += 1;
+    }
+    map.set(label, row);
+  });
+  return Array.from(map.values()).sort((a, b) => b.netPnl - a.netPnl);
+}
+
+function buildPlaybookReport(setup) {
+  const trades = getClosedTrades()
+    .filter((trade) => (trade.setupType || "Unknown") === setup)
+    .sort(sortTradesAsc);
+
+  let net = 0;
+  let wins = 0;
+  let grossProfit = 0;
+  let grossLoss = 0;
+  let rTotal = 0;
+  let rCount = 0;
+  const curve = [];
+  const dates = [];
+
+  trades.forEach((trade, index) => {
+    net = round(net + trade.netPnl);
+    if (trade.netPnl > 0) {
+      wins += 1;
+      grossProfit += trade.netPnl;
+    } else if (trade.netPnl < 0) {
+      grossLoss += Math.abs(trade.netPnl);
+    }
+    if (Number.isFinite(trade.rMultiple)) {
+      rTotal += trade.rMultiple;
+      rCount += 1;
+    }
+    // The expectancy curve: what this setup had been worth PER TRADE after
+    // each trade it produced. Flat is a stable edge, a falling tail is an
+    // edge decaying — which a cumulative P&L line hides behind its own slope.
+    curve.push(round(net / (index + 1)));
+    dates.push(trade.date);
+  });
+
+  return {
+    setup,
+    trades,
+    count: trades.length,
+    netPnl: net,
+    wins,
+    winRate: trades.length > 0 ? (wins / trades.length) * 100 : 0,
+    expectancy: trades.length > 0 ? net / trades.length : 0,
+    profitFactor: grossLoss > 0 ? grossProfit / grossLoss : null,
+    avgR: rCount > 0 ? rTotal / rCount : null,
+    rCount,
+    curve,
+    dates,
+    sessions: playbookGroup(trades, "session"),
+    timeframes: playbookGroup(trades, "timeframe"),
+    psychology: playbookGroup(trades, "psychology"),
+    shots: trades.filter((trade) => isInlineImage(trade.screenshotData)).slice().sort(sortTradesDesc)
+  };
+}
+
+function playbookMoney(value) {
+  return `${value >= 0 ? "+" : "−"}${formatCurrency(Math.abs(value))}`;
+}
+
+function playbookTradeCount(count) {
+  return `${count} trade${count === 1 ? "" : "s"}`;
+}
+
+// Rows arrive sorted by net P&L descending, so best is first and worst last.
+// With a single group there is no best or worst — there is one fact, and it
+// says so rather than crowning the only candidate.
+function playbookExtremes(rows, noun) {
+  if (!rows.length) {
+    return "";
+  }
+  if (rows.length === 1) {
+    return `Only one ${noun} here — ${rows[0].label}, on all ${playbookTradeCount(rows[0].trades)}. Nothing to compare it against.`;
+  }
+  const best = rows[0];
+  const worst = rows[rows.length - 1];
+  return (
+    `Best ${noun}: ${best.label}, ${playbookMoney(best.netPnl)} over ${playbookTradeCount(best.trades)}. ` +
+    `Worst: ${worst.label}, ${playbookMoney(worst.netPnl)} over ${playbookTradeCount(worst.trades)}.`
+  );
+}
+
+function playbookBarList(rows) {
+  const peak = Math.max(...rows.map((row) => Math.abs(row.netPnl)), 1);
+  return `
+    <ul class="pb-bars">
+      ${rows
+        .map((row) => {
+          const positive = row.netPnl >= 0;
+          const width = clamp((Math.abs(row.netPnl) / peak) * 100, 6, 100);
+          return `
+            <li class="pb-bar-row">
+              <span class="pb-bar-label">${escapeHtml(row.label)}</span>
+              <span class="pb-bar-value ${positive ? "pnl-positive" : "pnl-negative"}">${playbookMoney(row.netPnl)}</span>
+              <span class="pb-bar-track" aria-hidden="true"><span class="pb-bar-fill ${positive ? "is-pos" : "is-neg"}" style="width:${width.toFixed(0)}%"></span></span>
+              <span class="pb-bar-meta">${playbookTradeCount(row.trades)} · ${Math.round((row.wins / row.trades) * 100)}% win</span>
+            </li>
+          `;
+        })
+        .join("")}
+    </ul>
+  `;
+}
+
+function playbookBreakdownCard(title, noun, rows) {
+  return `
+    <section class="panel pb-breakdown">
+      <div class="panel-head">
+        <h3>${escapeHtml(title)}</h3>
+        <p>${escapeHtml(playbookExtremes(rows, noun))}</p>
+      </div>
+      ${playbookBarList(rows)}
+    </section>
+  `;
+}
+
+function renderPlaybookPage() {
+  if (!ui.playbookPicker || !ui.playbookStats) {
+    return;
+  }
+
+  const setups = getPlaybookSetups();
+  const active = setups.some((row) => row.setup === state.playbook.setup)
+    ? state.playbook.setup
+    : setups[0]?.setup || "";
+  state.playbook.setup = active;
+
+  ui.playbookPicker.innerHTML = setups
+    .map(
+      (row) => `
+        <button
+          class="pb-pick${row.setup === active ? " is-active" : ""}"
+          type="button"
+          data-playbook-setup="${escapeHtml(row.setup)}"
+          ${row.setup === active ? 'aria-current="page"' : ""}
+        >${escapeHtml(row.setup)}<span class="pb-pick-count">${row.trades}</span></button>
+      `
+    )
+    .join("");
+
+  const report = active ? buildPlaybookReport(active) : null;
+  const enough = Boolean(report) && report.count >= PLAYBOOK_MIN_TRADES;
+
+  // The series charts.js paints. Cleared below the threshold so the canvas
+  // shows its empty label instead of a curve nobody should read.
+  state.playbook.curve = enough ? report.curve : [];
+  state.playbook.dates = enough ? report.dates : [];
+  state.playbook.key = enough && report.expectancy < 0 ? "neg" : "line";
+
+  ui.playbookHeading.textContent = active || "Setups";
+  if (ui.playbookJournalBtn) {
+    ui.playbookJournalBtn.hidden = !active;
+  }
+
+  if (!report) {
+    ui.playbookLede.textContent =
+      "No closed trades yet. Log and close a trade and its setup gets a page here.";
+    ui.playbookEmpty.hidden = true;
+    ui.playbookStats.innerHTML = "";
+    ui.playbookChartPanel.hidden = true;
+    ui.playbookBreakdowns.innerHTML = "";
+    ui.playbookShotsPanel.hidden = true;
+    ui.playbookShots.innerHTML = "";
+    return;
+  }
+
+  const accountLabel = getActiveAccount()?.label || "";
+  ui.playbookLede.textContent =
+    `${playbookTradeCount(report.count)} closed${accountLabel ? ` in ${accountLabel}` : ""}, ` +
+    `net ${playbookMoney(report.netPnl)}.`;
+
+  // Below the threshold: say so, name the number, and show nothing derived.
+  ui.playbookEmpty.hidden = enough;
+  if (!enough) {
+    ui.playbookEmpty.textContent =
+      `${report.setup} has ${playbookTradeCount(report.count)} closed. ` +
+      `Win rate, profit factor, average R and the expectancy curve need at least ` +
+      `${PLAYBOOK_MIN_TRADES} before they mean anything, so they are left out rather than guessed. ` +
+      `Net so far is ${playbookMoney(report.netPnl)}.`;
+  }
+
+  ui.playbookStats.innerHTML = enough
+    ? [
+        {
+          label: "Expectancy",
+          value: playbookMoney(report.expectancy),
+          meta: "per trade",
+          tone: report.expectancy >= 0 ? "pos" : "neg"
+        },
+        {
+          label: "Net P&L",
+          value: playbookMoney(report.netPnl),
+          meta: playbookTradeCount(report.count),
+          tone: report.netPnl >= 0 ? "pos" : "neg"
+        },
+        {
+          label: "Win rate",
+          value: `${report.winRate.toFixed(0)}%`,
+          meta: `${report.wins} of ${report.count} closed green`
+        },
+        {
+          label: "Profit factor",
+          value: report.profitFactor === null ? "—" : report.profitFactor.toFixed(2),
+          meta: report.profitFactor === null ? "no losing trade yet" : "gross win ÷ gross loss"
+        },
+        {
+          label: "Avg R",
+          value: report.avgR === null ? "—" : `${report.avgR >= 0 ? "+" : "−"}${Math.abs(report.avgR).toFixed(2)}R`,
+          meta: report.avgR === null ? "no risk distance recorded" : `over ${playbookTradeCount(report.rCount)}`
+        }
+      ]
+        .map(
+          (stat) => `
+            <article class="pb-stat${stat.tone ? ` is-${stat.tone}` : ""}">
+              <p class="pb-stat-label">${escapeHtml(stat.label)}</p>
+              <p class="pb-stat-value${stat.tone ? ` pnl-${stat.tone === "pos" ? "positive" : "negative"}` : ""}">${escapeHtml(stat.value)}</p>
+              <p class="pb-stat-meta">${escapeHtml(stat.meta)}</p>
+            </article>
+          `
+        )
+        .join("")
+    : "";
+
+  ui.playbookChartPanel.hidden = !enough;
+
+  ui.playbookBreakdowns.innerHTML = enough
+    ? [
+        playbookBreakdownCard("Sessions", "session", report.sessions),
+        playbookBreakdownCard("Timeframes", "timeframe", report.timeframes),
+        playbookBreakdownCard("Psychology", "state of mind", report.psychology)
+      ].join("")
+    : "";
+
+  ui.playbookShotsPanel.hidden = report.shots.length === 0;
+  ui.playbookShotsLede.textContent = report.shots.length
+    ? `${report.shots.length} of ${report.count} trades in ${report.setup} have a chart attached, newest first.`
+    : "";
+  ui.playbookShots.innerHTML = report.shots
+    .map((trade) => {
+      const positive = trade.netPnl >= 0;
+      return `
+        <figure class="pb-shot">
+          <img
+            class="pb-shot-img"
+            src="${escapeHtml(trade.screenshotData)}"
+            alt="Chart screenshot from the ${escapeHtml(trade.asset)} trade on ${escapeHtml(trade.date)}"
+            loading="lazy"
+          />
+          <figcaption class="pb-shot-caption">
+            <p class="pb-shot-head">
+              <span class="pb-shot-symbol">${escapeHtml(trade.asset)}</span>
+              <span class="pb-shot-net ${positive ? "pnl-positive" : "pnl-negative"}">${playbookMoney(trade.netPnl)}</span>
+            </p>
+            <p class="pb-shot-meta">${escapeHtml(formatIsoShort(trade.date))} · ${escapeHtml(trade.timeframe)} · ${escapeHtml(trade.session)}</p>
+            ${
+              trade.notes
+                ? `<p class="pb-shot-note">${escapeHtml(trade.notes)}</p>`
+                : '<p class="pb-shot-note is-muted">No note on this trade.</p>'
+            }
+          </figcaption>
+        </figure>
+      `;
+    })
+    .join("");
+}
+
+function openPlaybook(setup) {
+  state.playbook.setup = setup || state.playbook.setup;
+  switchView("playbook");
+}
+
+// The route back out: the review screen filtered to this setup and nothing
+// else, so "show me the trades behind that number" is one tap.
+function openPlaybookInJournal() {
+  if (!state.playbook.setup) {
+    return;
+  }
+  clearFilters();
+  ui.filters.setup.value = state.playbook.setup;
+  handleFilterChange();
+  switchView("journal");
 }
 
 /* ── 1a unjournalled ─────────────────────────────────────────────────────────
@@ -8664,9 +9099,12 @@ function renderEdgeTable(analytics) {
     .map((row) => {
       const netClass = row.netPnl >= 0 ? "pnl-positive" : "pnl-negative";
       const expClass = row.expectancy >= 0 ? "pnl-positive" : "pnl-negative";
+      // 1f #04: the setup name is the link into its playbook page — this table
+      // computes every number on that page and previously had nowhere to send
+      // you with them.
       return `
         <tr>
-          <td data-label="Setup">${escapeHtml(row.setup)}</td>
+          <td data-label="Setup"><button class="pb-link" type="button" data-playbook-setup="${escapeHtml(row.setup)}">${escapeHtml(row.setup)}</button></td>
           <td data-label="Trades" class="num">${row.trades}</td>
           <td data-label="Win Rate" class="num">${row.winRate.toFixed(1)}%</td>
           <td data-label="Net P&L" class="num ${netClass}">${formatCurrency(row.netPnl)}</td>

@@ -1388,3 +1388,148 @@ transition. Static server returns the new markers on `index.html`, `app.js`,
 the 90/10 split). The research covers it in detail, but it is a separate
 feature from "am I about to bust this account", and the caps are the figures
 the research found most in conflict between the firm's own pages.
+
+---
+
+## 1f #04 — Playbook pages
+
+> "Each setup gets a page: its expectancy curve, its best session, its
+> screenshots side by side. The Edge Detection table already computes every
+> number — it just has nowhere to go." — `design-source/1f-features.html`
+
+The Edge Detection table now has somewhere to send you. Every setup with a
+closed trade gets a page at `#playbook/<setup>`, reachable from the dashboard
+playbook tiles, from "All setups →", and from the setup name in the Edge
+Detection table itself.
+
+### The route
+
+The first two-segment hash in the app. `#playbook/Liquidity%20Grab` is a view
+id plus a page argument, so refresh, back and forward restore the **page** you
+were reading rather than the shell around it. Three small pieces:
+
+- `viewHash(id)` appends the setup for `playbook` and is the identity function
+  for every other route, so nothing else in the router changed shape.
+- `getPlaybookSetupFromHash()` rejoins the tail (a setup name may contain "/")
+  and swallows a mangled percent escape rather than throwing the router.
+- The `hashchange` handler grew one branch: two setup pages share one view, so
+  back/forward between them is a hash change the existing `!isViewActive(id)`
+  guard would have swallowed silently.
+
+A deep link to a setup that no longer exists falls back to the busiest one
+rather than rendering an empty shell, and rewrites the hash to match.
+
+### The honesty threshold
+
+`PLAYBOOK_MIN_TRADES = 5`. Below it the page prints, in full:
+
+> Reversal has 2 trades closed. Win rate, profit factor, average R and the
+> expectancy curve need at least 5 before they mean anything, so they are left
+> out rather than guessed. Net so far is −$40.00.
+
+Trade count, net P&L and the screenshots still show — those are facts. The win
+rate, profit factor, average R, expectancy and the whole curve are withheld,
+not shrunk. A 100% win rate over two trades is a lie with a percent sign on it.
+
+Two more numbers refuse to be invented rather than defaulting:
+
+- **Profit factor with no losing trade** is `—` with "no losing trade yet"
+  under it, not the `999` sentinel `calculateAnalytics` uses internally.
+- **Average R with no risk distance recorded** is `—` with "no risk distance
+  recorded", not `0.00R`.
+
+### The curve is expectancy, not cumulative P&L
+
+`curve[i] = round(cumulativeNet / (i + 1))` — what the setup had been worth
+**per trade** after each trade it produced. This matters: four +$300 winners
+followed by four −$100 losers still ends at +$800 cumulative and looks like a
+working setup, while the expectancy line falls 300 → 100 across the back half
+and says the edge is decaying. `tests/playbook.check.mjs` asserts exactly that
+shape, because the two curves are indistinguishable at a glance and only one
+answers the question the page exists to answer.
+
+### The chart is the existing engine, not a new one
+
+No new drawing code. The series lives on `state.playbook` (which setup is on
+screen is a routing fact, not an analytics one), `computeChartHash` hashes it
+alongside every other series, and `drawAllCharts` paints `ui.playbookChart`
+through the same `drawLineChart` used by equity and drawdown. That buys the
+theme palette re-read on `themechange`, the draw-in guard, hover, the
+reduced-motion settled frame and the empty label for free. The line switches
+to the negative key when the setup's expectancy is negative — colour carrying
+state alongside the sign in the value, never depth alone.
+
+One wrinkle worth recording: a canvas in a hidden view has `clientWidth === 0`
+and falls back to the module's 900px default, so it would paint squashed.
+`switchView("playbook")` therefore renders the page **and** forces a chart
+repaint, in that order — `renderPlaybookPage()` settles which setup is on
+screen, and that setup is half of the URL the hash sync writes next.
+
+### What the page shows
+
+Five stat tiles (expectancy, net, win rate, profit factor, average R), the
+expectancy curve, then three breakdown cards — sessions, timeframes,
+psychology — each a bar list with a best/worst sentence above it. With only one
+group the sentence refuses to crown the only candidate: "Only one session here
+— London, on all 14 trades. Nothing to compare it against."
+
+Screenshots sit side by side in a real grid (one column at phone width; two
+charts at 375px is two charts nobody can read), each with the trade's net, its
+date/timeframe/session, and its note — or "No note on this trade", which is
+itself the honest answer. `isInlineImage()` gates the `src`: only a
+`data:image/…` value is ever rendered, so a hand-edited export cannot smuggle a
+`javascript:` URL into an attribute.
+
+"Open in journal →" clears the filters, sets the setup filter and switches to
+Trade Review — the route back to the rows behind the numbers.
+
+### Small things that came along
+
+- `.dash-play-tile` became a `<button>` (keyboard-reachable, announced as a
+  control) and its inner `<p>`/`<div>` became `<span>`s, which is what the
+  button content model actually allows. Grid blockification means the CSS is
+  unchanged; only a focus ring and a UA reset were added.
+- The ▲/▼ glyph on those tiles is now `aria-hidden` — the money colour and the
+  sign already carry it, and a screen reader announcing "up-pointing triangle"
+  did not.
+
+### Verified
+
+21/21 test files green, including the new `tests/playbook.check.mjs`, which
+drives the real `buildPlaybookReport`, `playbookGroup`, `playbookExtremes`,
+`playbookBarList`, `viewHash` and `getPlaybookSetupFromHash` sliced out of
+`app.js` — never a copy. `tests/charts.smoke.mjs` was extended rather than
+duplicated: the playbook canvas paints a negative-key series and an empty one.
+
+`node --check` clean on `app.js` and `src/modules/charts.js`.
+`tests/bootOrder.check.mjs` green — the one new module-level const
+(`PLAYBOOK_MIN_TRADES`, line 657) and `state.playbook` both sit above the
+`init()` call at line 816.
+
+Beyond the static checks, `app.js` was **actually booted headlessly** in node
+behind a stub DOM (scratchpad, not committed), with a seeded journal in
+localStorage and `location.hash = "#playbook/Breakout"`. `init()` ran to
+completion with no `ReferenceError`, and the deep link survived the whole boot:
+`#playbook` normalised to the busiest setup, `#playbook/Nope` fell back to it,
+`#playbook/Reversal` was honoured, and `#journal` was untouched. This is the
+first run in this series where the TDZ trap was disproved by *running* the
+module rather than by reading it.
+
+`tests/mobileFloors.check.mjs` green with the new CSS: nothing under 11px, the
+picker chips and header buttons carry `min-height: 44px` in their base rule,
+and the Edge Detection setup link becomes a 44px inline-flex target on a
+coarse pointer. Every new rule is token-only, so the dark theme is the same
+re-derivation with no second rule set. Static server returns the new markers on
+`index.html`, `app.js`, `clay-v2.css` and `src/modules/charts.js`;
+cache-busters bumped to `?v=20260813-playbook`.
+
+**No `api/` change.** The page is pure client-side derivation over trades the
+journal already stores, and it persists nothing — `state.playbook` is view
+state, not settings, so `CLIENT_OWNED_SETTINGS` in `api/_lib/sanitize.js` is
+untouched.
+
+**Not built, deliberately:** the playbook page does not let you *edit* a
+setup — rename it, merge two spellings of the same idea, or retire it. That is
+a data-cleanup feature with its own migration story (every trade carries the
+setup as a string), and it belongs next to bulk import rather than bolted to a
+read-only report.

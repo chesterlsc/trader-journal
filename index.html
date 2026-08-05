@@ -45,10 +45,10 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260812-accounts" />
+    <link rel="stylesheet" href="styles.css?v=20260813-playbook" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260812-accounts" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260813-playbook" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -1036,6 +1036,59 @@
                is an admin (ship-now #12) — the markup never ships publicly. -->
           <div id="adminPanelsMount"></div>
 
+        </section>
+
+        <!-- 1f #04 Playbook pages. One page per setup, reached from the
+             dashboard playbook tiles, "All setups →" and the Edge Detection
+             table. The route is #playbook/<setup>, so refresh, back and
+             forward restore the page you were reading rather than the shell.
+             Every figure inside is computed by renderPlaybookPage() from the
+             active account's closed trades in that setup — below the trade
+             threshold the statistics are withheld, never estimated. -->
+        <section class="view" id="playbook" aria-labelledby="playbookHeading">
+          <header class="view-head pb-head">
+            <div class="pb-head-copy">
+              <p class="view-kicker">Playbook</p>
+              <h2 id="playbookHeading">Setups</h2>
+              <p id="playbookLede">Every setup you have traded, one page each.</p>
+            </div>
+            <div class="pb-head-actions">
+              <button class="btn pb-head-btn" type="button" id="playbookBackBtn">&larr; Dashboard</button>
+              <button class="btn primary pb-head-btn" type="button" id="playbookJournalBtn">
+                Open in journal &rarr;
+              </button>
+            </div>
+          </header>
+
+          <nav class="pb-picker" id="playbookPicker" aria-label="Choose a setup"></nav>
+
+          <p class="pb-note" id="playbookEmpty" hidden></p>
+
+          <div class="pb-stats" id="playbookStats"></div>
+
+          <article class="panel panel-chart pb-chart-panel" id="playbookChartPanel" hidden>
+            <div class="panel-head">
+              <h3>Expectancy curve</h3>
+              <p>Net P&amp;L divided by trades taken, recomputed after every trade in this setup.</p>
+            </div>
+            <canvas
+              id="playbookChart"
+              width="900"
+              height="280"
+              data-height="240"
+              aria-label="Expectancy curve for this setup"
+            ></canvas>
+          </article>
+
+          <div class="pb-breakdowns" id="playbookBreakdowns"></div>
+
+          <section class="panel pb-shots-panel" id="playbookShotsPanel" hidden aria-labelledby="playbookShotsHeading">
+            <div class="panel-head">
+              <h3 id="playbookShotsHeading">Screenshots</h3>
+              <p id="playbookShotsLede"></p>
+            </div>
+            <div class="pb-shots" id="playbookShots"></div>
+          </section>
         </section>
 
         <!-- 1e Calendar: the month title IS the heading, the meta line carries
@@ -2177,6 +2230,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260812-accounts"></script>
+    <script type="module" src="app.js?v=20260813-playbook"></script>
   </body>
 </html>

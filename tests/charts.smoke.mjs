@@ -94,11 +94,19 @@ const ui = {
   psychologyChart: canvas("psychologyChart", 240),
   sessionChart: canvas("sessionChart", 240),
   rMultipleChart: canvas("rMultipleChart", 240),
+  // 1f #04 playbook page: same line engine, series carried on state.
+  playbookChart: canvas("playbookChart", 240),
   strategyDimensionButtons: [],
   strategyMetricButtons: []
 };
 
-const state = { dashboard: { performanceDimension: "setup", performanceMetric: "pnl" }, analytics: null };
+const state = {
+  dashboard: { performanceDimension: "setup", performanceMetric: "pnl" },
+  // Starts empty on purpose: the first renderCharts() pass below must survive
+  // a playbook page nobody has opened yet.
+  playbook: { setup: "", curve: [], dates: [], key: "line" },
+  analytics: null
+};
 const { renderCharts } = createChartsModule({ ui, state, prefersReducedMotion: () => false });
 
 const full = {
@@ -172,6 +180,21 @@ renderCharts(
   },
   { force: true }
 );
+
+// 1f #04 playbook curve: a losing setup paints on the negative key, and a
+// series short enough to be withheld must fall back to the empty label rather
+// than draw a two-point "trend".
+state.playbook = {
+  setup: "Failed auction",
+  curve: [-120, -180, -95, -140, -210],
+  dates: ["2026-02-02", "2026-02-03", "2026-02-04", "2026-02-05", "2026-02-06"],
+  key: "neg"
+};
+const beforePlaybook = calls.length;
+renderCharts(full, { force: true });
+assert.ok(calls.length > beforePlaybook, "the playbook curve must paint");
+state.playbook = { setup: "Scalp", curve: [], dates: [], key: "line" };
+renderCharts(full, { force: true });
 
 // Reduced motion: a separate instance that always paints the settled frame.
 const reduced = createChartsModule({ ui, state, prefersReducedMotion: () => true });

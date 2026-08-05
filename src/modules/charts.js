@@ -132,7 +132,12 @@ export function createChartsModule({ ui, state, prefersReducedMotion }) {
       analytics.sessionReport,
       analytics.rMultipleReport,
       state.dashboard.performanceDimension,
-      state.dashboard.performanceMetric
+      state.dashboard.performanceMetric,
+      // 1f #04 playbook page: its series lives on state, not on analytics,
+      // because which setup is on screen is a routing fact. Hashed here so
+      // opening a different setup's page replays the draw-in exactly once.
+      state.playbook?.curve,
+      state.playbook?.key
     ]);
   }
 
@@ -275,6 +280,29 @@ export function createChartsModule({ ui, state, prefersReducedMotion }) {
             underwater: true,
             extreme: "min",
             extremeLabel: "MAX DD"
+          },
+          p
+        ),
+      progress
+    );
+
+    // 1f #04 playbook page: the selected setup's expectancy after each of its
+    // trades, drawn by the same line engine — same palette, same draw-in, same
+    // hover, same reduced-motion behaviour. Empty series below the trade
+    // threshold, which is what puts the empty label on the canvas.
+    paint(
+      ui.playbookChart,
+      (p) =>
+        drawLineChart(
+          ui.playbookChart,
+          state.playbook?.curve || [],
+          {
+            key: state.playbook?.key === "neg" ? "neg" : "line",
+            labels: state.playbook?.dates || [],
+            readout: "EXPECTANCY / TRADE",
+            emptyLabel: "Not enough trades in this setup yet",
+            extreme: "max",
+            extremeLabel: "PEAK"
           },
           p
         ),

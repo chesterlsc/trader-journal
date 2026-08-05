@@ -4433,3 +4433,349 @@ body.auth-locked .topnav {
 .prop-figure-room strong.is-breach {
   color: var(--pnl-neg);
 }
+
+/* ==========================================================================
+   §11. 1f #04 — PLAYBOOK PAGES
+   design-source/1f-features.html: "Each setup gets a page: its expectancy
+   curve, its best session, its screenshots side by side."
+
+   Tokens only, so the dark re-derivation comes for free. Depth carries the
+   same meaning it does everywhere else — a positive stat tile is raised, a
+   negative one is pressed — and never alone: the money colour and the sign
+   in the value say it too (WCAG 1.4.1).
+   ========================================================================== */
+
+.pb-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.pb-head-copy {
+  min-width: 0;
+}
+
+.pb-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.pb-head-btn {
+  min-height: 44px;
+}
+
+/* The setup picker doubles as the "all setups" index — every setup with a
+   closed trade, busiest first, with its trade count on the chip. */
+.pb-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.pb-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  box-shadow: var(--clay-raised);
+  color: var(--text);
+  font: 600 13px/1 var(--font-ui);
+  cursor: pointer;
+}
+
+.pb-pick:hover {
+  background: var(--surface-3);
+}
+
+/* Pressed + accent + aria-current: three signals, not one. */
+.pb-pick.is-active {
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+  color: var(--accent);
+}
+
+.pb-pick-count {
+  font: 600 11px/1 var(--font-mono);
+  color: var(--text-faint);
+}
+
+.pb-pick.is-active .pb-pick-count {
+  color: var(--accent);
+}
+
+/* The honest empty state: too few trades to say anything, saying so. */
+.pb-note {
+  margin: 0 0 var(--space-5);
+  padding: 18px 20px;
+  border-radius: var(--radius-clay-md);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+  color: var(--text-soft);
+  font: 400 13.5px/1.6 var(--font-ui);
+}
+
+.pb-note[hidden] {
+  display: none;
+}
+
+.pb-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.pb-stats:empty {
+  display: none;
+}
+
+.pb-stat {
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-2);
+  box-shadow: var(--clay-raised);
+}
+
+.pb-stat.is-neg {
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+}
+
+.pb-stat-label {
+  margin: 0;
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.pb-stat-value {
+  margin: 0;
+  font: 700 22px/1.1 var(--font-mono);
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.pb-stat-meta {
+  margin: 0;
+  font: 400 12px/1.4 var(--font-ui);
+  color: var(--text-soft);
+}
+
+.pb-chart-panel {
+  margin-bottom: var(--space-5);
+}
+
+.pb-chart-panel[hidden] {
+  display: none;
+}
+
+.pb-breakdowns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.pb-breakdowns:empty {
+  display: none;
+}
+
+.pb-bars {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pb-bar-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px var(--space-3);
+  align-items: baseline;
+}
+
+.pb-bar-label {
+  font: 600 13px/1.2 var(--font-ui);
+  color: var(--text);
+}
+
+.pb-bar-value {
+  font: 700 13px/1.2 var(--font-mono);
+  text-align: right;
+}
+
+.pb-bar-track {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  box-shadow: var(--clay-pressed);
+  overflow: hidden;
+}
+
+.pb-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+}
+
+.pb-bar-fill.is-pos {
+  background: var(--pnl-pos);
+}
+
+.pb-bar-fill.is-neg {
+  background: var(--pnl-neg);
+}
+
+.pb-bar-meta {
+  grid-column: 1 / -1;
+  font: 500 11px/1.3 var(--font-mono);
+  color: var(--text-faint);
+}
+
+.pb-shots-panel[hidden] {
+  display: none;
+}
+
+/* "Screenshots side by side" — a real grid, so two charts sit next to each
+   other on a laptop and stack honestly on a phone. */
+.pb-shots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+}
+
+.pb-shot {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-2);
+  box-shadow: var(--clay-raised);
+}
+
+.pb-shot-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-inset);
+}
+
+.pb-shot-caption {
+  display: grid;
+  gap: 5px;
+}
+
+.pb-shot-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.pb-shot-symbol {
+  font: 700 14px/1.2 var(--font-mono);
+  color: var(--text);
+}
+
+.pb-shot-net {
+  font: 700 14px/1.2 var(--font-mono);
+}
+
+.pb-shot-meta {
+  margin: 0;
+  font: 500 11px/1.3 var(--font-mono);
+  color: var(--text-faint);
+}
+
+.pb-shot-note {
+  margin: 0;
+  font: 400 13px/1.5 var(--font-ui);
+  color: var(--text-soft);
+}
+
+.pb-shot-note.is-muted {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+/* The Edge Detection setup name, now the door into that setup's page. */
+.pb-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* The dashboard playbook tile became a <button>; reset the UA chrome the clay
+   rule above does not cover, keeping the tile identical to how it looked as
+   an <article>. */
+.dash-play-tile {
+  width: 100%;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Clay shadows out-specify the global focus ring, so restore it here. */
+.pb-pick:focus-visible,
+.dash-play-tile:focus-visible,
+.pb-link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+@media (max-width: 899px), (pointer: coarse) {
+  /* The Edge Detection link is inside a table cell, so it gets its tap height
+     from the row rather than from a box of its own — an inline-flex with a
+     min-height is what makes it a real 44px target on a thumb. */
+  .pb-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 720px) {
+  .pb-head-actions {
+    width: 100%;
+  }
+
+  .pb-head-btn {
+    flex: 1 1 auto;
+  }
+
+  /* One column at phone width: two screenshots side by side at 375px is two
+     screenshots nobody can read. The stat tiles stay two-up — they are short
+     enough to pair, and five stacked tiles is a scroll, not a summary. */
+  .pb-shots,
+  .pb-breakdowns {
+    grid-template-columns: 1fr;
+  }
+
+  .pb-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
