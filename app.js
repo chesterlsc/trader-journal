@@ -456,6 +456,7 @@ const ui = {
   progressTradeSummary: document.getElementById("progressTradeSummary"),
   progressTradeLabel: document.getElementById("progressTradeLabel"),
   progressTradeTrack: document.getElementById("progressTradeTrack"),
+  deleteFilteredBtn: document.getElementById("deleteFilteredBtn"),
   backupJsonBtn: document.getElementById("backupJsonBtn"),
   importJsonBtn: document.getElementById("importJsonBtn"),
   jsonImportInput: document.getElementById("jsonImportInput"),
@@ -658,6 +659,24 @@ const METRIC_DELTA_SPECS = {
   winningStreak: { read: (a) => a.maxWinStreak, format: (v) => String(Math.round(v)) },
   losingStreak: { read: (a) => a.maxLossStreak, format: (v) => String(Math.round(v)), invert: true }
 };
+
+/* ── delete affordances ────────────────────────────────────────────────────
+   Above init() like everything else in this block — a module-level binding
+   below that call is in the temporal dead zone during the first render.
+
+   Deleting a trading journal is the one action in this app with no natural
+   recovery, so both delete routes end in the same undo window. 30s, not the
+   toast's usual 5: "wait, that was the wrong filter" takes longer than five
+   seconds to arrive. */
+const UNDO_TOAST_MS = 30000;
+
+// Swipe-to-reveal on a row card. The swipe only OPENS the action; the delete
+// itself is a deliberate second tap through the normal confirm. A pocket
+// swipe must never destroy a trade.
+const SWIPE_REVEAL_PX = 56;   // travel that counts as a reveal
+const SWIPE_AXIS_PX = 10;     // travel before the axis is decided
+const swipeTrack = { row: null, x0: 0, y0: 0, axis: "" };
+let swipedRow = null;
 
 init();
 
@@ -1066,6 +1085,7 @@ function bindEvents() {
 
   ui.clearFiltersBtn.addEventListener("click", clearFilters);
   ui.tradesBody.addEventListener("click", handleTradeTableClick);
+  bindRowSwipe();
 
   // 1e review chips + header Export.
   ui.reviewChips.forEach((chip) => {
@@ -1169,6 +1189,7 @@ function bindEvents() {
   // The greeting carries a live session countdown; a minute tick is enough.
   window.setInterval(renderGreeting, 60000);
   ui.backupJsonBtn.addEventListener("click", exportBackupJson);
+  ui.deleteFilteredBtn?.addEventListener("click", deleteFilteredTrades);
   ui.importJsonBtn.addEventListener("click", () => ui.jsonImportInput.click());
   ui.jsonImportInput.addEventListener("change", importBackupJson);
 
@@ -3683,17 +3704,32 @@ function saveCapturedTrade(value, preTradeRules, preTradeRulesAsked) {
   return trade;
 }
 
-function showCaptureToast(text, tone = "success") {
+/* `onUndo` turns the confirmation into an action. textContent wipes any button
+   from the previous toast first, so an expired undo can never be clicked. */
+function showCaptureToast(text, tone = "success", options = {}) {
   if (!ui.captureToast) {
     return;
   }
+  const { onUndo = null, undoLabel = "Undo", duration = 5000 } = options;
   ui.captureToast.textContent = text;
   ui.captureToast.dataset.tone = tone;
+  if (onUndo) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "capture-toast-undo";
+    button.textContent = undoLabel;
+    button.addEventListener("click", () => {
+      window.clearTimeout(captureToastTimer);
+      ui.captureToast.hidden = true;
+      onUndo();
+    });
+    ui.captureToast.appendChild(button);
+  }
   ui.captureToast.hidden = false;
   window.clearTimeout(captureToastTimer);
   captureToastTimer = window.setTimeout(() => {
     ui.captureToast.hidden = true;
-  }, 5000);
+  }, duration);
 }
 
 // Route split. A command line needs a keyboard; a touch viewport gets the
@@ -4533,6 +4569,133 @@ function handleTradeTableClick(event) {
   }
 }
 
+/* ── swipe to reveal Delete ────────────────────────────────────────────────
+   Touch only, and only on a row card. Three things it must not do:
+
+   1. Delete on the swipe. The swipe REVEALS a Delete button; deleting is a
+      second, deliberate tap that goes through the same confirm as the
+      row-detail Delete. A phone in a pocket does not get to wipe a trade.
+   2. Eat vertical scrolling. The axis is decided once, at 10px of travel, and
+      a vertical verdict abandons the gesture for good. `touch-action: pan-y`
+      on the row (clay-v2 §16) means the browser owns the vertical axis
+      outright — we never preventDefault, so scrolling stays native.
+   3. Fire from the filter chip strip. These listeners are on #tradesBody; the
+      chip strip is a sibling of the table, so its horizontal scroll is never
+      seen here at all.
+
+   Desktop/keyboard equivalent: the row-detail Delete button, untouched. */
+// 900px is where styles.css turns every row into a card (tr{display:block}) —
+// the same breakpoint clay-v2 §16b styles the reveal at. One source of truth.
+function isCardLayout() {
+  return window.matchMedia("(max-width: 900px)").matches;
+}
+
+function bindRowSwipe() {
+  const body = ui.tradesBody;
+  if (!body) {
+    return;
+  }
+
+  body.addEventListener("pointerdown", (event) => {
+    // Mouse users have the row-detail Delete; a touch laptop at 1400px is a
+    // DESKTOP layout, where tr is still a table-row and the reveal has no
+    // styling and nowhere to open into. Both gates, not just pointerType.
+    if (event.pointerType === "mouse" || !event.isPrimary || !isCardLayout()) {
+      return;
+    }
+    // A tap that starts on a control is that control's, not a swipe.
+    if (event.target.closest("button, a, input, select, textarea")) {
+      return;
+    }
+    const row = event.target.closest("tr[data-trade-id]");
+    if (!row) {
+      return;
+    }
+    if (swipedRow && swipedRow !== row) {
+      closeRowSwipe();
+    }
+    swipeTrack.row = row;
+    swipeTrack.x0 = event.clientX;
+    swipeTrack.y0 = event.clientY;
+    swipeTrack.axis = "";
+  });
+
+  body.addEventListener("pointermove", (event) => {
+    if (!swipeTrack.row) {
+      return;
+    }
+    const dx = event.clientX - swipeTrack.x0;
+    const dy = event.clientY - swipeTrack.y0;
+    if (!swipeTrack.axis) {
+      if (Math.abs(dx) < SWIPE_AXIS_PX && Math.abs(dy) < SWIPE_AXIS_PX) {
+        return;
+      }
+      // Ties go to the page. Scrolling is the common case by orders of
+      // magnitude, and a swallowed scroll is worse than a missed swipe.
+      swipeTrack.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      if (swipeTrack.axis === "y") {
+        swipeTrack.row = null;
+      }
+    }
+  }, { passive: true });
+
+  const settle = (event) => {
+    const row = swipeTrack.row;
+    swipeTrack.row = null;
+    if (!row || swipeTrack.axis !== "x") {
+      return;
+    }
+    const dx = event.clientX - swipeTrack.x0;
+    if (dx >= SWIPE_REVEAL_PX) {
+      openRowSwipe(row);
+    } else if (dx <= -SWIPE_REVEAL_PX) {
+      closeRowSwipe();
+    }
+  };
+
+  body.addEventListener("pointerup", settle);
+  body.addEventListener("pointercancel", () => {
+    swipeTrack.row = null;
+  });
+
+  // Any tap outside the open row puts it away, like every other reveal.
+  document.addEventListener("pointerdown", (event) => {
+    if (swipedRow && !event.target.closest("tr[data-trade-id]")) {
+      closeRowSwipe();
+    }
+  });
+}
+
+function openRowSwipe(row) {
+  closeRowSwipe();
+  const id = row.dataset.tradeId;
+  const host = row.querySelector(".rev-chev-cell") || row.lastElementChild;
+  if (!id || !host) {
+    return;
+  }
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "row-swipe-delete";
+  // The existing #tradesBody click delegate owns these two attributes, so the
+  // revealed button routes straight into deleteTrade() — confirm, then undo.
+  button.dataset.action = "delete";
+  button.dataset.id = id;
+  button.textContent = "Delete";
+  host.appendChild(button);
+  row.classList.add("is-swiped");
+  swipedRow = row;
+}
+
+function closeRowSwipe() {
+  if (!swipedRow) {
+    return;
+  }
+  swipedRow.classList.remove("is-swiped");
+  swipedRow.querySelector(".row-swipe-delete")?.remove();
+  swipedRow = null;
+}
+
 // Close-at-market: confirm against the cached live price, then close the
 // trade through the existing buildTradeRecord/persistState/autosave path.
 function closeTradeAtMarket(id) {
@@ -4583,10 +4746,87 @@ function deleteTrade(id) {
     return;
   }
 
-  state.trades = state.trades.filter((item) => item.id !== id);
+  removeTrades([trade], `Deleted ${trade.asset} on ${formatIsoShort(trade.date)}.`);
+}
+
+/* The single delete path. Every route in — the row-detail Delete button, the
+   swipe reveal, Delete all — lands here, so every route in gets the same undo
+   window and the same persistState()/renderAll() pair (which is what keeps
+   demo mode on sessionStorage and an authenticated user syncing). */
+function removeTrades(doomed, message) {
+  if (!doomed.length) {
+    return;
+  }
+
+  const ids = new Set(doomed.map((trade) => String(trade.id)));
+  state.trades = state.trades.filter((trade) => !ids.has(String(trade.id)));
+  closeRowSwipe();
   persistState();
   renderAll();
-  setMessage(ui.journalMessage, "Trade deleted.", "success");
+  setMessage(ui.journalMessage, message, "success");
+  showCaptureToast(message, "success", {
+    duration: UNDO_TOAST_MS,
+    onUndo: () => {
+      state.trades = restoreTrades(state.trades, doomed);
+      persistState();
+      renderAll();
+      setMessage(
+        ui.journalMessage,
+        `Restored ${doomed.length} trade${doomed.length === 1 ? "" : "s"}.`,
+        "success"
+      );
+    }
+  });
+}
+
+/* Id-keyed union, not a concat: the undo toast outlives the delete by 30s, so
+   the trader can log a new trade — or import a backup — in between. Restoring
+   must never duplicate a row that is already back. Order does not matter; the
+   table and every analytic sort themselves. */
+function restoreTrades(current, removed) {
+  const present = new Set(current.map((trade) => String(trade.id)));
+  return current.concat(removed.filter((trade) => !present.has(String(trade.id))));
+}
+
+/* Typed confirmation for the bulk delete. Accepts the word DELETE or the exact
+   count, so the trader has to have read either the verb or the number — an OK
+   button can be hit by muscle memory, "DELETE" cannot. */
+function isBulkDeleteConfirmed(answer, count) {
+  const typed = String(answer ?? "").trim();
+  return typed.toUpperCase() === "DELETE" || (typed !== "" && typed === String(count));
+}
+
+/* Delete all — scoped to the CURRENT FILTER, and it says so with the real
+   count, because a trader with "Losses · London" applied must never discover
+   afterwards that it meant everything. */
+function deleteFilteredTrades() {
+  const doomed = getFilteredTrades();
+  if (!doomed.length) {
+    setMessage(ui.journalMessage, "Nothing to delete — no trades match the current filters.", "error");
+    return;
+  }
+
+  const scope = describeJournalFilters();
+  const noun = `trade${doomed.length === 1 ? "" : "s"}`;
+  const answer = window.prompt(
+    `Delete all ${doomed.length} ${scope.length ? "filtered " : ""}${noun}?` +
+      (scope.length ? `\n\nFilter: ${scope.join(" · ")}` : "\n\nNo filter is applied — this is the whole journal.") +
+      `\n\nA JSON backup downloads first, and you get ${Math.round(UNDO_TOAST_MS / 1000)} seconds to undo.` +
+      `\n\nType DELETE (or ${doomed.length}) to confirm:`,
+    ""
+  );
+
+  if (!isBulkDeleteConfirmed(answer, doomed.length)) {
+    if (answer !== null) {
+      setMessage(ui.journalMessage, "Delete cancelled — the confirmation did not match.", "error");
+    }
+    return;
+  }
+
+  // Backup BEFORE the state mutates, through the same builder the Backup JSON
+  // button uses, so the file restores through the existing Import JSON path.
+  downloadBackupJson(doomed, `trading-journal-deleted-${doomed.length}-${Date.now()}.json`);
+  removeTrades(doomed, `Deleted ${doomed.length} ${noun}. Backup downloaded.`);
 }
 
 function loadTradeIntoForm(id) {
@@ -4742,17 +4982,26 @@ function exportTradesCsv() {
   setMessage(ui.journalMessage, "CSV exported.", "success");
 }
 
-function exportBackupJson() {
+/* One backup shape, two callers: the Backup JSON button (whole journal) and
+   the bulk delete's pre-flight snapshot (just the doomed rows). The file is
+   the same schema either way, so importBackupJson restores both. */
+function downloadBackupJson(trades, filename) {
   const backup = {
     exportedAt: new Date().toISOString(),
     settings: state.settings,
-    trades: state.trades,
+    trades,
     reflections: state.reflections,
     replayNotes: state.replayNotes
   };
 
-  const payload = JSON.stringify(backup, null, 2);
-  triggerDownload(new Blob([payload], { type: "application/json" }), `trading-journal-backup-${Date.now()}.json`);
+  triggerDownload(
+    new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }),
+    filename
+  );
+}
+
+function exportBackupJson() {
+  downloadBackupJson(state.trades, `trading-journal-backup-${Date.now()}.json`);
   if (state.auth.guestMode) {
     nudgeGuest(ui.journalMessage, "JSON backup exported — it includes the sample rows.");
     return;
@@ -7620,6 +7869,10 @@ function buildTradeDetailRow(trade, isOpen) {
 }
 
 function renderJournalTable() {
+  // The table re-renders wholesale, so any open swipe reveal is about to be
+  // detached along with its row. Drop the reference rather than leak it.
+  swipedRow = null;
+  swipeTrack.row = null;
   syncJournalSortIndicators();
   const filtered = getFilteredTrades();
   renderReviewHeader(filtered.length);

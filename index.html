@@ -45,10 +45,10 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260810-mobile2" />
+    <link rel="stylesheet" href="styles.css?v=20260811-delete" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260810-mobile2" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260811-delete" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -1384,6 +1384,11 @@
                 <div class="inline-actions">
                   <button id="backupJsonBtn" class="btn" type="button">Backup JSON</button>
                   <button id="importJsonBtn" class="btn" type="button">Import JSON</button>
+                  <!-- Scoped to the current filter, typed confirmation, backs
+                       itself up first, undoable for 30s. Lives beside the data
+                       actions rather than in the header: a bulk delete should
+                       take a deliberate step to reach. -->
+                  <button id="deleteFilteredBtn" class="btn danger" type="button">Delete all filtered&hellip;</button>
                   <button id="savePhpBtn" class="btn" type="button">Save to Server DB</button>
                   <button id="loadPhpBtn" class="btn" type="button">Load from Server DB</button>
                   <input id="jsonImportInput" type="file" accept="application/json" hidden />
@@ -1921,6 +1926,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260809-fixes"></script>
+    <script type="module" src="app.js?v=20260811-delete"></script>
   </body>
 </html>

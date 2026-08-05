@@ -1134,3 +1134,92 @@ added and the top-level `init()` TDZ trap was not in play. The static server
 returns 200 and serves the §15a/§15b/§15c markers; the two stylesheet
 cache-busters were bumped to `?v=20260810-mobile2` so a returning browser
 actually gets them.
+
+---
+
+## Phase — Delete options (bulk delete + swipe to reveal)
+
+**The ask.** "if i want to delete trades i have option to delete all or swipe
+right to delete." Two affordances, one of which can wipe a real trading
+journal. So the interesting work here is not the deletes — it is the four
+guards around them.
+
+**One delete path, four routes in.** `deleteTrade()` used to filter
+`state.trades` inline. It now does the confirm and hands off to
+`removeTrades(doomed, message)`, which is the *only* place a trade leaves the
+journal: the row-detail Delete, the swipe reveal, and Delete all all land
+there. That is what makes the undo window, the `persistState()`/`renderAll()`
+pair and the swipe cleanup impossible to forget on a new route — and it is why
+demo mode still writes only to sessionStorage and an authenticated user still
+autosaves, without either path knowing it.
+
+**Delete all is scoped to the filter, and says so.** `deleteFilteredTrades()`
+takes `getFilteredTrades()` — the exact array the header line already counts —
+and puts both the real count and the live filter description into the prompt
+("Delete all 44 filtered trades? … Filter: losses · London"). With no filter on
+it says so instead: "No filter is applied — this is the whole journal." A
+trader who left a chip active two minutes ago cannot be surprised by what goes.
+
+Confirmation is typed, not clicked: `isBulkDeleteConfirmed()` accepts the word
+DELETE (any case, trimmed) or the exact count, and rejects Cancel, a bare
+Enter, whitespace, "yes", and a *stale* count — if the filter moved under them,
+the number they remember no longer matches. An OK button can be hit by muscle
+memory; "DELETE" cannot.
+
+**It backs itself up first.** `exportBackupJson()` was one function doing two
+jobs; the payload builder is now `downloadBackupJson(trades, filename)` and
+Delete all calls it with the doomed rows *before* the state mutates. Same
+schema, so the file restores through the existing Import JSON path with no new
+code. The whole-journal Backup button is unchanged.
+
+**Undo, for 30 seconds.** `showCaptureToast()` gains an optional `onUndo`, and
+the delete toast carries a real button. 30s rather than the toast's usual 5:
+"wait, wrong filter" takes longer than five seconds to arrive. `restoreTrades()`
+is an id-keyed union rather than a concat, because the undo outlives the delete
+by half a minute — long enough to log a new trade or import a backup — and a
+restore must never duplicate a row that came back some other way. Ids are
+compared as strings: they arrive as numbers from the server and strings from
+localStorage.
+
+**Swipe reveals, it does not delete.** This is the guard that mattered most. A
+right-swipe past 56px adds a `.row-swipe-delete` button carrying the
+`data-action="delete"` / `data-id` pair the existing `#tradesBody` click
+delegate already owns — so the revealed button routes into `deleteTrade()` and
+inherits its confirm *and* the undo. Nothing about the gesture itself removes
+anything. `tests/deleteTrades.check.mjs` asserts this structurally, because the
+regression is a one-word edit away.
+
+Vertical scrolling is never captured. `touch-action: pan-y` on the row hands
+the vertical axis to the browser outright, the axis is decided once at 10px of
+travel with ties going to the page, a vertical verdict abandons the gesture for
+good, and the handlers never call `preventDefault` (also asserted). The filter
+chip strip cannot trigger it structurally — the listeners are on `#tradesBody`
+and `.rev-chips` is a sibling of the table, so its horizontal scroll is never
+seen. Mouse pointers are ignored: desktop and keyboard users keep the row-detail
+Delete button, which is untouched.
+
+The reveal is a `padding-left` shift, not a `transform`. Transforming the row
+would carry the revealed button along with it and would fight the outer
+box-shadow that encodes win/loss depth. `prefers-reduced-motion: reduce` drops
+both the padding transition and the button's slide-in.
+
+**Desktop safety.** Every new rule is either inside `@media (max-width: 900px)`
+(the swipe reveal, §16b — the same breakpoint at which `tr` becomes a card) or
+scoped by `:has(.capture-toast-undo)` (§16a — only a toast that actually
+carries an undo becomes a flex row; every other toast stays the block it was).
+The JS gate is doubled: `pointerType === "mouse"` returns early, and so does
+`isCardLayout()`, so a 1400px *touch* laptop — where the reveal would have no
+styling and nowhere to open into — never starts tracking. The bulk-delete
+button reuses the existing `.btn.danger`; no new button styling at any width.
+
+**Verified:** 16/16 test files green — `tests/deleteTrades.check.mjs` is new
+(filter scoping incl. chip×dropdown intersection and the empty selection, ten
+typed-confirmation cases, `removeTrades` persisting on both the delete and the
+undo, the id-keyed union incl. `7` vs `"7"` and non-mutation, plus the two
+structural swipe guards). `node --check` clean on `app.js`; all five new
+module-level bindings (`UNDO_TOAST_MS`, `SWIPE_REVEAL_PX`, `SWIPE_AXIS_PX`,
+`swipeTrack`, `swipedRow`) sit at lines 671–679, above the top-level `init()`
+at 681 — the TDZ trap that has shipped four times, checked mechanically rather
+than by eye. Static server returns the new markers on all three files; the
+cache-busters are bumped to `?v=20260811-delete` (app.js included this time —
+it was still on `20260809-fixes`).

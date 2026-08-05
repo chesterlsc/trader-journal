@@ -3727,3 +3727,110 @@ body.auth-locked .topnav {
     bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* ==========================================================================
+   16. DELETE AFFORDANCES
+   Two ways out of a trade, both undoable: a filter-scoped bulk delete (styled
+   by the existing .btn.danger — no new rules needed) and a swipe-to-reveal on
+   a row card. Only the swipe needs CSS, and all of it is scoped to the card
+   layout: the desktop table never sees a rule from this section.
+   ========================================================================== */
+
+/* --- 16a. The undo action inside the toast ---------------------------------
+   The toast is the only place an undo can live — it has to outlive the render
+   that removed the row. 44px tall, because it is the recovery control for the
+   one irreversible action in the app. */
+.capture-toast-undo {
+  margin-left: 14px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-clay-sm);
+  background: transparent;
+  color: var(--accent);
+  font: 600 13px/1 var(--font-ui);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.capture-toast-undo:hover {
+  background: var(--surface-3);
+}
+
+.capture-toast-undo:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Only the toasts that actually carry an undo become a flex row — :has() keeps
+   every other toast (and every desktop toast without one) the plain block it
+   has always been. Where :has() is missing the button simply flows inline
+   after the text, which is the same thing with worse alignment. */
+.capture-toast:has(.capture-toast-undo) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.capture-toast:has(.capture-toast-undo) .capture-toast-undo {
+  flex: none;
+  margin-left: auto;
+}
+
+/* --- 16b. Swipe to reveal Delete ------------------------------------------
+   Card layout only (<=900px is where tr becomes a block). The reveal is a
+   padding shift, not a transform: transforming the row would carry the
+   revealed button along with it, and would also clip against the row's own
+   clay depth shadow — the outer box-shadow that encodes win/loss.
+
+   touch-action: pan-y is the load-bearing declaration. It hands the vertical
+   axis to the browser unconditionally, so the page scrolls natively however
+   long the JS takes to decide an axis; the JS never calls preventDefault. */
+@media (max-width: 900px) {
+  #journal tbody tr[data-trade-id] {
+    position: relative;
+    touch-action: pan-y;
+    transition: padding-left var(--dur-base, 200ms) var(--ease-out, ease);
+  }
+
+  #journal tbody tr[data-trade-id].is-swiped {
+    padding-left: 100px;
+  }
+
+  /* Positioned against the row (the only positioned ancestor), so it sits in
+     the gap the padding opened, full height, thumb-sized. */
+  .row-swipe-delete {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 92px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    background: var(--pnl-neg);
+    color: var(--surface-1);
+    font: 600 14px/1 var(--font-ui);
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    animation: swipeRevealIn var(--dur-base, 200ms) var(--ease-out, ease);
+  }
+
+  .row-swipe-delete:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+}
+
+@keyframes swipeRevealIn {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #journal tbody tr[data-trade-id] { transition: none; }
+  .row-swipe-delete { animation: none; }
+}
