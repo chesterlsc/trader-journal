@@ -1223,3 +1223,21 @@ at 681 — the TDZ trap that has shipped four times, checked mechanically rather
 than by eye. Static server returns the new markers on all three files; the
 cache-busters are bumped to `?v=20260811-delete` (app.js included this time —
 it was still on `20260809-fixes`).
+
+## "Remember me" — persistent login (2026-08-09)
+
+The user reported the app "keeps bugging me to login". That was a regression introduced by the Vercel port, not a missing feature.
+
+**The bug.** `serializeSessionCookie` emitted `Path`, `HttpOnly`, `SameSite=Lax` and `Secure` but **no `Max-Age` and no `Expires`** — a pure browser-session cookie, so closing the browser logged the user out. The port had faithfully reproduced PHP's `session.cookie_lifetime = 0`. Worse, the signed payload carried a 7-day `exp` the cookie could never reach, so the two halves disagreed about how long a session lasted.
+
+**The fix.** The lifetimes are now issued as a matching pair, chosen by a "Keep me logged in on this device" checkbox (default on):
+- unchecked → browser-session cookie, 7-day payload `exp` (previous behaviour, now internally consistent)
+- checked → `Max-Age=2592000` and a matching 30-day `exp`
+
+`rem` rides inside the *signed* payload, so it survives the re-mint that the `session` action performs on every page load — without that carry-forward, a remembered login would silently decay back to a session cookie on the first refresh. Only `login` and `register` may set it (`wantsRemember`); every other action inherits the existing choice.
+
+**Security is unchanged.** Remember-me alters exactly one thing — cookie lifetime. `HttpOnly`, `SameSite=Lax`, `Secure`, `Path`, the HMAC signature, CSRF binding and the `login_info`-based revocation on logout/password-reset are all untouched and independent of the flag.
+
+**Test:** `tests/rememberMe.check.mjs` pins the pair (Max-Age present iff remembered, and matching the payload `exp`), asserts the security attributes do not vary with the flag, and proves tampering with `rem` in the payload breaks the HMAC. Writing it caught a real property worth keeping: `encodeSession` spreads `...data` *before* setting `exp`, so a caller cannot choose its own expiry — that is now pinned rather than incidental. A correctly-signed but expired payload is still refused.
+
+17/17 test files green.

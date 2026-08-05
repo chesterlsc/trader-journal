@@ -131,14 +131,29 @@ function currentUsername(ctx) {
   return username !== '' ? username : null;
 }
 
+// Reads the "Remember me" box. Only login and register may set it — every other
+// action inherits whatever the current session already chose.
+function wantsRemember(ctx) {
+  const value = ctx.body?.remember;
+  return value === true || value === 1 || value === '1' || value === 'true' || value === 'on';
+}
+
 // Mints the cookie carrying the session. Called wherever PHP wrote $_SESSION.
 // `iat` is what makes the cookie revocable — see assertSessionNotRevoked.
 function issueSessionCookie(ctx, data) {
   const csrf = str(data.csrf ?? ctx.session?.csrf ?? '') || newCsrfToken();
-  const payload = { ...data, csrf, iat: Math.floor(Date.now() / 1000) };
+  // "Remember me" is sticky: an explicit rem on this call wins, otherwise the
+  // existing session's choice carries forward. Without the carry-forward the
+  // `session` action — which re-mints the cookie on every page load — would
+  // quietly downgrade a remembered login back to a browser-session cookie.
+  const remember = data.rem === undefined ? ctx.session?.rem === true : data.rem === true;
+  const payload = { ...data, csrf, rem: remember, iat: Math.floor(Date.now() / 1000) };
   return {
     csrf,
-    cookie: serializeSessionCookie(encodeSession(payload, ctx.secret), { secure: ctx.secure }),
+    cookie: serializeSessionCookie(encodeSession(payload, ctx.secret), {
+      secure: ctx.secure,
+      remember,
+    }),
   };
 }
 
@@ -409,7 +424,12 @@ const actions = {
     // Fresh CSRF token, not the pre-login one. PHP carried $_SESSION across
     // session_regenerate_id(), which meant a token planted before login stayed
     // valid after it; a new token on every privilege change closes that.
-    const { csrf, cookie } = issueSessionCookie(ctx, { username, userId, csrf: newCsrfToken() });
+    const { csrf, cookie } = issueSessionCookie(ctx, {
+      username,
+      userId,
+      csrf: newCsrfToken(),
+      rem: wantsRemember(ctx),
+    });
     await logEvent(ctx, { userId, username, eventType: 'register', success: true });
 
     respond(200, {
@@ -444,6 +464,7 @@ const actions = {
       username: user.username,
       userId: user.id,
       csrf: newCsrfToken(),
+      rem: wantsRemember(ctx),
     });
 
     await ctx.db.ensureJournalDataRow(user.id, journalDefaults());

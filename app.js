@@ -224,6 +224,7 @@ const ui = {
   authControls: document.getElementById("authControls"),
   authIdentifier: document.getElementById("authIdentifier"),
   authPassword: document.getElementById("authPassword"),
+  authRemember: document.getElementById("authRemember"),
   loginBtn: document.getElementById("loginBtn"),
   registerBtn: document.getElementById("registerBtn"),
   forgotPasswordBtn: document.getElementById("forgotPasswordBtn"),
@@ -2064,7 +2065,9 @@ async function submitAuth(action, password, successMessage, identifier = "") {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ identifier, password })
+      // "Remember me": checked issues a persistent cookie, unchecked keeps the
+      // browser-session cookie. Only login/register may set it.
+      body: JSON.stringify({ identifier, password, remember: ui.authRemember ? ui.authRemember.checked : true })
     });
     const body = await response.json();
     if (!response.ok || !body.ok) {

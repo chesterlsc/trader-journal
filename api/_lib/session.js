@@ -11,9 +11,22 @@ import crypto from 'node:crypto';
 
 export const COOKIE_NAME = 'tj_session';
 
-// PHP's session cookie had lifetime 0 (cleared when the browser closes). The
-// cookie stays a session cookie; this bounds how long a stolen one stays valid.
-const MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+// Two lifetimes, chosen by the "Remember me" box at login.
+//
+// Unchecked (default) reproduces PHP's lifetime => 0: a browser-session cookie
+// that dies when the browser closes. The signed payload still carries a 7-day
+// `exp`, which bounds how long a cookie stolen mid-session stays valid.
+//
+// Checked issues a persistent cookie with a matching 30-day `exp`. Before this
+// existed the cookie had no Max-Age at all while its payload claimed 7 days —
+// the two disagreed, and the 7 days was unreachable because the cookie died
+// with the browser first. The lifetimes are now always issued as a pair.
+const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+const REMEMBER_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+
+export function sessionMaxAge(remember) {
+  return remember ? REMEMBER_MAX_AGE_SECONDS : SESSION_MAX_AGE_SECONDS;
+}
 
 function base64url(buffer) {
   return Buffer.from(buffer).toString('base64url');
@@ -77,9 +90,14 @@ export function parseCookies(cookieHeader) {
 }
 
 export function encodeSession(data, secret) {
+  // `rem` rides inside the signed payload so it survives refreshes: the session
+  // action re-mints the cookie on every load, and without this the persistent
+  // choice would silently decay back to a browser-session cookie.
+  const remember = data.rem === true;
   const payload = base64url(JSON.stringify({
     ...data,
-    exp: Math.floor(Date.now() / 1000) + MAX_AGE_SECONDS,
+    rem: remember,
+    exp: Math.floor(Date.now() / 1000) + sessionMaxAge(remember),
   }));
   return `${payload}.${sign(payload, secret)}`;
 }
@@ -106,13 +124,16 @@ export function decodeSession(token, secret) {
   return data;
 }
 
-export function serializeSessionCookie(token, { secure }) {
+export function serializeSessionCookie(token, { secure, remember = false }) {
   const flags = [
     `${COOKIE_NAME}=${encodeURIComponent(token)}`,
     'Path=/',
     'HttpOnly',
     'SameSite=Lax',
   ];
+  // Omitting Max-Age entirely is what makes it a browser-session cookie. Only
+  // the remembered case gets an expiry, and it matches the payload's `exp`.
+  if (remember) flags.push(`Max-Age=${REMEMBER_MAX_AGE_SECONDS}`);
   if (secure) flags.push('Secure');
   return flags.join('; ');
 }
