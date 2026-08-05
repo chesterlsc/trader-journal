@@ -1518,7 +1518,8 @@ body.auth-locked .topnav {
 
 /* --- 11a. Shared dialog shell --------------------------------------------- */
 .cmdk,
-.sheet {
+.sheet,
+.cooldown-dialog {
   border: 0;
   padding: 0;
   background: transparent;
@@ -1529,18 +1530,21 @@ body.auth-locked .topnav {
 }
 
 .cmdk::backdrop,
-.sheet::backdrop {
+.sheet::backdrop,
+.cooldown-dialog::backdrop {
   background: hsl(35 20% 12% / 0.42);
   backdrop-filter: blur(3px);
 }
 
 :root:not([data-theme="light"]) .cmdk::backdrop,
-:root:not([data-theme="light"]) .sheet::backdrop {
+:root:not([data-theme="light"]) .sheet::backdrop,
+:root:not([data-theme="light"]) .cooldown-dialog::backdrop {
   background: hsl(30 30% 3% / 0.68);
 }
 
 .cmdk[open],
-.sheet[open] {
+.sheet[open],
+.cooldown-dialog[open] {
   animation: captureRise var(--dur-base) var(--ease-out);
 }
 
@@ -3188,4 +3192,360 @@ body.auth-locked .topnav {
   .rev-chev-glyph {
     transition: none;
   }
+}
+
+/* ==========================================================================
+   14. 1f — SYSTEM FEATURES
+   design-source/1f-features.html #01–#03: "the top three are what turn the
+   journal from a record into a system."
+
+   #01 finishes the unjournalled queue (the streak rule, stated on screen).
+   #02 is the pre-trade checklist editor plus the causal readout — the money
+       difference between the trades where a rule was ticked and the ones
+       where it was skipped.
+   #03 is the cooldown lock: a speed bump on "Log a trade" that asks one
+       question. Never a colour-only signal — the badge carries a word, the
+       button carries a title, and the dialog states the breach in figures.
+   ========================================================================== */
+
+/* --- 14a. #01 the dock badge + the streak rule, stated --------------------
+   Absolutely positioned so it does not become a third row in the tab's
+   two-row grid. */
+.tabbar-badge {
+  position: absolute;
+  top: 1px;
+  right: calc(50% - 20px);
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--pnl-neg);
+  color: #fff;
+  font: 700 9.5px/17px var(--font-mono, "JetBrains Mono", monospace);
+  text-align: center;
+}
+
+.tabbar-badge[hidden] { display: none; }
+
+.dash-unj-rule {
+  margin: 10px 0 0;
+  font: 400 11.5px/1.5 var(--font-ui);
+  color: var(--text-faint);
+}
+
+/* --- 14b. #02 the checklist editor ---------------------------------------- */
+.rules-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.rules-list {
+  display: grid;
+  gap: 10px;
+}
+
+.rules-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rules-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-inset);
+  color: var(--text);
+  font: 500 14.5px/1.3 var(--font-ui);
+  box-shadow: var(--clay-pressed);
+}
+
+.rules-remove {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-inset);
+  color: var(--text-soft);
+  font: 400 20px/1 var(--font-ui);
+  cursor: pointer;
+  box-shadow: var(--clay-pressed);
+}
+
+.rules-remove:hover {
+  color: var(--pnl-neg);
+}
+
+.rules-empty {
+  margin: 0;
+  padding: 16px 18px;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+  font: 400 13px/1.55 var(--font-ui);
+  color: var(--text-soft);
+}
+
+/* --- 14c. #02 the causal readout ------------------------------------------ */
+.rule-cost {
+  margin-top: var(--space-4);
+}
+
+.rule-cost-title {
+  margin: 0 0 8px;
+  font: 600 10px/1 var(--font-mono, "JetBrains Mono", monospace);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.rule-cost-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rule-cost-item,
+.rule-cost-note {
+  padding: 12px 15px;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+  font: 400 13px/1.55 var(--font-ui);
+  color: var(--text-soft);
+}
+
+.rule-cost-item strong {
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* Depth is never the only signal: the left rule and the figure's colour say
+   the same thing the shadow does. */
+.rule-cost-item.is-bad {
+  border-left: 3px solid var(--pnl-neg);
+  color: var(--text);
+}
+
+.rule-cost-item.is-bad strong {
+  color: var(--pnl-neg);
+}
+
+.rule-cost-item.is-good {
+  border-left: 3px solid var(--pnl-pos);
+  color: var(--text);
+}
+
+.rule-cost-item.is-good strong {
+  color: var(--pnl-pos);
+}
+
+/* Skipped rules / cooldown overrides in the review row detail. */
+.rev-detail-note.is-warn .rev-detail-key {
+  color: var(--warn);
+}
+
+/* --- 14d. #03 cooldown settings ------------------------------------------- */
+.cooldown-fieldset {
+  margin: 0;
+  padding: 18px 20px;
+  border: 0;
+  border-radius: var(--radius-clay-md);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+}
+
+.cooldown-fieldset legend {
+  padding: 0 6px;
+  font: 700 13px/1 var(--font-ui);
+  color: var(--text);
+}
+
+.cooldown-fieldset-note {
+  margin: 6px 0 14px;
+  font: 400 12.5px/1.55 var(--font-ui);
+  color: var(--text-soft);
+}
+
+.cooldown-fieldset-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.cooldown-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  font: 500 13.5px/1.35 var(--font-ui);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.cooldown-toggle input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  accent-color: var(--accent);
+}
+
+/* --- 14e. #03 the button state --------------------------------------------
+   The accent background is NOT swapped for the warn colour: --accent and
+   --warn invert between themes (dark text on light violet in dark mode, white
+   on deep violet in light) and a single override cannot carry a legible label
+   in both. The state is a warn RING plus a warn-on-card badge — the badge
+   also carries a word, so colour is never the only signal (WCAG 1.4.1). */
+.dash-log-flag {
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--warn);
+  font: 700 9.5px/1.35 var(--font-mono, "JetBrains Mono", monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dash-log-flag[hidden] { display: none; }
+
+.dash-log-btn.is-cooldown,
+.tabbar-fab.is-cooldown {
+  box-shadow: var(--clay-accent), 0 0 0 3px var(--warn);
+}
+
+/* --- 14f. #03 the dialog -------------------------------------------------- */
+.cooldown-dialog {
+  width: min(500px, calc(100vw - 32px));
+  margin: auto;
+}
+
+.cooldown-body {
+  display: grid;
+  gap: 14px;
+  padding: var(--space-6);
+  border-radius: var(--radius-clay-xl);
+  background: var(--surface-1);
+  box-shadow: var(--clay-float);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+}
+
+.cooldown-kicker {
+  margin: 0;
+  font: 700 10px/1 var(--font-mono, "JetBrains Mono", monospace);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--warn);
+}
+
+.cooldown-headline {
+  margin: 0;
+  font: 700 24px/1.2 var(--font-ui);
+  color: var(--text);
+}
+
+.cooldown-detail {
+  margin: 0;
+  font: 400 14px/1.55 var(--font-ui);
+  color: var(--text-soft);
+}
+
+.cooldown-field {
+  display: grid;
+  gap: 8px;
+}
+
+.cooldown-question {
+  font: 600 14.5px/1.4 var(--font-ui);
+  color: var(--text);
+}
+
+.cooldown-answer {
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-inset);
+  color: var(--text);
+  font: 400 14.5px/1.5 var(--font-ui);
+  box-shadow: var(--clay-pressed);
+  resize: vertical;
+}
+
+.cooldown-message:empty { display: none; }
+
+.cooldown-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.cooldown-proceed {
+  flex: 1 1 200px;
+  min-height: 56px;
+  border: 0;
+  border-radius: var(--radius-clay-md);
+  background: var(--accent);
+  color: var(--text-inverse);
+  font: 700 16px/1 var(--font-ui);
+  cursor: pointer;
+  box-shadow: var(--clay-accent);
+}
+
+.cooldown-away {
+  flex: 0 0 auto;
+  min-height: 56px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: var(--radius-clay-md);
+  background: var(--surface-inset);
+  color: var(--text-soft);
+  font: 600 15px/1 var(--font-ui);
+  cursor: pointer;
+  box-shadow: var(--clay-pressed);
+}
+
+.cooldown-settings {
+  justify-self: start;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: 600 12.5px/1 var(--font-ui);
+  cursor: pointer;
+}
+
+/* --- 14g. Mobile ---------------------------------------------------------- */
+@media (max-width: 620px) {
+  .cooldown-body { padding: var(--space-5); }
+  .cooldown-headline { font-size: 20px; }
+  .cooldown-proceed,
+  .cooldown-away { width: 100%; }
+  .rules-input { min-height: 52px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cooldown-dialog[open] { animation: none; }
+  .cooldown-dialog::backdrop { backdrop-filter: none; }
+}
+
+/* --- 14h. Focus rings ------------------------------------------------------
+   The clay box-shadows out-specify the global :focus-visible ring, so it is
+   restored explicitly on every control this section introduces. */
+.rules-input:focus-visible,
+.rules-remove:focus-visible,
+.cooldown-answer:focus-visible,
+.cooldown-proceed:focus-visible,
+.cooldown-away:focus-visible,
+.cooldown-settings:focus-visible,
+.cooldown-toggle input:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }

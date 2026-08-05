@@ -37,7 +37,9 @@ const DEMO_CONSTS = [
   "DEMO_SETUPS",
   "DEMO_TIMEFRAMES",
   "DEMO_PSYCHOLOGY",
-  "DEMO_EXECUTION"
+  "DEMO_EXECUTION",
+  // 1f #02: the sample rows carry a sample checklist history.
+  "DEFAULT_PRE_TRADE_RULES"
 ].map((name) => takeConst(appSrc, name)).join("\n");
 
 const bundle = [

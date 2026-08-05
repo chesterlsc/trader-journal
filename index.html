@@ -45,10 +45,10 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260808-landing1d" />
+    <link rel="stylesheet" href="styles.css?v=20260809-system1f" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260808-landing1d" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260809-system1f" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -459,6 +459,10 @@
                 </svg>
               </span>
               <span>Log a trade</span>
+              <!-- 1f #03: the cooldown speed bump. The word is the signal, not
+                   the colour — the button also gets a title describing the
+                   breach, and it still opens capture after one question. -->
+              <span class="dash-log-flag" id="dashLogCooldownFlag" hidden></span>
               <span class="kbd-hint" aria-hidden="true">&#8984;K</span>
             </button>
           </header>
@@ -526,9 +530,9 @@
                 </div>
                 <p class="dash-risk-consequence">
                   <span id="riskConsequence"></span>
-                  <!-- Phase 6 builds the cooldown lock. Until it exists this
-                       points at the budgets that drive the sentence above,
-                       which is the only honest destination today. -->
+                  <!-- 1f #03: now a real destination — the cooldown settings
+                       that decide when this budget stops being a colour and
+                       starts asking a question. -->
                   <button class="dash-risk-link" type="button" id="cooldownRulesBtn">Cooldown rules &rarr;</button>
                 </p>
               </section>
@@ -599,6 +603,11 @@
                   </div>
                   <div class="dash-unj-bars" id="dashJournalBars" role="img" aria-label="Journalling history"></div>
                 </div>
+                <!-- 1f #01: the streak rule, stated. It counts TRADING days,
+                     not calendar days, so a weekend off never breaks it. -->
+                <p class="dash-unj-rule">
+                  A day counts once every trade you closed that day carries a note. Days you did not trade are skipped.
+                </p>
               </section>
             </div>
 
@@ -785,6 +794,13 @@
                 <strong id="goalProgress">0%</strong>
               </div>
             </div>
+            <!-- 1f #02: what the score is made of, in money. Rendered only
+                 when both sides of a rule clear the threshold; until then the
+                 list says what the threshold is. Never a placeholder number. -->
+            <div class="rule-cost">
+              <p class="rule-cost-title">What the checklist costs</p>
+              <ul id="ruleCostList" class="rule-cost-list"></ul>
+            </div>
             <ul id="riskViolations" class="warning-list">
               <li class="muted">No violations detected.</li>
             </ul>
@@ -853,11 +869,52 @@
                 Equity Goal ($)
                 <input id="equityGoal" name="equityGoal" type="number" min="0" step="0.01" required />
               </label>
+              <!-- 1f #03: the cooldown is a risk rule, so it is configured
+                   with the budgets it enforces. It is a speed bump — one
+                   question, then the trade goes through either way. -->
+              <fieldset class="cooldown-fieldset field-span-all" id="cooldownFieldset">
+                <legend>Cooldown lock</legend>
+                <p class="cooldown-fieldset-note">
+                  When a loss budget is gone, or after a run of losses, &ldquo;Log a trade&rdquo; asks one
+                  question before it opens. You can always answer and carry on &mdash; the answer is stored
+                  on the trade so the cost of trading through it is measurable.
+                </p>
+                <div class="cooldown-fieldset-grid">
+                  <label class="cooldown-toggle">
+                    <input id="cooldownEnabled" name="cooldownEnabled" type="checkbox" checked />
+                    <span>Ask before logging when a budget is breached</span>
+                  </label>
+                  <label>
+                    Also after this many losses in a row (0 = off)
+                    <input id="cooldownLossStreak" name="cooldownLossStreak" type="number" min="0" max="20" step="1" />
+                  </label>
+                </div>
+              </fieldset>
               <div class="form-actions">
                 <button class="btn primary" type="submit">Save Risk Settings</button>
               </div>
             </form>
             <p id="riskFormMessage" class="form-message" aria-live="polite"></p>
+          </section>
+
+          <!-- ══ 1f #02 — PRE-TRADE CHECKLIST ═══════════════════════════════
+               The rules you write once. They render in the New Trade sheet,
+               the ticks are stored on the row, and the Discipline Monitor
+               above reports the money difference between ticking and
+               skipping. RULES in the top bar lands here. -->
+          <section class="panel" id="rulesPanel">
+            <div class="panel-head">
+              <h3>Pre-trade checklist</h3>
+              <p>Three or four rules, shown in the New Trade sheet, stored with the trade.</p>
+            </div>
+            <form id="rulesForm" class="rules-form" novalidate>
+              <div id="rulesEditorList" class="rules-list"></div>
+              <div class="form-actions">
+                <button id="rulesAddBtn" class="btn" type="button">+ Add rule</button>
+                <button class="btn primary" type="submit">Save checklist</button>
+              </div>
+            </form>
+            <p id="rulesFormMessage" class="form-message" aria-live="polite"></p>
           </section>
 
           <!-- Admin panels are injected here by app.js only when the session
@@ -1067,71 +1124,64 @@
                   </div>
                 </section>
 
-                <details id="tradeAdvancedDetails" class="trade-advanced-details">
-                  <summary class="trade-advanced-summary">
-                    <span>
-                      <strong>Advanced Details</strong>
-                      <small>Psychology, execution grading, screenshots, and notes</small>
-                    </span>
-                    <span class="trade-advanced-toggle"><span class="toggle-label-open">Hide</span><span class="toggle-label-closed">Expand</span></span>
-                  </summary>
-
-                  <div class="trade-advanced-body">
-                    <section class="trade-section">
-                      <div class="trade-section-head">
-                        <p class="trade-section-kicker">Review</p>
-                        <h3>Psychology & Execution</h3>
-                      </div>
-                      <div class="trade-grid trade-grid-review">
-                        <label>
-                          Psychology Rating
-                          <select id="psychology" name="psychology" required>
-                            <option>Focused</option>
-                            <option>Hesitant</option>
-                            <option>Emotional</option>
-                            <option>Revenge Trade</option>
-                            <option>Perfect Execution</option>
-                          </select>
-                        </label>
-                        <label>
-                          Execution Quality
-                          <select id="executionQuality" name="executionQuality" required>
-                            <option>A+</option>
-                            <option>A</option>
-                            <option>B</option>
-                            <option>C</option>
-                            <option>F</option>
-                          </select>
-                        </label>
-                      </div>
-                    </section>
-
-                    <section class="trade-section">
-                      <div class="trade-section-head">
-                        <p class="trade-section-kicker">Record</p>
-                        <h3>Evidence & Notes</h3>
-                      </div>
-                      <div class="trade-grid trade-grid-record">
-                        <label class="field-span-2">
-                          Screenshot Upload
-                          <input id="screenshot" name="screenshot" type="file" accept="image/*" />
-                          <small id="screenshotLabel" class="muted">No screenshot selected</small>
-                        </label>
-                        <div class="screenshot-preview field-span-all" id="screenshotPreview">No preview</div>
-                        <label class="field-span-all">
-                          Trade Notes
-                          <textarea
-                            id="tradeNotes"
-                            name="tradeNotes"
-                            rows="4"
-                            maxlength="600"
-                            placeholder="Setup rationale, execution notes, mistakes, plan adherence..."
-                          ></textarea>
-                        </label>
-                      </div>
-                    </section>
+                <!-- 1f, "Things I would cut": "Advanced Details": burying
+                     psychology behind a disclosure is what guarantees it stays
+                     empty. The <details> is gone — these are two ordinary
+                     sections in the flow, in the order the trade happened. -->
+                <section class="trade-section">
+                  <div class="trade-section-head">
+                    <p class="trade-section-kicker">Review</p>
+                    <h3>Psychology &amp; Execution</h3>
+                    <p class="trade-section-note">The two fields every report reads. They are not optional extras.</p>
                   </div>
-                </details>
+                  <div class="trade-grid trade-grid-review">
+                    <label>
+                      Psychology Rating
+                      <select id="psychology" name="psychology" required>
+                        <option>Focused</option>
+                        <option>Hesitant</option>
+                        <option>Emotional</option>
+                        <option>Revenge Trade</option>
+                        <option>Perfect Execution</option>
+                      </select>
+                    </label>
+                    <label>
+                      Execution Quality
+                      <select id="executionQuality" name="executionQuality" required>
+                        <option>A+</option>
+                        <option>A</option>
+                        <option>B</option>
+                        <option>C</option>
+                        <option>F</option>
+                      </select>
+                    </label>
+                  </div>
+                </section>
+
+                <section class="trade-section">
+                  <div class="trade-section-head">
+                    <p class="trade-section-kicker">Record</p>
+                    <h3>Evidence &amp; Notes</h3>
+                  </div>
+                  <div class="trade-grid trade-grid-record">
+                    <label class="field-span-2">
+                      Screenshot Upload
+                      <input id="screenshot" name="screenshot" type="file" accept="image/*" />
+                      <small id="screenshotLabel" class="muted">No screenshot selected</small>
+                    </label>
+                    <div class="screenshot-preview field-span-all" id="screenshotPreview">No preview</div>
+                    <label class="field-span-all">
+                      Trade Notes
+                      <textarea
+                        id="tradeNotes"
+                        name="tradeNotes"
+                        rows="4"
+                        maxlength="600"
+                        placeholder="Setup rationale, execution notes, mistakes, plan adherence..."
+                      ></textarea>
+                    </label>
+                  </div>
+                </section>
               </div>
 
               <div class="form-actions">
@@ -1507,6 +1557,9 @@
           </svg>
         </span>
         <span class="tabbar-label">Review</span>
+        <!-- 1f #01: the same counted badge as the desktop top bar. The dock is
+             where a phone lives, so the debt has to be visible there too. -->
+        <span class="tabbar-badge" id="tabBarUnjournalledBadge" hidden></span>
       </button>
       <!-- Reserved slot: the FAB is centred over this gap, so it never lands on
            a real tab and steal its taps. -->
@@ -1779,6 +1832,37 @@
       </form>
     </dialog>
 
+    <!-- ══ 1f #03 — COOLDOWN LOCK ═══════════════════════════════════════════
+         A speed bump, not a block. It fires when a loss budget is gone or the
+         configured loss streak is hit, asks exactly one question, and opens
+         the capture route the trader was already taking. "Step away" is the
+         other door and closes without logging anything. The answer is stored
+         on the trade that follows, which is what makes the Revenge Trade count
+         measurable against this feature. -->
+    <dialog id="cooldownDialog" class="cooldown-dialog" aria-labelledby="cooldownHeadline">
+      <form id="cooldownForm" class="cooldown-body" novalidate>
+        <p class="cooldown-kicker">Cooldown</p>
+        <h2 class="cooldown-headline" id="cooldownHeadline">Today's loss budget is gone.</h2>
+        <p class="cooldown-detail" id="cooldownDetail"></p>
+        <label class="cooldown-field">
+          <span class="cooldown-question" id="cooldownQuestion"></span>
+          <textarea
+            id="cooldownAnswer"
+            class="cooldown-answer"
+            rows="3"
+            maxlength="300"
+            placeholder="One sentence is enough."
+          ></textarea>
+        </label>
+        <p class="cooldown-message form-message" id="cooldownMessage" role="status" aria-live="polite"></p>
+        <div class="cooldown-actions">
+          <button class="cooldown-proceed" type="submit">Answer &amp; continue</button>
+          <button class="cooldown-away" type="button" id="cooldownStepAwayBtn">Step away</button>
+        </div>
+        <button class="cooldown-settings" type="button" id="cooldownSettingsBtn">Cooldown rules &rarr;</button>
+      </form>
+    </dialog>
+
     <!-- Capture confirmation. The command bar closes with no screen change, so
          this is the only feedback that the trade landed. -->
     <div class="capture-toast" id="captureToast" role="status" aria-live="polite" hidden></div>
@@ -1837,6 +1921,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260808-landing1d"></script>
+    <script type="module" src="app.js?v=20260809-system1f"></script>
   </body>
 </html>

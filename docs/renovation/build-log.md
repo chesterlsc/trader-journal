@@ -664,3 +664,50 @@ themes — the pill tints and the Example tag had to come off `--pnl-*-soft` /
 shell (light only) because the page ground measured 4.3:1.
 
 New check: `tests/landingTape.check.mjs`.
+
+---
+
+## Phase 1f — System features (#01–#03)
+
+`design-source/1f-features.html` #01–#03, "the top three are what turn the
+journal from a record into a system", plus the last cut from "Things I would
+cut".
+
+**#01 unjournalled queue — finished.** The counted badge now ships in the dock
+as well as the top bar (`#tabBarUnjournalledBadge`, same count, one render
+loop). The streak rule is stated on screen, not just in a comment: "A day
+counts once every trade you closed that day carries a note. Days you did not
+trade are skipped."
+
+**#02 pre-trade checklist.** `PRE_TRADE_RULES` (a module const) became
+`state.settings.preTradeRules`, edited in a new **Pre-trade checklist** panel —
+which is where the RULES top-bar action now lands. Ids are stable across a
+rename and fall back through the seed list, so historic ticks never orphan.
+The causal half needed a new field: `trade.preTradeRulesAsked`. Without it
+`preTradeRules: []` means both "never asked" and "asked, ticked nothing", and
+only one of those is a skipped rule — every pre-1f row, every import and every
+⌘K capture would have counted as three phantom skips. The Discipline Monitor
+now carries **What the checklist costs**, and renders a verdict only when a
+rule has ≥5 closed trades on BOTH sides; below that it prints the threshold and
+how close the best-covered rule is.
+
+**#03 cooldown lock.** `getCooldownState()` fires on weekly-budget breach,
+daily-budget breach, or N consecutive losses (N and the on/off switch live in
+Risk Controls; 0 disables the streak trigger). All four routes into logging —
+the dashboard button, the FAB, the empty-state CTA and ⌘K — pass through
+`requestTradeCapture()`, which asks one question first. It is a speed bump:
+answering always proceeds, and the answer is stamped on the trade
+(`cooldownOverride` / `cooldownNote`), which is what makes "2 cooldown
+overrides, −$160, 1 tagged Revenge Trade" computable. "Cooldown rules →" now
+has a real destination.
+
+**The cut.** `<details id="tradeAdvancedDetails">` is gone. Psychology,
+execution grade, screenshot and notes are four ordinary sections in the form
+flow; 1,978 chars of `.trade-advanced-*` CSS stripped.
+
+Not swapped: the cooldown button keeps its accent background and gains a warn
+ring + a worded badge — `--accent` and `--warn` invert between themes and one
+background override cannot keep the label legible in both.
+
+New check: `tests/systemFeatures.check.mjs` (rule ids through a rename, the
+asked≠ticked split, all four cooldown triggers, the override log).

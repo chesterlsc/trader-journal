@@ -38,6 +38,18 @@ const STORAGE_KEYS = {
   adminPanels: "axiom_journal_admin_panels_v1"
 };
 
+/* The pre-trade checklist a trader starts with. 1f #02 makes the list itself
+   editable (state.settings.preTradeRules), so this is only the seed — but the
+   ids are PERSISTED on every trade that ticked them, so these three ids must
+   never be renamed or old rows lose their labels. Declared above
+   DEFAULT_SETTINGS because that object references it at module-evaluation
+   time; anything below the init() call is in the temporal dead zone. */
+const DEFAULT_PRE_TRADE_RULES = [
+  { id: "playbook", label: "Setup is in my playbook" },
+  { id: "structure-stop", label: "Stop is at structure, not at a round number" },
+  { id: "no-news", label: "No news inside 15 minutes" }
+];
+
 const DEFAULT_SETTINGS = {
   journalName: "Your",
   startingBalance: 10000,
@@ -45,7 +57,14 @@ const DEFAULT_SETTINGS = {
   dailyMaxLoss: 300,
   weeklyMaxLoss: 1000,
   riskPerTrade: 1,
-  equityGoal: 15000
+  equityGoal: 15000,
+  // 1f #02 — the checklist shown in the New Trade sheet, written once here.
+  preTradeRules: DEFAULT_PRE_TRADE_RULES,
+  // 1f #03 — the cooldown speed bump. cooldownLossStreak = 0 turns off the
+  // consecutive-loss trigger; the loss-budget triggers still fire whenever a
+  // budget is configured and breached, because that is the budget's whole job.
+  cooldownEnabled: true,
+  cooldownLossStreak: 3
 };
 
 /* ---- DEMO (guest) MODE ----------------------------------------------------
@@ -244,6 +263,7 @@ const ui = {
   riskRulesBtn: document.getElementById("riskRulesBtn"),
   allSetupsBtn: document.getElementById("allSetupsBtn"),
   navUnjournalledBadge: document.getElementById("navUnjournalledBadge"),
+  tabBarUnjournalledBadge: document.getElementById("tabBarUnjournalledBadge"),
   topnavMore: document.getElementById("topnavMore"),
   dashPlaybook: document.getElementById("dashPlaybook"),
   dashPlaybookGrid: document.getElementById("dashPlaybookGrid"),
@@ -270,8 +290,29 @@ const ui = {
     dailyMaxLoss: document.getElementById("dailyMaxLoss"),
     weeklyMaxLoss: document.getElementById("weeklyMaxLoss"),
     riskPerTrade: document.getElementById("riskPerTrade"),
-    equityGoal: document.getElementById("equityGoal")
+    equityGoal: document.getElementById("equityGoal"),
+    cooldownEnabled: document.getElementById("cooldownEnabled"),
+    cooldownLossStreak: document.getElementById("cooldownLossStreak")
   },
+  // 1f #02 checklist editor + the causal readout it feeds.
+  rulesPanel: document.getElementById("rulesPanel"),
+  rulesForm: document.getElementById("rulesForm"),
+  rulesEditorList: document.getElementById("rulesEditorList"),
+  rulesAddBtn: document.getElementById("rulesAddBtn"),
+  rulesFormMessage: document.getElementById("rulesFormMessage"),
+  ruleCostList: document.getElementById("ruleCostList"),
+  // 1f #03 cooldown lock.
+  cooldownFieldset: document.getElementById("cooldownFieldset"),
+  cooldownDialog: document.getElementById("cooldownDialog"),
+  cooldownForm: document.getElementById("cooldownForm"),
+  cooldownHeadline: document.getElementById("cooldownHeadline"),
+  cooldownDetail: document.getElementById("cooldownDetail"),
+  cooldownQuestion: document.getElementById("cooldownQuestion"),
+  cooldownAnswer: document.getElementById("cooldownAnswer"),
+  cooldownMessage: document.getElementById("cooldownMessage"),
+  cooldownStepAwayBtn: document.getElementById("cooldownStepAwayBtn"),
+  cooldownSettingsBtn: document.getElementById("cooldownSettingsBtn"),
+  dashLogCooldownFlag: document.getElementById("dashLogCooldownFlag"),
   disciplineScore: document.getElementById("disciplineScore"),
   dailyTradingScore: document.getElementById("dailyTradingScore"),
   goalProgress: document.getElementById("goalProgress"),
@@ -347,7 +388,6 @@ const ui = {
   bulkMessage: document.getElementById("bulkMessage"),
   bulkPreviewWrap: document.getElementById("bulkPreviewWrap"),
   bulkPreviewBody: document.getElementById("bulkPreviewBody"),
-  tradeAdvancedDetails: document.getElementById("tradeAdvancedDetails"),
   // Admin panel markup is JS-injected into this mount only when the session
   // is an admin (ship-now #12); the handles below are bound at injection time.
   adminPanelsMount: document.getElementById("adminPanelsMount"),
@@ -502,14 +542,8 @@ const BALANCE_RANGE_LABELS = { "1m": "past 30 days", "3m": "past 90 days", all: 
    Declared here, above the module-level init() call, like every other module
    const — anything below it is in the temporal dead zone during first render.
 
-   The pre-trade checklist. Fixed ids because the ticked ones are STORED on
-   the trade (trade.preTradeRules), so renaming a label must never orphan the
-   history. Wording is the mockup's. */
-const PRE_TRADE_RULES = [
-  { id: "playbook", label: "Setup is in my playbook" },
-  { id: "structure-stop", label: "Stop is at structure, not at a round number" },
-  { id: "no-news", label: "No news inside 15 minutes" }
-];
+   The checklist itself now lives in settings (DEFAULT_PRE_TRADE_RULES seeds
+   it) — see getPreTradeRules(). */
 
 // Sheet state. Everything else is read straight off the inputs on demand —
 // only what has no field of its own lives here.
@@ -573,6 +607,28 @@ const MOOD_TONES = {
   Emotional: "is-bad",
   "Revenge Trade": "is-bad"
 };
+
+/* ── 1f system features ────────────────────────────────────────────────────
+   Above init() like everything else here.
+
+   #02 rule cost. A rule only gets a money verdict once BOTH sides of it have
+   this many closed trades — below that the difference is noise dressed up as
+   a finding, and the panel says so instead of printing a number. */
+const RULE_COST_MIN_SIDE = 5;
+
+// The checklist editor's working copy. Lives outside settings so add/remove/
+// retype can be abandoned by navigating away; Save writes it to settings.
+let rulesDraft = null;
+
+/* #03 cooldown. The answer the trader typed to get past the speed bump, held
+   until the trade it unlocked is written — then stamped on that trade and
+   cleared. That stamp is the only record of the interaction, and it is what
+   makes "how many of my cooldown overrides were revenge trades" answerable. */
+let pendingCooldown = null;
+
+// { reason, opener } while the cooldown dialog is up — the opener is the route
+// the trader was taking, resumed verbatim once they answer.
+let cooldownPrompt = null;
 
 const METRIC_DELTA_SPECS = {
   accountBalance: { read: (a) => a.totalPnl, format: formatCurrency },
@@ -1011,9 +1067,11 @@ function bindEvents() {
   // ⌘K, so it opens exactly what ⌘K opens; the FAB and the empty-state CTA go
   // straight to the sheet (route 3 — the FAB expands in place, it no longer
   // navigates). The full form stays reachable via Add detail / Edit / the nav.
-  ui.journalNewTradeBtn.addEventListener("click", openQuickCapture);
-  ui.tabBarNewTradeBtn?.addEventListener("click", () => openTradeSheet());
-  ui.dashboardEmptyCta?.addEventListener("click", () => openTradeSheet());
+  // 1f #03: all three go through requestTradeCapture(), which is where the
+  // cooldown speed bump lives.
+  ui.journalNewTradeBtn.addEventListener("click", () => requestTradeCapture(openQuickCapture));
+  ui.tabBarNewTradeBtn?.addEventListener("click", () => requestTradeCapture(() => openTradeSheet()));
+  ui.dashboardEmptyCta?.addEventListener("click", () => requestTradeCapture(() => openTradeSheet()));
   bindQuickCapture();
   ui.exportCsvBtn.addEventListener("click", exportTradesCsv);
   ui.exportCsvBtnMobile?.addEventListener("click", exportTradesCsv);
@@ -1029,11 +1087,38 @@ function bindEvents() {
 
   // Both "Rules" routes land on the risk budgets that drive the consequence
   // line. Phase 6 replaces this target with the cooldown feature itself.
-  [ui.cooldownRulesBtn, ui.riskRulesBtn].forEach((button) => {
+  // 1f: RULES is the checklist you write once; "Cooldown rules →" is the lock
+  // that acts on the budgets. Two destinations, two links.
+  ui.riskRulesBtn?.addEventListener("click", () => {
+    switchView("dashboard");
+    scrollDashboardTo(ui.rulesPanel);
+  });
+  [ui.cooldownRulesBtn, ui.cooldownSettingsBtn].forEach((button) => {
     button?.addEventListener("click", () => {
+      ui.cooldownDialog?.close();
+      cooldownPrompt = null;
       switchView("dashboard");
-      scrollDashboardTo(ui.riskForm);
+      scrollDashboardTo(ui.cooldownFieldset || ui.riskForm);
     });
+  });
+
+  // 1f #02 checklist editor.
+  ui.rulesForm?.addEventListener("submit", handleRulesSubmit);
+  ui.rulesAddBtn?.addEventListener("click", handleRulesAdd);
+  ui.rulesEditorList?.addEventListener("click", (event) => {
+    const remove = event.target.closest("[data-rule-remove]");
+    if (remove) {
+      handleRulesRemove(Number(remove.dataset.ruleRemove));
+    }
+  });
+
+  // 1f #03 cooldown dialog.
+  ui.cooldownForm?.addEventListener("submit", handleCooldownSubmit);
+  ui.cooldownStepAwayBtn?.addEventListener("click", handleCooldownStepAway);
+  // Esc / backdrop dismissal is a "step away" too — it must not leave a stale
+  // prompt holding an opener.
+  ui.cooldownDialog?.addEventListener("close", () => {
+    cooldownPrompt = null;
   });
   ui.allSetupsBtn?.addEventListener("click", () => {
     switchView("dashboard");
@@ -1159,7 +1244,7 @@ function bindEvents() {
         return;
       }
       event.preventDefault();
-      openQuickCapture();
+      requestTradeCapture(openQuickCapture);
     }
 
     if (!mod && event.key === "/") {
@@ -1531,6 +1616,14 @@ function buildDemoJournal() {
       psychology: DEMO_PSYCHOLOGY[index % DEMO_PSYCHOLOGY.length],
       executionQuality: DEMO_EXECUTION[index % DEMO_EXECUTION.length],
       importBatchId: DEMO_BATCH_ID,
+      // SAMPLE checklist history, so the rule-cost report has something to
+      // report in demo mode. Every row here is already flagged as sample data
+      // by DEMO_BATCH_ID and by the note prefix — the skip pattern is
+      // deterministic, not a claim about anyone's trading.
+      preTradeRulesAsked: DEFAULT_PRE_TRADE_RULES.map((rule) => rule.id),
+      preTradeRules: DEFAULT_PRE_TRADE_RULES.map((rule) => rule.id).filter(
+        (id) => !(index % 3 === 1 && id === "no-news")
+      ),
       notes:
         outcomeR > 0
           ? `${DEMO_TRADE_NOTE_PREFIX} plan followed, target hit at ${outcomeR}R.`
@@ -1565,6 +1658,8 @@ function buildDemoJournal() {
     psychology: "Focused",
     executionQuality: "A",
     importBatchId: DEMO_BATCH_ID,
+    preTradeRulesAsked: DEFAULT_PRE_TRADE_RULES.map((rule) => rule.id),
+    preTradeRules: DEFAULT_PRE_TRADE_RULES.map((rule) => rule.id),
     notes: `${DEMO_TRADE_NOTE_PREFIX} open position, priced live so you can watch the P&L move.`
   });
 
@@ -2324,6 +2419,17 @@ function hydrateRiskForm() {
   ui.riskInputs.weeklyMaxLoss.value = state.settings.weeklyMaxLoss;
   ui.riskInputs.riskPerTrade.value = state.settings.riskPerTrade;
   ui.riskInputs.equityGoal.value = state.settings.equityGoal;
+  if (ui.riskInputs.cooldownEnabled) {
+    ui.riskInputs.cooldownEnabled.checked = state.settings.cooldownEnabled;
+  }
+  if (ui.riskInputs.cooldownLossStreak) {
+    ui.riskInputs.cooldownLossStreak.value = state.settings.cooldownLossStreak;
+  }
+  // The checklist editor hydrates from the same places the risk form does:
+  // login, logout, demo start, import. Drop the draft so a stale half-edit
+  // from a previous session never survives a journal swap.
+  rulesDraft = null;
+  renderRulesEditor();
 }
 
 function hydrateReviewMonth() {
@@ -2350,7 +2456,12 @@ function handleRiskSubmit(event) {
     dailyMaxLoss: parseNumber(ui.riskInputs.dailyMaxLoss.value),
     weeklyMaxLoss: parseNumber(ui.riskInputs.weeklyMaxLoss.value),
     riskPerTrade: parseNumber(ui.riskInputs.riskPerTrade.value),
-    equityGoal: parseNumber(ui.riskInputs.equityGoal.value)
+    equityGoal: parseNumber(ui.riskInputs.equityGoal.value),
+    // 1f #03: the cooldown lives in risk settings because it is a risk rule.
+    // The checklist is edited in its own panel and is untouched here.
+    preTradeRules: state.settings.preTradeRules,
+    cooldownEnabled: Boolean(ui.riskInputs.cooldownEnabled?.checked),
+    cooldownLossStreak: parseNumber(ui.riskInputs.cooldownLossStreak?.value)
   };
 
   if (
@@ -2383,7 +2494,10 @@ function handleTradeSubmit(event) {
 
   const existingId = ui.tradeFields.tradeId.value.trim();
   const existingTrade = existingId ? getExistingTrade(existingId) : null;
-  const trade = buildTradeRecord(payload.value, {
+  // 1f #03: a NEW trade written after a cooldown override carries the answer.
+  // An edit does not — buildTradeRecord already carries the original stamp.
+  const input = existingId ? payload.value : { ...consumePendingCooldown(), ...payload.value };
+  const trade = buildTradeRecord(input, {
     id: existingId,
     createdAt: existingTrade?.createdAt || "",
     closedAt: existingTrade?.closedAt || "",
@@ -2468,14 +2582,6 @@ function syncTradeProgressState() {
       ui.tradeFields.tradeResult.value = "Auto";
     }
   }
-}
-
-function setTradeAdvancedDetailsOpen(isOpen) {
-  if (!ui.tradeAdvancedDetails) {
-    return;
-  }
-
-  ui.tradeAdvancedDetails.open = Boolean(isOpen);
 }
 
 function getExistingTrade(id) {
@@ -2601,6 +2707,18 @@ function buildTradeRecord(tradeInput, options = {}) {
       : Array.isArray(existingTrade?.preTradeRules)
         ? existingTrade.preTradeRules.map(String)
         : [],
+    // 1f #02/#03: same carry rule — the full form asks for none of these, so
+    // editing a trade through it must never erase what the sheet recorded.
+    preTradeRulesAsked: Array.isArray(tradeInput.preTradeRulesAsked)
+      ? tradeInput.preTradeRulesAsked.map(String)
+      : Array.isArray(existingTrade?.preTradeRulesAsked)
+        ? existingTrade.preTradeRulesAsked.map(String)
+        : [],
+    cooldownOverride: Boolean(
+      tradeInput.cooldownOverride === undefined ? existingTrade?.cooldownOverride : tradeInput.cooldownOverride
+    ),
+    cooldownReason: String(tradeInput.cooldownReason || existingTrade?.cooldownReason || ""),
+    cooldownNote: String(tradeInput.cooldownNote || existingTrade?.cooldownNote || ""),
     // 1c: same carry rule. Only the close sheet asks for these, so an edit
     // through the full form must not silently drop them.
     mistakeTags: Array.isArray(tradeInput.mistakeTags)
@@ -3384,7 +3502,6 @@ function resetTradeForm(keepDate) {
   ui.tradeFields.screenshot.value = "";
   clearScreenshotPreview();
   ui.tradeSubmitBtn.textContent = "Save Trade";
-  setTradeAdvancedDetailsOpen(false);
   syncDirectionToggle();
   syncSetupTypeCustomField();
   syncTradeProgressState();
@@ -3527,9 +3644,10 @@ function inferTradeContext(symbol) {
 
 // The one place all three capture routes build a record. Always an OPEN trade:
 // exits, result and the journal note are step 2's job.
-function saveCapturedTrade(value, preTradeRules) {
+function saveCapturedTrade(value, preTradeRules, preTradeRulesAsked) {
   const context = inferTradeContext(value.symbol);
   const trade = buildTradeRecord({
+    ...consumePendingCooldown(),
     ...context,
     asset: value.symbol,
     direction: value.direction,
@@ -3544,7 +3662,8 @@ function saveCapturedTrade(value, preTradeRules) {
     screenshotName: "",
     screenshotData: "",
     notes: "",
-    preTradeRules: Array.from(preTradeRules || [])
+    preTradeRules: Array.from(preTradeRules || []),
+    preTradeRulesAsked: Array.from(preTradeRulesAsked || [])
   });
 
   state.trades.push(trade);
@@ -3716,9 +3835,10 @@ function handleCaptureSubmit(event) {
     return;
   }
 
-  // Command-bar capture ticks no rules: an empty list is honest, a full one
-  // would be a lie about a checklist nobody read.
-  saveCapturedTrade(value, []);
+  // Command-bar capture ticks no rules AND asks none: both lists stay empty,
+  // which is what keeps this trade out of the rule-cost report rather than
+  // logging three phantom skips.
+  saveCapturedTrade(value, [], []);
   closeCaptureBar();
   showCaptureToast(
     state.auth.guestMode
@@ -3770,14 +3890,24 @@ function renderSheetRules() {
   if (!ui.sheetRulesList) {
     return;
   }
-  ui.sheetRulesList.innerHTML = PRE_TRADE_RULES.map(
-    (rule) => `
+  // 1f #02: the list is the trader's own now. Delete every rule and the whole
+  // fieldset goes with it — an empty checklist should not leave a legend and a
+  // promise about the discipline score standing over nothing.
+  const rules = getPreTradeRules();
+  const fieldset = ui.sheetRulesList.closest(".sheet-rules");
+  if (fieldset) {
+    fieldset.hidden = rules.length === 0;
+  }
+  ui.sheetRulesList.innerHTML = rules
+    .map(
+      (rule) => `
       <label class="sheet-rule">
         <input type="checkbox" class="sheet-rule-box" value="${escapeHtml(rule.id)}" />
         <span class="sheet-rule-mark" aria-hidden="true"></span>
         <span class="sheet-rule-text">${escapeHtml(rule.label)}</span>
       </label>`
-  ).join("");
+    )
+    .join("");
 }
 
 function getSheetRiskPercent() {
@@ -3891,7 +4021,11 @@ function handleSheetSubmit(event) {
     return;
   }
 
-  saveCapturedTrade(check.value, sheetState.rules);
+  saveCapturedTrade(
+    check.value,
+    sheetState.rules,
+    getPreTradeRules().map((rule) => rule.id)
+  );
   closeTradeSheet();
   showCaptureToast(
     state.auth.guestMode
@@ -3934,7 +4068,6 @@ function handleSheetAddDetail() {
   ui.tradeFields.tradeInProgress.checked = true;
   syncDirectionToggle();
   syncTradeProgressState();
-  setTradeAdvancedDetailsOpen(true);
   switchView("trade-entry");
   ui.tradeFields.takeProfit.focus();
   setMessage(ui.tradeFormMessage, "Carried over from the sheet. Fill the rest and save.", "success");
@@ -4489,7 +4622,6 @@ function loadTradeIntoForm(id) {
 
   ui.tradeFields.screenshotLabel.textContent = trade.screenshotName || "No screenshot selected";
   ui.tradeSubmitBtn.textContent = "Update Trade";
-  setTradeAdvancedDetailsOpen(true);
   syncDirectionToggle();
   syncSetupTypeCustomField();
   syncTradeProgressState();
@@ -5192,6 +5324,8 @@ function renderAll() {
   renderGreeting();
   renderPlaybook(state.analytics);
   renderUnjournalled();
+  renderRuleCost();
+  renderCooldown();
   syncBulkUndoButton();
   renderRiskViolations(state.analytics);
   renderEdgeTable(state.analytics);
@@ -6565,14 +6699,19 @@ function getUnjournalledTrades() {
 function renderUnjournalled() {
   const pending = getUnjournalledTrades();
 
-  if (ui.navUnjournalledBadge) {
-    ui.navUnjournalledBadge.hidden = pending.length === 0;
-    ui.navUnjournalledBadge.textContent = String(pending.length);
-    ui.navUnjournalledBadge.setAttribute(
+  // Desktop top bar and mobile dock carry the same count — 1f #01 asks for the
+  // badge in the nav AND the dock, and a phone only ever sees the dock.
+  [ui.navUnjournalledBadge, ui.tabBarUnjournalledBadge].forEach((badge) => {
+    if (!badge) {
+      return;
+    }
+    badge.hidden = pending.length === 0;
+    badge.textContent = String(pending.length);
+    badge.setAttribute(
       "aria-label",
       `${pending.length} trade${pending.length === 1 ? "" : "s"} without a note`
     );
-  }
+  });
 
   if (!ui.dashUnjournalled || !ui.dashUnjournalledList) {
     return;
@@ -6697,6 +6836,355 @@ function scrollDashboardTo(node) {
 
 // ‹ › month nav. The <input type="month"> stays the single source of truth,
 // so the existing change listener does the re-render.
+/* ══ 1f #02 — the pre-trade checklist, and what skipping it costs ══════════
+   design-source/1f-features.html: "Three or four rules you write once, shown
+   inside the New Trade sheet, stored with the row… With this it becomes
+   causal: 'the nine trades where you skipped the news check are −$1,240.'"
+
+   The editor writes state.settings.preTradeRules; the sheet reads it; the
+   trade stores BOTH what was ticked and what was asked, and the report below
+   is the difference between those two populations. */
+
+// The editor works on a draft so a half-typed rule is never live in the sheet.
+function getRulesDraft() {
+  if (!rulesDraft) {
+    rulesDraft = getPreTradeRules().map((rule) => ({ ...rule }));
+  }
+  return rulesDraft;
+}
+
+function renderRulesEditor() {
+  if (!ui.rulesEditorList) {
+    return;
+  }
+  const draft = getRulesDraft();
+  ui.rulesEditorList.innerHTML = draft.length
+    ? draft
+        .map(
+          (rule, index) => `
+        <div class="rules-row">
+          <input
+            class="rules-input"
+            type="text"
+            maxlength="90"
+            data-rule-index="${index}"
+            value="${escapeHtml(rule.label)}"
+            placeholder="e.g. No news inside 15 minutes"
+            aria-label="Rule ${index + 1}"
+          />
+          <button class="rules-remove" type="button" data-rule-remove="${index}" aria-label="Remove rule ${index + 1}">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>`
+        )
+        .join("")
+    : '<p class="rules-empty">No rules. The New Trade sheet will not ask for a checklist, and the rule-cost report below stays empty.</p>';
+
+  if (ui.rulesAddBtn) {
+    ui.rulesAddBtn.disabled = draft.length >= 8;
+  }
+}
+
+// Pull whatever is currently typed into the draft before add/remove/save, so
+// a re-render never loses an edit.
+function syncRulesDraftFromInputs() {
+  const draft = getRulesDraft();
+  ui.rulesEditorList?.querySelectorAll("[data-rule-index]").forEach((input) => {
+    const index = Number(input.dataset.ruleIndex);
+    if (draft[index]) {
+      draft[index].label = input.value;
+    }
+  });
+}
+
+function handleRulesAdd() {
+  syncRulesDraftFromInputs();
+  const draft = getRulesDraft();
+  if (draft.length >= 8) {
+    return;
+  }
+  // Blank id: normalizePreTradeRules slugs one from the label on save. Minting
+  // it here would bake in a slug of the placeholder text.
+  draft.push({ id: "", label: "" });
+  renderRulesEditor();
+  ui.rulesEditorList?.querySelector(`[data-rule-index="${draft.length - 1}"]`)?.focus();
+}
+
+function handleRulesRemove(index) {
+  syncRulesDraftFromInputs();
+  getRulesDraft().splice(index, 1);
+  renderRulesEditor();
+  ui.rulesAddBtn?.focus();
+}
+
+function handleRulesSubmit(event) {
+  event.preventDefault();
+  syncRulesDraftFromInputs();
+  const cleaned = normalizePreTradeRules(getRulesDraft());
+  state.settings = normalizeSettings({ ...state.settings, preTradeRules: cleaned });
+  rulesDraft = cleaned.map((rule) => ({ ...rule }));
+  persistState();
+  renderRulesEditor();
+  renderAll();
+  setMessage(
+    ui.rulesFormMessage,
+    cleaned.length
+      ? `Checklist saved — ${cleaned.length} rule${cleaned.length === 1 ? "" : "s"} will show in the New Trade sheet.`
+      : "Checklist cleared. The New Trade sheet will stop asking.",
+    "success"
+  );
+}
+
+/* The causal half. For each rule, split the trades that WERE SHOWN that rule
+   into ticked and skipped, and compare the money. Trades that never saw a
+   checklist (everything logged before 1f, every import, every command-bar
+   capture) are excluded — they have no answer to compare. */
+function computeRuleCosts() {
+  const closed = getClosedTrades().filter((trade) => (trade.preTradeRulesAsked || []).length > 0);
+  const sumNet = (rows) => rows.reduce((total, trade) => total + (Number(trade.netPnl) || 0), 0);
+
+  return getPreTradeRules().map((rule) => {
+    const seen = closed.filter((trade) => trade.preTradeRulesAsked.includes(rule.id));
+    const kept = seen.filter((trade) => (trade.preTradeRules || []).includes(rule.id));
+    const skipped = seen.filter((trade) => !(trade.preTradeRules || []).includes(rule.id));
+    return {
+      rule,
+      keptCount: kept.length,
+      skippedCount: skipped.length,
+      keptPnl: sumNet(kept),
+      skippedPnl: sumNet(skipped),
+      ready: kept.length >= RULE_COST_MIN_SIDE && skipped.length >= RULE_COST_MIN_SIDE
+    };
+  });
+}
+
+// Trades opened through a cooldown prompt. A statement about specific rows,
+// not a statistic, so one is enough to report.
+function computeCooldownCost() {
+  const rows = getClosedTrades().filter((trade) => trade.cooldownOverride);
+  return {
+    count: rows.length,
+    pnl: rows.reduce((total, trade) => total + (Number(trade.netPnl) || 0), 0),
+    revenge: rows.filter((trade) => trade.psychology === "Revenge Trade").length
+  };
+}
+
+function renderRuleCost() {
+  if (!ui.ruleCostList) {
+    return;
+  }
+
+  const items = [];
+  const costs = computeRuleCosts();
+  const ready = costs.filter((cost) => cost.ready);
+
+  ready.forEach((cost) => {
+    const skippedText = `${cost.skippedCount} trade${cost.skippedCount === 1 ? "" : "s"}`;
+    const tone = cost.skippedPnl < 0 ? "is-bad" : "is-good";
+    items.push(
+      `<li class="rule-cost-item ${tone}">
+        The ${skippedText} where you skipped &ldquo;${escapeHtml(cost.rule.label)}&rdquo;
+        ${cost.skippedCount === 1 ? "is" : "are"} <strong>${escapeHtml(formatSignedCurrency(cost.skippedPnl))}</strong>.
+        The ${cost.keptCount} where you ticked it: <strong>${escapeHtml(formatSignedCurrency(cost.keptPnl))}</strong>.
+      </li>`
+    );
+  });
+
+  const cooldown = computeCooldownCost();
+  if (cooldown.count > 0) {
+    items.push(
+      `<li class="rule-cost-item ${cooldown.pnl < 0 ? "is-bad" : "is-good"}">
+        ${cooldown.count} closed trade${cooldown.count === 1 ? "" : "s"} taken through a cooldown prompt:
+        <strong>${escapeHtml(formatSignedCurrency(cooldown.pnl))}</strong>${
+          cooldown.revenge
+            ? `, ${cooldown.revenge} tagged Revenge Trade`
+            : ""
+        }.
+      </li>`
+    );
+  }
+
+  if (!items.length) {
+    // Nothing is ready — say exactly what the threshold is and how close the
+    // best-covered rule is, rather than showing an empty panel or a number
+    // built on two trades.
+    if (!getPreTradeRules().length) {
+      items.push(
+        '<li class="rule-cost-note">No pre-trade checklist yet. Write your rules below and the cost of skipping them shows up here.</li>'
+      );
+    } else {
+      const best = costs
+        .slice()
+        .sort((a, b) => Math.min(b.keptCount, b.skippedCount) - Math.min(a.keptCount, a.skippedCount))[0];
+      const progress =
+        best && best.keptCount + best.skippedCount > 0
+          ? ` Closest: &ldquo;${escapeHtml(best.rule.label)}&rdquo; — ${best.keptCount} ticked, ${best.skippedCount} skipped.`
+          : " No trade has been through the checklist yet.";
+      items.push(
+        `<li class="rule-cost-note">A rule needs ${RULE_COST_MIN_SIDE} closed trades on each side — ticked and skipped — before the money difference means anything.${progress}</li>`
+      );
+    }
+  }
+
+  ui.ruleCostList.innerHTML = items.join("");
+}
+
+/* ══ 1f #03 — the cooldown lock ═══════════════════════════════════════════
+   design-source/1f-features.html: "at the daily limit, or after N losses in a
+   row, the Log-a-trade button changes state and asks one question before it
+   unlocks. Not a hard block, a speed bump."
+
+   The trigger conditions are exactly the two branches buildRiskConsequence()
+   already reports plus the configurable loss streak. Answering the question
+   always unlocks — the friction IS the feature, refusal is not. */
+
+function getConsecutiveLosses() {
+  let losses = 0;
+  for (const trade of getClosedTrades().sort(sortTradesDesc)) {
+    if (trade.result !== "Loss") {
+      break;
+    }
+    losses += 1;
+  }
+  return losses;
+}
+
+function getCooldownState() {
+  if (!state.settings.cooldownEnabled || !canAccessApp()) {
+    return null;
+  }
+
+  const analytics = state.analytics || {};
+  const dailyLimit = state.settings.dailyMaxLoss;
+  const weeklyLimit = state.settings.weeklyMaxLoss;
+
+  if (weeklyLimit > 0 && (analytics.weekPnl || 0) < -weeklyLimit) {
+    return {
+      reason: "weekly",
+      badge: "Weekly budget gone",
+      headline: "The weekly loss budget is gone.",
+      detail: `This week is ${formatSignedCurrency(analytics.weekPnl || 0)} against a ${formatCurrency(weeklyLimit)} budget.`,
+      question: "What has changed since the trade that broke the budget?"
+    };
+  }
+  if (dailyLimit > 0 && (analytics.todayPnl || 0) < -dailyLimit) {
+    return {
+      reason: "daily",
+      badge: "Daily budget gone",
+      headline: "Today's loss budget is gone.",
+      detail: `Today is ${formatSignedCurrency(analytics.todayPnl || 0)} against a ${formatCurrency(dailyLimit)} budget.`,
+      question: "What is the setup here that the last one did not have?"
+    };
+  }
+
+  const streakLimit = state.settings.cooldownLossStreak;
+  const losses = streakLimit > 0 ? getConsecutiveLosses() : 0;
+  if (streakLimit > 0 && losses >= streakLimit) {
+    return {
+      reason: "streak",
+      badge: `${losses} losses in a row`,
+      headline: `${losses} losses in a row.`,
+      detail: `Your cooldown triggers at ${streakLimit}. Change that in Risk Controls.`,
+      question: "What is the setup here that the last one did not have?"
+    };
+  }
+  return null;
+}
+
+// The button state. Colour is never the only signal — the badge word and the
+// button's accessible description carry it too.
+function renderCooldown() {
+  const cool = getCooldownState();
+  if (!cool && pendingCooldown) {
+    // The condition lifted before the answer was spent; the stamp would be a
+    // lie on whatever trade came next.
+    pendingCooldown = null;
+  }
+
+  [ui.journalNewTradeBtn, ui.tabBarNewTradeBtn, ui.dashboardEmptyCta].forEach((button) => {
+    if (!button) {
+      return;
+    }
+    button.classList.toggle("is-cooldown", Boolean(cool));
+    if (cool) {
+      button.setAttribute("title", `${cool.headline} One question before you log another.`);
+    } else {
+      button.removeAttribute("title");
+    }
+  });
+
+  if (ui.dashLogCooldownFlag) {
+    ui.dashLogCooldownFlag.hidden = !cool;
+    ui.dashLogCooldownFlag.textContent = cool ? cool.badge : "";
+  }
+}
+
+/* Every route into "log a trade" passes through here: the dashboard button,
+   the mobile FAB, the empty-state CTA and ⌘K. One gate, so a new entry point
+   cannot accidentally bypass the speed bump. */
+function requestTradeCapture(opener) {
+  if (!canAccessApp()) {
+    return;
+  }
+  // Already answered and the answer has not been spent — do not ask twice for
+  // the same trade.
+  const cool = pendingCooldown ? null : getCooldownState();
+  if (!cool) {
+    opener();
+    return;
+  }
+  if (!ui.cooldownDialog) {
+    // No dialog in the DOM: a speed bump that cannot render must not become a
+    // block.
+    opener();
+    return;
+  }
+  cooldownPrompt = { reason: cool.reason, opener };
+  ui.cooldownHeadline.textContent = cool.headline;
+  ui.cooldownDetail.textContent = cool.detail;
+  ui.cooldownQuestion.textContent = cool.question;
+  ui.cooldownAnswer.value = "";
+  setMessage(ui.cooldownMessage, "", "");
+  ui.cooldownDialog.showModal();
+  ui.cooldownAnswer.focus();
+}
+
+function handleCooldownSubmit(event) {
+  event.preventDefault();
+  const answer = ui.cooldownAnswer.value.trim();
+  if (!answer) {
+    setMessage(ui.cooldownMessage, "Answer it in your own words — that is the whole speed bump.", "error");
+    ui.cooldownAnswer.focus();
+    return;
+  }
+  const prompt = cooldownPrompt;
+  pendingCooldown = { reason: prompt?.reason || "", note: answer };
+  ui.cooldownDialog.close();
+  renderCooldown();
+  prompt?.opener?.();
+  cooldownPrompt = null;
+}
+
+function handleCooldownStepAway() {
+  ui.cooldownDialog?.close();
+  cooldownPrompt = null;
+  showCaptureToast("Nothing logged. The budget is still there tomorrow.");
+}
+
+// Spent by the next trade written after an override, then cleared.
+function consumePendingCooldown() {
+  if (!pendingCooldown) {
+    return {};
+  }
+  const carry = {
+    cooldownOverride: true,
+    cooldownReason: pendingCooldown.reason,
+    cooldownNote: pendingCooldown.note
+  };
+  pendingCooldown = null;
+  return carry;
+}
+
 function stepCalendarMonth(delta) {
   if (!ui.dashboardCalendarMonth) {
     return;
@@ -7080,13 +7568,25 @@ function buildTradeDetailRow(trade, isOpen) {
     ["Risk", `${Number(trade.riskPercent || 0).toFixed(2)}%${isRuleBroken(trade) ? ' <span class="rev-flag">over cap</span>' : ""}`]
   ];
 
-  const checklist = (trade.preTradeRules || [])
-    .map((ruleId) => PRE_TRADE_RULES.find((rule) => rule.id === ruleId)?.label)
-    .filter(Boolean);
+  const asked = trade.preTradeRulesAsked || [];
+  const ticked = trade.preTradeRules || [];
+  const checklist = ticked.map(preTradeRuleLabel);
+  // Only a trade that was actually SHOWN the checklist can have skipped it.
+  const skipped = asked.filter((id) => !ticked.includes(id)).map(preTradeRuleLabel);
 
   const extras = [];
   if (checklist.length) {
     extras.push(`<p class="rev-detail-note"><span class="rev-detail-key">Checked before entry</span>${escapeHtml(checklist.join(" · "))}</p>`);
+  }
+  if (skipped.length) {
+    extras.push(`<p class="rev-detail-note is-warn"><span class="rev-detail-key">Skipped</span>${escapeHtml(skipped.join(" · "))}</p>`);
+  }
+  if (trade.cooldownOverride) {
+    extras.push(
+      `<p class="rev-detail-note is-warn"><span class="rev-detail-key">Cooldown override</span>${escapeHtml(
+        trade.cooldownNote || "Taken through a cooldown prompt."
+      )}</p>`
+    );
   }
   if ((trade.mistakeTags || []).length) {
     extras.push(`<p class="rev-detail-note"><span class="rev-detail-key">What went wrong</span>${escapeHtml(trade.mistakeTags.join(" · "))}</p>`);
@@ -7473,8 +7973,70 @@ function normalizeSettings(input) {
     dailyMaxLoss: ensureNonNegative(value.dailyMaxLoss, DEFAULT_SETTINGS.dailyMaxLoss),
     weeklyMaxLoss: ensureNonNegative(value.weeklyMaxLoss, DEFAULT_SETTINGS.weeklyMaxLoss),
     riskPerTrade: ensureNonNegative(value.riskPerTrade, DEFAULT_SETTINGS.riskPerTrade),
-    equityGoal: ensurePositiveNumber(value.equityGoal, DEFAULT_SETTINGS.equityGoal)
+    equityGoal: ensurePositiveNumber(value.equityGoal, DEFAULT_SETTINGS.equityGoal),
+    // 1f #02. ABSENT (every journal saved before this ships) → the seed list,
+    // so nothing changes for an existing trader. PRESENT AND EMPTY → empty,
+    // because deleting every rule is a legitimate choice and must survive a
+    // reload. That distinction is why this is not a `|| DEFAULT` fallback.
+    preTradeRules: Array.isArray(value.preTradeRules)
+      ? normalizePreTradeRules(value.preTradeRules)
+      : DEFAULT_PRE_TRADE_RULES.map((rule) => ({ ...rule })),
+    // 1f #03.
+    cooldownEnabled: value.cooldownEnabled === undefined ? true : Boolean(value.cooldownEnabled),
+    cooldownLossStreak: clamp(
+      Math.round(ensureNonNegative(value.cooldownLossStreak, DEFAULT_SETTINGS.cooldownLossStreak)),
+      0,
+      20
+    )
   };
+}
+
+// Ids are persisted on trades, so a rule keeps whatever id it was created
+// with; only new rules mint one, and it is slugged from the label with a
+// numeric tail when that slug is already taken.
+function normalizePreTradeRules(input) {
+  const seen = new Set();
+  return input
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+      const label = String(item.label || "").trim().slice(0, 90);
+      if (!label) {
+        return null;
+      }
+      let id = String(item.id || "").trim() || slugifyRuleId(label);
+      while (seen.has(id)) {
+        id = `${id}-2`;
+      }
+      seen.add(id);
+      return { id, label };
+    })
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+function slugifyRuleId(label) {
+  const slug = label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32);
+  return slug || `rule-${createId()}`;
+}
+
+function getPreTradeRules() {
+  return Array.isArray(state.settings.preTradeRules) ? state.settings.preTradeRules : [];
+}
+
+// Historic trades carry ids of rules that may since have been renamed or
+// deleted, so the lookup falls back to the seed list and then to the raw id —
+// a stored tick always renders as something.
+function preTradeRuleLabel(id) {
+  const match =
+    getPreTradeRules().find((rule) => rule.id === id) ||
+    DEFAULT_PRE_TRADE_RULES.find((rule) => rule.id === id);
+  return match ? match.label : String(id);
 }
 
 function normalizeTrades(input) {
@@ -7514,6 +8076,19 @@ function normalizeTrades(input) {
         // ships and on every imported row — an empty array is "not asked",
         // not "ticked nothing", and nothing scores off it yet.
         preTradeRules: Array.isArray(item.preTradeRules) ? item.preTradeRules.map(String) : [],
+        // 1f #02: the ids the checklist ACTUALLY SHOWED for this trade. Without
+        // it, preTradeRules: [] is ambiguous — "never asked" and "asked, ticked
+        // nothing" are opposite facts and only one of them is a skipped rule.
+        // Empty here means the trade never saw a checklist, so the rule-cost
+        // report ignores it rather than counting it as a skip.
+        preTradeRulesAsked: Array.isArray(item.preTradeRulesAsked)
+          ? item.preTradeRulesAsked.map(String)
+          : [],
+        // 1f #03: this trade was opened through a cooldown prompt, and what the
+        // trader answered to unlock it.
+        cooldownOverride: Boolean(item.cooldownOverride),
+        cooldownReason: String(item.cooldownReason || ""),
+        cooldownNote: String(item.cooldownNote || ""),
         // 1c close sheet. Absent on every trade saved before this ships: an
         // empty tag list is "never asked", and an empty journalledAt on a
         // trade that already has notes still counts as journalled — see

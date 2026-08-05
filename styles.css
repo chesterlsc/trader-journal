@@ -1316,76 +1316,6 @@ textarea:focus {
   gap: 14px;
 }
 
-.trade-advanced-details {
-  grid-column: 1 / -1;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface-1);
-  overflow: hidden;
-}
-
-.trade-advanced-summary {
-  list-style: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 14px 16px;
-  cursor: pointer;
-}
-
-.trade-advanced-summary::-webkit-details-marker {
-  display: none;
-}
-
-.trade-advanced-summary span:first-child {
-  display: grid;
-  gap: 3px;
-}
-
-.trade-advanced-summary strong {
-  font: 600 var(--fs-md)/1.2 var(--font-ui);
-  color: var(--text);
-}
-
-.trade-advanced-summary small {
-  color: var(--text-soft);
-  font: 500 var(--fs-label)/1.45 var(--font-mono);
-}
-
-.trade-advanced-toggle {
-  flex: 0 0 auto;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
-  padding: 8px 10px;
-  color: var(--text-soft);
-  font: 600 var(--fs-micro)/1 var(--font-mono);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.trade-advanced-details[open] .trade-advanced-toggle {
-  color: var(--text);
-}
-
-/* Toggle copy lives in real spans (screen-reader visible); open state picks
-   which one shows. */
-.trade-advanced-details[open] .trade-advanced-toggle .toggle-label-closed,
-.trade-advanced-details:not([open]) .trade-advanced-toggle .toggle-label-open {
-  display: none;
-}
-
-.trade-advanced-body {
-  padding: 0 14px 14px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.trade-advanced-details:not([open]) .trade-advanced-body {
-  display: none;
-}
-
 /* Trade-entry sections are nested wells (§4): opaque inset surface. */
 .trade-section {
   display: grid;
@@ -1414,6 +1344,14 @@ textarea:focus {
 .trade-section-head h3 {
   margin: 0;
   font-size: var(--fs-md);
+}
+
+/* 1f: the psychology section no longer hides behind a disclosure, so it needs
+   the one line that says why it is not optional. */
+.trade-section-note {
+  margin: 2px 0 0;
+  color: var(--text-soft);
+  font: 400 var(--fs-label)/1.5 var(--font-ui);
 }
 
 .trade-grid {
@@ -2379,10 +2317,6 @@ body.is-guest:not(.demo-signup) .trust-row {
     gap: 12px;
   }
 
-  .trade-advanced-body {
-    gap: 12px;
-  }
-
   .trade-section {
     padding: 12px;
   }
@@ -2394,10 +2328,6 @@ body.is-guest:not(.demo-signup) .trust-row {
   }
 
   .trade-grid-record {
-    grid-template-columns: 1fr;
-  }
-
-  .trade-advanced-body {
     grid-template-columns: 1fr;
   }
 
@@ -2629,27 +2559,6 @@ body.is-guest:not(.demo-signup) .trust-row {
   .trade-grid-review,
   .trade-grid-record {
     grid-template-columns: 1fr;
-  }
-
-  .trade-advanced-summary {
-    padding: 13px 14px;
-    align-items: flex-start;
-  }
-
-  .trade-advanced-summary strong {
-    font-size: 0.92rem;
-  }
-
-  .trade-advanced-summary small {
-    font-size: 0.74rem;
-  }
-
-  .trade-advanced-toggle {
-    padding: 7px 9px;
-  }
-
-  .trade-advanced-body {
-    padding: 0 11px 11px;
   }
 
   .trade-section {
