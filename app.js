@@ -420,6 +420,16 @@ const ui = {
   riskViolations: document.getElementById("riskViolations"),
   edgeRows: document.getElementById("edgeRows"),
   equityChart: document.getElementById("equityChart"),
+  // 1f #05 equity scrub — the panel the playhead feeds.
+  equityScrub: document.getElementById("equityScrub"),
+  equityScrubHint: document.getElementById("equityScrubHint"),
+  equityScrubPos: document.getElementById("equityScrubPos"),
+  equityScrubSymbol: document.getElementById("equityScrubSymbol"),
+  equityScrubNet: document.getElementById("equityScrubNet"),
+  equityScrubMeta: document.getElementById("equityScrubMeta"),
+  equityScrubNote: document.getElementById("equityScrubNote"),
+  equityScrubShot: document.getElementById("equityScrubShot"),
+  equityScrubClear: document.getElementById("equityScrubClear"),
   drawdownChart: document.getElementById("drawdownChart"),
   psychologyChart: document.getElementById("psychologyChart"),
   sessionChart: document.getElementById("sessionChart"),
@@ -625,7 +635,14 @@ const {
   normalizeRecentTrades
 } = recentTradesView;
 
-const { renderCharts } = createChartsModule({ ui, state, prefersReducedMotion });
+// renderEquityScrub is a hoisted function declaration, so naming it here —
+// above its definition and above the init() call — is safe.
+const { renderCharts, clearScrub } = createChartsModule({
+  ui,
+  state,
+  prefersReducedMotion,
+  onScrub: renderEquityScrub
+});
 
 // Declared before init() so first-render code can reach them (module-level
 // let/const below init() are in the temporal dead zone during the first
@@ -1258,6 +1275,13 @@ function bindEvents() {
       syncBalanceRangeButtons();
       renderBalanceCard(state.analytics);
     });
+  });
+
+  // 1f #05: the way back out of a scrub without a keyboard. Escape does the
+  // same job while the curve has focus; the charts module owns both.
+  ui.equityScrubClear?.addEventListener("click", () => {
+    clearScrub();
+    ui.equityChart?.focus();
   });
 
   // Both "Rules" routes land on the risk budgets that drive the consequence
@@ -7082,6 +7106,131 @@ function getScopedEquity(analytics) {
   const scoped = equity.filter((_, index) => (dates[index] || "") >= cutoff);
   // Fewer than two points in the window is not a curve — fall back to all.
   return scoped.length >= 2 ? scoped : equity;
+}
+
+/* ── 1f #05 equity scrub ───────────────────────────────────────────────────
+   The playhead in src/modules/charts.js hands renderEquityScrub an index into
+   analytics.equity, or null when the scrub is cleared. Index 0 is the starting
+   balance — a real point on the curve, but not a trade — and index i is the
+   i-th closed trade in the same ascending order calculateAnalytics walked to
+   build the curve. Everything on the panel is read off that trade; there is no
+   placeholder row, so a curve with no trade behind a point says so. */
+
+// The trade that produced equity[index], or null for the starting balance.
+// Re-derived from state rather than cached onto analytics: this is the exact
+// expression calculateAnalytics uses for `ordered`, so the two cannot drift
+// out of step the way a parallel array would.
+function equityScrubTradeAt(index) {
+  if (!Number.isFinite(index) || index <= 0) {
+    return null;
+  }
+  return getClosedTrades(state.trades).sort(sortTradesAsc)[index - 1] || null;
+}
+
+// What a screen reader hears as the playhead moves — the same facts the panel
+// shows, in one line, and never a number the panel does not also show.
+function equityScrubValueText(index, trade, count) {
+  if (!Number.isFinite(index) || index < 0 || index >= count) {
+    return "No point selected";
+  }
+  const position = `Point ${index + 1} of ${count}`;
+  if (!trade) {
+    return `${position}. Starting balance, before the first trade.`;
+  }
+  const parts = [
+    position,
+    trade.asset || "Unknown symbol",
+    trade.setupType || "no setup recorded",
+    trade.session || "no session recorded",
+    // Spoken, not coloured: "up" and "down" are the sign, since a screen
+    // reader never sees the green.
+    trade.netPnl === 0 ? "net flat" : `net ${trade.netPnl > 0 ? "up" : "down"} ${formatCurrency(Math.abs(trade.netPnl))}`
+  ];
+  if (Number.isFinite(trade.rMultiple)) {
+    parts.push(`${trade.rMultiple.toFixed(2)} R`);
+  }
+  return `${parts.join(", ")}.`;
+}
+
+function renderEquityScrub(index) {
+  const equity = Array.isArray(state.analytics?.equity) ? state.analytics.equity : [];
+  const dates = Array.isArray(state.analytics?.equityDates) ? state.analytics.equityDates : [];
+  const count = equity.length;
+  const engaged = Number.isFinite(index) && index >= 0 && index < count;
+  const trade = engaged ? equityScrubTradeAt(index) : null;
+
+  if (ui.equityChart) {
+    ui.equityChart.setAttribute("aria-valuemin", "0");
+    ui.equityChart.setAttribute("aria-valuemax", String(Math.max(count - 1, 0)));
+    ui.equityChart.setAttribute("aria-valuenow", String(engaged ? index : 0));
+    ui.equityChart.setAttribute("aria-valuetext", equityScrubValueText(index, trade, count));
+  }
+
+  if (ui.equityScrub) {
+    ui.equityScrub.hidden = !engaged;
+  }
+  if (ui.equityScrubHint) {
+    ui.equityScrubHint.hidden = engaged;
+  }
+  if (!engaged) {
+    if (ui.equityScrubShot) {
+      ui.equityScrubShot.hidden = true;
+      ui.equityScrubShot.removeAttribute("src");
+      ui.equityScrubShot.alt = "";
+    }
+    return;
+  }
+
+  setText(ui.equityScrubPos, `Point ${index + 1} of ${count} · balance ${formatCurrency(equity[index])}`);
+
+  if (ui.equityScrubNet) {
+    // Colour is never the only signal — the sign travels in the text too.
+    ui.equityScrubNet.className = `eq-scrub-net${
+      trade ? (trade.netPnl > 0 ? " pnl-positive" : trade.netPnl < 0 ? " pnl-negative" : "") : ""
+    }`;
+  }
+
+  if (!trade) {
+    setText(ui.equityScrubSymbol, "Starting balance");
+    setText(ui.equityScrubNet, "");
+    setText(
+      ui.equityScrubMeta,
+      dates[index] ? `Where the curve begins · ${formatIsoShort(dates[index])}` : "Where the curve begins"
+    );
+    setText(ui.equityScrubNote, "No trade here — this is the balance the account opened with.");
+  } else {
+    setText(ui.equityScrubSymbol, trade.asset || "Unknown symbol");
+    setText(ui.equityScrubNet, playbookMoney(trade.netPnl));
+    setText(
+      ui.equityScrubMeta,
+      [
+        formatIsoShort(trade.date),
+        trade.setupType || "No setup",
+        trade.session || "No session",
+        Number.isFinite(trade.rMultiple) ? `${trade.rMultiple.toFixed(2)}R` : "No R recorded"
+      ].join(" · ")
+    );
+    setText(ui.equityScrubNote, trade.notes || "No note on this trade.");
+  }
+
+  if (ui.equityScrubNote) {
+    ui.equityScrubNote.classList.toggle("is-muted", !trade || !trade.notes);
+  }
+
+  if (ui.equityScrubShot) {
+    // Same trust boundary as the playbook shots: only an inline data: image
+    // ever reaches a src attribute.
+    const shot = trade && isInlineImage(trade.screenshotData) ? trade.screenshotData : "";
+    if (shot) {
+      ui.equityScrubShot.src = shot;
+      ui.equityScrubShot.alt = `Chart screenshot from the ${trade.asset || "unknown"} trade on ${trade.date}`;
+      ui.equityScrubShot.hidden = false;
+    } else {
+      ui.equityScrubShot.hidden = true;
+      ui.equityScrubShot.removeAttribute("src");
+      ui.equityScrubShot.alt = "";
+    }
+  }
 }
 
 function renderBalanceCard(analytics) {

@@ -4779,3 +4779,177 @@ body.auth-locked .topnav {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* --- 1f #05 Equity scrub -------------------------------------------------
+   Drag along the equity curve and the trade under the playhead lands here.
+   The canvas keeps `touch-action: pan-y`, so a vertical swipe still scrolls
+   the page and only the horizontal drag belongs to the playhead — the reason
+   this is the one chart with a touch gesture at all. */
+#equityChart {
+  touch-action: pan-y;
+  cursor: ew-resize;
+}
+
+/* Clay shadows out-specify the global focus ring, and a canvas has no other
+   affordance to say "the arrow keys work here". */
+#equityChart:focus-visible {
+  outline: none;
+  /* Keeps the chart well's own top hairline, so focusing the curve rings it
+     rather than flattening it. */
+  box-shadow: inset 0 1px 0 var(--chart-highlight), var(--focus-ring);
+}
+
+.eq-scrub-hint {
+  margin: var(--space-3) 0 0;
+  font: 500 11px/1.4 var(--font-mono);
+  color: var(--text-faint);
+}
+
+.eq-scrub-hint[hidden] {
+  display: none;
+}
+
+.eq-scrub-hint kbd {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+  font: 500 11px/1.4 var(--font-mono);
+  color: var(--text-soft);
+}
+
+/* Pressed, not raised: the panel is a well the curve reads into, and a raised
+   card here would compete with the chart panel it sits inside. */
+.eq-scrub {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 200px) auto;
+  align-items: start;
+  gap: var(--space-3) var(--space-4);
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+}
+
+.eq-scrub[hidden] {
+  display: none;
+}
+
+/* Explicit columns, because the screenshot column is empty on most trades and
+   auto-placement would otherwise slide the Clear button into its slot. */
+.eq-scrub-body {
+  grid-column: 1;
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.eq-scrub-pos {
+  margin: 0;
+  font: 600 11px/1.3 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.eq-scrub-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.eq-scrub-symbol {
+  font: 700 16px/1.2 var(--font-mono);
+  color: var(--text);
+}
+
+.eq-scrub-net {
+  font: 700 16px/1.2 var(--font-mono);
+  color: var(--text-soft);
+}
+
+.eq-scrub-meta {
+  margin: 0;
+  font: 500 11px/1.4 var(--font-mono);
+  color: var(--text-faint);
+}
+
+.eq-scrub-note {
+  margin: 0;
+  font: 400 13px/1.5 var(--font-ui);
+  color: var(--text-soft);
+}
+
+.eq-scrub-note.is-muted {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.eq-scrub-shot {
+  grid-column: 2;
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-2);
+}
+
+.eq-scrub-shot[hidden] {
+  display: none;
+}
+
+.eq-scrub-clear {
+  grid-column: 3;
+  justify-self: end;
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  box-shadow: var(--clay-raised);
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+
+.eq-scrub-clear:hover {
+  color: var(--text);
+}
+
+.eq-scrub-clear:active {
+  box-shadow: var(--clay-pressed);
+}
+
+.eq-scrub-clear:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+@media (max-width: 899px), (pointer: coarse) {
+  .eq-scrub-clear {
+    min-height: 44px;
+  }
+}
+
+/* At phone width the screenshot goes under the words rather than beside them:
+   a 200px chart next to a 13px note is neither readable. */
+@media (max-width: 720px) {
+  .eq-scrub {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .eq-scrub-clear {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .eq-scrub-shot {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}

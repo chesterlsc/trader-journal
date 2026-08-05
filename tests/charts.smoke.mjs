@@ -57,11 +57,19 @@ function canvas(id, height) {
     id,
     clientWidth: id === "strategyPerformanceChart" ? 700 : 350,
     dataset: { height: String(height) },
+    attrs: {},
+    captured: [],
     width: 0,
     height: 0,
     listeners: {},
     getContext: () => makeCtx(),
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 350, height }),
+    setAttribute(name, value) {
+      this.attrs[name] = String(value);
+    },
+    setPointerCapture(id) {
+      this.captured.push(id);
+    },
     addEventListener(type, fn) {
       this.listeners[type] = fn;
     }
@@ -216,6 +224,122 @@ ui.psychologyChart.listeners.mouseleave();
 const beforeMiss = calls.length;
 ui.psychologyChart.listeners.mousemove({ clientX: 200, clientY: 5 });
 assert.strictEqual(calls.length, beforeMiss, "hover outside the rows must not repaint");
+
+/* ── 1f #05 equity scrub ──────────────────────────────────────────────────
+   A dedicated instance with its own canvases, because the stub's
+   addEventListener overwrites by type and the two modules above already
+   fought over the shared ones.
+
+   What would rot silently here: the playhead landing one trade off the point
+   the finger is on; the hover crosshair and the playhead both claiming the
+   canvas; a poll tick clearing a scrub the trader is reading; a theme repaint
+   doing the same. */
+function scrubHarness(reducedMotion) {
+  const scrubUi = {
+    equityChart: canvas("equityChart", 240),
+    drawdownChart: canvas("drawdownChart", 240),
+    strategyPerformanceChart: canvas("strategyPerformanceChart", 280),
+    traderScoreChart: canvas("traderScoreChart", 300),
+    psychologyChart: canvas("psychologyChart", 240),
+    sessionChart: canvas("sessionChart", 240),
+    rMultipleChart: canvas("rMultipleChart", 240),
+    playbookChart: canvas("playbookChart", 240),
+    strategyDimensionButtons: [],
+    strategyMetricButtons: []
+  };
+  const seen = [];
+  const scrubState = {
+    dashboard: { performanceDimension: "setup", performanceMetric: "pnl" },
+    playbook: { setup: "", curve: [], dates: [], key: "line" },
+    analytics: null
+  };
+  const module = createChartsModule({
+    ui: scrubUi,
+    state: scrubState,
+    prefersReducedMotion: () => reducedMotion,
+    onScrub: (index) => seen.push(index)
+  });
+  module.renderCharts(full, { force: true });
+  return { ui: scrubUi, seen, ...module };
+}
+
+const scrub = scrubHarness(false);
+const eq = scrub.ui.equityChart;
+const LAST = full.equity.length - 1;
+
+// The canvas is 350 CSS px wide; the line renderer's plot runs from padLeft to
+// width - padRight, so a press well left of the plot is the first point and
+// one well right of it is the last. Anything in between is a nearest-point
+// hit, which is what stops the playhead landing one trade off the finger.
+eq.listeners.pointerdown({ clientX: 0, pointerId: 7 });
+assert.deepStrictEqual(scrub.seen, [0], "a press at the left edge must select the first point");
+assert.deepStrictEqual(eq.captured, [7], "the drag must capture its pointer");
+
+eq.listeners.pointermove({ clientX: 400, pointerId: 7 });
+assert.deepStrictEqual(scrub.seen, [0, LAST], "dragging to the right edge must reach the last point");
+
+// Same index twice must not re-fire — the panel repaint is not free.
+eq.listeners.pointermove({ clientX: 420, pointerId: 7 });
+assert.deepStrictEqual(scrub.seen, [0, LAST], "re-selecting the same point must not re-notify");
+
+// An engaged scrub owns the canvas: the hover crosshair must stay out.
+eq.listeners.pointerup({ pointerId: 7 });
+const beforeScrubHover = calls.length;
+eq.listeners.mousemove({ clientX: 180, clientY: 100 });
+assert.strictEqual(calls.length, beforeScrubHover, "hover must not repaint while a scrub is engaged");
+
+// Keyboard: arrows step trade to trade, Home/End jump, Escape releases.
+const prevented = [];
+const key = (name) => eq.listeners.keydown({ key: name, preventDefault: () => prevented.push(name) });
+key("ArrowLeft");
+assert.strictEqual(scrub.seen.at(-1), LAST - 1, "ArrowLeft must step back one trade");
+key("ArrowRight");
+assert.strictEqual(scrub.seen.at(-1), LAST, "ArrowRight must step forward one trade");
+key("Home");
+assert.strictEqual(scrub.seen.at(-1), 0, "Home must jump to the start of the curve");
+key("ArrowLeft");
+assert.strictEqual(scrub.seen.at(-1), 0, "the playhead must not walk off the front of the curve");
+key("End");
+assert.strictEqual(scrub.seen.at(-1), LAST, "End must jump to the head of the curve");
+assert.ok(prevented.length >= 5, "arrow keys must not also scroll the page");
+key("Tab");
+assert.strictEqual(prevented.includes("Tab"), false, "Tab must stay the browser's");
+
+// aria-valuetext is the app's to write; the module must not squat on it.
+assert.strictEqual(eq.attrs["aria-valuetext"], undefined);
+
+// A repaint with the SAME data (theme toggle, resize) keeps the playhead.
+const afterKeys = scrub.seen.length;
+scrub.renderCharts(full, { force: true });
+assert.strictEqual(scrub.seen.length, afterKeys, "a forced repaint must not drop the playhead");
+
+// A repaint with NEW data drops it: index 6 named a different trade a moment
+// ago and would now be a quiet lie.
+scrub.renderCharts({ ...full, equity: [...full.equity, 14000], equityDates: [...full.equityDates, "2026-01-14"] });
+assert.strictEqual(scrub.seen.at(-1), null, "a dataset change must release the playhead");
+
+// Escape releases too, and only when something is engaged.
+eq.listeners.pointerdown({ clientX: 200, pointerId: 8 });
+const engaged = scrub.seen.at(-1);
+assert.ok(typeof engaged === "number", "pointerdown must re-engage after a reset");
+key("Escape");
+assert.strictEqual(scrub.seen.at(-1), null, "Escape must release the playhead");
+const beforeIdleEscape = scrub.seen.length;
+key("Escape");
+assert.strictEqual(scrub.seen.length, beforeIdleEscape, "Escape with nothing engaged must do nothing");
+
+// clearScrub() is the Clear button's route out.
+eq.listeners.pointerdown({ clientX: 120, pointerId: 9 });
+scrub.clearScrub();
+assert.strictEqual(scrub.seen.at(-1), null, "clearScrub must release the playhead");
+
+// Reduced motion: the playhead still moves, it just does not ease there.
+const still = scrubHarness(true);
+still.ui.equityChart.listeners.pointerdown({ clientX: 0, pointerId: 1 });
+const beforeReducedStep = calls.length;
+still.ui.equityChart.listeners.keydown({ key: "End", preventDefault: () => {} });
+assert.deepStrictEqual(still.seen, [0, LAST], "reduced motion must still move the playhead");
+assert.ok(calls.length > beforeReducedStep, "reduced motion must still repaint the playhead");
 
 // Smoothing helper: 2 points degrade to a line, 3+ produce curves.
 const traced = [];

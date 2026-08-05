@@ -42,7 +42,7 @@ export function traceSmoothPath(ctx, points, move = true) {
   ctx.quadraticCurveTo(points[last - 1].x, points[last - 1].y, points[last].x, points[last].y);
 }
 
-export function createChartsModule({ ui, state, prefersReducedMotion }) {
+export function createChartsModule({ ui, state, prefersReducedMotion, onScrub }) {
   // Palette is read from CSS custom properties so canvas follows the theme.
   // Cached per render pass; invalidated (and charts repainted) on 'themechange'.
   let palette = null;
@@ -61,6 +61,21 @@ export function createChartsModule({ ui, state, prefersReducedMotion }) {
   // Highlighted index per canvas (null / absent = no highlight).
   const hoverIndex = new Map();
   const boundCanvases = new WeakSet();
+
+  // 1f #05 equity scrub. Exactly one canvas is scrubbable, so this is four
+  // plain variables rather than four more Maps.
+  //   scrubIndex  — index into the equity series, or null when disengaged.
+  //   scrubX      — the playhead's animated x in CSS px. Eases toward the
+  //                 target point; snapped instantly under reduced motion.
+  //   scrubFrame  — the easing rAF id; 0 while idle, which is also the signal
+  //                 that the playhead may be re-derived from fresh geometry.
+  //   scrubDragging — a pointer is down and owns the playhead.
+  let scrubIndex = null;
+  let scrubX = null;
+  let scrubFrame = 0;
+  let scrubDragging = false;
+
+  const isScrubCanvas = (canvas) => Boolean(canvas) && canvas === ui.equityChart;
 
   function getPalette() {
     if (palette) {
@@ -147,10 +162,21 @@ export function createChartsModule({ ui, state, prefersReducedMotion }) {
     }
 
     const hash = computeChartHash(analytics);
-    const changed = hash !== lastChartHash || options.force === true;
+    const dataChanged = hash !== lastChartHash;
+    const changed = dataChanged || options.force === true;
     lastChartHash = hash;
     cancelAnimationFrame(drawFrame);
     animating = false;
+
+    // A new dataset moves every point, so an index kept from the old one now
+    // names a different trade. Drop the playhead rather than quietly relabel
+    // it. State-only — the paint below is already scheduled. Keyed off the
+    // hash itself, not off `changed`: a forced repaint (theme toggle, resize)
+    // is the same data, so it keeps the playhead the trader put there, and the
+    // 5s poll's no-change renders never touch it either.
+    if (dataChanged) {
+      resetScrub();
+    }
 
     if (!changed || (typeof prefersReducedMotion === "function" && prefersReducedMotion())) {
       drawAllCharts(analytics, 1);
@@ -189,17 +215,41 @@ export function createChartsModule({ ui, state, prefersReducedMotion }) {
     }
   }
 
+  // Nearest data point to an x, in CSS px. Shared by hover and scrub so the
+  // two never disagree about which trade the pointer is over.
+  function nearestLineIndex(geo, x) {
+    let best = 0;
+    let bestDistance = Infinity;
+    geo.points.forEach((point, i) => {
+      const distance = Math.abs(point.x - x);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = i;
+      }
+    });
+    return best;
+  }
+
   // Mouse-only by design: a touch drag must keep scrolling the page, and every
-  // chart is fully readable without a pointer.
+  // chart is fully readable without a pointer. (The equity canvas is the one
+  // exception — see bindScrub, which claims the horizontal axis only.)
   function bindHover(canvas) {
     if (boundCanvases.has(canvas)) {
       return;
     }
     boundCanvases.add(canvas);
+    if (isScrubCanvas(canvas)) {
+      bindScrub(canvas);
+    }
 
     canvas.addEventListener("mousemove", (event) => {
       const geo = geometry.get(canvas);
       if (!geo || animating) {
+        return;
+      }
+      // The playhead and the crosshair are two answers to the same question,
+      // so an engaged scrub owns the canvas outright until it is cleared.
+      if (isScrubCanvas(canvas) && scrubIndex !== null) {
         return;
       }
 
@@ -210,16 +260,7 @@ export function createChartsModule({ ui, state, prefersReducedMotion }) {
 
       if (geo.kind === "line" && geo.points.length) {
         if (x >= geo.left - 12 && x <= geo.right + 12) {
-          let best = 0;
-          let bestDistance = Infinity;
-          geo.points.forEach((point, i) => {
-            const distance = Math.abs(point.x - x);
-            if (distance < bestDistance) {
-              bestDistance = distance;
-              best = i;
-            }
-          });
-          index = best;
+          index = nearestLineIndex(geo, x);
         }
       } else if (geo.kind === "bar") {
         const row = Math.floor((y - geo.top) / geo.rowGap);
@@ -244,6 +285,235 @@ export function createChartsModule({ ui, state, prefersReducedMotion }) {
         repaint(canvas);
       }
     });
+  }
+
+  /* ======================================================================
+     1f #05 — equity scrub
+
+     Drag (or swipe, or arrow-key) along the curve and the trade under the
+     playhead is handed to onScrub, which is what fills the panel below the
+     canvas. The playhead persists after the pointer lifts — the whole point
+     is to stop and read the note, which a hover-only affordance forbids on a
+     phone and rushes on a mouse.
+     ====================================================================== */
+
+  function scrubPoints() {
+    const geo = geometry.get(ui.equityChart);
+    return geo && geo.kind === "line" && geo.points.length > 1 ? geo.points : null;
+  }
+
+  // State only — no repaint. renderCharts uses this on a dataset change,
+  // where the paint is already happening.
+  function resetScrub() {
+    if (scrubIndex === null) {
+      return false;
+    }
+    scrubIndex = null;
+    scrubX = null;
+    cancelAnimationFrame(scrubFrame);
+    scrubFrame = 0;
+    scrubDragging = false;
+    if (typeof onScrub === "function") {
+      onScrub(null);
+    }
+    return true;
+  }
+
+  function clearScrub() {
+    if (resetScrub()) {
+      repaint(ui.equityChart);
+    }
+  }
+
+  function moveScrubTo(targetX, instant) {
+    cancelAnimationFrame(scrubFrame);
+    scrubFrame = 0;
+    const reduced = typeof prefersReducedMotion === "function" && prefersReducedMotion();
+    if (instant || reduced || scrubX === null) {
+      scrubX = targetX;
+      repaint(ui.equityChart);
+      return;
+    }
+
+    const step = () => {
+      // A draw-in has taken the canvas back; land the playhead and get out of
+      // its way rather than fighting it for frames.
+      if (animating) {
+        scrubX = targetX;
+        scrubFrame = 0;
+        return;
+      }
+      const delta = targetX - scrubX;
+      if (Math.abs(delta) < 0.5) {
+        scrubX = targetX;
+        scrubFrame = 0;
+        repaint(ui.equityChart);
+        return;
+      }
+      scrubX += delta * 0.35;
+      repaint(ui.equityChart);
+      scrubFrame = requestAnimationFrame(step);
+    };
+    scrubFrame = requestAnimationFrame(step);
+  }
+
+  function setScrub(index, options = {}) {
+    const points = scrubPoints();
+    if (!points) {
+      return;
+    }
+    if (!Number.isFinite(index)) {
+      return;
+    }
+    const next = clamp(Math.round(index), 0, points.length - 1);
+    const changed = next !== scrubIndex;
+    scrubIndex = next;
+    if (changed && typeof onScrub === "function") {
+      onScrub(next);
+    }
+    moveScrubTo(points[next].x, options.instant);
+  }
+
+  function bindScrub(canvas) {
+    const pointerIndex = (event) => {
+      const geo = geometry.get(canvas);
+      if (!geo || geo.kind !== "line" || !geo.points.length) {
+        return null;
+      }
+      const rect = canvas.getBoundingClientRect();
+      return nearestLineIndex(geo, event.clientX - rect.left);
+    };
+
+    canvas.addEventListener("pointerdown", (event) => {
+      if (animating || !scrubPoints()) {
+        return;
+      }
+      scrubDragging = true;
+      if (typeof canvas.setPointerCapture === "function") {
+        canvas.setPointerCapture(event.pointerId);
+      }
+      // Hand the canvas over cleanly: crosshair off, playhead on.
+      hoverIndex.delete(canvas);
+      // The first touch lands the playhead where the finger is, with no glide
+      // from wherever it was — the finger IS the position.
+      setScrub(pointerIndex(event), { instant: true });
+    });
+
+    canvas.addEventListener("pointermove", (event) => {
+      if (!scrubDragging || animating) {
+        return;
+      }
+      setScrub(pointerIndex(event));
+    });
+
+    // touch-action: pan-y on the canvas means the browser keeps vertical
+    // scrolling and only hands us the horizontal drag, so nothing here has to
+    // preventDefault and nothing here can strand a phone mid-page. When the
+    // browser does decide the gesture was a scroll it sends pointercancel.
+    const release = () => {
+      scrubDragging = false;
+    };
+    canvas.addEventListener("pointerup", release);
+    canvas.addEventListener("pointercancel", release);
+
+    canvas.addEventListener("keydown", (event) => {
+      const points = scrubPoints();
+      if (!points || animating) {
+        return;
+      }
+      const last = points.length - 1;
+      let next = null;
+
+      if (event.key === "Escape") {
+        if (scrubIndex === null) {
+          return;
+        }
+        event.preventDefault();
+        clearScrub();
+        return;
+      }
+      if (event.key === "ArrowRight" || event.key === "ArrowUp") {
+        next = scrubIndex === null ? last : scrubIndex + 1;
+      } else if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
+        next = scrubIndex === null ? last : scrubIndex - 1;
+      } else if (event.key === "Home") {
+        next = 0;
+      } else if (event.key === "End") {
+        next = last;
+      } else {
+        return;
+      }
+
+      // Arrow keys scroll the page by default; once the curve has focus they
+      // belong to the playhead.
+      event.preventDefault();
+      hoverIndex.delete(canvas);
+      setScrub(next);
+    });
+  }
+
+  // Solid accent rule + a marker riding the curve. Deliberately unlike the
+  // hover crosshair (neutral, dashed, transient) so the two never read as the
+  // same thing — and it is never the only signal: the panel below the canvas
+  // states the same trade in words.
+  function drawScrubPlayhead(ctx, options) {
+    const colors = getPalette();
+    const { x, y, color, glow, top, bottom } = options;
+    ctx.save();
+    const beam = ctx.createLinearGradient(0, top, 0, bottom);
+    beam.addColorStop(0, colors.haloFade);
+    beam.addColorStop(0.5, colors.halo);
+    beam.addColorStop(1, colors.haloFade);
+    ctx.fillStyle = beam;
+    ctx.fillRect(Math.round(x) - 3, top, 6, bottom - top);
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(Math.round(x) + 0.5, top);
+    ctx.lineTo(Math.round(x) + 0.5, bottom);
+    ctx.stroke();
+
+    // Grip nub on the baseline: the "you can drag this" tell.
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(Math.round(x) + 0.5, bottom, 3.5, Math.PI, Math.PI * 2);
+    ctx.fill();
+
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = 14;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 6.5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = colors.inset;
+    ctx.beginPath();
+    ctx.arc(x, y, 4.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // y on the polyline at an arbitrary x. The stroke is a quadratic smoothing
+  // of the same points, so the chord is within a pixel or two of it at these
+  // scales — and the marker snaps onto the exact vertex the moment the ease
+  // lands, which is where anybody is actually reading it.
+  function yAtX(points, x) {
+    for (let i = 1; i < points.length; i += 1) {
+      if (x <= points[i].x) {
+        const a = points[i - 1];
+        const b = points[i];
+        const span = b.x - a.x;
+        const t = span === 0 ? 0 : clamp((x - a.x) / span, 0, 1);
+        return a.y + (b.y - a.y) * t;
+      }
+    }
+    return points[points.length - 1].y;
   }
 
   function drawAllCharts(analytics, progress) {
@@ -529,6 +799,26 @@ export function createChartsModule({ ui, state, prefersReducedMotion }) {
     ctx.fillText(formatCurrency(options.underwater ? -lastValue : lastValue), left, 34);
 
     drawDateLabels(ctx, points, options.labels, bottom);
+
+    // Playhead before the crosshair, and mutually exclusive with it (the
+    // mousemove handler bails while a scrub is engaged).
+    if (isScrubCanvas(canvas) && scrubIndex !== null && progress >= 1) {
+      const anchor = clamp(scrubIndex, 0, points.length - 1);
+      // Idle ease => re-derive from the geometry just painted, so a resize or
+      // a theme repaint puts the playhead back on its own trade.
+      if (!scrubFrame || scrubX === null) {
+        scrubX = points[anchor].x;
+      }
+      const headX = clamp(scrubX, left, right);
+      drawScrubPlayhead(ctx, {
+        x: headX,
+        y: yAtX(points, headX),
+        color: stroke,
+        glow,
+        top,
+        bottom
+      });
+    }
 
     const hovered = hoverIndex.get(canvas);
     if (typeof hovered === "number" && hovered >= 0 && hovered < points.length && progress >= 1) {
@@ -1362,6 +1652,8 @@ export function createChartsModule({ ui, state, prefersReducedMotion }) {
   }
 
   return {
-    renderCharts
+    renderCharts,
+    setScrub,
+    clearScrub
   };
 }

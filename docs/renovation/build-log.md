@@ -1533,3 +1533,153 @@ setup — rename it, merge two spellings of the same idea, or retire it. That is
 a data-cleanup feature with its own migration story (every trade carries the
 setup as a string), and it belongs next to bulk import rather than bolted to a
 read-only report.
+
+---
+
+## 1f #05 — Equity scrub
+
+> "Drag along the equity curve and the trades under your finger stream past
+> with their notes and screenshots. Turns the drawdown from a shape into a
+> story."
+
+### What shipped
+
+The dashboard equity curve is now a slider over the trade sequence. Press or
+touch anywhere on it and a playhead lands on the nearest point; drag and it
+follows; lift and it **stays**, because the point of the feature is to stop on
+the worst day of the drawdown and read what you wrote that afternoon. The panel
+below the canvas shows that trade: symbol, net, date, setup, session, R, the
+note, and the screenshot if there is one.
+
+Index 0 of the curve is the starting balance — a real point, but not a trade —
+and it says so rather than borrowing the first trade's facts.
+
+### How it works
+
+`src/modules/charts.js` grew a scrub layer rather than a second renderer. The
+equity canvas is the only scrubbable one, so the state is four plain variables
+(`scrubIndex`, `scrubX`, `scrubFrame`, `scrubDragging`), not four more `Map`s.
+`nearestLineIndex()` was extracted from the existing hover hit-test and is now
+shared by both, so the crosshair and the playhead can never disagree about
+which trade the pointer is over.
+
+The module takes one new option, `onScrub(index | null)`. `app.js` passes
+`renderEquityScrub`, which is the only thing that knows what a trade *is* — the
+charts module stays about pixels and never writes a word of copy or a single
+aria string.
+
+**Pointer.** `pointerdown` / `pointermove` / `pointerup` / `pointercancel` with
+`setPointerCapture`, so one code path serves mouse, touch and pen. The canvas
+carries `touch-action: pan-y`: the browser keeps vertical scrolling and hands
+us only the horizontal drag, which is why nothing here calls `preventDefault`
+and why a phone cannot get stranded mid-page. When the browser decides a
+gesture was a scroll after all it sends `pointercancel` and the drag ends.
+
+**Keyboard.** `role="slider"`, `tabindex="0"`, arrows step trade to trade
+(and `preventDefault` so the page does not scroll out from under the reader),
+`Home`/`End` jump to the ends, `Escape` releases. The first arrow press engages
+at the head of the curve rather than moving, so the playhead appears where the
+eye already is. `#equityChart:focus-visible` restores the focus ring the clay
+shadow would otherwise out-specify, keeping the well's own top hairline so
+focusing the curve rings it instead of flattening it.
+
+**Not fighting the crosshair.** They are two answers to one question, so an
+engaged scrub owns the canvas outright: the `mousemove` handler returns early
+while `scrubIndex !== null`, and `pointerdown` clears any latched hover. The
+two also look nothing alike — the crosshair is a neutral dashed hairline, the
+playhead is a solid accent rule with a gradient beam, a grip nub on the
+baseline and a ring riding the curve.
+
+**Reduced motion.** The playhead eases toward its target x at 0.35/frame
+(settled in ~5 frames). Under `prefers-reduced-motion` `moveScrubTo()` snaps
+instead — it moves, it just does not travel.
+
+**The hash guard.** Scrub state is deliberately *not* in `computeChartHash`, so
+moving the playhead never replays a draw-in. Going the other way, the reset is
+keyed off the raw hash comparison (`dataChanged`) rather than off `changed`:
+
+* the 5s poll's no-change renders leave the playhead exactly where the trader
+  put it;
+* a **forced** repaint — theme toggle, resize — is the same data, so it also
+  keeps it;
+* a genuine dataset change releases it, because index 6 named a different
+  trade a moment ago and keeping it would be a quiet lie.
+
+### The off-by-one, and why there is no parallel array
+
+`equity[0]` is the starting balance and `equity[i]` is the *i*-th closed trade
+in ascending order. `equityScrubTradeAt()` re-derives that with
+`getClosedTrades(state.trades).sort(sortTradesAsc)[index - 1]` — the exact
+expression `calculateAnalytics` uses to build `ordered`. A cached
+`analytics.equityTradeIds` array would have been the obvious move and is
+exactly the thing that drifts out of step the first time somebody changes the
+sort. Nothing was added to `analytics`, nothing to `state`, nothing to storage.
+
+### Honesty
+
+Every field is read off the trade. A trade with no R multiple says "No R
+recorded" rather than printing `0.00R`; a trade with no note says so in muted
+italic; a breakeven trade is spoken as "net flat", not "up $0.00". Colour is
+never the only signal — the sign travels in the `+`/`−` glyph and, for a screen
+reader, in the words "up" and "down", since `aria-valuetext` never sees the
+green. Screenshots go through the same `isInlineImage()` trust boundary as the
+playbook shots: only an inline `data:` image ever reaches a `src`.
+
+### Verified
+
+23/23 test files green, including the new `tests/equityScrub.check.mjs`, which
+slices the real `getClosedTrades`, `equityScrubTradeAt` and
+`equityScrubValueText` out of `app.js` (never a copy) and pins the off-by-one
+against a deliberately out-of-order fixture with an open trade in the middle —
+the open trade must never appear at any index, because the curve is closed
+trades only. `tests/charts.smoke.mjs` was extended rather than duplicated: a
+dedicated harness drives `pointerdown`/`pointermove`/`pointerup`/`keydown` on a
+real module instance and asserts the left edge selects point 0, the right edge
+the last, a repeat selection does not re-notify, hover cannot repaint while a
+scrub is engaged, a forced repaint keeps the playhead, a dataset change drops
+it, and reduced motion still moves it.
+
+`node --check` clean on `app.js` and `src/modules/charts.js`.
+`tests/bootOrder.check.mjs` green — **no new module-level `let`/`const` at
+all**; `renderEquityScrub` is a hoisted function declaration, and the only new
+top-level binding is the `clearScrub` added to the existing destructure at
+line 640, well above the `init()` call at line 833.
+
+Beyond the static checks, `app.js` was **actually booted headlessly** in node
+behind a stub DOM (scratchpad, not committed) with a real canvas 2d stub and a
+seeded 8-trade journal, then scrubbed for real. `init()` ran with no
+`ReferenceError`, and:
+
+```
+scrub left edge  -> Point 1 of 9 · balance $10,000.00 | Starting balance | No trade here …
+scrub right edge -> Point 9 of 9 · balance $17,000.00 | EURUSD | Mar 08 · Reversal · London · -1.00R
+scrub ArrowLeft  -> Point 8 of 9 · balance $18,000.00 | EURUSD | Mar 07 · Reversal · New York · -1.00R
+scrub Escape     -> panel hidden, aria-valuetext "No point selected"
+aria: min=0 max=8 now=0
+```
+
+8 seeded trades, 9 equity points, point 9 = the 8th trade. The off-by-one is
+disproved by running it, not by reading it.
+
+`tests/mobileFloors.check.mjs` green with the new CSS: nothing under 11px (the
+position line, the meta line, the `kbd` hints and the Clear button all sit
+exactly on the floor), and `.eq-scrub-clear` lifts to `min-height: 44px` under
+`(max-width: 899px), (pointer: coarse)`. At ≤720px the screenshot drops below
+the words instead of sitting beside them — a 200px chart next to a 13px note is
+neither readable. Every new rule is token-only, so the dark theme is the same
+re-derivation with no second rule set; the playhead's colours come from the
+same `getPalette()` read as the curve it rides.
+
+Static server returns the new markers on `index.html`, `clay-v2.css`, `app.js`
+and `src/modules/charts.js`; cache-busters bumped to `?v=20260814-eqscrub`.
+
+**No `api/` change.** The panel is pure client-side derivation over trades the
+journal already stores and it persists nothing — there is no new settings key,
+so `CLIENT_OWNED_SETTINGS` in `api/_lib/sanitize.js` is untouched.
+
+**Not built, deliberately:** the drawdown chart is not scrubbable. It shares the
+line renderer and `isScrubCanvas()` is the only thing standing between it and
+the same behaviour, but two playheads on one dashboard is two things to clear
+and one question too many — and the drawdown curve's story is already the
+equity curve's story, told upside down. If it is ever wanted, the honest move
+is to *link* them to one shared index rather than give each its own.

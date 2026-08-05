@@ -45,10 +45,10 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260813-playbook" />
+    <link rel="stylesheet" href="styles.css?v=20260814-eqscrub" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260813-playbook" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260814-eqscrub" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -766,7 +766,38 @@
                 <h3>Equity Curve</h3>
                 <p>Starting balance + trade sequence</p>
               </div>
-              <canvas id="equityChart" width="900" height="280" data-height="240" aria-label="Equity curve chart"></canvas>
+              <!-- 1f #05 equity scrub: the canvas is a slider over the trade
+                   sequence. Drag, swipe or arrow-key it and #equityScrub below
+                   streams the trade under the playhead. -->
+              <canvas
+                id="equityChart"
+                width="900"
+                height="280"
+                data-height="240"
+                role="slider"
+                tabindex="0"
+                aria-label="Equity curve — drag across it, or press the arrow keys, to walk the trades behind it"
+                aria-valuemin="0"
+                aria-valuemax="0"
+                aria-valuenow="0"
+                aria-valuetext="No point selected"
+              ></canvas>
+              <p class="eq-scrub-hint" id="equityScrubHint">
+                Drag across the curve — or focus it and press <kbd>←</kbd> <kbd>→</kbd> — to read the trades behind it.
+              </p>
+              <div class="eq-scrub" id="equityScrub" hidden>
+                <div class="eq-scrub-body">
+                  <p class="eq-scrub-pos" id="equityScrubPos"></p>
+                  <p class="eq-scrub-head">
+                    <span class="eq-scrub-symbol" id="equityScrubSymbol"></span>
+                    <span class="eq-scrub-net" id="equityScrubNet"></span>
+                  </p>
+                  <p class="eq-scrub-meta" id="equityScrubMeta"></p>
+                  <p class="eq-scrub-note" id="equityScrubNote"></p>
+                </div>
+                <img class="eq-scrub-shot" id="equityScrubShot" alt="" hidden />
+                <button class="eq-scrub-clear" id="equityScrubClear" type="button">Clear</button>
+              </div>
             </article>
             <article class="panel panel-chart panel-span-4">
               <div class="panel-head">
@@ -2230,6 +2261,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260813-playbook"></script>
+    <script type="module" src="app.js?v=20260814-eqscrub"></script>
   </body>
 </html>
