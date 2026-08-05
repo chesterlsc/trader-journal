@@ -37,14 +37,23 @@
       href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260805-charts3d" />
+    <link rel="stylesheet" href="styles.css?v=20260805-landing3d" />
   </head>
   <body>
     <section class="auth-shell" id="authShell" aria-label="Login">
+      <!-- Atmosphere: three drifting radial washes + a perspective grid floor.
+           Pure CSS gradients (no filter: blur) so mobile Safari composites
+           them on the GPU; every layer is transform-only and dies under the
+           reduced-motion kill block. -->
+      <div class="landing-atmosphere" aria-hidden="true">
+        <span class="landing-aurora landing-aurora-a"></span>
+        <span class="landing-aurora landing-aurora-b"></span>
+        <span class="landing-aurora landing-aurora-c"></span>
+        <span class="landing-grid-floor"></span>
+        <span class="landing-scanline"></span>
+      </div>
+
       <header class="auth-shell-topbar">
-        <button id="previewAppBtn" class="btn nav-preview-landing preview-back-btn" type="button" hidden>
-          &larr; Back to app
-        </button>
         <div class="auth-shell-brand">
           <p class="brand-kicker">Execution analytics</p>
           <h1 class="brand-mark" data-brand-title>
@@ -53,39 +62,66 @@
           </h1>
           <p class="brand-support">Built for traders</p>
         </div>
+        <!-- Dev-only affordance: only rendered visible in local preview mode
+             (app.js toggles [hidden]). Deliberately styled as a subordinate
+             debug chip so it can never read as a "skip the account" path. -->
+        <button id="previewAppBtn" class="dev-chip preview-back-btn" type="button" hidden>
+          <span class="dev-chip-tag">dev</span>
+          <span>Back to app</span>
+        </button>
       </header>
 
       <div class="auth-hero">
         <canvas id="landingAtmos" class="landing-atmos" aria-hidden="true"></canvas>
         <section class="auth-hero-copy">
-          <p class="hero-preheadline"><span class="live-pulse-dot" aria-hidden="true"></span>Live desk &middot; execution journal</p>
-          <h2>
-            <span class="hero-line">Journal your trades,</span>
-            <span class="hero-line">mistakes, and emotions</span>
-            <span class="hero-line">in one place.</span>
-          </h2>
-          <p class="auth-hero-text">
-            Log the whole trade in seconds, then let the numbers tell you where your edge actually is —
-            and where your discipline breaks.
-          </p>
-          <div class="hero-cta-row">
-            <button id="heroRegisterBtn" class="btn primary hero-cta-btn" type="button">Get Started</button>
-            <button id="heroLoginBtn" class="btn hero-cta-btn hero-cta-btn-secondary" type="button">Log In</button>
+          <div class="hero-claim">
+            <p class="hero-preheadline"><span class="live-pulse-dot" aria-hidden="true"></span>Live desk &middot; execution journal</p>
+            <h2>
+              <span class="hero-line">Journal your trades,</span>
+              <span class="hero-line">mistakes, and emotions</span>
+              <span class="hero-line hero-line-accent">in one place.</span>
+            </h2>
+            <p class="auth-hero-text">
+              Log the whole trade in seconds, then let the numbers tell you where your edge actually is —
+              and where your discipline breaks.
+            </p>
+            <div class="hero-cta-row">
+              <button id="heroRegisterBtn" class="btn primary hero-cta-btn" type="button">Create your free account</button>
+              <button id="heroLoginBtn" class="btn hero-cta-btn hero-cta-btn-secondary" type="button">Log in</button>
+            </div>
+            <!-- Trust ledger: every line is verifiable in the product itself. -->
+            <ul class="hero-trust" aria-label="What you get">
+              <li><span class="hero-trust-tick" aria-hidden="true"></span>Free to use &mdash; no card, no trial clock</li>
+              <li><span class="hero-trust-tick" aria-hidden="true"></span>Your journal exports to CSV or JSON anytime</li>
+              <li><span class="hero-trust-tick" aria-hidden="true"></span>Dark and light themes, built in</li>
+            </ul>
           </div>
-          <dl class="hero-stats">
-            <div class="hero-stat">
-              <dt>Execution metrics</dt>
-              <dd>12</dd>
+
+          <!-- The live tape is the proof. Real rows from the public feed,
+               inside device chrome that tilts in 3D on desktop pointers. -->
+          <div class="hero-terminal-stage">
+            <div class="hero-terminal" data-hero-tilt>
+              <span class="hero-terminal-shine" aria-hidden="true"></span>
+              <div class="hero-terminal-rail">
+                <span class="hero-terminal-dots" aria-hidden="true">
+                  <i></i><i></i><i></i>
+                </span>
+                <span class="hero-terminal-title">recent_trades</span>
+                <span class="hero-terminal-live">
+                  <span class="live-pulse-dot" aria-hidden="true"></span>Live &middot; delayed
+                </span>
+              </div>
+              <div class="recent-trades-board" id="recentTradesList" aria-label="Public recent trades"></div>
+              <div class="hero-terminal-foot">
+                <p class="hero-terminal-note">Real rows from real journals, refreshed while you read.</p>
+                <button id="landingScrollHint" class="landing-scroll-hint" type="button">
+                  <span class="landing-scroll-hint-label">View trades</span>
+                  <span class="landing-scroll-hint-arrow">&darr;</span>
+                </button>
+              </div>
             </div>
-            <div class="hero-stat">
-              <dt>Analytics reports</dt>
-              <dd>7</dd>
-            </div>
-            <div class="hero-stat">
-              <dt>Dependencies</dt>
-              <dd>0</dd>
-            </div>
-          </dl>
+            <span class="hero-terminal-floor" aria-hidden="true"></span>
+          </div>
         </section>
 
         <div id="authOverlay" class="auth-overlay"></div>
@@ -157,6 +193,30 @@
         </section>
       </div>
 
+      <!-- Proof strip: counted from the product, not invented. 12 =
+           METRIC_DELTA_SPECS keys, 7 = report canvases, 6 = nav sections,
+           0 = npm/CDN packages (vanilla JS + CSS + PHP). -->
+      <section class="landing-proof" data-landing-reveal aria-label="Product facts">
+        <dl class="landing-proof-row reveal-stagger">
+          <div class="landing-proof-item">
+            <dd>12</dd>
+            <dt>Execution metrics</dt>
+          </div>
+          <div class="landing-proof-item">
+            <dd>7</dd>
+            <dt>Analytics reports</dt>
+          </div>
+          <div class="landing-proof-item">
+            <dd>6</dd>
+            <dt>Workspaces</dt>
+          </div>
+          <div class="landing-proof-item">
+            <dd>0</dd>
+            <dt>Dependencies</dt>
+          </div>
+        </dl>
+      </section>
+
       <!-- Product showcase: the mock is built from the real design system —
            same tokens, same type — so it can never misrepresent the product. -->
       <section class="landing-section landing-showcase" data-landing-reveal>
@@ -169,41 +229,74 @@
           </p>
         </header>
 
-        <div class="showcase-frame" aria-hidden="true">
-          <div class="showcase-chrome">
-            <span class="showcase-dot"></span><span class="showcase-dot"></span><span class="showcase-dot"></span>
-            <span class="showcase-chrome-label">Performance Dashboard</span>
-          </div>
-          <div class="showcase-body">
-            <div class="showcase-hero">
-              <p class="showcase-label">Account balance</p>
-              <p class="showcase-value">$14,030.00</p>
-              <p class="showcase-chip">Today +$420.00</p>
-              <svg class="showcase-spark" viewBox="0 0 320 60" preserveAspectRatio="none" focusable="false">
-                <path
-                  d="M0 48 L32 44 L64 46 L96 34 L128 36 L160 26 L192 30 L224 16 L256 20 L288 8 L320 10"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
+        <div class="showcase-stage">
+          <div class="showcase-frame" aria-hidden="true">
+            <div class="showcase-chrome">
+              <span class="showcase-dot"></span><span class="showcase-dot"></span><span class="showcase-dot"></span>
+              <span class="showcase-chrome-label">Performance Dashboard</span>
             </div>
-            <div class="showcase-side">
-              <p class="showcase-label">Risk budget</p>
-              <p class="showcase-side-value">$300.00 left</p>
-              <div class="showcase-track"><span style="width: 26%"></span></div>
-              <p class="showcase-label">Weekly</p>
-              <p class="showcase-side-value">$620.00 left</p>
-              <div class="showcase-track"><span style="width: 22%"></span></div>
+            <div class="showcase-body">
+              <div class="showcase-hero">
+                <p class="showcase-label">Account balance</p>
+                <p class="showcase-value">$14,030.00</p>
+                <p class="showcase-chip">Today +$420.00</p>
+                <svg class="showcase-spark" viewBox="0 0 320 60" preserveAspectRatio="none" focusable="false">
+                  <path
+                    d="M0 48 L32 44 L64 46 L96 34 L128 36 L160 26 L192 30 L224 16 L256 20 L288 8 L320 10"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </div>
+              <div class="showcase-side">
+                <p class="showcase-label">Risk budget</p>
+                <p class="showcase-side-value">$300.00 left</p>
+                <div class="showcase-track"><span style="width: 26%"></span></div>
+                <p class="showcase-label">Weekly</p>
+                <p class="showcase-side-value">$620.00 left</p>
+                <div class="showcase-track"><span style="width: 22%"></span></div>
+              </div>
+              <div class="showcase-cell"><p class="showcase-label">Win rate</p><p class="showcase-cell-value">63.6%</p></div>
+              <div class="showcase-cell"><p class="showcase-label">Profit factor</p><p class="showcase-cell-value">4.84</p></div>
+              <div class="showcase-cell"><p class="showcase-label">Expectancy</p><p class="showcase-cell-value is-pos">$366.36</p></div>
+              <div class="showcase-cell"><p class="showcase-label">Avg R:R</p><p class="showcase-cell-value">2.19</p></div>
             </div>
-            <div class="showcase-cell"><p class="showcase-label">Win rate</p><p class="showcase-cell-value">63.6%</p></div>
-            <div class="showcase-cell"><p class="showcase-label">Profit factor</p><p class="showcase-cell-value">4.84</p></div>
-            <div class="showcase-cell"><p class="showcase-label">Expectancy</p><p class="showcase-cell-value is-pos">$366.36</p></div>
-            <div class="showcase-cell"><p class="showcase-label">Avg R:R</p><p class="showcase-cell-value">2.19</p></div>
           </div>
+          <span class="showcase-floor" aria-hidden="true"></span>
         </div>
+      </section>
+
+      <section class="landing-section landing-steps" data-landing-reveal>
+        <header class="landing-section-head">
+          <p class="landing-kicker">How it works</p>
+          <h2>Three minutes a day.</h2>
+        </header>
+        <ol class="steps-rail reveal-stagger">
+          <li class="step-card">
+            <span class="step-index" aria-hidden="true">01</span>
+            <h3>Create your account</h3>
+            <p>A username or email and a password. No card, no plan picker, nothing to cancel.</p>
+          </li>
+          <li class="step-card">
+            <span class="step-index" aria-hidden="true">02</span>
+            <h3>Log the trade</h3>
+            <p>
+              Entry, stop, target, size, setup, session — plus how you felt and how well you executed.
+              Paste a whole broker statement if you would rather import.
+            </p>
+          </li>
+          <li class="step-card">
+            <span class="step-index" aria-hidden="true">03</span>
+            <h3>Read the verdict</h3>
+            <p>
+              Equity and drawdown curves, expectancy by setup, a discipline score, and a violations log
+              that does not flatter you.
+            </p>
+          </li>
+        </ol>
       </section>
 
       <section class="landing-section landing-features" data-landing-reveal>
@@ -211,7 +304,7 @@
           <p class="landing-kicker">What it does</p>
           <h2>Capture. Analyze. Control.</h2>
         </header>
-        <div class="feature-grid">
+        <div class="feature-grid reveal-stagger">
           <article class="feature-card">
             <span class="feature-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -257,25 +350,59 @@
         </div>
       </section>
 
-      <section class="landing-section landing-tape" data-landing-reveal>
-        <header class="landing-section-head landing-section-head-inline">
-          <div>
-            <p class="landing-kicker">Live feed</p>
-            <h2>Trades, as they happen.</h2>
-          </div>
-          <button id="landingScrollHint" class="landing-scroll-hint" type="button">
-            <span class="landing-scroll-hint-label">View trades</span>
-            <span class="landing-scroll-hint-arrow">&darr;</span>
-          </button>
+      <section class="landing-section landing-ledger" data-landing-reveal>
+        <header class="landing-section-head">
+          <p class="landing-kicker">The ledger</p>
+          <h2>Everything that ships, free.</h2>
+          <p class="landing-lede">
+            No paid tier is hiding behind any of these. If it is in the list, it is in the app.
+          </p>
         </header>
-        <div class="recent-trades-board" id="recentTradesList" aria-label="Public recent trades"></div>
+        <div class="ledger-wrap">
+          <table class="ledger-table">
+            <caption class="visually-hidden">Trader Journal capabilities</caption>
+            <thead>
+              <tr>
+                <th scope="col">Capability</th>
+                <th scope="col">What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Trade entry</th>
+                <td>Full trade in one form — risk, setup, timeframe, psychology, execution grade, screenshot.</td>
+              </tr>
+              <tr>
+                <th scope="row">Live open positions</th>
+                <td>Open trades re-price on a rolling poll so unrealised P&amp;L moves while you watch.</td>
+              </tr>
+              <tr>
+                <th scope="row">Edge detection</th>
+                <td>Expectancy, profit factor and R-multiples split by setup, session and timeframe.</td>
+              </tr>
+              <tr>
+                <th scope="row">Calendar P&amp;L</th>
+                <td>A month of trading days, coloured by result, clickable straight into the filtered journal.</td>
+              </tr>
+              <tr>
+                <th scope="row">Discipline scoring</th>
+                <td>Daily and weekly loss budgets, rule-breach logging, and a score you cannot argue with.</td>
+              </tr>
+              <tr>
+                <th scope="row">Import &amp; export</th>
+                <td>Bulk paste from a broker statement or spreadsheet; export CSV or a full JSON backup.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section class="landing-cta" data-landing-reveal>
         <p class="landing-kicker">Start today</p>
         <h2>Your next trade is worth journaling.</h2>
         <p class="landing-lede">Free to use. Your data stays yours — export it as CSV or JSON whenever you want.</p>
-        <button id="ctaRegisterBtn" class="btn primary landing-cta-btn" type="button">Create your account</button>
+        <button id="ctaRegisterBtn" class="btn primary landing-cta-btn" type="button">Create your free account</button>
+        <p class="landing-cta-fine">No card. No trial clock. Log in from any browser.</p>
       </section>
     </section>
 
@@ -311,8 +438,9 @@
           <button class="nav-btn" type="button" data-target="calendar">Calendar P&amp;L</button>
           <button class="nav-btn" type="button" data-target="monthly">Monthly Review</button>
           <button class="btn theme-toggle" type="button" data-theme-toggle aria-label="Switch to light theme">Light</button>
-          <button id="previewLandingBtnMobile" class="btn nav-preview-landing" type="button" data-preview-landing hidden>
-            View landing
+          <button id="previewLandingBtnMobile" class="dev-chip nav-preview-landing" type="button" data-preview-landing hidden>
+            <span class="dev-chip-tag">dev</span>
+            <span>Preview landing</span>
           </button>
           <button id="mobileLogoutBtn" class="btn nav-logout-mobile" type="button" hidden>Logout</button>
         </nav>
@@ -345,8 +473,9 @@
             <button class="nav-btn nav-btn-top" type="button" data-target="monthly">Monthly Review</button>
           </div>
           <div class="desktop-nav-actions">
-            <button id="previewLandingBtnDesktop" class="btn nav-preview-landing" type="button" data-preview-landing hidden>
-              View landing
+            <button id="previewLandingBtnDesktop" class="dev-chip nav-preview-landing" type="button" data-preview-landing hidden>
+              <span class="dev-chip-tag">dev</span>
+              <span>Preview landing</span>
             </button>
             <button class="btn theme-toggle" type="button" data-theme-toggle aria-label="Switch to light theme">Light</button>
             <button id="desktopLogoutBtn" class="btn nav-logout-desktop" type="button" hidden>Logout</button>
@@ -1343,6 +1472,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260805-charts3d"></script>
+    <script type="module" src="app.js?v=20260805-landing3d"></script>
   </body>
 </html>

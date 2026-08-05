@@ -411,6 +411,8 @@ function init() {
   setupScrollReveals();
   setupLandingReveals();
   setupLandingAtmos();
+  setupHeroTilt();
+  setupLandingParallax();
   startLivePriceLoop();
   // Hash router: restore the deep-linked view for preview sessions; the
   // authenticated flow restores in checkAuthSession once the gate opens.
@@ -4419,54 +4421,85 @@ function drawLandingAtmos(canvas, progress) {
   ctx.clearRect(0, 0, width, height);
 
   const styles = getComputedStyle(document.documentElement);
-  const line = (styles.getPropertyValue("--chart-line") || "").trim() || "#5b8def";
+  const read = (name, fallback) => (styles.getPropertyValue(name) || "").trim() || fallback;
+  const line = read("--chart-line", "#5b8def");
+  const glow = read("--chart-glow", "rgba(91, 141, 239, 0.55)");
+  const areaTop = read("--chart-area-top", "rgba(91, 141, 239, 0.42)");
+  const areaMid = read("--chart-area-mid", "rgba(91, 141, 239, 0.13)");
+  const areaBottom = read("--chart-area-bottom", "rgba(91, 141, 239, 0)");
 
   // A rising walk with a mid-course drawdown — the shape of a real curve.
   const steps = 72;
-  const points = [];
+  const values = [];
   for (let i = 0; i <= steps; i += 1) {
     const t = i / steps;
     const trend = Math.pow(t, 1.08);
     const wobble = Math.sin(t * 11.4) * 0.05 + Math.sin(t * 4.1) * 0.035;
     const dip = Math.exp(-Math.pow((t - 0.46) / 0.11, 2)) * 0.16;
-    points.push(trend + wobble - dip);
+    values.push(trend + wobble - dip);
   }
 
-  const min = Math.min(...points);
-  const max = Math.max(...points);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
   const span = max - min || 1;
   const padTop = height * 0.3;
   const usable = height - padTop - height * 0.12;
   const stepX = width / steps;
   const yFor = (value) => padTop + (1 - (value - min) / span) * usable;
   const lastIndex = Math.max(1, Math.round(steps * clamp(progress, 0, 1)));
-
-  ctx.beginPath();
+  const points = [];
   for (let i = 0; i <= lastIndex; i += 1) {
-    const x = i * stepX;
-    const y = yFor(points[i]);
-    if (i === 0) {
-      ctx.moveTo(x, y);
-    } else {
-      ctx.lineTo(x, y);
-    }
+    points.push({ x: i * stepX, y: yFor(values[i]) });
   }
 
-  ctx.save();
-  ctx.globalAlpha = 0.22;
-  ctx.strokeStyle = line;
-  ctx.lineWidth = 1.5;
-  ctx.lineJoin = "round";
-  ctx.stroke();
+  const head = points[points.length - 1];
 
-  ctx.lineTo(lastIndex * stepX, height);
+  // Area first, curve on top: same smoothing maths as the real equity chart
+  // (traceSmoothPath is charts.js's export) so the decoration cannot drift
+  // away from the product's own line language.
+  ctx.save();
+  ctx.beginPath();
+  traceSmoothPath(ctx, points);
+  ctx.lineTo(head.x, height);
   ctx.lineTo(0, height);
   ctx.closePath();
-  const gradient = ctx.createLinearGradient(0, padTop, 0, height);
-  gradient.addColorStop(0, line);
-  gradient.addColorStop(1, "transparent");
-  ctx.globalAlpha = 0.07;
-  ctx.fillStyle = gradient;
+  const area = ctx.createLinearGradient(0, padTop, 0, height);
+  area.addColorStop(0, areaTop);
+  area.addColorStop(0.55, areaMid);
+  area.addColorStop(1, areaBottom);
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = area;
+  ctx.fill();
+  ctx.restore();
+
+  // Two-pass stroke: a wide shadow-blurred halo, then a crisp core.
+  ctx.save();
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.globalAlpha = 0.42;
+  ctx.strokeStyle = glow;
+  ctx.lineWidth = 5;
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = 22;
+  ctx.beginPath();
+  traceSmoothPath(ctx, points);
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 0.7;
+  ctx.strokeStyle = line;
+  ctx.lineWidth = 1.75;
+  ctx.beginPath();
+  traceSmoothPath(ctx, points);
+  ctx.stroke();
+
+  // Head marker rides the draw-in and settles as a lit dot.
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = line;
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = 16;
+  ctx.beginPath();
+  ctx.arc(head.x, head.y, 3.2, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
@@ -4499,6 +4532,99 @@ function setupLandingAtmos() {
     window.clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(() => paint(1), 150);
   });
+}
+
+// Hero terminal 3D tilt. The resting rotation is pure CSS (scoped to
+// >=980px there); this only adds the pointer response, and only for a real
+// mouse on a hover-capable device with motion allowed. Touch and reduced
+// motion never bind a listener at all, so the panel simply sits still.
+function setupHeroTilt() {
+  const panel = document.querySelector("[data-hero-tilt]");
+  if (!panel || prefersReducedMotion()) {
+    return;
+  }
+
+  const finePointer = window.matchMedia("(hover: hover) and (pointer: fine) and (min-width: 980px)");
+  const stage = panel.closest(".hero-terminal-stage") || panel;
+  const MAX_TILT = 5;
+  let rect = null;
+  let frame = 0;
+  let nextX = 0;
+  let nextY = 0;
+
+  const commit = () => {
+    frame = 0;
+    panel.style.setProperty("--tilt-x", `${nextX.toFixed(2)}deg`);
+    panel.style.setProperty("--tilt-y", `${nextY.toFixed(2)}deg`);
+  };
+
+  const reset = () => {
+    rect = null;
+    nextX = 0;
+    nextY = 0;
+    if (!frame) {
+      frame = requestAnimationFrame(commit);
+    }
+  };
+
+  // Rect is cached on enter (and dropped on leave/resize) so the pointer
+  // handler never forces a synchronous layout while the tape is repainting.
+  stage.addEventListener("pointerenter", (event) => {
+    if (event.pointerType !== "mouse" || !finePointer.matches) {
+      return;
+    }
+    rect = stage.getBoundingClientRect();
+  });
+
+  stage.addEventListener("pointermove", (event) => {
+    if (event.pointerType !== "mouse" || !finePointer.matches) {
+      return;
+    }
+    if (!rect) {
+      rect = stage.getBoundingClientRect();
+    }
+    const px = (event.clientX - rect.left) / (rect.width || 1) - 0.5;
+    const py = (event.clientY - rect.top) / (rect.height || 1) - 0.5;
+    nextY = clamp(px, -0.5, 0.5) * 2 * MAX_TILT;
+    nextX = clamp(-py, -0.5, 0.5) * 2 * MAX_TILT;
+    if (!frame) {
+      frame = requestAnimationFrame(commit);
+    }
+  });
+
+  stage.addEventListener("pointerleave", reset);
+  window.addEventListener("resize", reset, { passive: true });
+  // Older Safari only has the deprecated addListener; optional call keeps the
+  // tilt working there instead of throwing during init.
+  finePointer.addEventListener?.("change", reset);
+}
+
+// Landing parallax: one passive scroll listener writing a single custom
+// property on the shell. CSS consumes it (grid floor, hero canvas) with
+// transforms only, so scrolling stays a composite — no layout, no repaint of
+// the live tape. Reduced motion never binds.
+function setupLandingParallax() {
+  const shell = ui.authShell;
+  if (!shell || prefersReducedMotion()) {
+    return;
+  }
+
+  let frame = 0;
+  const commit = () => {
+    frame = 0;
+    shell.style.setProperty("--landing-scroll", String(Math.round(window.scrollY)));
+  };
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (!frame) {
+        frame = requestAnimationFrame(commit);
+      }
+    },
+    { passive: true }
+  );
+  commit();
 }
 
 // Landing sections fade up as they enter the viewport (same contract as the

@@ -156,6 +156,32 @@
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
   --ease-in-out: cubic-bezier(0.45, 0, 0.15, 1);
   --ease-snap: cubic-bezier(0.3, 1.1, 0.3, 1);
+
+  /* Landing depth kit — the marketing surface only. Every value here is a
+     colour or a scalar so both themes stay authored in CSS; the gradients
+     themselves are composed at the rule so light/dark share one recipe. */
+  --fs-hero-xl: clamp(2.35rem, 5.2vw, 4.15rem);
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  --stagger-reveal: 70ms;
+  --landing-scroll: 0;            /* px, written by the parallax rAF */
+
+  --aurora-a: rgba(91, 141, 239, 0.32);
+  --aurora-b: rgba(47, 209, 140, 0.17);
+  --aurora-c: rgba(126, 92, 239, 0.22);
+  --aurora-fade: rgba(91, 141, 239, 0);
+  --landing-grid-line: rgba(91, 141, 239, 0.16);
+
+  --glass-top: rgba(27, 31, 40, 0.92);
+  --glass-bottom: rgba(9, 11, 15, 0.96);
+  --glass-edge: rgba(255, 255, 255, 0.10);
+  --glass-sheen: rgba(255, 255, 255, 0.08);
+  --glass-sheen-fade: rgba(255, 255, 255, 0);
+  --halo-accent: rgba(91, 141, 239, 0.42);
+  --floor-glow: rgba(91, 141, 239, 0.24);
+  --depth-shadow: 0 44px 96px -34px rgba(0, 0, 0, 0.88), 0 10px 34px -14px rgba(0, 0, 0, 0.62);
+  --depth-shadow-sm: 0 22px 46px -24px rgba(0, 0, 0, 0.75);
 }
 
 /* Light theme — only raw values override; every var()-referencing token
@@ -240,6 +266,25 @@
   --shadow-modal: 0 24px 64px rgba(23, 26, 33, 0.18);
   --edge-highlight: none;
   --focus-ring: 0 0 0 2px var(--surface-1), 0 0 0 4px var(--accent);
+
+  /* Landing depth kit, light. On white the same alphas that read as
+     atmosphere on graphite read as dirt, so every wash is roughly halved
+     and the glass becomes an opaque paper card with a soft edge. */
+  --aurora-a: rgba(38, 88, 199, 0.17);
+  --aurora-b: rgba(12, 123, 78, 0.11);
+  --aurora-c: rgba(104, 74, 214, 0.13);
+  --aurora-fade: rgba(38, 88, 199, 0);
+  --landing-grid-line: rgba(38, 88, 199, 0.13);
+
+  --glass-top: rgba(255, 255, 255, 0.97);
+  --glass-bottom: rgba(244, 246, 250, 0.98);
+  --glass-edge: rgba(23, 26, 33, 0.10);
+  --glass-sheen: rgba(255, 255, 255, 0.9);
+  --glass-sheen-fade: rgba(255, 255, 255, 0);
+  --halo-accent: rgba(38, 88, 199, 0.30);
+  --floor-glow: rgba(38, 88, 199, 0.16);
+  --depth-shadow: 0 38px 78px -32px rgba(23, 26, 33, 0.32), 0 10px 26px -12px rgba(23, 26, 33, 0.16);
+  --depth-shadow-sm: 0 20px 40px -22px rgba(23, 26, 33, 0.24);
 }
 
 /* Theme crossfade (graft) — JS adds .theme-switching before flipping
@@ -267,6 +312,11 @@ html.theme-switching *::after {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+    /* Delays must die with durations: a `backwards`-filled entrance or a
+       staggered reveal would otherwise sit in its invisible FROM state for
+       the whole delay. Required by the landing stagger + terminal settle. */
+    animation-delay: 0ms !important;
+    transition-delay: 0ms !important;
   }
 }
 
@@ -475,14 +525,6 @@ body.is-preview .auth-shell {
   min-height: 48px;
 }
 
-.hero-cta-note {
-  display: none;
-  margin: 8px 0 0;
-  padding-bottom: 2px;
-  color: var(--text-soft);
-  font-size: 0.92rem;
-  text-align: center;
-}
 
 .recent-trades-board {
   width: 100%;
@@ -3200,17 +3242,6 @@ body.is-preview .trust-row {
     order: 2;
   }
 
-  .hero-cta-note {
-    display: block;
-    margin-top: 8px;
-    font-size: 0.8rem;
-    padding-bottom: 4px;
-    text-align: center;
-  }
-
-  .hero-mobile-bullets {
-    display: grid;
-  }
 
   .auth-shell-brand {
     width: 100%;
@@ -4409,112 +4440,554 @@ th[aria-sort] {
 }
 
 /* ==========================================================================
-   LANDING ELEVATION — Terminal Poster
-   The shell becomes a scrolling narrative: hero (with an ambient equity
-   canvas) → product showcase → feature triptych → live tape → closing CTA.
-   The auth panel and overlay stay position:fixed, so the modal is unaffected.
+   LANDING — Live Terminal Poster (Phase B)
+   The logged-out shell is a scrolling sales narrative:
+     atmosphere → hero (claim 7 : live terminal 5) → proof strip →
+     dashboard showcase → how it works → feature triptych → capability
+     ledger → closing CTA.
+   The auth panel and overlay stay position:fixed, so the modal still opens
+   over everything and the tape keeps ticking behind it. Every id and
+   [data-*] the JS queries is untouched — only wrappers were added.
    ========================================================================== */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The page dot-grid steps back on the landing so the aurora + grid floor
+   below own the atmosphere. */
+body:not(.is-authenticated):not(.is-preview)::before {
+  opacity: 0.26;
+}
 
 .auth-shell {
   justify-content: flex-start;
-  padding-bottom: var(--space-12);
-  gap: var(--space-12);
+  gap: var(--space-20);
+  padding-bottom: var(--space-16);
+  isolation: isolate;
 }
 
 .auth-shell.is-trades-expanded {
   justify-content: flex-start;
 }
 
+/* --- Atmosphere ---------------------------------------------------------- */
+/* Anchored to the TOP of the shell, not the viewport, and masked out before
+   the proof strip. That is a contrast requirement, not a taste call: the wash
+   composites over the page surface, and --text-faint / --landing-kicker sit
+   exactly on the AA floor there. Above the fold the only text over the wash
+   is --text (huge) and --text-soft, both of which stay >= 4.5:1 at the peak
+   alpha in either theme; everything below the fold reads on clean surface.
+   Radial gradients only — no filter: blur — so mobile Safari keeps the whole
+   layer on the compositor. All motion is transform/opacity. */
+.landing-atmosphere {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: min(900px, 112vh);
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  contain: layout paint;
+  -webkit-mask-image: linear-gradient(to bottom, #000 46%, rgba(0, 0, 0, 0.4) 68%, transparent 84%);
+  mask-image: linear-gradient(to bottom, #000 46%, rgba(0, 0, 0, 0.4) 68%, transparent 84%);
+}
+
+.landing-aurora {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+}
+
+.landing-aurora-a {
+  top: -28%;
+  left: -16%;
+  width: 66%;
+  height: 96%;
+  background: radial-gradient(closest-side, var(--aurora-a), var(--aurora-fade) 72%);
+  animation: auroraDriftA 26s var(--ease-in-out) infinite alternate;
+}
+
+.landing-aurora-b {
+  top: -18%;
+  right: -20%;
+  width: 62%;
+  height: 92%;
+  background: radial-gradient(closest-side, var(--aurora-b), var(--aurora-fade) 72%);
+  animation: auroraDriftB 32s var(--ease-in-out) infinite alternate;
+}
+
+.landing-aurora-c {
+  top: 22%;
+  left: 8%;
+  width: 76%;
+  height: 84%;
+  background: radial-gradient(closest-side, var(--aurora-c), var(--aurora-fade) 70%);
+  animation: auroraDriftC 38s var(--ease-in-out) infinite alternate;
+}
+
+@keyframes auroraDriftA {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(9%, 8%, 0) scale(1.14); }
+}
+
+@keyframes auroraDriftB {
+  from { transform: translate3d(0, 0, 0) scale(1.08); }
+  to { transform: translate3d(-11%, 12%, 0) scale(0.94); }
+}
+
+@keyframes auroraDriftC {
+  from { transform: translate3d(0, 0, 0) scale(0.96); }
+  to { transform: translate3d(-8%, -10%, 0) scale(1.12); }
+}
+
+/* Perspective grid floor — the trading-terminal horizon. Parallaxes on
+   --landing-scroll (a plain number written by the rAF in app.js), so the
+   only per-scroll work is one custom-property write and a composite. */
+.landing-grid-floor {
+  position: absolute;
+  inset: auto -30% -6% -30%;
+  height: 56%;
+  background-image:
+    linear-gradient(to right, var(--landing-grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--landing-grid-line) 1px, transparent 1px);
+  background-size: 72px 72px;
+  transform-origin: 50% 100%;
+  transform: perspective(460px) rotateX(66deg) translateY(calc(var(--landing-scroll, 0) * -0.09px));
+  -webkit-mask-image: linear-gradient(to top, #000, rgba(0, 0, 0, 0.35) 42%, transparent 82%);
+  mask-image: linear-gradient(to top, #000, rgba(0, 0, 0, 0.35) 42%, transparent 82%);
+  opacity: 0.7;
+}
+
+/* A single slow light band crossing the field — transform-only, 18s. */
+.landing-scanline {
+  position: absolute;
+  inset: -46% -20% auto -20%;
+  height: 42%;
+  background: linear-gradient(180deg, var(--aurora-fade), var(--halo-accent), var(--aurora-fade));
+  opacity: 0.16;
+  animation: scanDrift 18s linear infinite;
+}
+
+@keyframes scanDrift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, 350%, 0); }
+}
+
+/* --- Top bar ------------------------------------------------------------- */
+.auth-shell-topbar {
+  position: relative;
+  padding-top: var(--space-6);
+}
+
 /* --- Hero ---------------------------------------------------------------- */
 .auth-hero {
   position: relative;
   max-width: none;
-  min-height: min(72vh, 620px);
-  padding: var(--space-10) 0 var(--space-8);
+  width: 100%;
+  min-height: min(76vh, 660px);
+  padding: var(--space-8) 0 var(--space-10);
   align-content: center;
+  justify-items: stretch;
 }
 
 .landing-atmos {
   position: absolute;
   inset: auto 0 0 0;
   width: 100%;
-  height: min(60%, 320px);
+  height: min(58%, 320px);
   pointer-events: none;
   z-index: 0;
+  opacity: 0.85;
+  transform: translate3d(0, calc(var(--landing-scroll, 0) * 0.12px), 0);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 62%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 62%, transparent 100%);
 }
 
 .auth-hero-copy {
   position: relative;
   z-index: 1;
-  max-width: 900px;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0;
+  text-align: left;
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: var(--space-10);
+  align-items: center;
+}
+
+.hero-claim {
+  display: grid;
+  align-content: center;
+  gap: 0;
+  animation: fadeUp var(--dur-slow) var(--ease-out);
+}
+
+.hero-preheadline {
+  padding: 5px 12px 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  box-shadow: var(--edge-highlight);
+  justify-self: start;
 }
 
 .auth-hero-copy h2 {
-  font-size: clamp(2.4rem, 6vw, 4.25rem);
-  line-height: 1.04;
-  letter-spacing: -0.03em;
+  max-width: 15ch;
+  font-size: var(--fs-hero-xl);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+}
+
+/* Gradient sign-off line. Guarded by @supports so a browser without
+   background-clip:text still gets a solid accent line, never invisible text.
+   Large display type, so the 3:1 large-text floor applies in both themes. */
+.hero-line-accent {
+  color: var(--accent);
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .hero-line-accent {
+    background-image: linear-gradient(96deg, var(--accent) 12%, var(--pnl-pos) 96%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
 }
 
 .auth-hero-text {
-  max-width: 58ch;
-  margin-top: var(--space-4);
+  max-width: 46ch;
+  margin: var(--space-4) 0 0;
   font-size: var(--fs-md);
-  line-height: 1.6;
+  line-height: 1.62;
 }
 
 .hero-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: var(--space-3);
   margin-top: var(--space-6);
 }
 
-/* Honest stat trio — facts about the product, never fabricated social proof. */
-.hero-stats {
+.hero-cta-btn {
+  width: auto;
+  min-width: 0;
+  padding-inline: var(--space-6);
+  min-height: 50px;
+}
+
+/* The single primary action on the page above the fold. Accent gradient +
+   accent halo so nothing else can compete with it. */
+#heroRegisterBtn.btn.primary,
+#ctaRegisterBtn.btn.primary {
+  background-image: linear-gradient(140deg, var(--accent-strong), var(--accent));
+  box-shadow: 0 10px 30px -12px var(--halo-accent), inset 0 1px 0 var(--glass-sheen);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+#heroRegisterBtn.btn.primary:hover,
+#ctaRegisterBtn.btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 42px -14px var(--halo-accent), inset 0 1px 0 var(--glass-sheen);
+}
+
+#heroRegisterBtn.btn.primary:active,
+#ctaRegisterBtn.btn.primary:active {
+  transform: translateY(0);
+}
+
+/* Trust ledger — every line verifiable inside the product. */
+.hero-trust {
+  list-style: none;
+  display: grid;
+  gap: 9px;
+  margin: var(--space-6) 0 0;
+  padding: 0;
+}
+
+.hero-trust li {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--space-8);
-  margin: var(--space-8) 0 0;
-  padding-top: var(--space-5);
-  border-top: 1px solid var(--line);
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--text-soft);
+  font: 500 var(--fs-body)/1.5 var(--font-ui);
 }
 
-.hero-stat {
-  display: grid;
-  gap: 2px;
-  text-align: center;
+.hero-trust-tick {
+  position: relative;
+  flex: 0 0 17px;
+  width: 17px;
+  height: 17px;
+  margin-top: 2px;
+  border: 1px solid var(--pnl-pos-line);
+  border-radius: 50%;
+  background: var(--pnl-pos-soft);
 }
 
-.hero-stat dt {
-  order: 2;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.11em;
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+.hero-trust-tick::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 4.5px;
+  width: 6px;
+  height: 3px;
+  border-left: 1.5px solid var(--pnl-pos);
+  border-bottom: 1.5px solid var(--pnl-pos);
+  transform: rotate(-45deg);
 }
 
-.hero-stat dd {
-  order: 1;
-  margin: 0;
-  font: 700 30px/1.1 var(--font-mono);
-  font-feature-settings: "tnum";
-  letter-spacing: -0.02em;
+/* --- Hero terminal (the live tape, in device chrome) --------------------- */
+.hero-terminal-stage {
+  position: relative;
+  perspective: 1500px;
+  animation: heroRise 760ms var(--ease-out) 120ms backwards;
 }
 
-/* --- Shared section furniture ------------------------------------------- */
-.landing-section {
-  width: 100%;
-  display: grid;
-  gap: var(--space-6);
+@keyframes heroRise {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.96);
+  }
 }
 
-[data-landing-reveal] {
+.hero-terminal {
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  position: relative;
+  z-index: 1;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-xl);
+  background-image: linear-gradient(168deg, var(--glass-top), var(--glass-bottom));
+  box-shadow: var(--depth-shadow), inset 0 1px 0 var(--glass-edge);
+  overflow: hidden;
+  transition: transform var(--dur-slow) var(--ease-out), box-shadow var(--dur-slow) var(--ease-out);
+}
+
+/* Ground shadow: sells the tilt without a second box-shadow pass. */
+.hero-terminal-floor {
+  position: absolute;
+  inset: auto 8% -34px 8%;
+  height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 50%, var(--floor-glow), var(--aurora-fade) 70%);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.hero-terminal-shine {
+  position: absolute;
+  inset: -20% -40%;
+  z-index: 3;
+  pointer-events: none;
   opacity: 0;
-  transform: translateY(20px);
+  background: linear-gradient(
+    102deg,
+    var(--glass-sheen-fade) 38%,
+    var(--glass-sheen) 50%,
+    var(--glass-sheen-fade) 62%
+  );
+  animation: shineSweep 1500ms var(--ease-out) 820ms 1;
+}
+
+@keyframes shineSweep {
+  0% { opacity: 0; transform: translate3d(-60%, 0, 0); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(60%, 0, 0); }
+}
+
+.hero-terminal-rail {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 11px var(--space-4);
+  border-bottom: 1px solid var(--glass-edge);
+  background-image: linear-gradient(180deg, var(--surface-inset), transparent);
+}
+
+.hero-terminal-dots {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.hero-terminal-dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+
+.hero-terminal-dots i:first-child {
+  background: var(--accent);
+}
+
+.hero-terminal-title {
+  flex: 1 1 auto;
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.hero-terminal-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--pnl-pos);
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* The real feed, in place. The renderer is untouched — these rules only
+   reseat #recentTradesList inside the chrome. */
+.hero-terminal .recent-trades-board {
+  position: relative;
+  z-index: 2;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: var(--space-3);
+  gap: var(--space-3);
+  animation: none;
+}
+
+.hero-terminal .recent-trades-card {
+  border-color: var(--line);
+  background: var(--surface-1);
+  box-shadow: var(--edge-highlight), var(--depth-shadow-sm);
+}
+
+/* The rail already carries the live badge — the per-card duplicate goes. */
+.hero-terminal .recent-trades-live-tag {
+  display: none;
+}
+
+/* Empty feed still has to look deliberate — it is the first thing a visitor
+   sees whenever the public endpoint returns nothing. */
+.hero-terminal .recent-trade-empty {
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.hero-terminal .recent-trade-row {
+  position: relative;
+  background: transparent;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    padding-left var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.hero-terminal .recent-trade-row:hover {
+  background: var(--surface-3);
+  padding-left: 16px;
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.hero-terminal-foot {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 10px var(--space-4) 12px;
+  border-top: 1px solid var(--glass-edge);
+  background-image: linear-gradient(0deg, var(--surface-inset), transparent);
+}
+
+.hero-terminal-note {
+  margin: 0;
+  color: var(--text-faint);
+  font: 500 var(--fs-micro)/1.35 var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.landing-scroll-hint {
+  margin: 0;
+}
+
+/* Tilt is desktop-only: pointer response is bound behind a
+   (hover: hover) and (pointer: fine) check in app.js, and the resting
+   rotation itself is scoped here so touch layouts stay flat. */
+@media (min-width: 980px) {
+  .hero-terminal {
+    transform: rotateX(calc(4deg + var(--tilt-x))) rotateY(calc(-9deg + var(--tilt-y)));
+    animation: tiltSettle 1100ms var(--ease-out) 160ms backwards;
+  }
+
+  .hero-terminal:hover {
+    box-shadow: var(--depth-shadow), inset 0 1px 0 var(--glass-edge), 0 0 0 1px var(--line-accent);
+  }
+
+  /* Keyboard users read the tape straight-on. */
+  .hero-terminal:focus-within {
+    transform: rotateX(0deg) rotateY(0deg);
+  }
+
+  @keyframes tiltSettle {
+    from { transform: rotateX(13deg) rotateY(-26deg); }
+    to { transform: rotateX(4deg) rotateY(-9deg); }
+  }
+}
+
+/* --- Reveal choreography ------------------------------------------------- */
+/* Gated on body.auth-ready (stamped in init()) so a visitor with JS disabled
+   never gets a page of invisible sections. The stagger delays are killed by
+   the reduced-motion block at the top of this file. */
+body.auth-ready [data-landing-reveal] {
+  opacity: 0;
+  transform: translateY(26px);
   transition: opacity var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out);
 }
 
-[data-landing-reveal].is-revealed {
+body.auth-ready [data-landing-reveal].is-revealed {
   opacity: 1;
   transform: none;
+}
+
+body.auth-ready [data-landing-reveal] .reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(22px) scale(0.985);
+  transition: opacity var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out);
+}
+
+body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > * {
+  opacity: 1;
+  transform: none;
+}
+
+body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(1) { transition-delay: calc(var(--stagger-reveal) * 1); }
+body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(2) { transition-delay: calc(var(--stagger-reveal) * 2); }
+body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(3) { transition-delay: calc(var(--stagger-reveal) * 3); }
+body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(4) { transition-delay: calc(var(--stagger-reveal) * 4); }
+body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(5) { transition-delay: calc(var(--stagger-reveal) * 5); }
+body.auth-ready [data-landing-reveal].is-revealed .reveal-stagger > *:nth-child(6) { transition-delay: calc(var(--stagger-reveal) * 6); }
+
+/* --- Shared section furniture -------------------------------------------- */
+.landing-section {
+  width: 100%;
+  display: grid;
+  gap: var(--space-8);
 }
 
 .landing-section-head {
@@ -4523,41 +4996,123 @@ th[aria-sort] {
   max-width: 62ch;
 }
 
-.landing-section-head-inline {
-  grid-template-columns: 1fr auto;
-  align-items: end;
-  max-width: none;
-  gap: var(--space-4);
-}
 
 .landing-kicker {
   margin: 0;
-  color: var(--text-faint);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent);
   text-transform: uppercase;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.14em;
   font: 600 var(--fs-micro)/1.2 var(--font-mono);
+}
+
+.landing-kicker::before {
+  content: "";
+  width: 22px;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.6;
 }
 
 .landing-section h2 {
   margin: 0;
-  font: 700 clamp(1.55rem, 3vw, 2.25rem)/1.16 var(--font-ui);
-  letter-spacing: -0.02em;
+  font: 700 clamp(1.7rem, 3.4vw, 2.6rem)/1.12 var(--font-ui);
+  letter-spacing: -0.028em;
 }
 
 .landing-lede {
   margin: 0;
   color: var(--text-soft);
   font-size: var(--fs-md);
-  line-height: 1.6;
+  line-height: 1.62;
+}
+
+/* --- Proof strip --------------------------------------------------------- */
+.landing-proof {
+  width: 100%;
+  padding: var(--space-6) 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.landing-proof-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.landing-proof-item {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  text-align: center;
+}
+
+.landing-proof-item + .landing-proof-item::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--space-4) / -2);
+  top: 12%;
+  bottom: 12%;
+  width: 1px;
+  background: var(--line);
+}
+
+.landing-proof-item dd {
+  order: 1;
+  margin: 0;
+  color: var(--accent);
+  font: 700 clamp(30px, 4vw, 44px)/1.02 var(--font-mono);
+  font-feature-settings: "tnum";
+  letter-spacing: -0.03em;
+}
+
+.landing-proof-item dt {
+  order: 2;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
 }
 
 /* --- Product showcase ---------------------------------------------------- */
+.showcase-stage {
+  position: relative;
+  perspective: 1800px;
+}
+
 .showcase-frame {
-  border: 1px solid var(--line-strong);
+  position: relative;
+  z-index: 1;
+  border: 1px solid var(--glass-edge);
   border-radius: var(--radius-xl);
-  background: var(--surface-1);
-  box-shadow: var(--shadow);
+  background-image: linear-gradient(168deg, var(--glass-top), var(--glass-bottom));
+  box-shadow: var(--depth-shadow);
   overflow: hidden;
+  transform-origin: 50% 0%;
+  transform: rotateX(9deg);
+  transition: transform 700ms var(--ease-out), box-shadow var(--dur-slow) var(--ease-out);
+}
+
+[data-landing-reveal].is-revealed .showcase-frame {
+  transform: rotateX(2.5deg);
+}
+
+.showcase-stage:hover .showcase-frame,
+.showcase-frame:focus-within {
+  transform: rotateX(0deg);
+}
+
+.showcase-floor {
+  position: absolute;
+  inset: auto 10% -40px 10%;
+  height: 70px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 50%, var(--floor-glow), var(--aurora-fade) 70%);
+  pointer-events: none;
 }
 
 .showcase-chrome {
@@ -4565,8 +5120,8 @@ th[aria-sort] {
   align-items: center;
   gap: 6px;
   padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--line);
-  background: var(--surface-2);
+  border-bottom: 1px solid var(--glass-edge);
+  background-image: linear-gradient(180deg, var(--surface-inset), transparent);
 }
 
 .showcase-dot {
@@ -4574,6 +5129,10 @@ th[aria-sort] {
   height: 8px;
   border-radius: 50%;
   background: var(--line-strong);
+}
+
+.showcase-dot:first-child {
+  background: var(--accent);
 }
 
 .showcase-chrome-label {
@@ -4589,18 +5148,21 @@ th[aria-sort] {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-3);
   padding: var(--space-4);
-  background: var(--surface-0);
+  background: transparent;
 }
 
 .showcase-hero {
   position: relative;
   grid-column: span 3;
-  min-height: 148px;
+  min-height: 156px;
   padding: var(--space-4);
   border: 1px solid var(--line);
   border-left: 2px solid var(--pnl-pos-line);
   border-radius: var(--radius-lg);
-  background: var(--surface-1);
+  background:
+    radial-gradient(120% 90% at 0% 0%, var(--pnl-pos-soft), transparent 62%),
+    var(--surface-1);
+  box-shadow: var(--edge-highlight);
   overflow: hidden;
 }
 
@@ -4628,6 +5190,7 @@ th[aria-sort] {
   display: inline-block;
   margin: var(--space-2) 0 0;
   padding: 2px 7px;
+  border: 1px solid var(--pnl-pos-line);
   border-radius: var(--radius-sm);
   background: var(--pnl-pos-soft);
   color: var(--pnl-pos);
@@ -4638,9 +5201,10 @@ th[aria-sort] {
   position: absolute;
   inset: auto 0 0 0;
   width: 100%;
-  height: 60px;
+  height: 62px;
   color: var(--pnl-pos);
-  opacity: 0.6;
+  opacity: 0.65;
+  filter: drop-shadow(0 0 6px var(--pnl-pos-line));
 }
 
 .showcase-side {
@@ -4651,6 +5215,7 @@ th[aria-sort] {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--surface-1);
+  box-shadow: var(--edge-highlight);
 }
 
 .showcase-side-value {
@@ -4660,18 +5225,18 @@ th[aria-sort] {
 }
 
 .showcase-track {
-  height: 4px;
+  height: 5px;
   margin-bottom: var(--space-3);
+  border: 1px solid var(--line);
   border-radius: var(--radius-pill);
   background: var(--surface-inset);
-  border: 1px solid var(--line);
   overflow: hidden;
 }
 
 .showcase-track span {
   display: block;
   height: 100%;
-  background: var(--line-strong);
+  background-image: linear-gradient(90deg, var(--accent), var(--accent-strong));
 }
 
 .showcase-cell {
@@ -4679,6 +5244,7 @@ th[aria-sort] {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--surface-1);
+  box-shadow: var(--edge-highlight);
 }
 
 .showcase-cell-value {
@@ -4691,46 +5257,128 @@ th[aria-sort] {
   color: var(--pnl-pos);
 }
 
+/* --- How it works -------------------------------------------------------- */
+.steps-rail {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+}
+
+.step-card {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background-image: linear-gradient(168deg, var(--surface-2), var(--surface-1));
+  box-shadow: var(--edge-highlight);
+  overflow: hidden;
+  transition: border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+
+.step-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background-image: linear-gradient(90deg, var(--accent), transparent 72%);
+  opacity: 0.7;
+}
+
+.step-card:hover {
+  border-color: var(--line-accent);
+  box-shadow: var(--depth-shadow-sm);
+}
+
+.step-index {
+  color: var(--accent);
+  font: 700 var(--fs-lg)/1 var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.step-card h3 {
+  margin: 0;
+  font: 600 var(--fs-lg)/1.3 var(--font-ui);
+  letter-spacing: -0.01em;
+}
+
+.step-card p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: var(--fs-body);
+  line-height: 1.62;
+}
+
 /* --- Feature triptych ---------------------------------------------------- */
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 .feature-card {
+  position: relative;
   display: grid;
   align-content: start;
   gap: var(--space-2);
-  padding: var(--space-5);
+  padding: var(--space-6);
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
-  background: var(--surface-1);
+  background-image: linear-gradient(168deg, var(--surface-2), var(--surface-1));
   box-shadow: var(--edge-highlight);
   text-align: left;
-  transition: border-color var(--dur-fast) var(--ease-out);
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
 }
 
-.feature-card:hover {
-  border-color: var(--line-strong);
+.feature-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(90% 70% at 20% 0%, var(--halo-accent), transparent 62%);
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+
+.feature-card:hover,
+.feature-card:focus-within {
+  transform: perspective(1000px) translateY(-6px) rotateX(3deg);
+  border-color: var(--line-accent);
+  box-shadow: var(--depth-shadow-sm);
+}
+
+.feature-card:hover::after,
+.feature-card:focus-within::after {
+  opacity: 0.14;
 }
 
 .feature-icon {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   margin-bottom: var(--space-2);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: var(--surface-inset);
-  color: var(--text-soft);
+  background-image: linear-gradient(160deg, var(--surface-3), var(--surface-inset));
+  color: var(--accent);
+  box-shadow: inset 0 1px 0 var(--glass-edge);
 }
 
 .feature-icon svg {
-  width: 19px;
-  height: 19px;
+  width: 20px;
+  height: 20px;
 }
 
 .feature-kicker {
@@ -4754,33 +5402,234 @@ th[aria-sort] {
   line-height: 1.62;
 }
 
-/* --- Closing CTA --------------------------------------------------------- */
-.landing-cta {
-  display: grid;
-  justify-items: center;
-  gap: var(--space-3);
-  padding: var(--space-12) var(--space-5);
-  border: 1px solid var(--line-strong);
+/* --- Capability ledger --------------------------------------------------- */
+.ledger-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   background: var(--surface-1);
   box-shadow: var(--edge-highlight);
+}
+
+.ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-body);
+}
+
+.ledger-table th,
+.ledger-table td {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.ledger-table thead th {
+  background: var(--surface-inset);
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ledger-table tbody th {
+  width: 32%;
+  min-width: 150px;
+  color: var(--text);
+  font: 600 var(--fs-label)/1.4 var(--font-mono);
+  letter-spacing: 0.03em;
+}
+
+.ledger-table tbody td {
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+.ledger-table tbody tr:last-child th,
+.ledger-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.ledger-table tbody tr {
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.ledger-table tbody tr:hover {
+  background: var(--surface-3);
+}
+
+/* --- Closing CTA --------------------------------------------------------- */
+.landing-cta {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-16) var(--space-6);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-xl);
+  background-image:
+    radial-gradient(120% 130% at 50% 0%, var(--halo-accent), transparent 58%),
+    linear-gradient(168deg, var(--glass-top), var(--glass-bottom));
+  box-shadow: var(--depth-shadow);
   text-align: center;
+  overflow: hidden;
+}
+
+.landing-cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(var(--landing-grid-line) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000, transparent 72%);
+  mask-image: radial-gradient(ellipse at 50% 40%, #000, transparent 72%);
+  opacity: 0.5;
+}
+
+.landing-cta > * {
+  position: relative;
+  z-index: 1;
 }
 
 .landing-cta h2 {
   margin: 0;
-  font: 700 clamp(1.6rem, 3.4vw, 2.5rem)/1.14 var(--font-ui);
-  letter-spacing: -0.025em;
+  font: 700 clamp(1.75rem, 3.8vw, 2.75rem)/1.12 var(--font-ui);
+  letter-spacing: -0.03em;
 }
 
 .landing-cta-btn {
   margin-top: var(--space-3);
-  min-height: 48px;
-  padding-inline: var(--space-8);
+  min-height: 52px;
+  padding-inline: var(--space-10);
+}
+
+.landing-cta-fine {
+  margin: 0;
+  color: var(--text-faint);
+  font: 500 var(--fs-micro)/1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* --- Dev-only affordances ------------------------------------------------ */
+/* These render only in local preview mode (app.js keeps them [hidden]
+   otherwise). Deliberately small, muted and tagged so they can never read as
+   a "use the app without an account" path next to the sign-up CTA. */
+.dev-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.06em;
+  opacity: 0.72;
+  transition: opacity var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.dev-chip:hover {
+  opacity: 1;
+  color: var(--text-soft);
+}
+
+.dev-chip[hidden] {
+  display: none;
+}
+
+.dev-chip-tag {
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.preview-back-btn {
+  position: absolute;
+  right: 0;
+  top: var(--space-6);
+}
+
+.nav-preview-landing {
+  justify-content: center;
 }
 
 /* --- Landing responsive -------------------------------------------------- */
-@media (max-width: 980px) {
+@media (max-width: 1180px) {
+  .auth-hero-copy {
+    gap: var(--space-8);
+  }
+
+  .hero-terminal {
+    --tilt-x: 0deg;
+    --tilt-y: 0deg;
+  }
+}
+
+/* Stacked hero. .hero-claim becomes display:contents so its children join the
+   hero flex line directly — that lets the terminal sit right under the CTA
+   (high on the page, as the proof it is) with the trust ledger beneath it,
+   without any DOM reorder. */
+@media (max-width: 979px) {
+  .auth-shell {
+    gap: var(--space-12);
+  }
+
+  .auth-hero {
+    min-height: 0;
+    padding: var(--space-5) 0 var(--space-6);
+  }
+
+  .auth-hero-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    max-width: 620px;
+    text-align: left;
+  }
+
+  .hero-claim {
+    display: contents;
+  }
+
+  /* display:contents above means these are flex items now — the pill needs
+     align-self or the default stretch blows it to full width. */
+  .hero-preheadline { order: 1; display: inline-flex; align-self: flex-start; }
+  .auth-hero-copy h2 { order: 2; max-width: none; }
+  .auth-hero-text { order: 3; max-width: none; margin-left: 0; margin-right: 0; }
+  .hero-terminal-stage { order: 5; margin-top: var(--space-6); perspective: none; }
+  .hero-trust { order: 6; }
+
+  /* Overrides the legacy ≤900px CTA rules (2-col grid, Log-in-first order)
+     that live earlier in this file — sign-up always leads. */
+  .hero-cta-row {
+    order: 4;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: var(--space-3);
+  }
+
+  #heroRegisterBtn { order: 1; }
+  #heroLoginBtn { order: 2; }
+
+  .hero-terminal {
+    transform: none;
+  }
+
+  .landing-section {
+    gap: var(--space-6);
+  }
+
   .showcase-body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -4790,8 +5639,23 @@ th[aria-sort] {
     grid-column: span 2;
   }
 
-  .feature-grid {
+  .showcase-frame,
+  [data-landing-reveal].is-revealed .showcase-frame {
+    transform: none;
+  }
+
+  .feature-grid,
+  .steps-rail {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .landing-proof-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-5) var(--space-4);
+  }
+
+  .landing-proof-item:nth-child(3)::before {
+    display: none;
   }
 }
 
@@ -4800,27 +5664,117 @@ th[aria-sort] {
     gap: var(--space-10);
   }
 
-  .auth-hero {
-    min-height: 0;
-    padding: var(--space-6) 0 var(--space-4);
+  .auth-shell-topbar {
+    padding-top: var(--space-4);
+    flex-wrap: wrap;
   }
 
-  .hero-stats {
-    gap: var(--space-5);
-    justify-content: space-between;
+  /* Own row at 375px — absolute placement would collide with the centred
+     brand mark. Still visually subordinate, still dev-only. */
+  .preview-back-btn {
+    position: static;
+    order: -1;
+    flex: 0 0 100%;
+    justify-content: center;
+    margin-bottom: var(--space-3);
   }
 
-  .hero-stat dd {
-    font-size: 24px;
+  .auth-hero-copy h2 {
+    font-size: clamp(1.95rem, 8.6vw, 2.9rem);
+    line-height: 1.04;
+    letter-spacing: -0.03em;
   }
 
-  .landing-section-head-inline {
+  .hero-preheadline {
+    display: inline-flex;
+    font-size: 10px;
+  }
+
+  .auth-hero-text {
+    margin-top: var(--space-3);
+    font-size: var(--fs-body);
+  }
+
+  .hero-cta-row {
+    display: grid;
     grid-template-columns: minmax(0, 1fr);
-    align-items: start;
+    gap: var(--space-2);
+    margin-top: var(--space-5);
+  }
+
+  .hero-cta-btn {
+    width: 100%;
+    padding-inline: var(--space-4);
+  }
+
+  #heroRegisterBtn { order: 1; }
+  #heroLoginBtn { order: 2; }
+
+  .hero-terminal-rail {
+    padding: 10px var(--space-3);
+  }
+
+  .hero-terminal-title {
+    display: none;
+  }
+
+  .hero-terminal .recent-trades-board {
+    padding: var(--space-2);
+    gap: var(--space-2);
+  }
+
+  .hero-terminal-foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 10px var(--space-3) 12px;
+    text-align: center;
+  }
+
+  .hero-terminal-note {
+    order: 2;
+  }
+
+  .landing-scroll-hint {
+    order: 1;
+  }
+
+  .step-card,
+  .feature-card {
+    padding: var(--space-4);
+  }
+
+  .feature-card:hover,
+  .feature-card:focus-within {
+    transform: none;
+  }
+
+  .ledger-table th,
+  .ledger-table td {
+    padding: var(--space-3);
+  }
+
+  .ledger-table tbody th {
+    width: auto;
+    min-width: 118px;
+  }
+
+  .landing-proof {
+    padding: var(--space-5) 0;
+  }
+
+  .landing-proof-item dd {
+    font-size: 28px;
+  }
+
+  .landing-proof-item dt {
+    font-size: 10px;
+    letter-spacing: 0.06em;
   }
 
   .showcase-body {
     grid-template-columns: minmax(0, 1fr);
+    padding: var(--space-3);
   }
 
   .showcase-hero,
@@ -4830,72 +5784,28 @@ th[aria-sort] {
   }
 
   .landing-cta {
-    padding: var(--space-8) var(--space-4);
+    padding: var(--space-10) var(--space-4);
+  }
+
+  .landing-cta-btn {
+    width: 100%;
+    padding-inline: var(--space-4);
+  }
+
+  .landing-grid-floor {
+    height: 42%;
+    background-size: 52px 52px;
+  }
+
+  .landing-scanline {
+    display: none;
   }
 }
 
-/* Atmosphere fades out at both ends so the curve dissolves into the page
-   instead of ending on a hard canvas edge. */
-.landing-atmos {
-  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 62%, transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 62%, transparent 100%);
-}
-
-/* Mobile hero: the primary CTA leads (a legacy rule ordered Log In first,
-   from when both buttons were secondary), and the stat trio stays one row. */
-@media (max-width: 900px) {
-  #heroRegisterBtn {
-    order: 1;
-  }
-
-  #heroLoginBtn {
-    order: 2;
-  }
-}
-
-@media (max-width: 760px) {
-  .hero-stats {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--space-3);
-    margin-top: var(--space-6);
-  }
-
-  .hero-stat dt {
-    font-size: 10px;
-    letter-spacing: 0.06em;
-  }
-
-  .hero-stat dd {
-    font-size: 22px;
-  }
-}
-
-/* Local-preview navigation aids: these only appear when the app is running
-   without a session (dev preview) — a real session shows Logout instead. */
-.nav-preview-landing {
-  font-size: var(--fs-micro);
-  padding: 7px 11px;
-}
-
-.nav-preview-landing[hidden] {
-  display: none;
-}
-
-.preview-back-btn {
-  position: absolute;
-  left: 0;
-  top: var(--space-3);
-}
-
-.auth-shell-topbar {
-  position: relative;
-}
-
-@media (max-width: 760px) {
-  .preview-back-btn {
-    position: static;
-    justify-self: start;
-    margin-bottom: var(--space-3);
+/* Fine-pointer only: the aurora field is heavy enough on low-power mobile
+   GPUs that the drift is not worth the battery. Layers stay, motion stops. */
+@media (hover: none) {
+  .landing-aurora {
+    animation: none;
   }
 }
