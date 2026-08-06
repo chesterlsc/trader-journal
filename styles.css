@@ -6053,6 +6053,39 @@ body.auth-ready .lnd-tape-list .lnd-row {
   color: var(--text-faint);
 }
 
+/* Sticky twin of the pair: fixed top-center, off-canvas until .is-docked.
+   Costs no layout (always fixed), so docking can never reflow the header
+   that triggers it. Sits under modals/toasts (they use higher z). */
+.dash-ticker-dock {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translate(-50%, -160%);
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  box-shadow: var(--clay-raised);
+  opacity: 0;
+  z-index: 60;
+  pointer-events: none;
+  transition: transform var(--dur-base) var(--ease-out), opacity var(--dur-base) var(--ease-out);
+}
+
+.dash-ticker-dock.is-docked {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-ticker-dock {
+    transition: none;
+  }
+}
+
 /* --- 3. Product demo ------------------------------------------------------ */
 .lnd-demo {
   display: grid;

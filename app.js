@@ -916,16 +916,13 @@ const TICKER_CACHE_KEY = "axiom_journal_ticker_v1";
 // Last price actually rendered per symbol — the strip's delta is "vs the
 // previous poll you saw", whether that came from cache or live.
 const tickerShown = {};
-// One price loop serves both shells. The landing only needs a 10s cadence,
-// so every second 5s tick is skipped while logged out — never a second loop.
-let livePriceTickCount = 0;
 
 // Scripted product demo. One deterministic timeline drives three modes:
 // autoplay while the frame is on screen, replay on demand, and a static
 // step-through under reduced motion. Every number in it is sample data on a
 // $10,000 demo account and the frame is labelled as such — this is a replay
 // of the real components, not footage and not a mock.
-const LND_DEMO_COMMAND = "btc long 118400 sl 117900 1%";
+const LND_DEMO_COMMAND = "xauusd short 4234 sl 4244 tp 4214 0.02 lots";
 const LND_DEMO_NOTE_TEXT = "Waited for the retest instead of chasing it.";
 const lndDemoPlayer = {
   steps: [],
@@ -995,6 +992,7 @@ function init() {
   // Cached ticker prices paint before the first poll answers, marked stale
   // until it does; the demo player owns its own reduced-motion branch.
   setupLandingTicker();
+  setupStickyDashTicker();
   setupLandingDemo();
   startLivePriceLoop();
   // Hash router: restore the deep-linked view for preview sessions; the
@@ -3171,10 +3169,13 @@ function readTradeForm() {
     };
   }
 
+  // A target is optional everywhere else — the quick capture prints "no
+  // target — R:R unknown" and the sheet hands off takeProfit: 0. The full
+  // form demanding one made the sheet -> Add detail -> Save path fail with a
+  // silent focus jump. Empty means "no target"; a typed one must make sense.
   const numericFields = [
     ["Entry Price", value.entryPrice, ui.tradeFields.entryPrice],
     ["Stop Loss", value.stopLoss, ui.tradeFields.stopLoss],
-    ["Take Profit", value.takeProfit, ui.tradeFields.takeProfit],
     ["Risk %", value.riskPercent, ui.tradeFields.riskPercent],
     ["Position Size", value.positionSize, ui.tradeFields.positionSize]
   ];
@@ -3206,6 +3207,25 @@ function readTradeForm() {
       ok: false,
       error: "For Sell trades, stop loss should be above entry price.",
       field: ui.tradeFields.stopLoss
+    };
+  }
+
+  if (!String(ui.tradeFields.takeProfit.value || "").trim()) {
+    value.takeProfit = 0;
+  } else if (!Number.isFinite(value.takeProfit) || value.takeProfit <= 0) {
+    return {
+      ok: false,
+      error: "Take Profit must be greater than zero — or leave it empty for no target.",
+      field: ui.tradeFields.takeProfit
+    };
+  } else if (value.direction === "Buy" ? value.takeProfit <= value.entryPrice : value.takeProfit >= value.entryPrice) {
+    return {
+      ok: false,
+      error:
+        value.direction === "Buy"
+          ? "For Buy trades, the target should be above entry price."
+          : "For Sell trades, the target should be below entry price.",
+      field: ui.tradeFields.takeProfit
     };
   }
 
@@ -4141,6 +4161,20 @@ function getAccountBalance() {
 // Position size that puts exactly `riskAmount` at risk between entry and stop,
 // through the same pip model calculateTradeMetrics uses to price the trade —
 // so the size shown before the click is the size the journal prices after it.
+// The inverse of computePositionSize: a trader who speaks in lots gets their
+// risk derived from the size instead of the other way round.
+function estimateRiskFromSize({ asset, market, entryPrice, stopLoss, positionSize }) {
+  const distance = Math.abs(entryPrice - stopLoss);
+  if (!(distance > 0) || !(positionSize > 0)) {
+    return 0;
+  }
+  const spec = getPipSpec({ asset, market, entryPrice });
+  if (spec.mode === "pip-lot") {
+    return (distance / spec.pipSize) * spec.pipValuePerLot * positionSize;
+  }
+  return distance * positionSize;
+}
+
 function computePositionSize({ asset, market, entryPrice, stopLoss, riskAmount }) {
   const distance = Math.abs(entryPrice - stopLoss);
   if (!(distance > 0) || !(riskAmount > 0)) {
@@ -4312,7 +4346,7 @@ function renderCaptureReadout() {
     return;
   }
 
-  const parsed = parseQuickTrade(raw);
+  const parsed = parseTradeCommand(raw);
   const value = parsed.value;
   const chips = [];
 
@@ -4327,10 +4361,24 @@ function renderCaptureReadout() {
     chips.push(captureChip(`stop ${formatCapturePrice(value.stopLoss)}${pipTail}`));
   }
 
-  // Risk %, converted to cash against the REAL account balance.
+  // Risk %, converted to cash against the REAL account balance. A trader who
+  // gives an explicit size instead ("0.02 lots") gets risk derived FROM it.
   const balance = getAccountBalance();
   let riskAmount = 0;
-  if (value.riskCash > 0) {
+  if (value.positionSize > 0 && !(value.riskCash > 0) && !(value.riskPercent > 0)) {
+    riskAmount = estimateRiskFromSize({
+      asset: value.symbol,
+      market: value.market,
+      entryPrice: value.entryPrice,
+      stopLoss: value.stopLoss,
+      positionSize: value.positionSize
+    });
+    if (riskAmount > 0) {
+      const percent = balance > 0 ? (riskAmount / balance) * 100 : 0;
+      value.riskPercent = round(percent);
+      chips.push(captureChip(`risk ${formatCurrency(riskAmount)} = ${value.riskPercent}% (from size)`));
+    }
+  } else if (value.riskCash > 0) {
     riskAmount = value.riskCash;
     const percent = balance > 0 ? (riskAmount / balance) * 100 : 0;
     value.riskPercent = round(percent);
@@ -4383,9 +4431,37 @@ function formatCapturePrice(price) {
   return price.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: decimals });
 }
 
+// Pip-distance stops/targets ("sl 10p", "tp 20 pips") become real prices
+// here, against entry and direction — the parser stays pip-spec-free.
+function resolvePipDistances(value) {
+  if (!(value.entryPrice > 0) || !value.direction) {
+    return value;
+  }
+  const spec = getPipSpec({ asset: value.symbol, market: value.market, entryPrice: value.entryPrice });
+  if (value.stopPips > 0 && !(value.stopLoss > 0)) {
+    value.stopLoss =
+      value.direction === "Buy"
+        ? value.entryPrice - value.stopPips * spec.pipSize
+        : value.entryPrice + value.stopPips * spec.pipSize;
+  }
+  if (value.targetPips > 0 && !(value.takeProfit > 0)) {
+    value.takeProfit =
+      value.direction === "Buy"
+        ? value.entryPrice + value.targetPips * spec.pipSize
+        : value.entryPrice - value.targetPips * spec.pipSize;
+  }
+  return value;
+}
+
+function parseTradeCommand(raw) {
+  const parsed = parseQuickTrade(raw);
+  resolvePipDistances(parsed.value);
+  return parsed;
+}
+
 function handleCaptureSubmit(event) {
   event.preventDefault();
-  const parsed = parseQuickTrade(ui.captureInput.value);
+  const parsed = parseTradeCommand(ui.captureInput.value);
   if (!parsed.ok) {
     // Unparseable input SAYS so rather than saving something wrong.
     renderCaptureReadout();
@@ -4516,12 +4592,26 @@ function syncSheetControls() {
 
 function readSheetValues() {
   const symbol = resolveSymbol(ui.sheetSymbol.value);
+  const market = symbol ? inferMarket(symbol) : "";
+  const direction = sheetState.direction;
+  const entryPrice = parseNumber(ui.sheetEntry.value);
+  // "10p" / "10 pips" in the stop box is a pip DISTANCE off entry — exact
+  // prices still work exactly as before. One choke point: the readout, the
+  // validation and the submit all read the stop through here.
+  const stopRaw = String(ui.sheetStop.value || "").trim();
+  const pipMatch = /^(\d*\.?\d+)\s*(?:p|pips?)$/i.exec(stopRaw);
+  let stopLoss = parseNumber(stopRaw);
+  if (pipMatch && entryPrice > 0) {
+    const spec = getPipSpec({ asset: symbol, market, entryPrice });
+    const distance = Number(pipMatch[1]) * spec.pipSize;
+    stopLoss = direction === "Buy" ? entryPrice - distance : entryPrice + distance;
+  }
   return {
     symbol,
-    market: symbol ? inferMarket(symbol) : "",
-    direction: sheetState.direction,
-    entryPrice: parseNumber(ui.sheetEntry.value),
-    stopLoss: parseNumber(ui.sheetStop.value),
+    market,
+    direction,
+    entryPrice,
+    stopLoss,
     takeProfit: 0,
     riskPercent: getSheetRiskPercent(),
     positionSize: 0
@@ -5516,7 +5606,7 @@ function bindQuickCapture() {
     ui.captureBarForm.addEventListener("submit", handleCaptureSubmit);
     ui.captureInput.addEventListener("input", renderCaptureReadout);
     ui.captureToSheetBtn.addEventListener("click", () => {
-      const parsed = parseQuickTrade(ui.captureInput.value);
+      const parsed = parseTradeCommand(ui.captureInput.value);
       closeCaptureBar();
       openTradeSheet(parsed.value);
     });
@@ -5916,7 +6006,7 @@ function loadTradeIntoForm(id) {
   ui.tradeFields.direction.value = trade.direction;
   ui.tradeFields.entryPrice.value = trade.entryPrice;
   ui.tradeFields.stopLoss.value = trade.stopLoss;
-  ui.tradeFields.takeProfit.value = trade.takeProfit;
+  ui.tradeFields.takeProfit.value = trade.takeProfit > 0 ? trade.takeProfit : "";
   ui.tradeFields.exitPrice.value = trade.status === "open" ? "" : trade.exitPrice;
   ui.tradeFields.riskPercent.value = trade.riskPercent;
   ui.tradeFields.positionSize.value = trade.positionSize;
@@ -11348,13 +11438,9 @@ function startLivePriceLoop() {
     clearInterval(state.marketData.timerId);
   }
 
+  // One 5s loop serves both shells — landing and app tick at the same rate,
+  // which is what lets the strips say "live · 5s" and mean it.
   state.marketData.timerId = window.setInterval(() => {
-    livePriceTickCount += 1;
-    // Landing cadence: 10s is plenty for a logged-out visitor; the app keeps
-    // the full 5s. Same loop either way — never two.
-    if (!canAccessApp() && livePriceTickCount % 2 === 1) {
-      return;
-    }
     refreshLivePrices();
   }, LIVE_PRICE_REFRESH_MS);
 
@@ -11551,6 +11637,25 @@ function setupLandingTicker() {
   renderTickerPair({ stale: true });
 }
 
+/* The dock pill is position:fixed, so it costs no layout and cannot flap:
+   it slides in when the dashboard header's bottom edge crosses the top of
+   the viewport, and only while the dashboard view is the active one. */
+function setupStickyDashTicker() {
+  const dock = document.getElementById("dashTickerDock");
+  const head = document.querySelector(".dash-head");
+  if (!dock || !head) {
+    return;
+  }
+  // No rAF throttle: one rect read + class toggle is cheaper than the jam a
+  // queued-but-never-run frame causes in a hidden tab (raf id never clears,
+  // and every later scroll gets swallowed by the guard).
+  const update = () => {
+    const dashboardActive = canAccessApp() && document.getElementById("dashboard")?.classList.contains("is-active");
+    dock.classList.toggle("is-docked", dashboardActive && head.getBoundingClientRect().bottom < 0);
+  };
+  window.addEventListener("scroll", update, { passive: true });
+}
+
 function setTickerStale(stale) {
   document.querySelectorAll("[data-ticker-strip]").forEach((strip) => {
     strip.classList.toggle("is-stale", Boolean(stale));
@@ -11644,13 +11749,13 @@ function buildLndDemoTimeline() {
 
   tween(s0, "typed", cmdLen, 52);
   const s1 = lndDemoState({ typed: cmdLen });
-  key(s1, "Parsed as you type — symbol, side, stop, risk, already sized.", 1500);
+  key(s1, "Parsed as you type — entry, stop, target, all measured in pips.", 1500);
 
   const s2 = lndDemoState({ typed: cmdLen, entered: true });
   key(s2, "Enter.", 520);
 
   const s3 = lndDemoState({ typed: cmdLen, entered: true, toast: true });
-  key(s3, "Position open, sized off 1% of the demo account.", 1700);
+  key(s3, "Position open. 0.02 lots — the risk is derived for you: $20.", 1700);
 
   const s4 = lndDemoState({ scene: "close" });
   key(s4, "The trade closed. Journalling it: two taps and a sentence.", 1300);
@@ -11688,22 +11793,22 @@ function renderLndDemoFrame(frame) {
   d.typed.textContent = LND_DEMO_COMMAND.slice(0, frame.typed);
   d.caretBar.hidden = frame.scene !== "capture" || frame.entered;
   const chips = [];
-  if (frame.typed >= 3) chips.push('<span class="cmdk-chip cmdk-chip-accent">BTCUSDT</span>');
-  if (frame.typed >= 8) chips.push('<span class="cmdk-chip cmdk-chip-pos">LONG</span>');
-  if (frame.typed >= 15) chips.push('<span class="cmdk-chip">entry 118,400</span>');
-  if (frame.typed >= 25) chips.push('<span class="cmdk-chip">stop 117,900</span>');
-  if (frame.typed >= 28) {
-    chips.push('<span class="cmdk-chip">risk 1% = $100</span>');
-    chips.push('<span class="cmdk-chip">size 0.20 BTC</span>');
-    chips.push('<span class="cmdk-chip cmdk-chip-warn">no target — R:R unknown</span>');
+  if (frame.typed >= 6) chips.push('<span class="cmdk-chip cmdk-chip-accent">XAUUSD</span>');
+  if (frame.typed >= 12) chips.push('<span class="cmdk-chip cmdk-chip-neg">SHORT</span>');
+  if (frame.typed >= 17) chips.push('<span class="cmdk-chip">entry 4,234</span>');
+  if (frame.typed >= 25) chips.push('<span class="cmdk-chip">stop 4,244 · 10.0 pips</span>');
+  if (frame.typed >= 43) {
+    chips.push('<span class="cmdk-chip">risk $20.00 = 0.2% (from size)</span>');
+    chips.push('<span class="cmdk-chip">size 0.02 lots</span>');
   }
+  if (frame.typed >= 33) chips.push('<span class="cmdk-chip">target 4,214 · 20.0 pips · R:R 2.00</span>');
   // Rebuild only when the chip count changes, so the pop-in animation fires
   // once per chip instead of once per keystroke.
   if (d.chips.dataset.rendered !== String(chips.length)) {
     d.chips.innerHTML = chips.join("");
     d.chips.dataset.rendered = String(chips.length);
   }
-  d.status.hidden = frame.typed < 28;
+  d.status.hidden = frame.typed < 43;
   d.enterKey.classList.toggle("is-pressed", frame.entered);
   d.toast.hidden = !frame.toast;
 

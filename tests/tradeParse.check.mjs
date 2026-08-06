@@ -27,7 +27,9 @@ assert.deepStrictEqual(ok("btc long 118400 sl 117900 1%"), {
   takeProfit: 0,
   riskPercent: 1,
   riskCash: 0,
-  positionSize: 0
+  positionSize: 0,
+  stopPips: 0,
+  targetPips: 0
 });
 
 // Aliases, casing, thousands separators, glued keywords, "=" and ":" forms.
@@ -55,6 +57,28 @@ assert.strictEqual(ok("btc long 118400 sl 117900 tp 119400").takeProfit, 119400)
 assert.strictEqual(ok("btc long 118400 117900 119400").takeProfit, 119400);
 // Noise words are ignored, not treated as the symbol.
 assert.strictEqual(ok("go long the btc at 118400 sl 117900").symbol, "BTCUSDT");
+
+// Postfix lot size: "0.02 lots" claims only the adjacent number, never a
+// positional entry/stop/target.
+assert.strictEqual(ok("xauusd short 4234 sl 4244 tp 4214 0.02 lots").positionSize, 0.02);
+assert.strictEqual(ok("xau short 4234 4244 4214 0.5 lot").positionSize, 0.5);
+assert.strictEqual(ok("btc long 118400 sl 117900 size 0.2").positionSize, 0.2);
+
+// Pip-distance stops and targets: the parser records the DISTANCE and leaves
+// the price at zero — the app resolves it against entry with the pip spec.
+const pipStop = ok("xauusd short 4234 sl 10p tp 20p 0.02 lots");
+assert.strictEqual(pipStop.stopPips, 10);
+assert.strictEqual(pipStop.targetPips, 20);
+assert.strictEqual(pipStop.stopLoss, 0);
+assert.strictEqual(pipStop.takeProfit, 0);
+const pipWords = ok("xauusd short 4234 sl 10 pips tp 20 pips");
+assert.strictEqual(pipWords.stopPips, 10);
+assert.strictEqual(pipWords.targetPips, 20);
+// The unit word re-tags ONLY the immediately preceding assignment — a later
+// "pips" can never turn the 4214 target price into 4,214 pips.
+const loose = ok("xauusd short 4234 sl 4244 tp 4214 0.02 lots");
+assert.strictEqual(loose.takeProfit, 4214);
+assert.strictEqual(loose.targetPips, 0);
 
 // Market inference feeds the pip model, so it must not drift.
 assert.strictEqual(inferMarket("BTCUSDT"), "Crypto");

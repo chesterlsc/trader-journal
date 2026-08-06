@@ -2,13 +2,16 @@
 // by hand — which is exactly how they rot. Two honesty contracts pinned here:
 //
 //   1. The demo command line must still parse, with the real parser, into the
-//      exact position the demo's chips claim (BTCUSDT long, entry 118,400,
-//      stop 117,900, risk 1% = $100 on the labelled $10,000 demo account,
-//      size 0.20 BTC). If the parser's grammar changes, this fails before the
-//      landing starts showing a parse the product would no longer do.
+//      exact position the demo's chips claim (XAUUSD short, entry 4,234,
+//      stop 4,244 = 10 pips, target 4,214 = 20 pips, size 0.02 lots, risk
+//      $20 = 0.2% derived from the size on the labelled $10,000 demo
+//      account, close P&L +$40). If the parser's grammar or the pip model
+//      changes, this fails before the landing shows a parse the product
+//      would no longer do.
 //   2. The ticker strips in index.html must carry a price + delta node for
-//      every symbol app.js polls, in both marquee halves, and the "delayed"
-//      label must actually be printed.
+//      every symbol app.js polls, in every strip (marquee halves, dashboard
+//      pair, sticky dock), and the "live · 5s" label must be printed while
+//      the poll loop actually runs at 5s with no skip.
 //
 // Run: node tests/landingDemo.check.mjs
 import assert from "node:assert/strict";
@@ -26,31 +29,55 @@ const command = commandMatch[1];
 
 const parsed = parseQuickTrade(command);
 assert.ok(parsed.ok, `demo command "${command}" no longer parses: ${parsed.error}`);
-assert.equal(parsed.value.symbol, "BTCUSDT", "demo symbol chip is wrong");
-assert.equal(parsed.value.direction, "Buy", "demo LONG chip is wrong");
-assert.equal(parsed.value.entryPrice, 118400, "demo entry chip is wrong");
-assert.equal(parsed.value.stopLoss, 117900, "demo stop chip is wrong");
-assert.equal(parsed.value.riskPercent, 1, "demo risk chip is wrong");
+assert.equal(parsed.value.symbol, "XAUUSD", "demo symbol chip is wrong");
+assert.equal(parsed.value.direction, "Sell", "demo SHORT chip is wrong");
+assert.equal(parsed.value.entryPrice, 4234, "demo entry chip is wrong");
+assert.equal(parsed.value.stopLoss, 4244, "demo stop chip is wrong");
+assert.equal(parsed.value.takeProfit, 4214, "demo target chip is wrong");
+assert.equal(parsed.value.positionSize, 0.02, "demo size chip is wrong");
 
-// The demo states a $10,000 account, so risk 1% = $100 and size = $100 over
-// the $500 stop distance = 0.2 BTC. These figures are hard-coded in the demo
-// chips, the toast and the close-sheet header — all four must agree.
+// XAUUSD pip model: pip size 1.0, $100 per pip per 1.0 lot. Stop distance 10
+// = 10 pips, target distance 20 = 20 pips, so at 0.02 lots the risk is $20
+// (0.2% of the labelled $10,000 demo account) and the winning close is +$40.
+// These figures are hard-coded in the demo chips, the toast, and the
+// close-sheet header — all of them must agree with the arithmetic.
+const PIP_SIZE = 1;
+const PIP_VALUE_PER_LOT = 100;
 const DEMO_BALANCE = 10000;
-const riskAmount = (DEMO_BALANCE * parsed.value.riskPercent) / 100;
-assert.equal(riskAmount, 100);
-const size = riskAmount / Math.abs(parsed.value.entryPrice - parsed.value.stopLoss);
-assert.equal(size, 0.2);
-for (const claim of ["risk 1% = $100", "size 0.20 BTC"]) {
+const stopPips = Math.abs(parsed.value.entryPrice - parsed.value.stopLoss) / PIP_SIZE;
+const targetPips = Math.abs(parsed.value.entryPrice - parsed.value.takeProfit) / PIP_SIZE;
+assert.equal(stopPips, 10);
+assert.equal(targetPips, 20);
+const riskAmount = stopPips * PIP_VALUE_PER_LOT * parsed.value.positionSize;
+assert.equal(riskAmount, 20);
+assert.equal((riskAmount / DEMO_BALANCE) * 100, 0.2);
+const closePnl = targetPips * PIP_VALUE_PER_LOT * parsed.value.positionSize;
+assert.equal(closePnl, 40);
+const rr = targetPips / stopPips;
+assert.equal(rr, 2);
+
+for (const claim of [
+  "stop 4,244 · 10.0 pips",
+  "risk $20.00 = 0.2% (from size)",
+  "size 0.02 lots",
+  "target 4,214 · 20.0 pips · R:R 2.00"
+]) {
   assert.ok(appJs.includes(claim), `demo chip "${claim}" missing from app.js`);
 }
-for (const claim of ["0.20 BTC at risk $100", "$10,000 demo account", "Long &middot; 0.20 BTC"]) {
+for (const claim of [
+  "0.02 lots at risk $20",
+  "$10,000 demo account",
+  "Short &middot; 0.02 lots",
+  "+$40.00",
+  "+20.0 pips"
+]) {
   assert.ok(html.includes(claim), `demo frame claim "${claim}" missing from index.html`);
 }
 // The frame must say it is a demo with sample data, out loud.
 assert.ok(html.includes("Product demo"), "the demo section lost its 'Product demo' label");
 assert.ok(/demo &middot; sample data/.test(html), "the demo frame chrome lost its 'sample data' tag");
 
-// --- 2. Ticker strips match the polled symbols, and say "delayed" ----------
+// --- 2. Ticker strips match the polled symbols, and say live · 5s ----------
 const symbolsMatch = /const TICKER_SYMBOLS = \[([^\]]+)\];/.exec(appJs);
 assert.ok(symbolsMatch, "TICKER_SYMBOLS no longer in app.js");
 const symbols = [...symbolsMatch[1].matchAll(/"([A-Z]+)"/g)].map((m) => m[1]);
@@ -59,16 +86,22 @@ assert.ok(symbols.length >= 2, "ticker pair shrank below two symbols");
 for (const symbol of symbols) {
   const prices = html.split(`data-ticker-price="${symbol}"`).length - 1;
   const deltas = html.split(`data-ticker-delta="${symbol}"`).length - 1;
-  // Landing marquee halves (2) + dashboard pair (1) = 3 of each.
-  assert.equal(prices, 3, `${symbol}: expected 3 price nodes (2 marquee halves + dashboard), found ${prices}`);
-  assert.equal(deltas, 3, `${symbol}: expected 3 delta nodes, found ${deltas}`);
+  // Landing marquee halves (2) + dashboard pair (1) + sticky dock (1) = 4.
+  assert.equal(prices, 4, `${symbol}: expected 4 price nodes (2 marquee halves + dashboard + dock), found ${prices}`);
+  assert.equal(deltas, 4, `${symbol}: expected 4 delta nodes, found ${deltas}`);
 }
-const strips = html.split('data-ticker-strip').length - 1;
-assert.equal(strips, 2, `expected the landing strip + dashboard pair, found ${strips} [data-ticker-strip]`);
-assert.ok(/lnd-ticker-tag">delayed</.test(html), "the landing ticker lost its 'delayed' label");
-assert.ok(/dash-ticker-tag">delayed</.test(html), "the dashboard ticker lost its 'delayed' label");
+const strips = html.split("data-ticker-strip").length - 1;
+assert.equal(strips, 3, `expected the landing strip + dashboard pair + sticky dock, found ${strips} [data-ticker-strip]`);
+
+// "live · 5s" may only be printed while it is true: one shared loop at 5s,
+// no skip-every-other-tick branch for the landing.
+assert.ok(/lnd-ticker-tag">live/.test(html), "the landing ticker lost its 'live · 5s' label");
+assert.ok(/dash-ticker-tag">live/.test(html), "the dashboard ticker lost its 'live · 5s' label");
+assert.ok(!/delayed/i.test(html), "a leftover 'delayed' label still in index.html");
+assert.ok(/const LIVE_PRICE_REFRESH_MS = 5000;/.test(appJs), "the poll cadence moved off 5s — relabel the strips");
+assert.ok(!appJs.includes("livePriceTickCount"), "the landing skip-tick branch is back — that makes 'live · 5s' a lie");
 
 console.log(
-  `landingDemo.check.mjs: OK — "${command}" parses to the position the demo claims; ` +
-    `${symbols.join("/")} nodes present in both strips with the delayed label`
+  `landingDemo.check.mjs: OK — "${command}" parses to the position the demo claims (risk $20, +$40 close); ` +
+    `${symbols.join("/")} nodes present in all three strips with the live · 5s label`
 );

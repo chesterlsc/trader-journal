@@ -108,7 +108,7 @@ const row = (over) => ({ id: "t", asset: "BTCUSDT", direction: "Buy", status: "c
 // 6. Empty feed still says which feed is empty.
 {
   const { ui } = harness({ trades: [] });
-  assert.match(ui.recentTradesList.innerHTML, /No closed trades on the public feed yet\./);
+  assert.match(ui.recentTradesList.innerHTML, /No closed trades on Leon\u2019s feed yet\./);
   assert.equal(ui.lndTapeCount.hidden, true);
 }
 

@@ -38,21 +38,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260313-metallic" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260315-apple-touch" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260807-pipslive" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260807-pipslive" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260806-landingv3" />
+    <link rel="stylesheet" href="styles.css?v=20260807-pipslive" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260806-demoloop" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260807-pipslive" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260806-landingv3" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260807-pipslive" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -138,15 +138,15 @@
           <section class="lnd-tape" aria-label="Recent closed trades">
             <div class="lnd-tape-head">
               <span class="live-pulse-dot" aria-hidden="true"></span>
-              <span class="lnd-tape-title">Live tape &middot; real journals</span>
-              <span class="lnd-tape-delay">delayed</span>
+              <span class="lnd-tape-title">Leon trades &middot; live tape</span>
+              <span class="lnd-tape-delay">live &middot; 5s</span>
             </div>
             <div class="lnd-tape-list" id="recentTradesList"></div>
             <!-- Copy is re-stamped by renderHeroRecentTrades: it must never
                  call a demo/preview journal "the public feed". -->
             <p class="lnd-tape-note" id="lndTapeNote">
-              Raised rows made money. Sunk rows lost it. Nothing here is a mock-up — it is the public feed,
-              one row per closed trade.
+              Raised rows made money. Sunk rows lost it. Nothing here is a mock-up — it is Leon&rsquo;s
+              public feed, one row per closed trade from his real journal.
             </p>
           </section>
 
@@ -175,8 +175,8 @@
            single price loop polls it at a 10s cadence; prices are cached in
            sessionStorage so a revisit paints instantly, and a failed poll
            keeps the last known price with a "stale" marker — never a blank.
-           "delayed" is printed because it is true. -->
-      <div class="lnd-ticker" data-ticker-strip aria-label="Live prices for Bitcoin and gold, delayed">
+           the 5s cadence is printed because it is true. -->
+      <div class="lnd-ticker" data-ticker-strip aria-label="Live prices for Bitcoin and gold, refreshed every 5 seconds">
         <div class="lnd-ticker-track">
           <div class="lnd-ticker-group">
             <span class="lnd-ticker-item">
@@ -189,7 +189,7 @@
               <span class="lnd-ticker-price" data-ticker-price="XAUUSD">&mdash;</span>
               <span class="lnd-ticker-delta" data-ticker-delta="XAUUSD"></span>
             </span>
-            <span class="lnd-ticker-tag">delayed</span>
+            <span class="lnd-ticker-tag">live &middot; 5s</span>
             <span class="lnd-ticker-tag lnd-ticker-stale">stale &middot; last known</span>
           </div>
           <!-- Verbatim duplicate: the marquee loop needs two identical halves.
@@ -205,7 +205,7 @@
               <span class="lnd-ticker-price" data-ticker-price="XAUUSD">&mdash;</span>
               <span class="lnd-ticker-delta" data-ticker-delta="XAUUSD"></span>
             </span>
-            <span class="lnd-ticker-tag">delayed</span>
+            <span class="lnd-ticker-tag">live &middot; 5s</span>
             <span class="lnd-ticker-tag lnd-ticker-stale">stale &middot; last known</span>
           </div>
         </div>
@@ -253,18 +253,18 @@
                   <p class="cmdk-status is-ok" id="lndDemoStatus" hidden>Enter opens this position.</p>
                 </div>
               </div>
-              <p class="lnd-demo-toast" id="lndDemoToast" hidden>BTCUSDT long opened &middot; 0.20 BTC at risk $100</p>
+              <p class="lnd-demo-toast" id="lndDemoToast" hidden>XAUUSD short opened &middot; 0.02 lots at risk $20</p>
             </div>
 
             <div class="lnd-demo-scene" data-demo-scene="close">
               <header class="jrn-head">
                 <div class="jrn-id">
                   <p class="jrn-kicker">Closed &middot; demo trade</p>
-                  <h3 class="jrn-symbol">BTCUSDT <span class="jrn-meta">Long &middot; 0.20 BTC</span></h3>
+                  <h3 class="jrn-symbol">XAUUSD <span class="jrn-meta">Short &middot; 0.02 lots</span></h3>
                 </div>
                 <div class="jrn-result">
-                  <p class="jrn-net is-pos">+$212.00</p>
-                  <p class="jrn-sub">sample numbers</p>
+                  <p class="jrn-net is-pos">+$40.00</p>
+                  <p class="jrn-sub">+20.0 pips &middot; sample numbers</p>
                 </div>
               </header>
               <div class="jrn-block">
@@ -730,8 +730,8 @@
 
             <!-- Compact live pair — patched by the SAME 5s loop that feeds the
                  open-position ticker (renderTickerPair runs off
-                 refreshLivePrices); no second poll. Delayed, and it says so. -->
-            <div class="dash-tickers" data-ticker-strip aria-label="Live prices, delayed">
+                 refreshLivePrices); no second poll. 5s cadence, and it says so. -->
+            <div class="dash-tickers" data-ticker-strip aria-label="Live prices, refreshed every 5 seconds">
               <span class="dash-ticker">
                 <span class="dash-ticker-sym">BTC</span>
                 <span class="dash-ticker-price" data-ticker-price="BTCUSDT">&mdash;</span>
@@ -742,7 +742,26 @@
                 <span class="dash-ticker-price" data-ticker-price="XAUUSD">&mdash;</span>
                 <span class="dash-ticker-delta" data-ticker-delta="XAUUSD"></span>
               </span>
-              <span class="dash-ticker-tag">delayed</span>
+              <span class="dash-ticker-tag">live &middot; 5s</span>
+              <span class="dash-ticker-tag lnd-ticker-stale">stale</span>
+            </div>
+
+            <!-- Sticky twin of the pair above: fixed to the top edge, slid in
+                 by setupStickyDashTicker once .dash-head scrolls out. Same
+                 [data-ticker-*] nodes, so the 5s poll patches it for free;
+                 aria-hidden because it only duplicates the strip above. -->
+            <div class="dash-ticker-dock" id="dashTickerDock" data-ticker-strip aria-hidden="true">
+              <span class="dash-ticker">
+                <span class="dash-ticker-sym">BTC</span>
+                <span class="dash-ticker-price" data-ticker-price="BTCUSDT">&mdash;</span>
+                <span class="dash-ticker-delta" data-ticker-delta="BTCUSDT"></span>
+              </span>
+              <span class="dash-ticker">
+                <span class="dash-ticker-sym">XAU</span>
+                <span class="dash-ticker-price" data-ticker-price="XAUUSD">&mdash;</span>
+                <span class="dash-ticker-delta" data-ticker-delta="XAUUSD"></span>
+              </span>
+              <span class="dash-ticker-tag">live &middot; 5s</span>
               <span class="dash-ticker-tag lnd-ticker-stale">stale</span>
             </div>
 
@@ -1528,7 +1547,7 @@
                     </label>
                     <label>
                       Take Profit
-                      <input id="takeProfit" name="takeProfit" type="number" min="0" step="0.0001" required />
+                      <input id="takeProfit" name="takeProfit" type="number" min="0" step="0.0001" />
                     </label>
                     <label class="trade-status-toggle field-span-2">
                       <input id="tradeInProgress" name="tradeInProgress" type="checkbox" />
@@ -2196,7 +2215,7 @@
 
           <label class="sheet-field">
             <span class="sheet-label">Stop</span>
-            <input id="sheetStop" class="sheet-input" type="text" inputmode="decimal" autocomplete="off" placeholder="117900" />
+            <input id="sheetStop" class="sheet-input" type="text" autocomplete="off" placeholder="117900 or 10p" />
           </label>
 
           <div class="sheet-field sheet-field-wide">
@@ -2606,6 +2625,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260806-demoloop"></script>
+    <script type="module" src="app.js?v=20260807-pipslive"></script>
   </body>
 </html>

@@ -2330,3 +2330,32 @@ User-reported: the demo's Execution grades rendered as floating labels above emp
 2. The final timeline step had `ms: 0` and the player halted there — worse, the IntersectionObserver's resume condition (`index < last`) could never re-fire it, so the demo stayed frozen on the saved frame forever. The timeline now holds the saved frame 2.6s and wraps to step 0; resume works from any index; a thin oxide progress rail under the caption makes the cycle legible. Verified by sampling the live player over 28s: two clean wraps (100% → 0% → 100% → 0%), captions cycling correctly.
 
 28/28 test files green.
+
+## 2026-08-07 — Pips-first journaling, live·5s, Leon trades, sticky dock
+
+- **Bug (mobile card):** `#takeProfit` was `required` in the full form while the
+  sheet hands off `takeProfit: 0` — the sheet → Add detail → Save path failed as
+  a silent native-validation focus jump. TP is now optional (empty = no target),
+  with side-of-entry validation only when one is typed. Edit fill renders 0 as "".
+- **Pips input:** parser accepts pip-distance stops/targets — `sl 10p`,
+  `sl 10 pips`, `tp 20p` — recorded as `stopPips`/`targetPips` distances;
+  `resolvePipDistances()` (app.js) turns them into prices against entry via
+  getPipSpec, through the new `parseTradeCommand()` wrapper at all three
+  capture call sites. Postfix lot size (`0.02 lots`) claims only the adjacent
+  number. Sheet STOP box takes `10p`/`10 pips` too (one choke point:
+  readSheetValues); placeholder says so. Exact prices unchanged everywhere.
+- **Risk from size:** `estimateRiskFromSize()` — explicit size with no risk% /
+  cash now derives the risk chip: `risk $20.00 = 0.2% (from size)`.
+- **Demo:** command is now `xauusd short 4234 sl 4244 tp 4214 0.02 lots`; chips,
+  toast, close scene (+$40.00 · +20.0 pips) recomputed from the real pip model
+  and pinned by tests/landingDemo.check.mjs.
+- **Live pricing:** the landing skip-every-2nd-tick branch is gone — one 5s
+  loop for both shells; every "delayed" label replaced with "live · 5s" (the
+  test now fails if the cadence and the label ever disagree). Stale marker kept.
+- **Sticky dock:** `#dashTickerDock` — a fixed top-center twin of the dashboard
+  pair, patched by the same render path, slid in by a plain scroll listener once
+  .dash-head scrolls out (rAF throttle deliberately absent: a queued frame in a
+  hidden tab never runs and jams the guard).
+- **Leon trades:** public tape renamed ("Leon trades · live tape"), captions and
+  empty state updated; feed still env-driven (PUBLIC_RECENT_TRADES_USERNAME).
+- Cache busters unified to `?v=20260807-pipslive`. All 26 tests pass.

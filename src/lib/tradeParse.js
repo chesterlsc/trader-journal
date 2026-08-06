@@ -41,6 +41,7 @@ const STOP_WORDS = new Set(["SL", "STOP", "STOPLOSS", "X"]);
 const TARGET_WORDS = new Set(["TP", "TARGET", "TAKEPROFIT", "T"]);
 const SIZE_WORDS = new Set(["SIZE", "QTY", "LOTS", "LOT", "UNITS"]);
 const RISK_WORDS = new Set(["RISK", "R"]);
+const PIP_WORDS = new Set(["PIPS", "PIP", "P"]);
 const ENTRY_WORDS = new Set(["ENTRY", "E", "AT", "@"]);
 const NOISE_WORDS = new Set(["A", "AN", "THE", "FOR", "WITH", "OF", "GO", "GOING", "TAKE"]);
 
@@ -113,7 +114,11 @@ export function parseQuickTrade(input) {
     takeProfit: 0,
     riskPercent: 0,
     riskCash: 0,
-    positionSize: 0
+    positionSize: 0,
+    // Pip-DISTANCE forms ("sl 10p", "tp 20 pips") land here; the app resolves
+    // them into prices against entry, because only it knows the pip spec.
+    stopPips: 0,
+    targetPips: 0
   };
 
   const tokens = String(input || "")
@@ -129,9 +134,24 @@ export function parseQuickTrade(input) {
   const bareNumbers = [];
   let pending = "";
   let unknown = "";
+  let prevWasBareNumber = false;
+  let lastConsumed = "";
 
   for (const token of tokens) {
     const word = token.toUpperCase();
+    const followsBareNumber = prevWasBareNumber;
+    prevWasBareNumber = false;
+    const prevConsumed = lastConsumed;
+    lastConsumed = "";
+
+    // Glued pip distance: "sl 10p" / "tp 2.5p".
+    if ((pending === "stop" || pending === "target") && /^\d*\.?\d+p$/i.test(token)) {
+      const amount = Number(token.replace(/p$/i, ""));
+      if (pending === "stop") value.stopPips = amount;
+      else value.targetPips = amount;
+      pending = "";
+      continue;
+    }
 
     if (pending && isNumeric(token)) {
       const amount = toNumber(token);
@@ -144,14 +164,39 @@ export function parseQuickTrade(input) {
         if (/\$/.test(token)) value.riskCash = amount;
         else value.riskPercent = amount;
       }
+      lastConsumed = pending;
       pending = "";
       continue;
     }
     pending = "";
 
+    // "sl 10 pips": the 10 was just consumed as a stop PRICE — the unit word
+    // retro-tags it as a distance. Only the immediately preceding assignment
+    // qualifies, so "tp 4214 0.02 pips" can never re-tag the 4214.
+    if (PIP_WORDS.has(word)) {
+      if (prevConsumed === "stop" && value.stopLoss > 0) {
+        value.stopPips = value.stopLoss;
+        value.stopLoss = 0;
+      } else if (prevConsumed === "target" && value.takeProfit > 0) {
+        value.targetPips = value.takeProfit;
+        value.takeProfit = 0;
+      }
+      continue;
+    }
+
     if (STOP_WORDS.has(word)) { pending = "stop"; continue; }
     if (TARGET_WORDS.has(word)) { pending = "target"; continue; }
-    if (SIZE_WORDS.has(word)) { pending = "size"; continue; }
+    if (SIZE_WORDS.has(word)) {
+      // Both orders are natural speech: "size 0.02" (unit first) sets pending;
+      // "0.02 lots" (number first) claims ONLY the immediately preceding
+      // number — a greedy pop would steal positional entry/stop/target.
+      if (!value.positionSize && followsBareNumber && bareNumbers.length) {
+        value.positionSize = bareNumbers.pop();
+      } else {
+        pending = "size";
+      }
+      continue;
+    }
     if (ENTRY_WORDS.has(word)) { pending = "entry"; continue; }
     if (RISK_WORDS.has(word)) { pending = "risk"; continue; }
     if (LONG_WORDS.has(word)) { value.direction = "Buy"; continue; }
@@ -168,6 +213,7 @@ export function parseQuickTrade(input) {
     }
     if (isNumeric(token)) {
       bareNumbers.push(toNumber(token));
+      prevWasBareNumber = true;
       continue;
     }
     if (/^[A-Z0-9]{2,12}$/.test(word) && !value.symbol) {
@@ -182,8 +228,8 @@ export function parseQuickTrade(input) {
   // Positional fallback: bare numbers fill entry, then stop, then target —
   // the order the sentence says them.
   if (!value.entryPrice && bareNumbers.length) value.entryPrice = bareNumbers.shift();
-  if (!value.stopLoss && bareNumbers.length) value.stopLoss = bareNumbers.shift();
-  if (!value.takeProfit && bareNumbers.length) value.takeProfit = bareNumbers.shift();
+  if (!value.stopLoss && !value.stopPips && bareNumbers.length) value.stopLoss = bareNumbers.shift();
+  if (!value.takeProfit && !value.targetPips && bareNumbers.length) value.takeProfit = bareNumbers.shift();
 
   value.market = value.symbol ? inferMarket(value.symbol) : "";
 
@@ -199,13 +245,13 @@ export function parseQuickTrade(input) {
   if (!(value.entryPrice > 0)) {
     return { ok: false, error: "No entry price yet.", value };
   }
-  if (!(value.stopLoss > 0)) {
+  if (!(value.stopLoss > 0) && !(value.stopPips > 0)) {
     return { ok: false, error: "No stop yet — a trade with no stop has no size.", value };
   }
-  if (value.direction === "Buy" && value.stopLoss >= value.entryPrice) {
+  if (value.stopLoss > 0 && value.direction === "Buy" && value.stopLoss >= value.entryPrice) {
     return { ok: false, error: "Long: the stop must sit below entry.", value };
   }
-  if (value.direction === "Sell" && value.stopLoss <= value.entryPrice) {
+  if (value.stopLoss > 0 && value.direction === "Sell" && value.stopLoss <= value.entryPrice) {
     return { ok: false, error: "Short: the stop must sit above entry.", value };
   }
   if (value.takeProfit > 0) {

@@ -40,13 +40,13 @@ export function createRecentTradesView(deps) {
     ui.recentTradesList.innerHTML = closedTrades.length
       ? closedTrades.slice(0, TAPE_ROW_LIMIT).map(renderTapeRow).join("")
       : `<p class="lnd-tape-empty">${
-          isOwnJournal ? "No closed trades in this journal yet." : "No closed trades on the public feed yet."
+          isOwnJournal ? "No closed trades in this journal yet." : "No closed trades on Leon\u2019s feed yet."
         }</p>`;
 
     if (ui.lndTapeNote) {
       ui.lndTapeNote.textContent = isOwnJournal
         ? "Raised rows made money. Sunk rows lost it. These are closed trades from the journal open in this browser."
-        : "Raised rows made money. Sunk rows lost it. Nothing here is a mock-up — it is the public feed, one row per closed trade.";
+        : "Raised rows made money. Sunk rows lost it. Nothing here is a mock-up — it is Leon\u2019s public feed, one row per closed trade from his real journal.";
     }
 
     renderTapeWeekCount(closedTrades);
