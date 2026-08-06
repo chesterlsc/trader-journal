@@ -2143,3 +2143,97 @@ device — a trader with no prop account and no `dailyMaxLoss` set sees no numbe
 at all, which is honest but means the most-common new-account case gets a rail
 that is brand-and-toggle. That is still 44px against the old 88px, so it is not a
 regression; it just is not yet earning.
+
+## Clay V3 phase 1 — gunmetal + oxide (2026-08-06)
+
+The renovation's third skin, and the first phase of V3: masculinity and
+discipline. `clay-v3.css` is a drop-in token layer loaded AFTER `clay-v2.css`
+in index.html, shipped as the default. V2's structure (radii, depth-as-data,
+component geometry) survives untouched underneath; V3 only retones.
+
+**Dark is primary.** Cold gunmetal ground (`--surface-0: #14161a`), steel
+surfaces (`#1d2126` family), machined hairlines (`#2b313a`/`#3d4552`). The
+FOUC guard in the head and `getStoredTheme()` in app.js flipped TOGETHER (the
+comment pair marks them): `localStorage 'light'` is now the stored opt-in,
+everything else — including blocked storage — falls to dark. Users who
+explicitly chose a theme keep it; only the default moves.
+
+**Violet dies.** Burnt oxide (#c2410c family) is the single interaction
+accent — primary CTA, active nav, focus ring, chart line — and it is TUNED,
+not pasted: the raw #c2410c measures 3.1:1 on gunmetal, a body-text fail, so
+dark lifts it to `#f0763d` (4.63:1 worst case, on the muted fill) and light
+darkens it to `#a83508` (4.94:1 on the inset well) with white CTA labels
+still at 6.6:1 on top. Every accent-derived token re-derived on oxide in both
+themes: `--chart-line/glow/halo/area` family, `--halo-accent`, aurora a/fade,
+`--landing-grid-line`, `--floor-glow`, `--deck-wash`, `--line-accent`,
+`--clay-accent`, `--focus-ring`. The two literal `hsl(265 …)` consumers in
+clay-v2 (`.sheet-rules` inset, `.rev-chip.is-active` both themes) are
+overridden; a regex guard in the new test keeps the four V2 violet hexes and
+their rgba forms out of clay-v3/styles/index/app forever.
+
+**Light is concrete, not cream.** Re-derived cold from `#e6e8ea`, never
+inverted: cards `#f0f2f4`, wells `#dde0e4`, cool ink text (`#191c1f`,
+`#566068`). `--warn`/`--info` darkened one step (`#7d520b`/`#0b607c`) to hold
+4.5:1 on the new lighter card. Money green/red stay money-only: light keeps
+V2's `#146b49`/`#b32b4f` (measured, they hold on concrete); dark keeps
+`#3ecf8e` and lifts rose to `#f7758d` because V2's `#f5637f` measured 4.43:1
+on `--surface-3` — under the body floor.
+
+**Depth-as-data survives on a dark primary ground.** Both clay stacks
+re-derived cold: dark clay is deep 220-hue drops plus a whisper of cool top
+light at 0.10–0.15 alpha; pressed wells are machined recesses
+(`inset hsl(220 45% 2% / 0.72)`). Every warm-hsl component shadow clay-v2
+hard-codes is re-cast for both themes with the same geometry and the same
+intensity ramps: calendar cells (+flat wells, which V2 never even re-derived
+for dark), calendar legend, journal win/loss rows, `.dash-spark-wrap`, and
+all four dialog backdrops. The seg long/short buttons keep their 155/345
+drops — those are money-tinted, not warm-clay.
+
+**Labels on bright fills.** clay-v2 hard-codes `color: #fff` on seven
+oxide/money chips (`.tabbar-badge`, `.topnav-badge`, `.dash-alert-mark`,
+`.dash-unj-count`, `.dash-unj-chevron`, both active seg buttons). In dark the
+fills are now bright and white fails on them (white on `#f7758d` = 2.7:1 — a
+V2 latent bug: white on V2's dark rose already measured 3.0:1). All seven go
+to `var(--text-inverse)`, which flips per theme and measures ≥ 4.5:1 on both
+fills in both themes — now a tested pairing.
+
+**Wordmark.** Single colour (`--text` on both words — a logo is not an
+interaction, so it does not get the accent), single weight, tighter tracking
+(−0.06em). The TJ monogram is a squared ink stamp: flat `--text` fill,
+`--surface-0` glyph, 9–10px radius, one hairline edge, no clay — across
+topnav, landing topbar and auth shell, ids/classes untouched
+(`PRODUCT_BRAND_MARKUP` in app.js unchanged). The stamp override tied with
+§10h's focus restoration on `.topnav-mark.is-active`, so the ring is
+restored explicitly after it.
+
+**Measurement, not taste.** New `tests/clayV3Contrast.check.mjs` parses the
+top-level token blocks of all three sheets, merges them in true cascade
+order per theme, resolves `var()` chains, composites every alpha colour over
+its real backdrop, and checks **106 pairings** (53 × both themes): all text
+tones × all five surfaces, accent-as-text on every surface AND on the muted
+fill, inverse labels on accent/money fills, money on soft fills, status on
+soft fills, chart axis on both canvas ends, tooltip body, deck numerals at
+3:1, and `--control-edge` + focus ring at 3:1 against card and page
+(1.4.11). Both control edges had to be re-cut for the new grounds
+(`#6b7684` dark, `#75808b` light — V2's values measured 2.6–2.9:1). The
+same file guards the violet ban, asserts clay-v3 overrides all 20
+accent-derived tokens in both blocks, and asserts no oxide hex lands in any
+JS file — charts stay zero-JS, reading tokens via `getComputedStyle` on
+`themechange`.
+
+**Verification.** `node --check` on app.js clean; **27/27 test files green**
+(26 prior + the new harness); clay-v3.css braces balanced (30/30); zero
+undefined `var()` beyond the two inline-stamped intensity vars; curl of
+127.0.0.1:8000 confirms the served page carries the `=== "light"` guard, the
+`clay-v3.css?v=20260806-clayv3` link and the `#14161a`/`#e6e8ea`
+theme-colors. Cache busters → `v=20260806-clayv3` on all three sheets.
+No new animations; every existing one keeps its static final state under
+`prefers-reduced-motion`.
+
+**The honest reservation.** Oxide tuned for AA is brighter (dark) and deeper
+(light) than the #c2410c swatch the direction named — the burnt-metal
+character survives, the exact pixel does not, because a failing accent does
+not ship. And this phase retones V2's component shadows from outside;
+clay-v2.css still contains the warm literals it overrides. A later V3 phase
+that touches those components should fold the cold values in and delete the
+overrides rather than stacking a third opinion.

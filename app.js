@@ -989,13 +989,13 @@ function init() {
   checkAuthSession();
 }
 
-// Clay V2: light is the primary theme, dark is the stored opt-out. Must stay
+// Clay V3: dark is the primary theme, light is the stored opt-in. Must stay
 // in agreement with the FOUC guard in index.html <head> or the page flashes.
 function getStoredTheme() {
   try {
-    return localStorage.getItem(THEME_STORAGE_KEY) === "dark" ? "dark" : "light";
+    return localStorage.getItem(THEME_STORAGE_KEY) === "light" ? "light" : "dark";
   } catch (error) {
-    return "light";
+    return "dark";
   }
 }
 
