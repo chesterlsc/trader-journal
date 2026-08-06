@@ -2237,3 +2237,81 @@ not ship. And this phase retones V2's component shadows from outside;
 clay-v2.css still contains the warm literals it overrides. A later V3 phase
 that touches those components should fold the cold values in and delete the
 overrides rather than stacking a third opinion.
+
+---
+
+## Phase — Animated landing on V3 (2026-08-06)
+
+**What shipped.** The landing rebuilt as a living page on the gunmetal/oxide
+tokens: hero motion, a real live-price ticker strip, and a scripted product
+demo that replays the actual journalling flows — plus the same ticker pair,
+compact, in the dashboard header.
+
+**1. Hero motion.** A fixed `.lnd-atmo` layer (two oversized radial sheets on
+46s/38s alternating transform loops — no `filter: blur`, gradients rasterise
+once and only transform) drifts behind the dot grid. The live-count badge
+gets an oxide scanline sweep (`lndScan`, translateX only, final state
+off-canvas). The three headline lines are now blocks staggered in with
+`lndLineIn` (120ms + 110ms/line). Tape rows enter with a depth flip
+(`lndRowFlip`, perspective rotateX, delay off the `--row-order` var the
+renderer already stamps). Everything is transform/opacity and everything is
+killed to its complete final state by the global reduced-motion block.
+
+**2. Live ticker.** `.lnd-ticker` is a marquee strip (two identical halves,
+`translateX(-50%)` loop, hover/focus pauses it) showing BTCUSDT + XAUUSD from
+the public `live_prices` endpoint. No new poll loop anywhere: the single
+existing 5s loop now always tracks the pair (`collectTrackedSymbols`) and
+skips every second tick while logged out, so the landing polls at 10s and the
+authenticated dashboard keeps its 5s loop — `renderTickerPair` runs off the
+same `refreshLivePrices` success path that feeds `patchLiveNodes`, patching
+every `[data-ticker-price]`/`[data-ticker-delta]` node in place (marquee
+duplicates and the new `.dash-tickers` header pair included) with a pnl-tick
+flash and a signed delta vs the previous rendered poll in money colours. Last
+prices cache to sessionStorage (`axiom_journal_ticker_v1`): a revisit paints
+instantly, marked **stale · last known** (`--warn` tag + dimmed price) until
+the first fresh poll lands, and a failed poll re-marks stale rather than ever
+blanking. "delayed" is printed on both strips because it is true.
+
+**3. Product demo, not a fake video.** `.lnd-demo` is a device frame built
+from the live component classes (`cmdk-well/-line/-chips/-status`,
+`jrn-head/-chips/-grades/-note`, `sheet-submit`) replaying a deterministic
+timeline: the command line typed character-by-character with parse chips
+popping at the exact token boundaries, Enter, the open toast; then the close
+sheet — mood tap, grade tap, a typed note, Save (pressed clay + oxide halo).
+One state object derives every frame, so autoplay (IntersectionObserver:
+starts on first sight, pauses off-viewport, resumes in place), Replay, and
+the reduced-motion mode — final composed frame + a "Play demo" button that
+steps the keyframes statically — all render identical pixels. The frame is
+aria-hidden; `#lndDemoCaption` (role=status) narrates for AT. Labelled
+"Product demo" and "demo · sample data"; the copy names the $10,000 demo
+account.
+
+**Honesty.** No footage, no fake `<video>`, no invented counts. The new
+`tests/landingDemo.check.mjs` pins the demo to the truth: the scripted
+command must still parse (real `parseQuickTrade`) into exactly the position
+the chips claim (risk 1% = $100, size 0.20 BTC on the stated $10,000), the
+four places that state those figures must agree, both strips must carry
+nodes for every polled symbol, and the "delayed" labels must exist. Tape
+counter and captions untouched (landingTape green).
+
+**Mobile.** ≤1080px the demo stacks; ≤760px the ticker goes full-bleed
+(negative margins matching the shell padding — exactly 100vw, overflow
+hidden, no horizontal scroll) and the demo frame runs edge-to-edge keeping
+its clay radius. All new type ≥ 11px (`--fs-micro` floor), demo chips reuse
+the 44px+ clay components.
+
+**Verification.** `node --check app.js` clean; **27/27 test files green**
+including bootOrder (all new module state above `init()`, next to
+METRIC_DELTA_SPECS), mobileFloors (1644 rules), clayV3Contrast (106 pairings;
+no oxide hex added to JS — the ticker/demo use classes and tokens only), and
+the new landingDemo check. Curl of 127.0.0.1:8000 confirms the served page
+carries the ticker nodes, demo frame and `v=20260806-landingv3` busters on
+all three sheets + app.js. Stale-tag contrast measured by hand: `--warn` on
+`--surface-0` = 9.71:1 dark / 5.54:1 light.
+
+**The honest reservation.** The demo's chip thresholds are hard-coded
+character counts, not a live parse — the new check keeps them truthful to the
+parser's OUTPUT for this one input, but a cosmetic change to chip copy in
+`renderCaptureReadout` (e.g. wording of the risk chip) would not trip it
+unless the numbers change. If the capture readout's phrasing is redesigned,
+re-sync the demo strings in the same commit.

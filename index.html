@@ -46,13 +46,13 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260806-clayv3" />
+    <link rel="stylesheet" href="styles.css?v=20260806-landingv3" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260806-clayv3" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260806-landingv3" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260806-clayv3" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260806-landingv3" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -63,6 +63,13 @@
          queries is unchanged.
          ═══════════════════════════════════════════════════════════════════ -->
     <section class="auth-shell" id="authShell" aria-label="Trader Journal">
+      <!-- V3 atmosphere: two gunmetal/oxide gradient sheets drifting on slow
+           transform loops — GPU-cheap (transform only, no filter). The global
+           reduced-motion block freezes both in their final state. -->
+      <div class="lnd-atmo" aria-hidden="true">
+        <span class="lnd-atmo-a"></span>
+        <span class="lnd-atmo-b"></span>
+      </div>
       <header class="lnd-topbar">
         <div class="lnd-brand">
           <span class="lnd-mark" aria-hidden="true">TJ</span>
@@ -89,8 +96,12 @@
             <span class="live-pulse-dot" aria-hidden="true"></span>
             <span id="lndTapeCountText"></span>
           </p>
+          <!-- Each line is a block so the reveal can stagger them; reduced
+               motion lands all three instantly via the global kill block. -->
           <h1 class="lnd-hero-title">
-            Every trade<br />you'd rather<br /><span class="lnd-hero-title-accent">not remember.</span>
+            <span class="lnd-title-line" style="--line-i: 0">Every trade</span>
+            <span class="lnd-title-line" style="--line-i: 1">you'd rather</span>
+            <span class="lnd-title-line lnd-hero-title-accent" style="--line-i: 2">not remember.</span>
           </h1>
           <p class="lnd-hero-lede">
             Log the position in eight seconds. Say what you were thinking when it closed. The journal does
@@ -159,6 +170,133 @@
           </dl>
         </div>
       </div>
+
+      <!-- LIVE TICKER — the real public prices endpoint. On the landing the
+           single price loop polls it at a 10s cadence; prices are cached in
+           sessionStorage so a revisit paints instantly, and a failed poll
+           keeps the last known price with a "stale" marker — never a blank.
+           "delayed" is printed because it is true. -->
+      <div class="lnd-ticker" data-ticker-strip aria-label="Live prices for Bitcoin and gold, delayed">
+        <div class="lnd-ticker-track">
+          <div class="lnd-ticker-group">
+            <span class="lnd-ticker-item">
+              <span class="lnd-ticker-sym">BTCUSDT</span>
+              <span class="lnd-ticker-price" data-ticker-price="BTCUSDT">&mdash;</span>
+              <span class="lnd-ticker-delta" data-ticker-delta="BTCUSDT"></span>
+            </span>
+            <span class="lnd-ticker-item">
+              <span class="lnd-ticker-sym">XAUUSD</span>
+              <span class="lnd-ticker-price" data-ticker-price="XAUUSD">&mdash;</span>
+              <span class="lnd-ticker-delta" data-ticker-delta="XAUUSD"></span>
+            </span>
+            <span class="lnd-ticker-tag">delayed</span>
+            <span class="lnd-ticker-tag lnd-ticker-stale">stale &middot; last known</span>
+          </div>
+          <!-- Verbatim duplicate: the marquee loop needs two identical halves.
+               Hidden from AT; the JS patches both copies by [data-ticker-*]. -->
+          <div class="lnd-ticker-group" aria-hidden="true">
+            <span class="lnd-ticker-item">
+              <span class="lnd-ticker-sym">BTCUSDT</span>
+              <span class="lnd-ticker-price" data-ticker-price="BTCUSDT">&mdash;</span>
+              <span class="lnd-ticker-delta" data-ticker-delta="BTCUSDT"></span>
+            </span>
+            <span class="lnd-ticker-item">
+              <span class="lnd-ticker-sym">XAUUSD</span>
+              <span class="lnd-ticker-price" data-ticker-price="XAUUSD">&mdash;</span>
+              <span class="lnd-ticker-delta" data-ticker-delta="XAUUSD"></span>
+            </span>
+            <span class="lnd-ticker-tag">delayed</span>
+            <span class="lnd-ticker-tag lnd-ticker-stale">stale &middot; last known</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ PRODUCT DEMO ═══════════════════════════════════════════════════
+           A scripted replay of the real journalling loop, built from the live
+           component markup and V3 styles — not a video file, not a mock
+           screenshot. Every number in it is sample data on a $10,000 demo
+           account and the frame says so. The frame is aria-hidden; the
+           narration line (#lndDemoCaption) carries the story for AT. Reduced
+           motion gets the final composed frame plus a static step-through. -->
+      <section class="lnd-demo" data-landing-reveal aria-labelledby="lndDemoHeading">
+        <div class="lnd-demo-copy">
+          <p class="lnd-kicker">Product demo</p>
+          <h2 id="lndDemoHeading" class="lnd-demo-title">Watch a trade get journalled.</h2>
+          <p class="lnd-demo-lede">
+            One line opens a sized position. When it closes, the journal asks for two taps and a
+            sentence. This is the real interface replaying a scripted trade &mdash; sample numbers on a
+            $10,000 demo account, no footage, nothing mocked up.
+          </p>
+          <div class="lnd-demo-controls">
+            <button class="lnd-btn lnd-btn-quiet lnd-demo-btn" type="button" id="lndDemoBtn">Replay</button>
+            <p class="lnd-demo-caption" id="lndDemoCaption" role="status" aria-live="polite"></p>
+          </div>
+        </div>
+
+        <div class="lnd-demo-frame" id="lndDemoFrame" aria-hidden="true">
+          <div class="lnd-demo-chrome">
+            <span class="lnd-demo-dot"></span><span class="lnd-demo-dot"></span><span class="lnd-demo-dot"></span>
+            <span class="lnd-demo-chrome-tag">demo &middot; sample data</span>
+          </div>
+
+          <div class="lnd-demo-stage">
+            <div class="lnd-demo-scene is-active" data-demo-scene="capture">
+              <div class="cmdk-well">
+                <div class="cmdk-line">
+                  <span class="cmdk-caret">&rsaquo;</span>
+                  <span class="cmdk-input lnd-demo-input"><span id="lndDemoTyped"></span><span class="lnd-demo-caret-bar" id="lndDemoCaretBar"></span></span>
+                  <span class="cmdk-key" id="lndDemoEnterKey">ENTER</span>
+                </div>
+                <div class="cmdk-readout">
+                  <div class="cmdk-chips" id="lndDemoChips"></div>
+                  <p class="cmdk-status is-ok" id="lndDemoStatus" hidden>Enter opens this position.</p>
+                </div>
+              </div>
+              <p class="lnd-demo-toast" id="lndDemoToast" hidden>BTCUSDT long opened &middot; 0.20 BTC at risk $100</p>
+            </div>
+
+            <div class="lnd-demo-scene" data-demo-scene="close">
+              <header class="jrn-head">
+                <div class="jrn-id">
+                  <p class="jrn-kicker">Closed &middot; demo trade</p>
+                  <h3 class="jrn-symbol">BTCUSDT <span class="jrn-meta">Long &middot; 0.20 BTC</span></h3>
+                </div>
+                <div class="jrn-result">
+                  <p class="jrn-net is-pos">+$212.00</p>
+                  <p class="jrn-sub">sample numbers</p>
+                </div>
+              </header>
+              <div class="jrn-block">
+                <p class="jrn-label">How did that feel? <span class="jrn-hint">one tap</span></p>
+                <div class="jrn-chips">
+                  <span class="jrn-chip" id="lndDemoMood" aria-pressed="false">Focused</span>
+                  <span class="jrn-chip" aria-pressed="false">Hesitant</span>
+                  <span class="jrn-chip" aria-pressed="false">Emotional</span>
+                  <span class="jrn-chip" aria-pressed="false">Revenge</span>
+                  <span class="jrn-chip" aria-pressed="false">Perfect</span>
+                </div>
+              </div>
+              <div class="jrn-block">
+                <p class="jrn-label">Execution</p>
+                <div class="jrn-grades">
+                  <span class="jrn-grade" aria-pressed="false">A+</span>
+                  <span class="jrn-grade" id="lndDemoGrade" aria-pressed="false">A</span>
+                  <span class="jrn-grade" aria-pressed="false">B</span>
+                  <span class="jrn-grade" aria-pressed="false">C</span>
+                  <span class="jrn-grade" aria-pressed="false">F</span>
+                </div>
+              </div>
+              <div class="jrn-block">
+                <p class="jrn-label">Note</p>
+                <div class="jrn-note lnd-demo-note"><span id="lndDemoNote"></span><span class="lnd-demo-caret-bar" id="lndDemoNoteCaret" hidden></span></div>
+              </div>
+              <div class="sheet-actions">
+                <span class="sheet-submit lnd-demo-save" id="lndDemoSave">Save &amp; close</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section class="lnd-value" data-landing-reveal aria-labelledby="lndValueHeading">
         <div class="lnd-value-copy">
@@ -587,6 +725,24 @@
             <div class="dash-greeting">
               <p class="dash-clock" id="dashClock"></p>
               <h2 id="dashboardHeading" class="dash-hello">Welcome back.</h2>
+            </div>
+
+            <!-- Compact live pair — patched by the SAME 5s loop that feeds the
+                 open-position ticker (renderTickerPair runs off
+                 refreshLivePrices); no second poll. Delayed, and it says so. -->
+            <div class="dash-tickers" data-ticker-strip aria-label="Live prices, delayed">
+              <span class="dash-ticker">
+                <span class="dash-ticker-sym">BTC</span>
+                <span class="dash-ticker-price" data-ticker-price="BTCUSDT">&mdash;</span>
+                <span class="dash-ticker-delta" data-ticker-delta="BTCUSDT"></span>
+              </span>
+              <span class="dash-ticker">
+                <span class="dash-ticker-sym">XAU</span>
+                <span class="dash-ticker-price" data-ticker-price="XAUUSD">&mdash;</span>
+                <span class="dash-ticker-delta" data-ticker-delta="XAUUSD"></span>
+              </span>
+              <span class="dash-ticker-tag">delayed</span>
+              <span class="dash-ticker-tag lnd-ticker-stale">stale</span>
             </div>
 
             <article id="progressTradeSummary" class="dash-live" hidden aria-label="Open positions">
@@ -2445,6 +2601,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260806-thumbsheet"></script>
+    <script type="module" src="app.js?v=20260806-landingv3"></script>
   </body>
 </html>

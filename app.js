@@ -907,6 +907,36 @@ const PROP_DISCLAIMER =
 const PROP_VISIBILITY_NOTE =
   "Computed from closed trades only. This journal never sees intraday equity or open-position P&L, so a limit that was touched and recovered from inside a session leaves no trace here.";
 
+/* ── V3 landing: live ticker pair + scripted product demo ──────────────────
+   Above init() like every other module-level binding — a const declared below
+   that call is in the temporal dead zone during the first render. */
+const TICKER_SYMBOLS = ["BTCUSDT", "XAUUSD"];
+const TICKER_CACHE_KEY = "axiom_journal_ticker_v1";
+// Last price actually rendered per symbol — the strip's delta is "vs the
+// previous poll you saw", whether that came from cache or live.
+const tickerShown = {};
+// One price loop serves both shells. The landing only needs a 10s cadence,
+// so every second 5s tick is skipped while logged out — never a second loop.
+let livePriceTickCount = 0;
+
+// Scripted product demo. One deterministic timeline drives three modes:
+// autoplay while the frame is on screen, replay on demand, and a static
+// step-through under reduced motion. Every number in it is sample data on a
+// $10,000 demo account and the frame is labelled as such — this is a replay
+// of the real components, not footage and not a mock.
+const LND_DEMO_COMMAND = "btc long 118400 sl 117900 1%";
+const LND_DEMO_NOTE_TEXT = "Waited for the retest instead of chasing it.";
+const lndDemoPlayer = {
+  steps: [],
+  keyframes: [],
+  index: 0,
+  timer: 0,
+  playing: false,
+  started: false,
+  staticMode: false,
+  ui: null
+};
+
 init();
 
 function init() {
@@ -961,6 +991,10 @@ function init() {
   setupScrollReveals();
   setupLandingReveals();
   setupDeckTilt();
+  // Cached ticker prices paint before the first poll answers, marked stale
+  // until it does; the demo player owns its own reduced-motion branch.
+  setupLandingTicker();
+  setupLandingDemo();
   startLivePriceLoop();
   // Hash router: restore the deep-linked view for preview sessions; the
   // authenticated flow restores in checkAuthSession once the gate opens.
@@ -11281,6 +11315,12 @@ function startLivePriceLoop() {
   }
 
   state.marketData.timerId = window.setInterval(() => {
+    livePriceTickCount += 1;
+    // Landing cadence: 10s is plenty for a logged-out visitor; the app keeps
+    // the full 5s. Same loop either way — never two.
+    if (!canAccessApp() && livePriceTickCount % 2 === 1) {
+      return;
+    }
     refreshLivePrices();
   }, LIVE_PRICE_REFRESH_MS);
 
@@ -11306,6 +11346,9 @@ async function refreshLivePrices(options = {}) {
   try {
     const updates = await fetchLivePricesFromBackend(symbols);
     if (Object.keys(updates).length === 0) {
+      // Failed or empty poll: the ticker keeps its last known prices on
+      // screen and marks them stale — the strip never blanks.
+      setTickerStale(true);
       return;
     }
 
@@ -11318,6 +11361,7 @@ async function refreshLivePrices(options = {}) {
     // scroll position, focus, and text selection survive every tick.
     // renderAll still owns real state mutations.
     patchLiveNodes();
+    renderTickerPair();
   } finally {
     state.marketData.inFlight = false;
   }
@@ -11442,6 +11486,305 @@ function collectTrackedSymbols() {
     }
   });
 
+  // The hero/dashboard ticker pair is always tracked, journal or no journal.
+  TICKER_SYMBOLS.forEach((symbol) => symbols.add(symbol));
+
   return Array.from(symbols);
+}
+
+/* ── Landing + dashboard ticker pair ───────────────────────────────────────
+   One render path for both strips: every [data-ticker-price] and
+   [data-ticker-delta] node is patched in place (marquee duplicates included),
+   the change flash reuses pnl-tick, and the last live prices are cached in
+   sessionStorage so a revisit paints instantly — marked stale until the
+   first fresh poll lands. */
+function setupLandingTicker() {
+  let cached = null;
+  try {
+    cached = JSON.parse(window.sessionStorage.getItem(TICKER_CACHE_KEY) || "null");
+  } catch (error) {
+    cached = null;
+  }
+  if (!cached || typeof cached !== "object") {
+    return;
+  }
+  TICKER_SYMBOLS.forEach((symbol) => {
+    const price = Number(cached[symbol]);
+    if (Number.isFinite(price) && price > 0 && !Number.isFinite(state.marketData.currentPrices[symbol])) {
+      state.marketData.currentPrices[symbol] = price;
+    }
+  });
+  renderTickerPair({ stale: true });
+}
+
+function setTickerStale(stale) {
+  document.querySelectorAll("[data-ticker-strip]").forEach((strip) => {
+    strip.classList.toggle("is-stale", Boolean(stale));
+  });
+}
+
+function renderTickerPair(options = {}) {
+  const stale = Boolean(options.stale);
+  setTickerStale(stale);
+
+  TICKER_SYMBOLS.forEach((symbol) => {
+    const price = state.marketData.currentPrices[symbol];
+    if (!Number.isFinite(price) || price <= 0) {
+      return;
+    }
+
+    const previous = tickerShown[symbol];
+    const text = formatCapturePrice(price);
+    document.querySelectorAll(`[data-ticker-price="${symbol}"]`).forEach((node) => {
+      if (node.textContent !== text) {
+        node.textContent = text;
+        if (Number.isFinite(previous)) {
+          flashPnlTick(node, price - previous);
+        }
+      }
+    });
+
+    if (Number.isFinite(previous) && price !== previous) {
+      const delta = price - previous;
+      const deltaText = `${delta > 0 ? "+" : "−"}${formatCapturePrice(Math.abs(delta))}`;
+      document.querySelectorAll(`[data-ticker-delta="${symbol}"]`).forEach((node) => {
+        node.textContent = deltaText;
+        node.classList.toggle("pnl-positive", delta > 0);
+        node.classList.toggle("pnl-negative", delta < 0);
+      });
+    }
+    tickerShown[symbol] = price;
+  });
+
+  if (!stale) {
+    try {
+      const cache = {};
+      TICKER_SYMBOLS.forEach((symbol) => {
+        if (Number.isFinite(state.marketData.currentPrices[symbol])) {
+          cache[symbol] = state.marketData.currentPrices[symbol];
+        }
+      });
+      window.sessionStorage.setItem(TICKER_CACHE_KEY, JSON.stringify(cache));
+    } catch (error) {
+      /* storage blocked: the strip still works, it just cold-starts next visit */
+    }
+  }
+}
+
+/* ── Scripted product demo ─────────────────────────────────────────────────
+   Replays the two real flows (command-bar open, close-and-journal) inside a
+   device frame built from the live component markup. Every frame is derived
+   from one small state object, so animated playback and the reduced-motion
+   step-through render pixel-identical frames. */
+function lndDemoState(overrides) {
+  return {
+    scene: "capture",
+    typed: 0,
+    entered: false,
+    toast: false,
+    mood: false,
+    grade: false,
+    note: 0,
+    saved: false,
+    ...overrides
+  };
+}
+
+function buildLndDemoTimeline() {
+  const cmdLen = LND_DEMO_COMMAND.length;
+  const noteLen = LND_DEMO_NOTE_TEXT.length;
+  const keyframes = [];
+  const steps = [];
+  const key = (frame, label, holdMs) => {
+    keyframes.push({ state: frame, label });
+    steps.push({ state: frame, label, ms: holdMs });
+  };
+  const tween = (base, prop, target, msPerChar) => {
+    for (let i = base[prop] + 1; i < target; i += 1) {
+      steps.push({ state: { ...base, [prop]: i }, ms: msPerChar });
+    }
+  };
+
+  const s0 = lndDemoState({});
+  key(s0, "The command bar. One line describes the whole trade.", 950);
+
+  tween(s0, "typed", cmdLen, 52);
+  const s1 = lndDemoState({ typed: cmdLen });
+  key(s1, "Parsed as you type — symbol, side, stop, risk, already sized.", 1500);
+
+  const s2 = lndDemoState({ typed: cmdLen, entered: true });
+  key(s2, "Enter.", 520);
+
+  const s3 = lndDemoState({ typed: cmdLen, entered: true, toast: true });
+  key(s3, "Position open, sized off 1% of the demo account.", 1700);
+
+  const s4 = lndDemoState({ scene: "close" });
+  key(s4, "The trade closed. Journalling it: two taps and a sentence.", 1300);
+
+  const s5 = lndDemoState({ scene: "close", mood: true });
+  key(s5, "Tap — how it felt.", 900);
+
+  const s6 = lndDemoState({ scene: "close", mood: true, grade: true });
+  key(s6, "Tap — how you executed.", 900);
+
+  tween(s6, "note", noteLen, 34);
+  const s7 = lndDemoState({ scene: "close", mood: true, grade: true, note: noteLen });
+  key(s7, "One honest sentence.", 900);
+
+  const s8 = lndDemoState({ scene: "close", mood: true, grade: true, note: noteLen, saved: true });
+  key(s8, "Saved. That is the whole loop.", 0);
+
+  return { keyframes, steps };
+}
+
+// Chip thresholds are the character counts at which each token of
+// LND_DEMO_COMMAND is complete — the chips appear exactly where the real
+// parser would produce them for this input on a $10,000 demo account.
+function renderLndDemoFrame(frame) {
+  const d = lndDemoPlayer.ui;
+  if (!d) {
+    return;
+  }
+
+  d.scenes.forEach((scene) => {
+    scene.classList.toggle("is-active", scene.dataset.demoScene === frame.scene);
+  });
+
+  // Scene 1 — the command bar.
+  d.typed.textContent = LND_DEMO_COMMAND.slice(0, frame.typed);
+  d.caretBar.hidden = frame.scene !== "capture" || frame.entered;
+  const chips = [];
+  if (frame.typed >= 3) chips.push('<span class="cmdk-chip cmdk-chip-accent">BTCUSDT</span>');
+  if (frame.typed >= 8) chips.push('<span class="cmdk-chip cmdk-chip-pos">LONG</span>');
+  if (frame.typed >= 15) chips.push('<span class="cmdk-chip">entry 118,400</span>');
+  if (frame.typed >= 25) chips.push('<span class="cmdk-chip">stop 117,900</span>');
+  if (frame.typed >= 28) {
+    chips.push('<span class="cmdk-chip">risk 1% = $100</span>');
+    chips.push('<span class="cmdk-chip">size 0.20 BTC</span>');
+    chips.push('<span class="cmdk-chip cmdk-chip-warn">no target — R:R unknown</span>');
+  }
+  // Rebuild only when the chip count changes, so the pop-in animation fires
+  // once per chip instead of once per keystroke.
+  if (d.chips.dataset.rendered !== String(chips.length)) {
+    d.chips.innerHTML = chips.join("");
+    d.chips.dataset.rendered = String(chips.length);
+  }
+  d.status.hidden = frame.typed < 28;
+  d.enterKey.classList.toggle("is-pressed", frame.entered);
+  d.toast.hidden = !frame.toast;
+
+  // Scene 2 — close & journal.
+  d.mood.setAttribute("aria-pressed", frame.mood ? "true" : "false");
+  d.grade.setAttribute("aria-pressed", frame.grade ? "true" : "false");
+  d.note.textContent = LND_DEMO_NOTE_TEXT.slice(0, frame.note);
+  d.noteCaret.hidden = !(frame.scene === "close" && frame.note > 0 && !frame.saved);
+  d.save.classList.toggle("is-pressed", frame.saved);
+  d.frame.classList.toggle("is-saved", frame.saved);
+}
+
+function setupLandingDemo() {
+  const frame = document.getElementById("lndDemoFrame");
+  const button = document.getElementById("lndDemoBtn");
+  const caption = document.getElementById("lndDemoCaption");
+  if (!frame || !button || !caption) {
+    return;
+  }
+
+  lndDemoPlayer.ui = {
+    frame,
+    scenes: Array.from(frame.querySelectorAll("[data-demo-scene]")),
+    typed: document.getElementById("lndDemoTyped"),
+    caretBar: document.getElementById("lndDemoCaretBar"),
+    chips: document.getElementById("lndDemoChips"),
+    status: document.getElementById("lndDemoStatus"),
+    enterKey: document.getElementById("lndDemoEnterKey"),
+    toast: document.getElementById("lndDemoToast"),
+    mood: document.getElementById("lndDemoMood"),
+    grade: document.getElementById("lndDemoGrade"),
+    note: document.getElementById("lndDemoNote"),
+    noteCaret: document.getElementById("lndDemoNoteCaret"),
+    save: document.getElementById("lndDemoSave"),
+    caption,
+    button
+  };
+
+  const { keyframes, steps } = buildLndDemoTimeline();
+  lndDemoPlayer.keyframes = keyframes;
+  lndDemoPlayer.steps = steps;
+  lndDemoPlayer.staticMode = prefersReducedMotion();
+
+  if (lndDemoPlayer.staticMode) {
+    // Reduced motion: the final composed frame, plus a button that walks the
+    // keyframes one static step per press. Nothing moves on its own.
+    lndDemoPlayer.index = keyframes.length - 1;
+    renderLndDemoFrame(keyframes[lndDemoPlayer.index].state);
+    caption.textContent = keyframes[lndDemoPlayer.index].label;
+    button.textContent = "Play demo";
+    button.addEventListener("click", () => {
+      lndDemoPlayer.index = (lndDemoPlayer.index + 1) % keyframes.length;
+      const kf = keyframes[lndDemoPlayer.index];
+      renderLndDemoFrame(kf.state);
+      caption.textContent = kf.label;
+      button.textContent = lndDemoPlayer.index === keyframes.length - 1 ? "Play demo" : "Next step";
+    });
+    return;
+  }
+
+  renderLndDemoFrame(steps[0].state);
+
+  button.addEventListener("click", () => {
+    lndDemoStop();
+    lndDemoPlayFrom(0);
+  });
+
+  // Autoplay on first sight; pause whenever the frame leaves the viewport,
+  // resume where it left off when it comes back.
+  if (!("IntersectionObserver" in window)) {
+    lndDemoPlayer.started = true;
+    lndDemoPlayFrom(0);
+    return;
+  }
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          if (!lndDemoPlayer.started) {
+            lndDemoPlayer.started = true;
+            lndDemoPlayFrom(0);
+          } else if (!lndDemoPlayer.playing && lndDemoPlayer.index < lndDemoPlayer.steps.length - 1) {
+            lndDemoPlayFrom(lndDemoPlayer.index);
+          }
+        } else if (lndDemoPlayer.playing) {
+          lndDemoStop();
+        }
+      });
+    },
+    { threshold: 0.35 }
+  );
+  observer.observe(frame);
+}
+
+function lndDemoPlayFrom(index) {
+  const step = lndDemoPlayer.steps[index];
+  if (!step) {
+    lndDemoPlayer.playing = false;
+    return;
+  }
+  lndDemoPlayer.index = index;
+  lndDemoPlayer.playing = true;
+  renderLndDemoFrame(step.state);
+  if (step.label) {
+    lndDemoPlayer.ui.caption.textContent = step.label;
+  }
+  if (index === lndDemoPlayer.steps.length - 1) {
+    lndDemoPlayer.playing = false;
+    return;
+  }
+  lndDemoPlayer.timer = window.setTimeout(() => lndDemoPlayFrom(index + 1), step.ms);
+}
+
+function lndDemoStop() {
+  window.clearTimeout(lndDemoPlayer.timer);
+  lndDemoPlayer.playing = false;
 }
 
