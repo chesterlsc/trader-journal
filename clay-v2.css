@@ -885,6 +885,71 @@ body.auth-locked .topnav {
   color: var(--pnl-neg);
 }
 
+/* The pill body is a disclosure button: tap → the pip detail row unfolds.
+   Reset the button chrome so the pill reads exactly as before, plus a caret. */
+.dash-live-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 38px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dash-live-caret {
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--text-faint);
+  border-bottom: 2px solid var(--text-faint);
+  transform: rotate(45deg);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.dash-live-pill.is-expanded .dash-live-caret {
+  transform: rotate(-135deg);
+}
+
+.dash-live-pill {
+  flex-wrap: wrap;
+}
+
+.dash-live-detail {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  padding: 8px 10px 6px;
+}
+
+.dash-live-detail[hidden] {
+  display: none;
+}
+
+.dash-live-cell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.dash-live-k {
+  color: var(--text-faint);
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dash-live-v {
+  color: var(--text);
+  font: 700 12.5px/1.2 var(--font-mono);
+  font-feature-settings: "tnum";
+}
+
 .dash-live-close {
   min-height: 38px;
   padding: 0 16px;

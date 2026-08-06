@@ -2374,3 +2374,25 @@ User-reported: the demo's Execution grades rendered as floating labels above emp
   "public feed · 60s". Hidden while the feed is empty.
 - Contract pinned in tests/landingTape.check.mjs (open-first order, no buttons,
   own-journal never leaks, hidden when empty). Busters → `?v=20260807-leontape`.
+
+## 2026-08-07 — Landing v4: open tape rows, showcase, Terminal Pro teaser; dashboard pill detail
+
+- Landing tape now leads with OPEN positions ("Open" pill, neutral depth) —
+  the reason the user "couldn't see" their live trade was the closed-only
+  filter. Week counter counts all tape rows; captions updated; test pins flipped.
+- Open-trade pills on the dashboard are disclosures: tap → entry, stop and
+  target with pip distances, plus a live ±pips cell patched by the 5s loop
+  (new livePips LIVE_FIELD_SPEC off snapshot.pips).
+- Dashboard ticker: pulse dot on the pair and the dock; on ≤1024px the dock
+  docks at 60px (under the 52px sticky rail, z 99 so menus stay above).
+- Desktop landing un-boxed: shell 1200→1320px (1560 at ≥1600px), price
+  marquee full-bleed (100vw), reveal travel 18→34px over 980ms, hero tape on
+  a slow float loop.
+- "What you get back" replaced by a three-frame showcase — phone dashboard
+  (sparkline draw loop), calendar (staggered breathe), analytics (equity draw
+  + score dial) — CSS-only loops, all labelled sample data, all frozen under
+  reduced motion.
+- Terminal Pro teaser (#terminalPro) + topbar link with SOON chip: coming-soon
+  copy ("in development" ×3, "nothing on it is live"), sample headlines on a
+  gunmetal screen, oxide flash row, blinking cursor. No live-news claims.
+- Busters → ?v=20260807-terminal. All 26 tests pass.

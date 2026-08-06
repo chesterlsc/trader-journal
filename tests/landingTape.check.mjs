@@ -44,12 +44,15 @@ function harness({ trades, canAccess = false }) {
 
 const row = (over) => ({ id: "t", asset: "BTCUSDT", direction: "Buy", status: "closed", result: "win", netPnl: 1, date: iso(1), closedAt: "", ...over });
 
-// 1. Open positions never reach the tape — the mockup is one row per CLOSED trade.
+// 1. Open positions LEAD the tape (they are the live part), closed follow —
+// and an open row always ships with its "Open" word, never a money word.
 {
   const { ui } = harness({
     trades: [row({ id: "a" }), row({ id: "b", status: "open", result: "" })]
   });
-  assert.equal((ui.recentTradesList.innerHTML.match(/class="lnd-row is-/g) || []).length, 1, "open trade leaked onto the tape");
+  const order = [...ui.recentTradesList.innerHTML.matchAll(/lnd-row (is-[a-z]+)/g)].map((m) => m[1]);
+  assert.deepEqual(order, ["is-open", "is-win"], `open row must lead the tape, got ${order}`);
+  assert.ok(ui.recentTradesList.innerHTML.includes(">Open</span>"), "open row shipped without its word");
 }
 
 // 2. Depth as data — and the result WORD travels with it, in every case.
@@ -111,7 +114,7 @@ const row = (over) => ({ id: "t", asset: "BTCUSDT", direction: "Buy", status: "c
 // 6. Empty feed still says which feed is empty.
 {
   const { ui } = harness({ trades: [] });
-  assert.match(ui.recentTradesList.innerHTML, /No closed trades on Leon\u2019s feed yet\./);
+  assert.match(ui.recentTradesList.innerHTML, /No trades on Leon\u2019s feed yet\./);
   assert.equal(ui.lndTapeCount.hidden, true);
 }
 
@@ -142,4 +145,4 @@ const row = (over) => ({ id: "t", asset: "BTCUSDT", direction: "Buy", status: "c
   assert.equal(ui.dashLeonTapeList.innerHTML, "", "Leon tape rendered rows from the wrong source");
 }
 
-console.log("OK — landing tape: closed-only, depth+word, honest counter, honest caption");
+console.log("OK — landing tape: open rows lead, depth+word, honest counter, honest caption");

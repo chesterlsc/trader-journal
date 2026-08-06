@@ -38,21 +38,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260807-leontape" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260807-leontape" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260807-terminal" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260807-terminal" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260807-leontape" />
+    <link rel="stylesheet" href="styles.css?v=20260807-terminal" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260807-leontape" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260807-terminal" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260807-leontape" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260807-terminal" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -76,6 +76,7 @@
           <span class="lnd-brand-name">Trader Journal</span>
         </div>
         <div class="lnd-topbar-actions">
+          <a class="lnd-textlink lnd-term-link" href="#terminalPro">Terminal&nbsp;Pro <span class="lnd-soon-chip">soon</span></a>
           <button id="heroLoginBtn" class="lnd-textlink" type="button">Log in</button>
           <button id="heroRegisterBtn" class="lnd-btn lnd-btn-quiet" type="button">Start free</button>
           <!-- Dev-only affordance: only rendered visible in local preview mode
@@ -299,61 +300,168 @@
         </div>
       </section>
 
-      <section class="lnd-value" data-landing-reveal aria-labelledby="lndValueHeading">
-        <div class="lnd-value-copy">
-          <p class="lnd-kicker">What you get back</p>
-          <h2 id="lndValueHeading" class="lnd-value-title">
-            The setup you love is<br />the one costing you money.
-          </h2>
+      <!-- Showcase: three looping SAMPLE frames in real component styles —
+           the phone dashboard, the calendar, the analytics. CSS-only loops
+           (transform/stroke only), each card labelled sample data, all of it
+           frozen by the global reduced-motion block. Nothing here claims to
+           be anyone's live numbers. -->
+      <section class="lnd-show" data-landing-reveal aria-labelledby="lndShowHeading">
+        <div class="lnd-show-head">
+          <p class="lnd-kicker">See it all first</p>
+          <h2 id="lndShowHeading" class="lnd-value-title">The whole product,<br />playing on a loop.</h2>
           <p class="lnd-value-lede">
-            Expectancy per setup, per session, per mood. After about thirty trades the journal starts
-            telling you things you would not have volunteered about yourself.
+            Sample data, real components. These are the same screens you get on day one — on your
+            phone and on the desk. Expectancy per setup, loss budgets that lock the desk, bulk import
+            from Vantage, Binance or a spreadsheet.
           </p>
-          <ul class="lnd-ticks">
-            <li><span class="lnd-tick" aria-hidden="true">&#10003;</span>Daily and weekly loss budgets that actually lock the desk</li>
-            <li><span class="lnd-tick" aria-hidden="true">&#10003;</span>Bulk import from Vantage, Binance or a spreadsheet</li>
-            <li><span class="lnd-tick" aria-hidden="true">&#10003;</span>Screenshots, notes and psychology attached to every row</li>
-          </ul>
         </div>
 
-        <!-- ILLUSTRATIVE. A logged-out visitor has no journal, and the public
-             feed carries no setup or P&L (whitelisted to symbol/direction/
-             result/date), so these bars cannot be real. Labelled as an example
-             in the heading, in the tag, and in the caption underneath. -->
-        <figure class="lnd-expect" aria-label="Example expectancy report — illustrative figures, not live data">
-          <figcaption class="lnd-expect-head">
-            <span class="lnd-expect-title">Expectancy by setup</span>
-            <span class="lnd-expect-tag">Example</span>
+        <div class="lnd-show-grid">
+          <figure class="lnd-show-card" aria-label="The dashboard on a phone — sample data">
+            <figcaption class="lnd-show-cap">
+              <span class="lnd-show-name">Dashboard &middot; phone</span>
+              <span class="lnd-show-tag">sample data</span>
+            </figcaption>
+            <div class="lnd-phone" aria-hidden="true">
+              <div class="lnd-phone-screen">
+                <p class="lnd-ph-label">Account balance</p>
+                <p class="lnd-ph-balance">$12,480</p>
+                <svg class="lnd-ph-spark" viewBox="0 0 200 48" preserveAspectRatio="none">
+                  <polyline class="lnd-ph-line" points="0,40 22,36 40,38 58,30 76,32 96,24 116,27 138,18 160,21 182,12 200,14" />
+                </svg>
+                <div class="lnd-ph-tiles">
+                  <div class="lnd-ph-tile"><span>Win rate</span><strong>58%</strong></div>
+                  <div class="lnd-ph-tile"><span>Profit factor</span><strong>1.9</strong></div>
+                </div>
+                <div class="lnd-ph-dock"><span></span><span></span><span class="lnd-ph-fab">+</span><span></span><span></span></div>
+              </div>
+            </div>
+          </figure>
+
+          <figure class="lnd-show-card" aria-label="The trading calendar — sample data">
+            <figcaption class="lnd-show-cap">
+              <span class="lnd-show-name">Calendar &middot; depth is money</span>
+              <span class="lnd-show-tag">sample data</span>
+            </figcaption>
+            <div class="lnd-cal" aria-hidden="true">
+              <div class="lnd-cal-grid">
+                <span class="lnd-cal-day" style="--d:0"></span>
+                <span class="lnd-cal-day is-pos" style="--d:1"></span>
+                <span class="lnd-cal-day" style="--d:2"></span>
+                <span class="lnd-cal-day is-neg" style="--d:3"></span>
+                <span class="lnd-cal-day is-pos" style="--d:4"></span>
+                <span class="lnd-cal-day" style="--d:5"></span>
+                <span class="lnd-cal-day" style="--d:6"></span>
+                <span class="lnd-cal-day is-pos" style="--d:7"></span>
+                <span class="lnd-cal-day is-pos" style="--d:8"></span>
+                <span class="lnd-cal-day" style="--d:9"></span>
+                <span class="lnd-cal-day is-neg" style="--d:10"></span>
+                <span class="lnd-cal-day" style="--d:11"></span>
+                <span class="lnd-cal-day is-pos" style="--d:12"></span>
+                <span class="lnd-cal-day" style="--d:13"></span>
+                <span class="lnd-cal-day" style="--d:14"></span>
+                <span class="lnd-cal-day is-neg" style="--d:15"></span>
+                <span class="lnd-cal-day is-pos" style="--d:16"></span>
+                <span class="lnd-cal-day" style="--d:17"></span>
+                <span class="lnd-cal-day is-pos" style="--d:18"></span>
+                <span class="lnd-cal-day" style="--d:19"></span>
+                <span class="lnd-cal-day" style="--d:20"></span>
+                <span class="lnd-cal-day is-pos" style="--d:21"></span>
+                <span class="lnd-cal-day is-neg" style="--d:22"></span>
+                <span class="lnd-cal-day" style="--d:23"></span>
+                <span class="lnd-cal-day is-pos" style="--d:24"></span>
+                <span class="lnd-cal-day" style="--d:25"></span>
+                <span class="lnd-cal-day" style="--d:26"></span>
+                <span class="lnd-cal-day is-pos" style="--d:27"></span>
+              </div>
+            </div>
+            <p class="lnd-show-note">Green days rise off the page. Red days sink into it. A month of discipline at a glance.</p>
+          </figure>
+
+          <figure class="lnd-show-card" aria-label="Equity curve and trader score — sample data">
+            <figcaption class="lnd-show-cap">
+              <span class="lnd-show-name">Analytics &middot; equity &amp; score</span>
+              <span class="lnd-show-tag">sample data</span>
+            </figcaption>
+            <div class="lnd-an" aria-hidden="true">
+              <svg class="lnd-an-chart" viewBox="0 0 260 96" preserveAspectRatio="none">
+                <polyline class="lnd-an-line" points="0,80 24,74 44,78 66,62 88,66 112,50 134,56 158,38 182,44 208,26 234,32 260,18" />
+              </svg>
+              <div class="lnd-an-score">
+                <svg viewBox="0 0 44 44">
+                  <circle class="lnd-an-track" cx="22" cy="22" r="18" />
+                  <circle class="lnd-an-arc" cx="22" cy="22" r="18" />
+                </svg>
+                <span class="lnd-an-score-text"><strong>74</strong> trader score</span>
+              </div>
+            </div>
+            <p class="lnd-show-note">Expectancy per setup, per session, per mood — the journal does the arithmetic.</p>
+          </figure>
+        </div>
+      </section>
+
+      <!-- Terminal Pro teaser. HONESTY RULES: this is a COMING-SOON preview
+           of a planned paid tier — the copy says "in development" in the
+           kicker, the lede and the fine print; every headline on the sample
+           screen is labelled sample and none of them stream from anywhere.
+           No live-news claims are made in the present tense. -->
+      <section class="lnd-term" id="terminalPro" data-landing-reveal aria-labelledby="lndTermHeading">
+        <div class="lnd-term-copy">
+          <p class="lnd-kicker">In development &middot; pro tier</p>
+          <h2 id="lndTermHeading" class="lnd-value-title">Terminal Pro.<br />The market, at desk speed.</h2>
+          <p class="lnd-value-lede">
+            A news terminal inside your journal, built for the moment a number crosses the wire:
+            market-moving headlines ranked by punch, an economic calendar with countdowns, and the
+            pairs you trade on one dense screen. Desktop density, phone-sized when you are away from
+            the desk.
+          </p>
+          <ul class="lnd-ticks">
+            <li><span class="lnd-tick" aria-hidden="true">&#10003;</span>Headlines ranked by market impact, not by volume</li>
+            <li><span class="lnd-tick" aria-hidden="true">&#10003;</span>Economic calendar with countdowns to every release</li>
+            <li><span class="lnd-tick" aria-hidden="true">&#10003;</span>One dense screen — your pairs, your positions, the tape</li>
+          </ul>
+          <p class="lnd-term-fine">
+            Sample screen below — nothing on it is live. Pricing lands with the launch; journalling
+            itself stays free.
+          </p>
+        </div>
+
+        <figure class="lnd-term-frame" aria-label="Terminal Pro preview — sample headlines, not live news">
+          <figcaption class="lnd-term-chrome">
+            <span class="lnd-term-dot" aria-hidden="true"></span>
+            <span class="lnd-term-title">Terminal Pro</span>
+            <span class="lnd-term-tag">preview &middot; sample headlines</span>
           </figcaption>
-          <div class="lnd-expect-rows">
-            <div class="lnd-expect-row is-pos">
-              <span class="lnd-expect-name">Liquidity Grab</span>
-              <span class="lnd-expect-track"><span class="lnd-expect-fill" style="--w: 88%"></span></span>
-              <span class="lnd-expect-value">+$229</span>
+          <div class="lnd-term-screen" aria-hidden="true">
+            <div class="lnd-term-row is-flash" style="--r:0">
+              <span class="lnd-term-time">13:30:00</span>
+              <span class="lnd-term-flag">flash</span>
+              <span class="lnd-term-head">CPI 3.2% y/y &mdash; two tenths under consensus</span>
             </div>
-            <div class="lnd-expect-row is-pos">
-              <span class="lnd-expect-name">Breakout</span>
-              <span class="lnd-expect-track"><span class="lnd-expect-fill" style="--w: 56%"></span></span>
-              <span class="lnd-expect-value">+$137</span>
+            <div class="lnd-term-row" style="--r:1">
+              <span class="lnd-term-time">13:30:04</span>
+              <span class="lnd-term-flag is-fx">fx</span>
+              <span class="lnd-term-head">Dollar index slips 40 pips on the print</span>
             </div>
-            <div class="lnd-expect-row is-pos">
-              <span class="lnd-expect-name">Scalp</span>
-              <span class="lnd-expect-track"><span class="lnd-expect-fill" style="--w: 22%"></span></span>
-              <span class="lnd-expect-value">+$42</span>
+            <div class="lnd-term-row" style="--r:2">
+              <span class="lnd-term-time">13:31:12</span>
+              <span class="lnd-term-flag is-metal">gold</span>
+              <span class="lnd-term-head">XAUUSD takes out the Asia high</span>
             </div>
-            <div class="lnd-expect-row is-neg">
-              <span class="lnd-expect-name">Reversal</span>
-              <span class="lnd-expect-track"><span class="lnd-expect-fill" style="--w: 30%"></span></span>
-              <span class="lnd-expect-value">&minus;$68</span>
+            <div class="lnd-term-row" style="--r:3">
+              <span class="lnd-term-time">13:32:40</span>
+              <span class="lnd-term-flag">macro</span>
+              <span class="lnd-term-head">2Y yield &minus;9bp &mdash; cuts repriced to June</span>
+            </div>
+            <div class="lnd-term-row is-cal" style="--r:4">
+              <span class="lnd-term-time">14:00</span>
+              <span class="lnd-term-flag is-cal">next</span>
+              <span class="lnd-term-head">FOMC minutes &mdash; countdown 27:20</span>
+            </div>
+            <div class="lnd-term-strip">
+              <span>XAUUSD 4,240.1</span><span>BTCUSD 64,368</span><span>EURUSD 1.0834</span><span>US10Y 4.21%</span><span class="lnd-term-cursor"></span>
             </div>
           </div>
-          <p class="lnd-expect-insight">
-            In this example journal, Reversal is 33% of the volume and all of the drawdown.
-          </p>
-          <p class="lnd-expect-foot">
-            Illustrative figures — this is the shape of the report, not anyone's data. Your own numbers
-            replace them once you have logged a few dozen trades.
-          </p>
         </figure>
       </section>
 
@@ -732,6 +840,7 @@
                  open-position ticker (renderTickerPair runs off
                  refreshLivePrices); no second poll. 5s cadence, and it says so. -->
             <div class="dash-tickers" data-ticker-strip aria-label="Live prices, refreshed every 5 seconds">
+              <span class="live-pulse-dot" aria-hidden="true"></span>
               <span class="dash-ticker">
                 <span class="dash-ticker-sym">BTC</span>
                 <span class="dash-ticker-price" data-ticker-price="BTCUSDT">&mdash;</span>
@@ -751,6 +860,7 @@
                  [data-ticker-*] nodes, so the 5s poll patches it for free;
                  aria-hidden because it only duplicates the strip above. -->
             <div class="dash-ticker-dock" id="dashTickerDock" data-ticker-strip aria-hidden="true">
+              <span class="live-pulse-dot" aria-hidden="true"></span>
               <span class="dash-ticker">
                 <span class="dash-ticker-sym">BTC</span>
                 <span class="dash-ticker-price" data-ticker-price="BTCUSDT">&mdash;</span>
@@ -2642,6 +2752,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260807-leontape"></script>
+    <script type="module" src="app.js?v=20260807-terminal"></script>
   </body>
 </html>

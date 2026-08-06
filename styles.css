@@ -280,7 +280,7 @@
      cascade is slower and wider than the Phase C snap. */
   --ease-clay: cubic-bezier(0.22, 1, 0.36, 1);
   --stagger-dash: 72ms;
-  --dur-reveal: 820ms;
+  --dur-reveal: 980ms;
 }
 
 /* Light theme — only raw values override; every var()-referencing token
@@ -581,6 +581,514 @@ body.is-guest:not(.demo-signup) .auth-shell {
   }
   50% {
     opacity: 0.3;
+  }
+}
+
+/* --- Showcase: three looping sample frames -------------------------------- */
+.lnd-show {
+  display: grid;
+  gap: var(--space-10);
+}
+
+.lnd-show-head {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 62ch;
+}
+
+.lnd-show-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.lnd-show-card {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: var(--space-5);
+  border-radius: var(--radius-clay-lg);
+  background: var(--surface-1);
+  box-shadow: var(--clay-raised);
+}
+
+.lnd-show-cap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.lnd-show-name {
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lnd-show-tag {
+  padding: 4px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.lnd-show-note {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+/* Phone frame */
+.lnd-phone {
+  justify-self: center;
+  width: min(230px, 100%);
+  padding: 10px;
+  border-radius: 34px;
+  background: var(--surface-0);
+  box-shadow: var(--clay-pressed);
+}
+
+.lnd-phone-screen {
+  display: grid;
+  gap: 10px;
+  padding: 18px 14px 12px;
+  border-radius: 26px;
+  background: var(--surface-2);
+  box-shadow: inset 0 1px 0 var(--clay-edge);
+}
+
+.lnd-ph-label {
+  margin: 0;
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lnd-ph-balance {
+  margin: 0;
+  font: 700 26px/1 var(--font-mono);
+  font-feature-settings: "tnum";
+  color: var(--text);
+}
+
+.lnd-ph-spark {
+  width: 100%;
+  height: 44px;
+}
+
+.lnd-ph-line,
+.lnd-an-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 460;
+  stroke-dashoffset: 460;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lnd-ph-line {
+    animation: lndDraw 6s var(--ease-in-out) infinite;
+  }
+
+  .lnd-an-line {
+    animation: lndDraw 7s var(--ease-in-out) infinite;
+  }
+}
+
+@keyframes lndDraw {
+  0% {
+    stroke-dashoffset: 460;
+  }
+  55%,
+  90% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+.lnd-ph-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.lnd-ph-tile {
+  display: grid;
+  gap: 5px;
+  padding: 10px 11px;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-1);
+  box-shadow: var(--clay-soft);
+}
+
+.lnd-ph-tile span {
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.lnd-ph-tile strong {
+  font: 700 17px/1 var(--font-mono);
+  color: var(--text);
+}
+
+.lnd-ph-dock {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  margin-top: 2px;
+  padding: 8px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  box-shadow: var(--clay-raised);
+}
+
+.lnd-ph-dock > span:not(.lnd-ph-fab) {
+  width: 16px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--text-faint);
+  opacity: 0.55;
+}
+
+.lnd-ph-fab {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--text-inverse);
+  font: 700 18px/1 var(--font-ui);
+}
+
+/* Calendar */
+.lnd-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 7px;
+}
+
+.lnd-cal-day {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  background: var(--surface-2);
+  box-shadow: var(--clay-soft);
+}
+
+.lnd-cal-day.is-pos {
+  background: var(--pnl-pos-soft);
+  box-shadow: var(--clay-raised);
+}
+
+.lnd-cal-day.is-neg {
+  background: var(--pnl-neg-soft);
+  box-shadow: var(--clay-pressed);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lnd-cal-day.is-pos,
+  .lnd-cal-day.is-neg {
+    animation: lndCalBreathe 5.6s var(--ease-in-out) infinite;
+    animation-delay: calc(var(--d, 0) * 180ms);
+  }
+}
+
+@keyframes lndCalBreathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Analytics */
+.lnd-an {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.lnd-an-chart {
+  width: 100%;
+  height: 96px;
+}
+
+.lnd-an-score {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.lnd-an-score svg {
+  width: 44px;
+  height: 44px;
+  transform: rotate(-90deg);
+}
+
+.lnd-an-track,
+.lnd-an-arc {
+  fill: none;
+  stroke-width: 5;
+}
+
+.lnd-an-track {
+  stroke: var(--surface-2);
+}
+
+.lnd-an-arc {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-dasharray: 113;
+  /* 74/100 of the 113 circumference */
+  stroke-dashoffset: 29.4;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lnd-an-arc {
+    animation: lndScoreFill 7s var(--ease-in-out) infinite;
+  }
+}
+
+@keyframes lndScoreFill {
+  0%,
+  15% {
+    stroke-dashoffset: 113;
+  }
+  55%,
+  100% {
+    stroke-dashoffset: 29.4;
+  }
+}
+
+.lnd-an-score-text {
+  color: var(--text-soft);
+  font: 600 12px/1.3 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lnd-an-score-text strong {
+  color: var(--text);
+  font-size: 16px;
+}
+
+@media (max-width: 980px) {
+  .lnd-show-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --- Terminal Pro teaser --------------------------------------------------
+   Terminal density without terminal kitsch: near-black screen, hairline rows,
+   mono everywhere, the oxide accent doing the work an amber phosphor would.
+   Every animated element is a loop the reduced-motion block freezes. */
+.lnd-term {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: var(--space-10);
+  align-items: center;
+}
+
+.lnd-term-copy {
+  display: grid;
+  gap: var(--space-5);
+  justify-items: start;
+}
+
+.lnd-term-fine {
+  margin: 0;
+  color: var(--text-faint);
+  font: 500 12px/1.6 var(--font-mono);
+}
+
+.lnd-soon-chip {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--line-accent, var(--accent));
+  border-radius: var(--radius-pill);
+  color: var(--accent);
+  font: 700 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lnd-term-link {
+  white-space: nowrap;
+}
+
+.lnd-term-frame {
+  margin: 0;
+  border-radius: var(--radius-clay-lg);
+  background: var(--surface-1);
+  box-shadow: var(--clay-raised);
+  overflow: hidden;
+}
+
+.lnd-term-chrome {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lnd-term-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: livePulse 2s var(--ease-in-out) infinite;
+}
+
+.lnd-term-title {
+  color: var(--text);
+  font: 700 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lnd-term-tag {
+  margin-left: auto;
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.lnd-term-screen {
+  display: grid;
+  padding: 6px 0 0;
+  background: var(--surface-0);
+}
+
+.lnd-term-row {
+  display: grid;
+  grid-template-columns: 76px 64px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lnd-term-row {
+    animation: lndTermPop 9s var(--ease-out) infinite;
+    animation-delay: calc(var(--r, 0) * 420ms);
+  }
+}
+
+@keyframes lndTermPop {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  4%,
+  92% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lnd-term-time {
+  color: var(--text-faint);
+  font: 600 12px/1 var(--font-mono);
+  font-feature-settings: "tnum";
+}
+
+.lnd-term-flag {
+  justify-self: start;
+  padding: 3px 8px;
+  border: 1px solid var(--line-accent, var(--accent));
+  border-radius: 4px;
+  color: var(--accent);
+  font: 700 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.lnd-term-flag.is-fx,
+.lnd-term-flag.is-metal,
+.lnd-term-flag.is-cal {
+  border-color: var(--line-strong);
+  color: var(--text-soft);
+}
+
+.lnd-term-head {
+  color: var(--text);
+  font: 600 13px/1.4 var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lnd-term-row.is-flash .lnd-term-head {
+  color: var(--accent);
+}
+
+.lnd-term-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: 12px 18px;
+  overflow: hidden;
+  color: var(--text-soft);
+  font: 600 12px/1 var(--font-mono);
+  font-feature-settings: "tnum";
+  white-space: nowrap;
+}
+
+.lnd-term-cursor {
+  width: 8px;
+  height: 14px;
+  background: var(--accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lnd-term-cursor {
+    animation: lndCursor 1.1s steps(1) infinite;
+  }
+}
+
+@keyframes lndCursor {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 980px) {
+  .lnd-term {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lnd-term-row {
+    grid-template-columns: 64px 56px minmax(0, 1fr);
+    gap: 8px;
+    padding: 10px 14px;
   }
 }
 
@@ -3392,10 +3900,48 @@ body.demo-signup::before {
 }
 
 .auth-shell {
-  width: min(1200px, 94vw);
+  width: min(1320px, 94vw);
   justify-content: flex-start;
   gap: var(--space-16);
   padding: 0 0 var(--space-16);
+}
+
+/* Big desktops: let the landing breathe instead of floating in a 1200px box. */
+@media (min-width: 1600px) {
+  .auth-shell {
+    width: min(1560px, 92vw);
+  }
+
+  .lnd-hero {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 560px);
+    gap: var(--space-16);
+  }
+}
+
+/* The price marquee breaks out of the shell and runs the full viewport width
+   — the one full-bleed moment on the page, so the desktop stops feeling like
+   a centered card. The inner track keeps its own padding. */
+.lnd-ticker {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+}
+
+/* The hero tape drifts — slow, transform-only, frozen by the global
+   reduced-motion block like every other loop. */
+@media (prefers-reduced-motion: no-preference) {
+  .lnd-tape {
+    animation: lndTapeFloat 9s var(--ease-in-out) infinite;
+  }
+}
+
+@keyframes lndTapeFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-9px);
+  }
 }
 
 /* --- Top bar ------------------------------------------------------------- */
@@ -4069,7 +4615,9 @@ body.demo-signup::before {
    the global kill block plus setupLandingReveals()'s own opt-out. */
 body.auth-ready [data-landing-reveal] {
   opacity: 0;
-  transform: translateY(18px);
+  /* 34px of rise over the longer --dur-reveal: continuous motion on a tall
+     desktop, not a quick pop. */
+  transform: translateY(34px);
   transition: opacity var(--dur-reveal) var(--ease-clay), transform var(--dur-reveal) var(--ease-clay);
 }
 
@@ -6118,6 +6666,23 @@ body.auth-ready .lnd-tape-list .lnd-row {
 @media (prefers-reduced-motion: reduce) {
   .dash-ticker-dock {
     transition: none;
+  }
+}
+
+/* The strips align on the text baseline; the pulse dot has no baseline to
+   speak of, so centre it by itself. */
+.dash-tickers .live-pulse-dot,
+.dash-ticker-dock .live-pulse-dot {
+  align-self: center;
+}
+
+/* Mobile: the app's top rail is sticky at z-nav (100) and 52px tall — the
+   dock slides in just beneath it, one layer below so open menus stay on top. */
+@media (max-width: 1024px) {
+  .dash-ticker-dock {
+    top: 60px;
+    z-index: 99;
+    max-width: calc(100vw - 20px);
   }
 }
 

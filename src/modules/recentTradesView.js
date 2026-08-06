@@ -35,33 +35,37 @@ export function createRecentTradesView(deps) {
     // the journal in this browser, not the public feed — the caption has to
     // say which, or the landing claims someone else's rows as public ones.
     const isOwnJournal = canAccessApp();
-    const closedTrades = getRecentTradesSource().filter((trade) => trade.status !== "open");
+    const source = getRecentTradesSource();
+    // Open positions lead the tape — they are the live part — then closed.
+    const openTrades = source.filter((trade) => trade.status === "open");
+    const closedTrades = source.filter((trade) => trade.status !== "open");
+    const rows = [...openTrades, ...closedTrades];
 
-    ui.recentTradesList.innerHTML = closedTrades.length
-      ? closedTrades.slice(0, TAPE_ROW_LIMIT).map(renderTapeRow).join("")
+    ui.recentTradesList.innerHTML = rows.length
+      ? rows.slice(0, TAPE_ROW_LIMIT).map(renderTapeRow).join("")
       : `<p class="lnd-tape-empty">${
-          isOwnJournal ? "No closed trades in this journal yet." : "No closed trades on Leon\u2019s feed yet."
+          isOwnJournal ? "No trades in this journal yet." : "No trades on Leon\u2019s feed yet."
         }</p>`;
 
     if (ui.lndTapeNote) {
       ui.lndTapeNote.textContent = isOwnJournal
-        ? "Raised rows made money. Sunk rows lost it. These are closed trades from the journal open in this browser."
-        : "Raised rows made money. Sunk rows lost it. Nothing here is a mock-up — it is Leon\u2019s public feed, one row per closed trade from his real journal.";
+        ? "Raised rows made money. Sunk rows lost it. These are trades from the journal open in this browser."
+        : "Raised rows made money. Sunk rows lost it. Open positions ride on top. Nothing here is a mock-up — it is Leon\u2019s public feed, straight from his real journal.";
     }
 
-    renderTapeWeekCount(closedTrades);
+    renderTapeWeekCount(rows);
   }
 
   // The mockup's "1,284 trades journalled this week" has no backend counter
   // behind it. This counts the rows actually on the tape — nothing else — and
   // says so in the label. Hidden at zero rather than printing "0".
-  function renderTapeWeekCount(closedTrades) {
+  function renderTapeWeekCount(tapeRows) {
     if (!ui.lndTapeCount || !ui.lndTapeCountText) {
       return;
     }
 
     const cutoff = Date.now() - WEEK_MS;
-    const count = closedTrades.filter((trade) => {
+    const count = tapeRows.filter((trade) => {
       const stamp = Date.parse(trade.closedAt || trade.date || "");
       return Number.isFinite(stamp) && stamp >= cutoff;
     }).length;
@@ -111,7 +115,7 @@ export function createRecentTradesView(deps) {
 
   function renderTapeRow(trade, order = 0) {
     const isSell = String(trade.direction || "").toLowerCase() === "sell";
-    const outcome = getTradeOutcome(trade);
+    const outcome = trade.status === "open" ? { key: "open", label: "Open" } : getTradeOutcome(trade);
     const meta = `${isSell ? "Short" : "Long"} · ${formatCompactTradeDate(trade)}`;
 
     return `

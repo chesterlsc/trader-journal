@@ -6842,14 +6842,35 @@ function renderProgressTradeSummary() {
       const tone = snapshot?.toneClass ?? "";
       const symbol = escapeHtml(trade.asset || "—");
 
+      // The pill body is a disclosure: tap it and the position's numbers
+      // unfold — entry, stop and target with their pip distances, and the
+      // live move in pips (patched by the same 5s loop, never re-rendered).
+      const stopPips = pipsBetween(trade.asset, trade.market, trade.entryPrice, trade.stopLoss);
+      const targetPips = trade.takeProfit > 0 ? pipsBetween(trade.asset, trade.market, trade.entryPrice, trade.takeProfit) : null;
+      const stopText = trade.stopLoss > 0
+        ? `${formatCapturePrice(trade.stopLoss)}${stopPips !== null ? ` · ${formatPips(stopPips)} pips` : ""}`
+        : "—";
+      const targetText = trade.takeProfit > 0
+        ? `${formatCapturePrice(trade.takeProfit)}${targetPips !== null ? ` · ${formatPips(targetPips)} pips` : ""}`
+        : "no target";
+
       return `
-        <article class="dash-live-pill">
-          <span class="dash-live-dot" aria-hidden="true"></span>
-          <span class="dash-live-tag">Live</span>
-          <strong class="dash-live-symbol">${symbol}</strong>
-          <span class="dash-live-price live-cell" ${liveCellAttrs(trade, "currentPrice")}>${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : "—"}</span>
-          <span class="dash-live-move ${tone} live-cell" ${liveCellAttrs(trade, "livePercent")}>${escapeHtml(formatLivePercentLabel(livePercent, "OPEN"))}</span>
+        <article class="dash-live-pill" data-trade-pill="${escapeHtml(String(trade.id || ""))}">
+          <button class="dash-live-main" type="button" data-toggle-trade="${escapeHtml(String(trade.id || ""))}" aria-expanded="false" aria-label="Show details for ${symbol}">
+            <span class="dash-live-dot" aria-hidden="true"></span>
+            <span class="dash-live-tag">Live</span>
+            <strong class="dash-live-symbol">${symbol}</strong>
+            <span class="dash-live-price live-cell" ${liveCellAttrs(trade, "currentPrice")}>${Number.isFinite(currentPrice) ? formatProgressTradePrice(currentPrice) : "—"}</span>
+            <span class="dash-live-move ${tone} live-cell" ${liveCellAttrs(trade, "livePercent")}>${escapeHtml(formatLivePercentLabel(livePercent, "OPEN"))}</span>
+            <span class="dash-live-caret" aria-hidden="true"></span>
+          </button>
           <button class="dash-live-close" type="button" data-close-trade="${escapeHtml(String(trade.id || ""))}" aria-label="Close ${symbol} at market price">Close</button>
+          <div class="dash-live-detail" hidden>
+            <span class="dash-live-cell"><span class="dash-live-k">entry</span><span class="dash-live-v">${formatCapturePrice(trade.entryPrice)}</span></span>
+            <span class="dash-live-cell"><span class="dash-live-k">stop</span><span class="dash-live-v">${escapeHtml(stopText)}</span></span>
+            <span class="dash-live-cell"><span class="dash-live-k">target</span><span class="dash-live-v">${escapeHtml(targetText)}</span></span>
+            <span class="dash-live-cell"><span class="dash-live-k">live</span><span class="dash-live-v live-cell" ${liveCellAttrs(trade, "livePips")}>—</span></span>
+          </div>
         </article>
       `;
     })
@@ -6861,7 +6882,20 @@ function handleProgressTradeDetailsToggle(event) {
   const closeButton = event.target.closest("[data-close-trade]");
   if (closeButton) {
     closeTradeAtMarket(closeButton.dataset.closeTrade);
+    return;
   }
+  const toggle = event.target.closest("[data-toggle-trade]");
+  if (!toggle) {
+    return;
+  }
+  const pill = toggle.closest(".dash-live-pill");
+  const detail = pill?.querySelector(".dash-live-detail");
+  if (!pill || !detail) {
+    return;
+  }
+  const expanded = pill.classList.toggle("is-expanded");
+  detail.hidden = !expanded;
+  toggle.setAttribute("aria-expanded", String(expanded));
 }
 
 function getClosedTrades(trades = state.trades) {
@@ -11539,6 +11573,12 @@ const LIVE_FIELD_SPECS = {
   dollarPnl: {
     value: (s) => s?.dollarPnl,
     text: (s) => formatSignedCurrency(s?.dollarPnl ?? NaN),
+    tone: (s) => getLiveToneClass(s?.livePercent),
+    toneGroup: "pnl"
+  },
+  livePips: {
+    value: (s) => s?.pips,
+    text: (s) => (Number.isFinite(s?.pips) ? `${s.pips >= 0 ? "+" : "\u2212"}${formatPips(Math.abs(s.pips))} pips` : "—"),
     tone: (s) => getLiveToneClass(s?.livePercent),
     toneGroup: "pnl"
   },
