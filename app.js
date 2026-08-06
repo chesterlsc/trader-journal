@@ -471,6 +471,7 @@ const ui = {
   sheetSize: document.getElementById("sheetSize"),
   sheetAtRisk: document.getElementById("sheetAtRisk"),
   sheetBudgetAfter: document.getElementById("sheetBudgetAfter"),
+  sheetPips: document.getElementById("sheetPips"),
   sheetMessage: document.getElementById("sheetMessage"),
   sheetSubmitBtn: document.getElementById("sheetSubmitBtn"),
   sheetDetailBtn: document.getElementById("sheetDetailBtn"),
@@ -3900,6 +3901,26 @@ function getPipSpec(trade) {
   };
 }
 
+// Distance between two prices expressed in pips for the instrument, using the
+// same pip spec the P&L engine uses — capture and results can never disagree.
+function pipsBetween(asset, market, priceA, priceB) {
+  if (!Number.isFinite(priceA) || !Number.isFinite(priceB) || priceA <= 0 || priceB <= 0) {
+    return null;
+  }
+  const spec = getPipSpec({ asset, market, entryPrice: priceA });
+  if (!spec || !Number.isFinite(spec.pipSize) || spec.pipSize <= 0) {
+    return null;
+  }
+  return Math.abs(priceA - priceB) / spec.pipSize;
+}
+
+function formatPips(pips) {
+  if (!Number.isFinite(pips)) {
+    return "";
+  }
+  return pips >= 1000 ? Math.round(pips).toLocaleString("en-US") : pips.toFixed(1);
+}
+
 function inferPipSizeFromPrice(entryPrice, market) {
   if (!Number.isFinite(entryPrice) || entryPrice <= 0) {
     return 0.01;
@@ -4300,7 +4321,11 @@ function renderCaptureReadout() {
     chips.push(captureChip(value.direction === "Buy" ? "LONG" : "SHORT", value.direction === "Buy" ? "long" : "short"));
   }
   if (value.entryPrice > 0) chips.push(captureChip(`entry ${formatCapturePrice(value.entryPrice)}`));
-  if (value.stopLoss > 0) chips.push(captureChip(`stop ${formatCapturePrice(value.stopLoss)}`));
+  if (value.stopLoss > 0) {
+    const stopPips = pipsBetween(value.symbol, value.market, value.entryPrice, value.stopLoss);
+    const pipTail = stopPips !== null && value.entryPrice > 0 ? ` · ${formatPips(stopPips)} pips` : "";
+    chips.push(captureChip(`stop ${formatCapturePrice(value.stopLoss)}${pipTail}`));
+  }
 
   // Risk %, converted to cash against the REAL account balance.
   const balance = getAccountBalance();
@@ -4333,7 +4358,9 @@ function renderCaptureReadout() {
 
   if (value.takeProfit > 0 && value.stopLoss > 0 && value.entryPrice > 0) {
     const rr = Math.abs(value.takeProfit - value.entryPrice) / Math.abs(value.entryPrice - value.stopLoss);
-    chips.push(captureChip(`target ${formatCapturePrice(value.takeProfit)} · R:R ${rr.toFixed(2)}`));
+    const targetPips = pipsBetween(value.symbol, value.market, value.entryPrice, value.takeProfit);
+    const pipTail = targetPips !== null ? ` · ${formatPips(targetPips)} pips` : "";
+    chips.push(captureChip(`target ${formatCapturePrice(value.takeProfit)}${pipTail} · R:R ${rr.toFixed(2)}`));
   } else if (parsed.ok) {
     chips.push(captureChip("no target — R:R unknown", "warn"));
   }
@@ -4515,6 +4542,13 @@ function renderSheetReadout() {
 
   ui.sheetSize.textContent = size > 0 ? formatPositionSize(size, value.symbol, value.market) : "—";
   ui.sheetAtRisk.textContent = riskAmount > 0 ? formatCurrency(riskAmount) : "—";
+
+  // Pips ready at the point of journalling: stop distance in the instrument's
+  // own pip size, from the same spec the P&L engine settles with.
+  if (ui.sheetPips) {
+    const stopPips = pipsBetween(value.symbol, value.market, value.entryPrice, value.stopLoss);
+    ui.sheetPips.textContent = stopPips !== null ? `${formatPips(stopPips)} pips` : "—";
+  }
 
   const budgetLeft = getDailyBudgetLeft();
   if (budgetLeft === null) {
