@@ -38,21 +38,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260807-tapedetail" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260807-tapedetail" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260807-termfeats" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260807-termfeats" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260807-tapedetail" />
+    <link rel="stylesheet" href="styles.css?v=20260807-termfeats" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260807-tapedetail" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260807-termfeats" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260807-tapedetail" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260807-termfeats" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -238,7 +238,7 @@
         <div class="lnd-demo-frame" id="lndDemoFrame" aria-hidden="true">
           <div class="lnd-demo-chrome">
             <span class="lnd-demo-dot"></span><span class="lnd-demo-dot"></span><span class="lnd-demo-dot"></span>
-            <span class="lnd-demo-chrome-tag">demo &middot; sample data</span>
+            <span class="lnd-demo-chrome-tag">demo</span>
           </div>
 
           <div class="lnd-demo-stage">
@@ -265,7 +265,7 @@
                 </div>
                 <div class="jrn-result">
                   <p class="jrn-net is-pos">+$40.00</p>
-                  <p class="jrn-sub">+20.0 pips &middot; sample numbers</p>
+                  <p class="jrn-sub">+20.0 pips &middot; demo</p>
                 </div>
               </header>
               <div class="jrn-block">
@@ -310,9 +310,9 @@
           <p class="lnd-kicker">See it all first</p>
           <h2 id="lndShowHeading" class="lnd-value-title">The whole product,<br />playing on a loop.</h2>
           <p class="lnd-value-lede">
-            Sample data, real components. These are the same screens you get on day one — on your
-            phone and on the desk. Expectancy per setup, loss budgets that lock the desk, bulk import
-            from Vantage, Binance or a spreadsheet.
+            Real components, example figures — the same screens you get on day one, on your phone
+            and on the desk. Expectancy per setup, loss budgets that lock the desk, bulk import from
+            Vantage, Binance or a spreadsheet.
           </p>
         </div>
 
@@ -404,18 +404,19 @@
               </div>
 
               <div class="lnd-show-scene" data-scene="accounts" aria-hidden="true">
-                <p class="lnd-ph-label">Your accounts</p>
+                <p class="lnd-ph-label">Every account, one journal</p>
                 <div class="lnd-ph-accounts">
-                  <div class="lnd-ph-acct" style="--a:0"><strong>Main</strong><span>$12,480</span></div>
-                  <div class="lnd-ph-acct" style="--a:1"><strong>Topstep 50K</strong><span>$50,912</span></div>
-                  <div class="lnd-ph-acct" style="--a:2"><strong>Topstep 25K</strong><span>$25,204</span></div>
+                  <div class="lnd-ph-acct" style="--a:0"><span class="lnd-ph-acct-id"><strong>Topstep 50K</strong><em>eval</em></span><span>$50,912</span></div>
+                  <div class="lnd-ph-acct" style="--a:1"><span class="lnd-ph-acct-id"><strong>Topstep 100K</strong><em>funded</em></span><span>$101,480</span></div>
+                  <div class="lnd-ph-acct" style="--a:2"><span class="lnd-ph-acct-id"><strong>Broker</strong><em>live</em></span><span>$12,480</span></div>
+                  <div class="lnd-ph-acct" style="--a:3"><span class="lnd-ph-acct-id"><strong>200K challenge</strong><em>eval</em></span><span>$198,730</span></div>
                 </div>
-                <p class="lnd-ph-foot">One tap to switch. Every journal stays its own.</p>
+                <span class="lnd-ph-add">+ Add another account</span>
+                <p class="lnd-ph-foot">Evals, funded, live — each keeps its own journal, rules and drawdown math.</p>
               </div>
             </div>
           </div>
 
-          <p class="lnd-show-note">Every screen above is sample data in the real components — the same product you get on day one, free.</p>
         </div>
       </section>
 
@@ -434,11 +435,24 @@
             pairs you trade on one dense screen. Desktop density, phone-sized when you are away from
             the desk.
           </p>
-          <ul class="lnd-ticks">
-            <li><span class="lnd-tick" aria-hidden="true">&#10003;</span>Headlines ranked by market impact, not by volume</li>
-            <li><span class="lnd-tick" aria-hidden="true">&#10003;</span>Economic calendar with countdowns to every release</li>
-            <li><span class="lnd-tick" aria-hidden="true">&#10003;</span>One dense screen — your pairs, your positions, the tape</li>
-          </ul>
+          <div class="lnd-term-feats">
+            <div class="lnd-term-feat">
+              <span class="lnd-term-feat-k">Wires</span>
+              <p>Breaking headlines from the major wires and financial TV networks, the moment they cross.</p>
+            </div>
+            <div class="lnd-term-feat">
+              <span class="lnd-term-feat-k">Posts</span>
+              <p>Presidential and central-bank posts, straight to your screen the second they land.</p>
+            </div>
+            <div class="lnd-term-feat">
+              <span class="lnd-term-feat-k">Calendar</span>
+              <p>Economic releases with countdowns — CPI, NFP, rate decisions, all on one clock.</p>
+            </div>
+            <div class="lnd-term-feat">
+              <span class="lnd-term-feat-k">Impact</span>
+              <p>Ranked by market punch, not volume — fundamentals read in one glance, desk or phone.</p>
+            </div>
+          </div>
           <p class="lnd-term-fine">
             Sample screen below — nothing on it is live. Pricing lands with the launch; journalling
             itself stays free.
@@ -449,7 +463,7 @@
           <figcaption class="lnd-term-chrome">
             <span class="lnd-term-dot" aria-hidden="true"></span>
             <span class="lnd-term-title">Terminal Pro</span>
-            <span class="lnd-term-tag">preview &middot; sample headlines</span>
+            <span class="lnd-term-tag">concept preview</span>
           </figcaption>
           <div class="lnd-term-screen" aria-hidden="true">
             <div class="lnd-term-row is-flash" style="--r:0">
@@ -472,7 +486,12 @@
               <span class="lnd-term-flag">macro</span>
               <span class="lnd-term-head">2Y yield &minus;9bp &mdash; cuts repriced to June</span>
             </div>
-            <div class="lnd-term-row is-cal" style="--r:4">
+            <div class="lnd-term-row" style="--r:4">
+              <span class="lnd-term-time">13:33:05</span>
+              <span class="lnd-term-flag">post</span>
+              <span class="lnd-term-head">Head-of-state post on tariffs &mdash; USD bid</span>
+            </div>
+            <div class="lnd-term-row is-cal" style="--r:5">
               <span class="lnd-term-time">14:00</span>
               <span class="lnd-term-flag is-cal">next</span>
               <span class="lnd-term-head">FOMC minutes &mdash; countdown 27:20</span>
@@ -2771,6 +2790,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260807-tapedetail"></script>
+    <script type="module" src="app.js?v=20260807-termfeats"></script>
   </body>
 </html>

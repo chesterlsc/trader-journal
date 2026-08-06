@@ -2414,3 +2414,19 @@ User-reported: the demo's Execution grades rendered as floating labels above emp
 - Open-trade pill: expanded state morphs from 999px lozenge to card radius
   with a hairline above the detail row — no more squeezed distortion.
 - Busters → ?v=20260807-tapedetail. All 26 tests pass.
+
+## 2026-08-07 — Quieter labels, funded-accounts scene, Terminal Pro features
+
+- Disclosure redesign, not removal: demo chrome is one quiet "demo" chip
+  (close P&L tagged "demo"), showcase discloses once in its lede ("example
+  figures"), terminal tag reads "concept preview". landingDemo pins updated.
+  The one line held: illustrative numbers stay labelled at least once per
+  surface — no fake balances passed off as real.
+- Accounts scene rebuilt as the funded-account pitch: Topstep 50K eval /
+  Topstep 100K funded / Broker live / 200K challenge eval with type badges,
+  "+ Add another account" row, 4-row ring walk (7.2s cycle).
+- Terminal Pro: ticks became a 2×2 feature grid (Wires / Posts / Calendar /
+  Impact — future-framed, no network partnerships implied) and the sample
+  screen gained a head-of-state "post" row. Fine print unchanged: in
+  development, nothing live.
+- Busters → ?v=20260807-termfeats. All 26 tests pass.

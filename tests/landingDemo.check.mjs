@@ -69,13 +69,14 @@ for (const claim of [
   "$10,000 demo account",
   "Short &middot; 0.02 lots",
   "+$40.00",
-  "+20.0 pips"
+  "+20.0 pips &middot; demo"
 ]) {
   assert.ok(html.includes(claim), `demo frame claim "${claim}" missing from index.html`);
 }
-// The frame must say it is a demo with sample data, out loud.
+// The frame must still SAY it is a demo — one quiet chip, but present, and
+// the winning close is tagged demo where the money number is printed.
 assert.ok(html.includes("Product demo"), "the demo section lost its 'Product demo' label");
-assert.ok(/demo &middot; sample data/.test(html), "the demo frame chrome lost its 'sample data' tag");
+assert.ok(/lnd-demo-chrome-tag">demo</.test(html), "the demo frame chrome lost its demo tag");
 
 // --- 2. Ticker strips match the polled symbols, and say live · 5s ----------
 const symbolsMatch = /const TICKER_SYMBOLS = \[([^\]]+)\];/.exec(appJs);

@@ -892,6 +892,29 @@ body.is-guest:not(.demo-signup) .auth-shell {
   }
 }
 
+.lnd-ph-acct-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.lnd-ph-acct-id em {
+  padding: 3px 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-faint);
+  font: 700 11px/1 var(--font-mono);
+  font-style: normal;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lnd-ph-add {
+  justify-self: start;
+  color: var(--text-faint);
+  font: 600 11.5px/1 var(--font-mono);
+}
+
 /* Accounts scene: the active ring walks the list — switching, on a loop. */
 .lnd-ph-accounts {
   display: grid;
@@ -921,19 +944,19 @@ body.is-guest:not(.demo-signup) .auth-shell {
 
 @media (prefers-reduced-motion: no-preference) {
   .lnd-ph-acct {
-    animation: lndAcctTurn 5.4s var(--ease-in-out) infinite;
+    animation: lndAcctTurn 7.2s var(--ease-in-out) infinite;
     animation-delay: calc(var(--a, 0) * 1.8s);
   }
 }
 
 @keyframes lndAcctTurn {
   0%,
-  33.4%,
+  25.1%,
   100% {
     box-shadow: var(--clay-soft);
   }
-  8%,
-  25% {
+  6%,
+  19% {
     box-shadow: var(--clay-raised), 0 0 0 1.5px var(--accent);
   }
 }
@@ -1224,6 +1247,42 @@ body.is-guest:not(.demo-signup) .auth-shell {
 
 .lnd-term-link {
   white-space: nowrap;
+}
+
+.lnd-term-feats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.lnd-term-feat {
+  display: grid;
+  gap: 7px;
+  padding: var(--space-4);
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-1);
+  box-shadow: var(--clay-soft);
+}
+
+.lnd-term-feat-k {
+  color: var(--accent);
+  font: 700 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lnd-term-feat p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+@media (max-width: 620px) {
+  .lnd-term-feats {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .lnd-term-frame {
