@@ -6277,3 +6277,23 @@ body.auth-ready .lnd-tape-list .lnd-row {
     font-size: 21px;
   }
 }
+
+/* Demo timeline: a thin oxide progress rail under the caption. Width is
+   driven by the player (index / steps); the loop wrap snaps it back to zero.
+   Purely decorative — the caption narrates for AT — so aria-hidden. */
+.lnd-demo-progress {
+  height: 3px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: var(--surface-inset);
+  overflow: hidden;
+}
+
+.lnd-demo-progress span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 240ms var(--ease-out);
+}

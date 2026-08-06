@@ -11666,7 +11666,7 @@ function buildLndDemoTimeline() {
   key(s7, "One honest sentence.", 900);
 
   const s8 = lndDemoState({ scene: "close", mood: true, grade: true, note: noteLen, saved: true });
-  key(s8, "Saved. That is the whole loop.", 0);
+  key(s8, "Saved. That is the whole loop.", 2600);
 
   return { keyframes, steps };
 }
@@ -11739,6 +11739,7 @@ function setupLandingDemo() {
     noteCaret: document.getElementById("lndDemoNoteCaret"),
     save: document.getElementById("lndDemoSave"),
     caption,
+    progress: document.getElementById("lndDemoProgress"),
     button
   };
 
@@ -11785,7 +11786,8 @@ function setupLandingDemo() {
           if (!lndDemoPlayer.started) {
             lndDemoPlayer.started = true;
             lndDemoPlayFrom(0);
-          } else if (!lndDemoPlayer.playing && lndDemoPlayer.index < lndDemoPlayer.steps.length - 1) {
+          } else if (!lndDemoPlayer.playing) {
+            // Resume wherever it paused — the loop means every index is valid.
             lndDemoPlayFrom(lndDemoPlayer.index);
           }
         } else if (lndDemoPlayer.playing) {
@@ -11807,14 +11809,19 @@ function lndDemoPlayFrom(index) {
   lndDemoPlayer.index = index;
   lndDemoPlayer.playing = true;
   renderLndDemoFrame(step.state);
+  if (lndDemoPlayer.ui.progress) {
+    const pct = (index / (lndDemoPlayer.steps.length - 1)) * 100;
+    lndDemoPlayer.ui.progress.style.width = `${pct.toFixed(1)}%`;
+  }
   if (step.label) {
     lndDemoPlayer.ui.caption.textContent = step.label;
   }
-  if (index === lndDemoPlayer.steps.length - 1) {
-    lndDemoPlayer.playing = false;
-    return;
-  }
-  lndDemoPlayer.timer = window.setTimeout(() => lndDemoPlayFrom(index + 1), step.ms);
+  // The demo loops: the final frame holds for its own duration, then the
+  // sequence restarts from the top. Halting here is what made the demo feel
+  // stuck after it ended — and the viewport observer could never restart it,
+  // because its resume condition required index < last.
+  const nextIndex = index === lndDemoPlayer.steps.length - 1 ? 0 : index + 1;
+  lndDemoPlayer.timer = window.setTimeout(() => lndDemoPlayFrom(nextIndex), step.ms);
 }
 
 function lndDemoStop() {

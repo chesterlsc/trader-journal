@@ -2267,6 +2267,9 @@ body.auth-locked .topnav {
 }
 
 .jrn-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 44px;
   padding: 12px 20px;
   border: 0;
@@ -2337,6 +2340,11 @@ body.auth-locked .topnav {
 }
 
 .jrn-grade {
+  /* Buttons centre their label on their own; the landing demo renders these
+     as <span>s, which do not — so the centring is explicit, element-agnostic. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 1;
   min-width: 0;
   min-height: 52px;

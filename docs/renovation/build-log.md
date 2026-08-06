@@ -2321,3 +2321,12 @@ re-sync the demo strings in the same commit.
 Finished the limit-interrupted third phase inline. `pipsBetween()`/`formatPips()` derive capture-time pip distances from the same `getPipSpec` the P&L engine settles with, so capture and results can never disagree. Surfaced: ⌘K readout ("stop 2,410 · 10.0 pips", "target 2,380 · 20.0 pips · R:R 2.00") and a STOP pips cell in the open sheet's live readout. `tests/pips.check.mjs` pins EURUSD 40 pips / USDJPY 50 / XAUUSD 10 / BTCUSDT 500, direction-independence, null on bad input, and that the UI actually renders the tails.
 
 Browser-verified V3: gunmetal `#14161a` default-dark, oxide `#f0763d`, stamped TJ monogram, animated hero, live-ticker strip failing gracefully to "stale · last known" with no backend (production endpoint verified returning real BTCUSDT/XAUUSD), and the Product demo replaying the real ⌘K flow with honest labelling. Zero boot errors; 28/28 test files green.
+
+## Demo loop + grade-pill fix (2026-08-06)
+
+User-reported: the demo's Execution grades rendered as floating labels above empty pills, and the demo felt stuck/laggy after ending. Both root-caused:
+
+1. `.jrn-grade`/`.jrn-chip` were styled for `<button>` elements, which centre their own labels; the demo renders them as `<span>`s, which don't — the text sat at the top-left of a 52px pill. Centring is now explicit (`inline-flex` + centring) so element type is irrelevant.
+2. The final timeline step had `ms: 0` and the player halted there — worse, the IntersectionObserver's resume condition (`index < last`) could never re-fire it, so the demo stayed frozen on the saved frame forever. The timeline now holds the saved frame 2.6s and wraps to step 0; resume works from any index; a thin oxide progress rail under the caption makes the cycle legible. Verified by sampling the live player over 28s: two clean wraps (100% → 0% → 100% → 0%), captions cycling correctly.
+
+28/28 test files green.
