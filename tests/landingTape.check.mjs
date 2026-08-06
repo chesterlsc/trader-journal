@@ -35,7 +35,9 @@ function harness({ trades, canAccess = false }) {
     switchView: () => {},
     setAuthIntent: () => {},
     formatCompactTradeDate: (trade) => trade.date,
-    sortRecentTradeRowsDesc: () => 0
+    sortRecentTradeRowsDesc: () => 0,
+    formatTapePrice: (price) => String(price),
+    tapePips: (trade, price) => Math.abs(price - trade.entryPrice)
   });
   view.renderHeroRecentTrades();
   view.renderDashLeonTape();
@@ -143,6 +145,22 @@ const row = (over) => ({ id: "t", asset: "BTCUSDT", direction: "Buy", status: "c
   const { ui } = harness({ trades: [row({ id: "mine" })], canAccess: true });
   assert.equal(ui.dashLeonTape.hidden, true, "own-journal rows leaked into the Leon tape");
   assert.equal(ui.dashLeonTapeList.innerHTML, "", "Leon tape rendered rows from the wrong source");
+}
+
+// 7. Published numbers: rows with entry/stop/target print them (with pip
+// tails); rows without prices render exactly as before — no zeros invented.
+{
+  const { ui } = harness({
+    trades: [
+      row({ id: "priced", entryPrice: 4234, stopLoss: 4244, takeProfit: 4214 }),
+      row({ id: "bare" })
+    ]
+  });
+  const html = ui.recentTradesList.innerHTML;
+  assert.ok(html.includes(">E</span>4234"), "entry cell missing from a priced row");
+  assert.ok(html.includes(">SL</span>4244 · 10p"), "stop cell lost its pip tail");
+  assert.ok(html.includes(">TP</span>4214 · 20p"), "target cell lost its pip tail");
+  assert.equal((html.match(/lnd-row-prices/g) || []).length, 1, "a priceless row invented a price line");
 }
 
 console.log("OK — landing tape: open rows lead, depth+word, honest counter, honest caption");

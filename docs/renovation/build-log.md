@@ -2396,3 +2396,21 @@ User-reported: the demo's Execution grades rendered as floating labels above emp
   copy ("in development" ×3, "nothing on it is live"), sample headlines on a
   gunmetal screen, oxide flash row, blinking cursor. No live-news claims.
 - Busters → ?v=20260807-terminal. All 26 tests pass.
+
+## 2026-08-07 — Tape publishes E/SL/TP, demo chooser, ticker motion, pill morph
+
+- public_recent_trades whitelist grows entry_price/stop_loss/take_profit by
+  the feed owner's explicit choice (size, P&L amounts, ids still sealed);
+  apiRouter pins updated. Tape rows (landing + dashboard) grew a second line:
+  E / SL·pips / TP·pips — rows without prices render as before, no zeros.
+- Showcase became a chooser: five sample scenes in one phone frame
+  (Dashboard / Journaling / Calendar / Reflection / Accounts), chip tabs,
+  CSS-only loops per scene (typing command, chips landing, moods cycling,
+  note writing, account ring walking). setupShowcaseChooser = class swaps.
+- Live pricing motion: deltas formatted by magnitude (0.299805 → 0.3) with
+  ▲/▼ in money colours, prices slide in the direction they moved on top of
+  the tick flash, the dock takes one shadow breath per changed tick, dock is
+  one row always (live·5s label yields on phones; stale marker never does).
+- Open-trade pill: expanded state morphs from 999px lozenge to card radius
+  with a hairline above the detail row — no more squeezed distortion.
+- Busters → ?v=20260807-tapedetail. All 26 tests pass.

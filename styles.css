@@ -644,6 +644,300 @@ body.is-guest:not(.demo-signup) .auth-shell {
   line-height: 1.55;
 }
 
+/* Stage: chips + one phone. */
+.lnd-show-stage {
+  display: grid;
+  gap: var(--space-6);
+  justify-items: center;
+}
+
+.lnd-show-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.lnd-show-chip {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  color: var(--text-soft);
+  font: 600 13px/1 var(--font-ui);
+  cursor: pointer;
+  box-shadow: var(--clay-soft);
+  transition: transform var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.lnd-show-chip:hover {
+  transform: translateY(-1px);
+  color: var(--text);
+}
+
+.lnd-show-chip.is-active {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--text-inverse);
+  box-shadow: var(--clay-accent);
+}
+
+.lnd-show-scene {
+  display: none;
+}
+
+.lnd-show-scene.is-active {
+  display: grid;
+  gap: 12px;
+  animation: lndSceneIn 360ms var(--ease-out);
+}
+
+@keyframes lndSceneIn {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lnd-ph-foot {
+  margin: 0;
+  color: var(--text-faint);
+  font: 500 11.5px/1.5 var(--font-mono);
+}
+
+/* Journal scene: the command line types itself, chips land one by one. */
+.lnd-ph-cmd {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding: 12px 12px;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-0);
+  box-shadow: var(--clay-pressed);
+}
+
+.lnd-ph-cmdtext {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--text);
+  font: 600 11.5px/1.4 var(--font-mono);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lnd-ph-cmdtext {
+    animation: lndType 7s steps(34, end) infinite;
+  }
+}
+
+@keyframes lndType {
+  0% {
+    max-width: 0;
+  }
+  55%,
+  100% {
+    max-width: 100%;
+  }
+}
+
+.lnd-ph-caret {
+  flex: 0 0 7px;
+  height: 14px;
+  margin-left: 3px;
+  background: var(--accent);
+  animation: lndCursor 1.1s steps(1) infinite;
+}
+
+.lnd-ph-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lnd-ph-chips span {
+  padding: 6px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-soft);
+  font: 600 11px/1 var(--font-mono);
+}
+
+.lnd-ph-chips .is-neg {
+  border-color: var(--pnl-neg-line);
+  color: var(--pnl-neg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lnd-ph-chips span {
+    opacity: 0;
+    animation: lndChipLand 7s var(--ease-out) infinite;
+    animation-delay: calc(2.2s + var(--c, 0) * 480ms);
+  }
+}
+
+@keyframes lndChipLand {
+  0% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  6%,
+  92% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.lnd-ph-save {
+  justify-self: start;
+  color: var(--pnl-pos);
+  font: 600 11.5px/1 var(--font-mono);
+}
+
+/* Reflection scene: moods take turns, the note writes itself. */
+.lnd-ph-moods,
+.lnd-ph-grades {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lnd-ph-moods span,
+.lnd-ph-grades span {
+  padding: 7px 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-soft);
+  font: 600 11px/1 var(--font-mono);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lnd-ph-moods span {
+    animation: lndMoodTurn 6s var(--ease-in-out) infinite;
+    animation-delay: calc(var(--c, 0) * 1.5s);
+  }
+}
+
+@keyframes lndMoodTurn {
+  0%,
+  20%,
+  100% {
+    border-color: var(--line-strong);
+    color: var(--text-soft);
+  }
+  6%,
+  14% {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+}
+
+.lnd-ph-grades .is-on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.lnd-ph-note {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-0);
+  box-shadow: var(--clay-pressed);
+}
+
+.lnd-ph-note i {
+  display: block;
+  height: 7px;
+  border-radius: 4px;
+  background: var(--surface-3);
+}
+
+.lnd-ph-note i.is-short {
+  width: 55%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lnd-ph-note i {
+    transform-origin: left center;
+    animation: lndNoteWrite 6s var(--ease-out) infinite;
+  }
+
+  .lnd-ph-note i:nth-child(2) {
+    animation-delay: 700ms;
+  }
+
+  .lnd-ph-note i:nth-child(3) {
+    animation-delay: 1400ms;
+  }
+}
+
+@keyframes lndNoteWrite {
+  0% {
+    transform: scaleX(0);
+  }
+  22%,
+  92% {
+    transform: scaleX(1);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+/* Accounts scene: the active ring walks the list — switching, on a loop. */
+.lnd-ph-accounts {
+  display: grid;
+  gap: 8px;
+}
+
+.lnd-ph-acct {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 13px;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-1);
+  box-shadow: var(--clay-soft);
+}
+
+.lnd-ph-acct strong {
+  font: 700 12.5px/1 var(--font-ui);
+  color: var(--text);
+}
+
+.lnd-ph-acct span {
+  font: 600 12px/1 var(--font-mono);
+  font-feature-settings: "tnum";
+  color: var(--text-soft);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lnd-ph-acct {
+    animation: lndAcctTurn 5.4s var(--ease-in-out) infinite;
+    animation-delay: calc(var(--a, 0) * 1.8s);
+  }
+}
+
+@keyframes lndAcctTurn {
+  0%,
+  33.4%,
+  100% {
+    box-shadow: var(--clay-soft);
+  }
+  8%,
+  25% {
+    box-shadow: var(--clay-raised), 0 0 0 1.5px var(--accent);
+  }
+}
+
 /* Phone frame */
 .lnd-phone {
   justify-self: center;
@@ -4309,6 +4603,31 @@ body.demo-signup::before {
   text-transform: uppercase;
 }
 
+/* Second row: the published numbers. Faint labels, tabular figures. */
+.lnd-row-prices {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding-top: 3px;
+}
+
+.lnd-row-pcell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--text-soft);
+  font: 600 11.5px/1.3 var(--font-mono);
+  font-feature-settings: "tnum";
+  white-space: nowrap;
+}
+
+.lnd-row-plabel {
+  color: var(--text-faint);
+  font: 700 11px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+}
+
 .lnd-row.is-win .lnd-row-result {
   border-color: var(--pnl-pos-line);
   color: var(--pnl-pos);
@@ -6636,6 +6955,52 @@ body.auth-ready .lnd-tape-list .lnd-row {
   color: var(--text-faint);
 }
 
+/* Ticker motion: prices slide in the direction they moved (up rises from
+   below, down falls from above), deltas wear the money colour with their
+   arrow, and the dock takes one visible breath per changed tick. All of it
+   sits on top of the shared tickUp/tickDown flash. */
+.dash-ticker-delta.pnl-positive,
+.lnd-ticker-delta.pnl-positive {
+  color: var(--pnl-pos);
+}
+
+.dash-ticker-delta.pnl-negative,
+.lnd-ticker-delta.pnl-negative {
+  color: var(--pnl-neg);
+}
+
+.dash-ticker-price.tick-up,
+.lnd-ticker-price.tick-up {
+  animation: tickUp var(--dur-tick) var(--ease-out), tickerRiseIn 420ms var(--ease-out);
+}
+
+.dash-ticker-price.tick-down,
+.lnd-ticker-price.tick-down {
+  animation: tickDown var(--dur-tick) var(--ease-out), tickerFallIn 420ms var(--ease-out);
+}
+
+@keyframes tickerRiseIn {
+  0% {
+    transform: translateY(6px);
+    opacity: 0.35;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes tickerFallIn {
+  0% {
+    transform: translateY(-6px);
+    opacity: 0.35;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+
 /* Sticky twin of the pair: fixed top-center, off-canvas until .is-docked.
    Costs no layout (always fixed), so docking can never reflow the header
    that triggers it. Sits under modals/toasts (they use higher z). */
@@ -6661,6 +7026,33 @@ body.auth-ready .lnd-tape-list .lnd-row {
 .dash-ticker-dock.is-docked {
   transform: translate(-50%, 0);
   opacity: 1;
+}
+
+/* Never two lines: the dock is one row, and on phones the "live · 5s" label
+   yields to the pulse dot (the stale marker always keeps its seat). */
+.dash-ticker-dock {
+  flex-wrap: nowrap;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.dash-ticker-dock.is-ticking {
+  animation: dockBreath 700ms var(--ease-out);
+}
+
+@keyframes dockBreath {
+  0% {
+    box-shadow: var(--clay-raised), 0 0 0 1px var(--line-strong), 0 14px 40px -16px rgb(0 0 0 / 0.65);
+  }
+  100% {
+    box-shadow: var(--clay-raised);
+  }
+}
+
+@media (max-width: 620px) {
+  .dash-ticker-dock .dash-ticker-tag:not(.lnd-ticker-stale) {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

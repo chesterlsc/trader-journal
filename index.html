@@ -38,21 +38,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260807-terminal" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260807-terminal" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260807-tapedetail" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260807-tapedetail" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260807-terminal" />
+    <link rel="stylesheet" href="styles.css?v=20260807-tapedetail" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260807-terminal" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260807-tapedetail" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260807-terminal" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260807-tapedetail" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -316,14 +316,21 @@
           </p>
         </div>
 
-        <div class="lnd-show-grid">
-          <figure class="lnd-show-card" aria-label="The dashboard on a phone — sample data">
-            <figcaption class="lnd-show-cap">
-              <span class="lnd-show-name">Dashboard &middot; phone</span>
-              <span class="lnd-show-tag">sample data</span>
-            </figcaption>
-            <div class="lnd-phone" aria-hidden="true">
-              <div class="lnd-phone-screen">
+        <!-- One phone, five scenes, chips to choose. Each scene is a CSS
+             loop over real component styles — sample data throughout, frozen
+             under reduced motion. setupShowcaseChooser swaps [data-scene]. -->
+        <div class="lnd-show-stage">
+          <div class="lnd-show-chips" role="tablist" aria-label="Choose a sample screen">
+            <button class="lnd-show-chip is-active" type="button" role="tab" aria-selected="true" data-show-scene="dashboard">Dashboard</button>
+            <button class="lnd-show-chip" type="button" role="tab" aria-selected="false" data-show-scene="journal">Journaling</button>
+            <button class="lnd-show-chip" type="button" role="tab" aria-selected="false" data-show-scene="calendar">Calendar</button>
+            <button class="lnd-show-chip" type="button" role="tab" aria-selected="false" data-show-scene="reflect">Reflection</button>
+            <button class="lnd-show-chip" type="button" role="tab" aria-selected="false" data-show-scene="accounts">Accounts</button>
+          </div>
+
+          <div class="lnd-phone">
+            <div class="lnd-phone-screen">
+              <div class="lnd-show-scene is-active" data-scene="dashboard" aria-hidden="true">
                 <p class="lnd-ph-label">Account balance</p>
                 <p class="lnd-ph-balance">$12,480</p>
                 <svg class="lnd-ph-spark" viewBox="0 0 200 48" preserveAspectRatio="none">
@@ -335,68 +342,80 @@
                 </div>
                 <div class="lnd-ph-dock"><span></span><span></span><span class="lnd-ph-fab">+</span><span></span><span></span></div>
               </div>
-            </div>
-          </figure>
 
-          <figure class="lnd-show-card" aria-label="The trading calendar — sample data">
-            <figcaption class="lnd-show-cap">
-              <span class="lnd-show-name">Calendar &middot; depth is money</span>
-              <span class="lnd-show-tag">sample data</span>
-            </figcaption>
-            <div class="lnd-cal" aria-hidden="true">
-              <div class="lnd-cal-grid">
-                <span class="lnd-cal-day" style="--d:0"></span>
-                <span class="lnd-cal-day is-pos" style="--d:1"></span>
-                <span class="lnd-cal-day" style="--d:2"></span>
-                <span class="lnd-cal-day is-neg" style="--d:3"></span>
-                <span class="lnd-cal-day is-pos" style="--d:4"></span>
-                <span class="lnd-cal-day" style="--d:5"></span>
-                <span class="lnd-cal-day" style="--d:6"></span>
-                <span class="lnd-cal-day is-pos" style="--d:7"></span>
-                <span class="lnd-cal-day is-pos" style="--d:8"></span>
-                <span class="lnd-cal-day" style="--d:9"></span>
-                <span class="lnd-cal-day is-neg" style="--d:10"></span>
-                <span class="lnd-cal-day" style="--d:11"></span>
-                <span class="lnd-cal-day is-pos" style="--d:12"></span>
-                <span class="lnd-cal-day" style="--d:13"></span>
-                <span class="lnd-cal-day" style="--d:14"></span>
-                <span class="lnd-cal-day is-neg" style="--d:15"></span>
-                <span class="lnd-cal-day is-pos" style="--d:16"></span>
-                <span class="lnd-cal-day" style="--d:17"></span>
-                <span class="lnd-cal-day is-pos" style="--d:18"></span>
-                <span class="lnd-cal-day" style="--d:19"></span>
-                <span class="lnd-cal-day" style="--d:20"></span>
-                <span class="lnd-cal-day is-pos" style="--d:21"></span>
-                <span class="lnd-cal-day is-neg" style="--d:22"></span>
-                <span class="lnd-cal-day" style="--d:23"></span>
-                <span class="lnd-cal-day is-pos" style="--d:24"></span>
-                <span class="lnd-cal-day" style="--d:25"></span>
-                <span class="lnd-cal-day" style="--d:26"></span>
-                <span class="lnd-cal-day is-pos" style="--d:27"></span>
+              <div class="lnd-show-scene" data-scene="journal" aria-hidden="true">
+                <p class="lnd-ph-label">Log a trade</p>
+                <div class="lnd-ph-cmd"><span class="lnd-ph-cmdtext">xauusd short 4234 sl 10p 0.02 lots</span><span class="lnd-ph-caret"></span></div>
+                <div class="lnd-ph-chips">
+                  <span style="--c:0">XAUUSD</span>
+                  <span class="is-neg" style="--c:1">SHORT</span>
+                  <span style="--c:2">stop &middot; 10 pips</span>
+                  <span style="--c:3">size &middot; 0.02 lots</span>
+                  <span style="--c:4">risk &middot; $20</span>
+                </div>
+                <span class="lnd-ph-save">Enter opens this position</span>
+              </div>
+
+              <div class="lnd-show-scene" data-scene="calendar" aria-hidden="true">
+                <p class="lnd-ph-label">August &middot; month net +$1,214</p>
+                <div class="lnd-cal-grid">
+                    <span class="lnd-cal-day" style="--d:0"></span>
+                    <span class="lnd-cal-day is-pos" style="--d:1"></span>
+                    <span class="lnd-cal-day" style="--d:2"></span>
+                    <span class="lnd-cal-day is-neg" style="--d:3"></span>
+                    <span class="lnd-cal-day is-pos" style="--d:4"></span>
+                    <span class="lnd-cal-day" style="--d:5"></span>
+                    <span class="lnd-cal-day" style="--d:6"></span>
+                    <span class="lnd-cal-day is-pos" style="--d:7"></span>
+                    <span class="lnd-cal-day is-pos" style="--d:8"></span>
+                    <span class="lnd-cal-day" style="--d:9"></span>
+                    <span class="lnd-cal-day is-neg" style="--d:10"></span>
+                    <span class="lnd-cal-day" style="--d:11"></span>
+                    <span class="lnd-cal-day is-pos" style="--d:12"></span>
+                    <span class="lnd-cal-day" style="--d:13"></span>
+                    <span class="lnd-cal-day" style="--d:14"></span>
+                    <span class="lnd-cal-day is-neg" style="--d:15"></span>
+                    <span class="lnd-cal-day is-pos" style="--d:16"></span>
+                    <span class="lnd-cal-day" style="--d:17"></span>
+                    <span class="lnd-cal-day is-pos" style="--d:18"></span>
+                    <span class="lnd-cal-day" style="--d:19"></span>
+                    <span class="lnd-cal-day" style="--d:20"></span>
+                    <span class="lnd-cal-day is-pos" style="--d:21"></span>
+                    <span class="lnd-cal-day is-neg" style="--d:22"></span>
+                    <span class="lnd-cal-day" style="--d:23"></span>
+                    <span class="lnd-cal-day is-pos" style="--d:24"></span>
+                    <span class="lnd-cal-day" style="--d:25"></span>
+                    <span class="lnd-cal-day" style="--d:26"></span>
+                    <span class="lnd-cal-day is-pos" style="--d:27"></span>
+                </div>
+                <p class="lnd-ph-foot">Green days rise. Red days sink.</p>
+              </div>
+
+              <div class="lnd-show-scene" data-scene="reflect" aria-hidden="true">
+                <p class="lnd-ph-label">After the close</p>
+                <div class="lnd-ph-moods">
+                  <span style="--c:0">Focused</span>
+                  <span style="--c:1">Hesitant</span>
+                  <span style="--c:2">Revenge</span>
+                  <span style="--c:3">Perfect</span>
+                </div>
+                <div class="lnd-ph-note"><i></i><i></i><i class="is-short"></i></div>
+                <div class="lnd-ph-grades"><span>A+</span><span class="is-on">A</span><span>B</span><span>C</span><span>F</span></div>
+              </div>
+
+              <div class="lnd-show-scene" data-scene="accounts" aria-hidden="true">
+                <p class="lnd-ph-label">Your accounts</p>
+                <div class="lnd-ph-accounts">
+                  <div class="lnd-ph-acct" style="--a:0"><strong>Main</strong><span>$12,480</span></div>
+                  <div class="lnd-ph-acct" style="--a:1"><strong>Topstep 50K</strong><span>$50,912</span></div>
+                  <div class="lnd-ph-acct" style="--a:2"><strong>Topstep 25K</strong><span>$25,204</span></div>
+                </div>
+                <p class="lnd-ph-foot">One tap to switch. Every journal stays its own.</p>
               </div>
             </div>
-            <p class="lnd-show-note">Green days rise off the page. Red days sink into it. A month of discipline at a glance.</p>
-          </figure>
+          </div>
 
-          <figure class="lnd-show-card" aria-label="Equity curve and trader score — sample data">
-            <figcaption class="lnd-show-cap">
-              <span class="lnd-show-name">Analytics &middot; equity &amp; score</span>
-              <span class="lnd-show-tag">sample data</span>
-            </figcaption>
-            <div class="lnd-an" aria-hidden="true">
-              <svg class="lnd-an-chart" viewBox="0 0 260 96" preserveAspectRatio="none">
-                <polyline class="lnd-an-line" points="0,80 24,74 44,78 66,62 88,66 112,50 134,56 158,38 182,44 208,26 234,32 260,18" />
-              </svg>
-              <div class="lnd-an-score">
-                <svg viewBox="0 0 44 44">
-                  <circle class="lnd-an-track" cx="22" cy="22" r="18" />
-                  <circle class="lnd-an-arc" cx="22" cy="22" r="18" />
-                </svg>
-                <span class="lnd-an-score-text"><strong>74</strong> trader score</span>
-              </div>
-            </div>
-            <p class="lnd-show-note">Expectancy per setup, per session, per mood — the journal does the arithmetic.</p>
-          </figure>
+          <p class="lnd-show-note">Every screen above is sample data in the real components — the same product you get on day one, free.</p>
         </div>
       </section>
 
@@ -2752,6 +2771,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260807-terminal"></script>
+    <script type="module" src="app.js?v=20260807-tapedetail"></script>
   </body>
 </html>

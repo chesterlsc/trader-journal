@@ -596,9 +596,10 @@ const actions = {
     const trades = userId !== null ? await ctx.db.listRecentTrades(userId) : [];
 
     // The landing page tape is unauthenticated, so it gets a whitelist rather
-    // than a redaction: five fields built by hand, capped at twenty rows. No
-    // price, size, P&L or trade id can leave through here even if the stored
-    // trade grows new fields.
+    // than a redaction: fields built by hand, capped at twenty rows. The feed
+    // owner chose to publish entry/stop/target alongside symbol and result —
+    // it is their own journal on display. Size, P&L amounts and trade ids
+    // still cannot leave through here even if the stored trade grows fields.
     respond(200, {
       ok: true,
       trades: trades.slice(0, PUBLIC_TRADES_LIMIT).map((trade) => ({
@@ -606,6 +607,9 @@ const actions = {
         date: trade.date,
         direction: trade.direction,
         status: trade.status,
+        entry_price: trade.entry_price,
+        stop_loss: trade.stop_loss,
+        take_profit: trade.take_profit,
         result: trade.status === 'closed'
           ? (trade.profit_loss > 0 ? 'win' : (trade.profit_loss < 0 ? 'loss' : 'flat'))
           : '',

@@ -659,7 +659,12 @@ const recentTradesView = createRecentTradesView({
   switchView,
   setAuthIntent,
   formatCompactTradeDate,
-  sortRecentTradeRowsDesc
+  sortRecentTradeRowsDesc,
+  formatTapePrice: (price) => formatCapturePrice(price),
+  // Pip distance for a tape row's stop/target — the feed carries no market
+  // field, so it is inferred from the symbol like everywhere else.
+  tapePips: (trade, price) =>
+    pipsBetween(trade.asset, inferMarket(trade.asset), trade.entryPrice, price)
 });
 const {
   renderHeroRecentTrades,
@@ -1000,6 +1005,7 @@ function init() {
   // until it does; the demo player owns its own reduced-motion branch.
   setupLandingTicker();
   setupStickyDashTicker();
+  setupShowcaseChooser();
   setupLandingDemo();
   startLivePriceLoop();
   // Hash router: restore the deep-linked view for preview sessions; the
@@ -11716,15 +11722,48 @@ function setupStickyDashTicker() {
   window.addEventListener("scroll", update, { passive: true });
 }
 
+/* Landing showcase: five sample scenes in one phone frame, chip-switched.
+   Pure class swaps — every scene loops on CSS alone once it is visible. */
+function setupShowcaseChooser() {
+  const stage = document.querySelector(".lnd-show-stage");
+  if (!stage) {
+    return;
+  }
+  stage.addEventListener("click", (event) => {
+    const chip = event.target.closest("[data-show-scene]");
+    if (!chip) {
+      return;
+    }
+    const target = chip.dataset.showScene;
+    stage.querySelectorAll("[data-show-scene]").forEach((button) => {
+      const active = button === chip;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+    stage.querySelectorAll("[data-scene]").forEach((scene) => {
+      scene.classList.toggle("is-active", scene.dataset.scene === target);
+    });
+  });
+}
+
 function setTickerStale(stale) {
   document.querySelectorAll("[data-ticker-strip]").forEach((strip) => {
     strip.classList.toggle("is-stale", Boolean(stale));
   });
 }
 
+// Delta magnitudes span BTC's ±100s and EURUSD's ±0.0004 — decimals follow
+// the delta itself, not the price, so XAU never prints 0.299805 again.
+function formatTickerDelta(delta) {
+  const abs = Math.abs(delta);
+  const decimals = abs >= 100 ? 0 : abs >= 1 ? 1 : abs >= 0.01 ? 2 : 4;
+  return abs.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: decimals });
+}
+
 function renderTickerPair(options = {}) {
   const stale = Boolean(options.stale);
   setTickerStale(stale);
+  let anyChange = false;
 
   TICKER_SYMBOLS.forEach((symbol) => {
     const price = state.marketData.currentPrices[symbol];
@@ -11738,6 +11777,7 @@ function renderTickerPair(options = {}) {
       if (node.textContent !== text) {
         node.textContent = text;
         if (Number.isFinite(previous)) {
+          anyChange = true;
           flashPnlTick(node, price - previous);
         }
       }
@@ -11745,7 +11785,7 @@ function renderTickerPair(options = {}) {
 
     if (Number.isFinite(previous) && price !== previous) {
       const delta = price - previous;
-      const deltaText = `${delta > 0 ? "+" : "−"}${formatCapturePrice(Math.abs(delta))}`;
+      const deltaText = `${delta > 0 ? "\u25b2" : "\u25bc"} ${formatTickerDelta(delta)}`;
       document.querySelectorAll(`[data-ticker-delta="${symbol}"]`).forEach((node) => {
         node.textContent = deltaText;
         node.classList.toggle("pnl-positive", delta > 0);
@@ -11754,6 +11794,16 @@ function renderTickerPair(options = {}) {
     }
     tickerShown[symbol] = price;
   });
+
+  // One breath of the dock per tick that actually moved a number.
+  if (anyChange && !prefersReducedMotion()) {
+    const dock = document.getElementById("dashTickerDock");
+    if (dock) {
+      dock.classList.remove("is-ticking");
+      void dock.offsetWidth;
+      dock.classList.add("is-ticking");
+    }
+  }
 
   if (!stale) {
     try {

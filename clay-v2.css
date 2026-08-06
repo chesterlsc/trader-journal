@@ -916,6 +916,14 @@ body.auth-locked .topnav {
 
 .dash-live-pill {
   flex-wrap: wrap;
+  transition: border-radius var(--dur-fast) var(--ease-out);
+}
+
+/* Expanded, the pill stops being a pill: a 999px radius around a two-row
+   block reads as a squeezed lozenge. Morph to card radius, and let the
+   detail row sit under a hairline with its own breathing room. */
+.dash-live-pill.is-expanded {
+  border-radius: var(--radius-clay-sm);
 }
 
 .dash-live-detail {
@@ -923,7 +931,9 @@ body.auth-locked .topnav {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-5);
-  padding: 8px 10px 6px;
+  margin-top: 8px;
+  padding: 10px 10px 6px;
+  border-top: 1px solid var(--line);
 }
 
 .dash-live-detail[hidden] {

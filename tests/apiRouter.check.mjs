@@ -341,15 +341,18 @@ const sensitiveTrade = (index) => ({
   // The cap.
   assert.strictEqual(trades.length, 20, 'the public tape is capped at 20 rows');
 
-  // The whitelist: exactly five fields, built by hand.
-  const allowed = ['symbol', 'date', 'direction', 'status', 'result'];
+  // The whitelist, built by hand. Entry/stop/target are published by the
+  // feed owner's choice — it is their own journal on display.
+  const allowed = ['symbol', 'date', 'direction', 'status', 'result', 'entry_price', 'stop_loss', 'take_profit'];
   for (const trade of trades) {
     assert.deepStrictEqual(Object.keys(trade).sort(), [...allowed].sort(), 'only whitelisted fields may appear');
   }
 
-  // Nothing that could reveal size, price or P&L survives anywhere in the body.
+  // Nothing that could reveal size, P&L amounts or internal ids survives
+  // anywhere in the body — entry/stop/target are deliberate, the rest stays
+  // sealed even if the stored trade grows fields.
   const serialized = JSON.stringify(response.payload);
-  for (const leak of ['entry_price', 'stop_loss', 'take_profit', 'exit_price', 'profit_loss', 'pips', 'created_at', 'closed_at', 'trade-0', '2400.5', '250']) {
+  for (const leak of ['exit_price', 'profit_loss', '"pips"', 'created_at', 'closed_at', 'trade-0', '"id"']) {
     assert.ok(!serialized.includes(leak), `public feed must not leak ${leak}`);
   }
 

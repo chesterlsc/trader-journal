@@ -23,8 +23,29 @@ export function createRecentTradesView(deps) {
     switchView,
     setAuthIntent,
     formatCompactTradeDate,
-    sortRecentTradeRowsDesc
+    sortRecentTradeRowsDesc,
+    formatTapePrice,
+    tapePips
   } = deps;
+
+  /* Second line of a tape row: E / SL / TP with pip distances. The feed
+     owner publishes these deliberately; rows without prices (older cached
+     feeds, other sources) render exactly as before — no zeros invented. */
+  function renderTapePrices(trade) {
+    if (!(trade.entryPrice > 0) || typeof formatTapePrice !== "function") {
+      return "";
+    }
+    const cells = [`<span class="lnd-row-pcell"><span class="lnd-row-plabel">E</span>${formatTapePrice(trade.entryPrice)}</span>`];
+    [["SL", trade.stopLoss], ["TP", trade.takeProfit]].forEach(([label, price]) => {
+      if (!(price > 0)) {
+        return;
+      }
+      const pips = typeof tapePips === "function" ? tapePips(trade, price) : null;
+      const tail = pips !== null && Number.isFinite(pips) ? ` · ${Math.round(pips * 10) / 10}p` : "";
+      cells.push(`<span class="lnd-row-pcell"><span class="lnd-row-plabel">${label}</span>${formatTapePrice(price)}${tail}</span>`);
+    });
+    return `<span class="lnd-row-prices">${cells.join("")}</span>`;
+  }
 
   function renderHeroRecentTrades() {
     if (!ui.recentTradesList) {
@@ -123,6 +144,7 @@ export function createRecentTradesView(deps) {
         <span class="lnd-row-symbol">${escapeHtml(trade.asset)}</span>
         <span class="lnd-row-meta">${escapeHtml(meta)}</span>
         <span class="lnd-row-result">${outcome.label}</span>
+        ${renderTapePrices(trade)}
       </button>
     `;
   }
@@ -190,6 +212,7 @@ export function createRecentTradesView(deps) {
         <span class="lnd-row-symbol">${escapeHtml(trade.asset)}</span>
         <span class="lnd-row-meta">${escapeHtml(meta)}</span>
         <span class="lnd-row-result">${outcome.label}</span>
+        ${renderTapePrices(trade)}
       </div>
     `;
   }
