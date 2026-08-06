@@ -38,21 +38,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260807-pipslive" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260807-pipslive" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260807-leontape" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260807-leontape" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260807-pipslive" />
+    <link rel="stylesheet" href="styles.css?v=20260807-leontape" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260807-pipslive" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260807-leontape" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260807-pipslive" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260807-leontape" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -1043,6 +1043,23 @@
               </article>
             </section>
           </div>
+
+          <!-- Leon trades on the dashboard: the SAME whitelisted public feed
+               the landing tape reads (symbol / direction / status / result /
+               date — the server sends nothing else, so nothing else can be
+               printed). Open rows are the live part and lead the list. Rows
+               are not buttons here: these are Leon's entries, not links into
+               this user's own journal. Hidden until the feed has rows, so a
+               demo or preview journal can never masquerade as Leon's. -->
+          <section class="panel dash-leon" id="dashLeonTape" hidden aria-labelledby="dashLeonHeading">
+            <div class="lnd-tape-head">
+              <span class="live-pulse-dot" aria-hidden="true"></span>
+              <h3 id="dashLeonHeading" class="lnd-tape-title">Leon trades &middot; live tape</h3>
+              <span class="lnd-tape-delay">public feed &middot; 60s</span>
+            </div>
+            <div class="lnd-tape-list" id="dashLeonTapeList"></div>
+            <p class="lnd-tape-note">Leon&rsquo;s public feed &mdash; open positions first, then closed trades. The same rows the landing page shows.</p>
+          </section>
 
           <section class="dashboard-empty" id="dashboardEmptyState" hidden aria-label="No trades yet">
             <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2625,6 +2642,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260807-pipslive"></script>
+    <script type="module" src="app.js?v=20260807-leontape"></script>
   </body>
 </html>

@@ -19,7 +19,9 @@ function harness({ trades, canAccess = false }) {
     recentTradesList: { innerHTML: "" },
     lndTapeCount: { hidden: null },
     lndTapeCountText: { textContent: "" },
-    lndTapeNote: { textContent: "" }
+    lndTapeNote: { textContent: "" },
+    dashLeonTape: { hidden: null },
+    dashLeonTapeList: { innerHTML: "" }
   };
   const state = { trades: [], publicRecentTrades: trades, recentTrades: [] };
   if (canAccess) {
@@ -36,6 +38,7 @@ function harness({ trades, canAccess = false }) {
     sortRecentTradeRowsDesc: () => 0
   });
   view.renderHeroRecentTrades();
+  view.renderDashLeonTape();
   return { ui, view };
 }
 
@@ -110,6 +113,33 @@ const row = (over) => ({ id: "t", asset: "BTCUSDT", direction: "Buy", status: "c
   const { ui } = harness({ trades: [] });
   assert.match(ui.recentTradesList.innerHTML, /No closed trades on Leon\u2019s feed yet\./);
   assert.equal(ui.lndTapeCount.hidden, true);
+}
+
+// 6. Dashboard Leon tape: strictly the public feed, open rows first, and
+// NEVER the own-journal fallback — a logged-in user's rows must not be
+// captioned as Leon's. Hidden (not empty-stated) when the feed has nothing.
+{
+  const { ui } = harness({
+    trades: [
+      row({ id: "c1", asset: "BTCUSDT", result: "win" }),
+      row({ id: "o1", asset: "XAUUSD", status: "open", result: "", direction: "Sell" }),
+      row({ id: "c2", asset: "EURUSD", result: "loss", netPnl: -1 })
+    ]
+  });
+  const html = ui.dashLeonTapeList.innerHTML;
+  assert.equal(ui.dashLeonTape.hidden, false, "dash tape hidden despite feed rows");
+  const order = [...html.matchAll(/lnd-row (is-[a-z]+)/g)].map((m) => m[1]);
+  assert.deepEqual(order, ["is-open", "is-win", "is-loss"], `open row must lead, got ${order}`);
+  assert.ok(html.includes(">Open</span>"), "open row shipped without its word");
+  assert.ok(!html.includes("<button"), "Leon rows must not render as buttons — they are not links into this user's journal");
+}
+{
+  // Logged-in user with their OWN trades but an empty public feed: the
+  // landing tape may show the own journal (captioned as such); the dashboard
+  // Leon tape must stay hidden rather than borrow those rows.
+  const { ui } = harness({ trades: [row({ id: "mine" })], canAccess: true });
+  assert.equal(ui.dashLeonTape.hidden, true, "own-journal rows leaked into the Leon tape");
+  assert.equal(ui.dashLeonTapeList.innerHTML, "", "Leon tape rendered rows from the wrong source");
 }
 
 console.log("OK — landing tape: closed-only, depth+word, honest counter, honest caption");

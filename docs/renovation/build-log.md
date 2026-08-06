@@ -2359,3 +2359,18 @@ User-reported: the demo's Execution grades rendered as floating labels above emp
 - **Leon trades:** public tape renamed ("Leon trades · live tape"), captions and
   empty state updated; feed still env-driven (PUBLIC_RECENT_TRADES_USERNAME).
 - Cache busters unified to `?v=20260807-pipslive`. All 26 tests pass.
+
+## 2026-08-07 — Leon trades on the dashboard
+
+- New `#dashLeonTape` panel between the bento grid and the analytics grid:
+  the SAME whitelisted public feed the landing tape reads, rendered by
+  `renderDashLeonTape` (recentTradesView) — strictly `state.publicRecentTrades`,
+  never the own-journal fallback, so a logged-in user's rows can't be captioned
+  as Leon's. Open rows lead ("Open" pill, neutral clay depth — raised/sunk stay
+  reserved for money), then closed rows with the usual win/loss depth. Rows are
+  divs, not buttons — Leon's entries aren't links into this user's journal.
+- Feed refresh: every 12th 5s tick (60s) re-pulls `public_recent_trades`
+  (skipped in preview/demo shells and hidden tabs); card labelled
+  "public feed · 60s". Hidden while the feed is empty.
+- Contract pinned in tests/landingTape.check.mjs (open-first order, no buttons,
+  own-journal never leaks, hidden when empty). Busters → `?v=20260807-leontape`.

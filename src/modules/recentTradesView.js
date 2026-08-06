@@ -150,8 +150,49 @@ export function createRecentTradesView(deps) {
       .sort(sortRecentTradeRowsDesc);
   }
 
+  /* Dashboard Leon tape: strictly the PUBLIC feed — never the own-journal
+     fallback the landing uses, or a logged-in user's rows would be captioned
+     as Leon's. Open rows lead (they are the "live" part), then closed. Rows
+     are static divs, not buttons: Leon's entries are not links into this
+     user's journal. */
+  function renderDashLeonTape() {
+    if (!ui.dashLeonTape || !ui.dashLeonTapeList) {
+      return;
+    }
+
+    const rows = Array.isArray(state.publicRecentTrades) ? state.publicRecentTrades : [];
+    ui.dashLeonTape.hidden = rows.length === 0;
+    if (!rows.length) {
+      ui.dashLeonTapeList.innerHTML = "";
+      return;
+    }
+
+    const open = rows.filter((trade) => trade.status === "open");
+    const closed = rows.filter((trade) => trade.status !== "open");
+    ui.dashLeonTapeList.innerHTML = [...open, ...closed]
+      .slice(0, TAPE_ROW_LIMIT)
+      .map((trade, order) => renderLeonRow(trade, order))
+      .join("");
+  }
+
+  function renderLeonRow(trade, order) {
+    const isSell = String(trade.direction || "").toLowerCase() === "sell";
+    const isOpen = trade.status === "open";
+    const outcome = isOpen ? { key: "open", label: "Open" } : getTradeOutcome(trade);
+    const meta = `${isSell ? "Short" : "Long"} · ${formatCompactTradeDate(trade)}`;
+
+    return `
+      <div class="lnd-row is-${outcome.key}" style="--row-order:${Number(order)};">
+        <span class="lnd-row-symbol">${escapeHtml(trade.asset)}</span>
+        <span class="lnd-row-meta">${escapeHtml(meta)}</span>
+        <span class="lnd-row-result">${outcome.label}</span>
+      </div>
+    `;
+  }
+
   return {
     renderHeroRecentTrades,
+    renderDashLeonTape,
     handleRecentTradesClick,
     normalizeRecentTrades
   };

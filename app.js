@@ -256,6 +256,8 @@ const ui = {
   lndTapeCount: document.getElementById("lndTapeCount"),
   lndTapeCountText: document.getElementById("lndTapeCountText"),
   lndTapeNote: document.getElementById("lndTapeNote"),
+  dashLeonTape: document.getElementById("dashLeonTape"),
+  dashLeonTapeList: document.getElementById("dashLeonTapeList"),
   heroEmailForm: document.getElementById("heroEmailForm"),
   heroEmail: document.getElementById("heroEmail"),
   authControls: document.getElementById("authControls"),
@@ -661,6 +663,7 @@ const recentTradesView = createRecentTradesView({
 });
 const {
   renderHeroRecentTrades,
+  renderDashLeonTape,
   handleRecentTradesClick,
   normalizeRecentTrades
 } = recentTradesView;
@@ -916,6 +919,10 @@ const TICKER_CACHE_KEY = "axiom_journal_ticker_v1";
 // Last price actually rendered per symbol — the strip's delta is "vs the
 // previous poll you saw", whether that came from cache or live.
 const tickerShown = {};
+// Every 12th 5s tick (60s) re-pulls the public feed so the Leon tape rows
+// stay live, not just the prices. Skipped in preview/demo shells: their
+// fetch would fail against the static server and wipe the simulated tape.
+let leonFeedTick = 0;
 
 // Scripted product demo. One deterministic timeline drives three modes:
 // autoplay while the frame is on screen, replay on demand, and a static
@@ -6774,6 +6781,7 @@ function renderAll() {
   renderAccountSwitcher();
   renderAccountsPanel();
   renderHeroRecentTrades();
+  renderDashLeonTape();
   renderProgressTradeSummary();
   renderDashboardMetrics(state.analytics);
   renderRiskStrip(state.analytics);
@@ -11421,11 +11429,13 @@ async function loadPublicRecentTrades(options = {}) {
 
     state.publicRecentTrades = normalizeRecentTrades(body.trades);
     renderHeroRecentTrades();
+    renderDashLeonTape();
     refreshLivePrices({ immediate: true });
     return true;
   } catch (error) {
     state.publicRecentTrades = [];
     renderHeroRecentTrades();
+    renderDashLeonTape();
     if (!silent) {
       setMessage(ui.authMessage, error.message || "Public recent trades load failed.", "error");
     }
@@ -11442,6 +11452,16 @@ function startLivePriceLoop() {
   // which is what lets the strips say "live · 5s" and mean it.
   state.marketData.timerId = window.setInterval(() => {
     refreshLivePrices();
+    leonFeedTick += 1;
+    if (
+      leonFeedTick % 12 === 0 &&
+      !state.auth.previewMode &&
+      !state.auth.guestMode &&
+      !state.auth.landingPreviewMode &&
+      document.visibilityState === "visible"
+    ) {
+      loadPublicRecentTrades({ silent: true });
+    }
   }, LIVE_PRICE_REFRESH_MS);
 
   refreshLivePrices({ immediate: true });

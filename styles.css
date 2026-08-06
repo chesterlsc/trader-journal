@@ -3777,6 +3777,41 @@ body.demo-signup::before {
   color: var(--text-soft);
 }
 
+/* Open rows on the dashboard Leon tape: neutral depth — raised means profit
+   and sunk means loss, and an open position is neither yet. The pill stays
+   text-coloured for the same reason: money colours are for money. */
+.lnd-row.is-open {
+  background: var(--surface-1);
+  box-shadow: var(--clay-soft), var(--edge-highlight);
+}
+
+.lnd-row.is-open .lnd-row-result {
+  color: var(--text-soft);
+}
+
+/* Leon's rows are not this user's journal entries — no hover, no pointer. */
+.dash-leon .lnd-row {
+  cursor: default;
+}
+
+.dash-leon .lnd-row:hover {
+  transform: none;
+}
+
+.dash-leon .lnd-tape-head {
+  margin-bottom: var(--space-4);
+}
+
+/* The tape title is an <h3> here (it labels a dashboard panel) — strip the
+   UA heading margin the landing's <span> version never had. */
+.dash-leon .lnd-tape-title {
+  margin: 0;
+}
+
+.dash-leon .lnd-tape-note {
+  margin-top: var(--space-4);
+}
+
 /* Three facts, each checkable inside the product. */
 .lnd-stats {
   display: grid;
