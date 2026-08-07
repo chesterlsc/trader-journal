@@ -2540,3 +2540,25 @@ User-reported: the demo's Execution grades rendered as floating labels above emp
 - SEO: keyword title, canonical, og:url/site_name/image, Twitter card,
   JSON-LD SoftwareApplication (price 0), richer og description.
 - Busters -> ?v=20260808-herodial. All 27 tests pass.
+
+## 2026-08-08 — Terminal Pro rebuilt from scratch: the control room
+
+- Third design panel of the day (control-room / spec-sheet / kinetic lenses
+  + judge). The 2x2 feature boxes the user called "boxy cheap" are gone.
+- The section is now a FULL-BLEED instrument band (the .lnd-ticker breakout):
+  recessed --surface-inset ground with an oxide corner wash and aurora glow,
+  a 160px oxide scan band drifting down the room (12s), a ruler-tape crawl
+  under the top hairline (24px pitch, one-pitch loop = seamless), the hero's
+  machined dial reused verbatim as a corner radar quadrant, film grain on
+  top. All transform-only, all frozen under reduced motion.
+- Masthead: "Terminal Pro" ink stamp + in-development plate whose hairline
+  DRAWS across the band on reveal; headline v4 (judge-picked): "A news
+  instrument, not a news feed." with the accent on the one word.
+- Features: an engraved numbered manifest (01 WIRES .. 04 IMPACT), hairline
+  rules, staggered ride-in one beat apart. No boxes anywhere.
+- Sample frame byte-identical (verified: flash row, chrome, concept-preview
+  tag); honesty chrome intact throughout. Judge caught and renamed two
+  class collisions (-masthead/-headline vs the frame's -head/-title) before
+  they could restyle the untouched frame.
+- Busters -> ?v=20260808-controlroom. All 27 tests pass; 375px and 1440px
+  verified, frame promoted above the manifest on phones.

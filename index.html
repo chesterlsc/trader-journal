@@ -61,21 +61,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260808-herodial" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260808-herodial" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260808-controlroom" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260808-controlroom" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260808-herodial" />
+    <link rel="stylesheet" href="styles.css?v=20260808-controlroom" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260808-herodial" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260808-controlroom" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260808-herodial" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260808-controlroom" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -521,46 +521,69 @@
         </div>
       </section>
 
-      <!-- Terminal Pro teaser. HONESTY RULES: this is a COMING-SOON preview
-           of a planned paid tier — the copy says "in development" in the
-           kicker, the lede and the fine print; every headline on the sample
-           screen is labelled sample and none of them stream from anywhere.
-           No live-news claims are made in the present tense. -->
+      <!-- Terminal Pro: the control room. Full-bleed instrument band (same
+           breakout trick as .lnd-ticker). HONESTY RULES unchanged: "in
+           development" in the plate kicker, "nothing on it is live" in the
+           fine print, "concept preview" on the frame. No live-news claims
+           in the present tense. The sample frame is byte-identical. -->
       <section class="lnd-term" id="terminalPro" data-landing-reveal aria-labelledby="lndTermHeading">
-        <div class="lnd-term-copy">
-          <p class="lnd-kicker">In development &middot; pro tier</p>
-          <h2 id="lndTermHeading" class="lnd-value-title">Terminal Pro.<br />Built for the minute before the number.</h2>
-          <p class="lnd-value-lede">
-            A news terminal inside your journal, built for the moment a number crosses the wire:
-            market-moving headlines ranked by punch, an economic calendar with countdowns, and the
-            pairs you trade on one dense screen. Desktop density, phone-sized when you are away from
-            the desk.
-          </p>
-          <div class="lnd-term-feats">
-            <div class="lnd-term-feat">
-              <span class="lnd-term-feat-k">Wires</span>
-              <p>Breaking headlines from the major wires and financial TV networks, the moment they cross.</p>
-            </div>
-            <div class="lnd-term-feat">
-              <span class="lnd-term-feat-k">Posts</span>
-              <p>Presidential and central-bank posts, straight to your screen the second they land.</p>
-            </div>
-            <div class="lnd-term-feat">
-              <span class="lnd-term-feat-k">Calendar</span>
-              <p>Economic releases with countdowns: CPI, NFP, rate decisions, all on one clock.</p>
-            </div>
-            <div class="lnd-term-feat">
-              <span class="lnd-term-feat-k">Impact</span>
-              <p>Ranked by market punch, not volume. Fundamentals read in one glance, desk or phone.</p>
-            </div>
-          </div>
-          <p class="lnd-term-fine">
-            Sample screen below: nothing on it is live. Pricing lands with the launch; journalling
-            itself stays free.
-          </p>
+        <div class="lnd-term-air" aria-hidden="true">
+          <span class="lnd-term-scan"></span>
+          <!-- The hero's machined dial, reused verbatim (same classes, same
+               counter-rotating oxide arcs), quarter-visible in the corner:
+               the band's radar quadrant. -->
+          <svg class="lnd-term-radar" viewBox="0 0 1000 1000" focusable="false">
+            <circle class="lnd-dial-rim" cx="500" cy="500" r="488" />
+            <circle class="lnd-dial-tick" cx="500" cy="500" r="452" pathLength="960" />
+            <circle class="lnd-dial-tick lnd-dial-tick-major" cx="500" cy="500" r="452" pathLength="960" />
+            <circle class="lnd-dial-ring" cx="500" cy="500" r="340" />
+            <circle class="lnd-dial-arc" cx="500" cy="500" r="396" pathLength="360" />
+            <circle class="lnd-dial-arc lnd-dial-arc-b" cx="500" cy="500" r="340" pathLength="360" />
+          </svg>
+          <span class="lnd-hero-grain"></span>
         </div>
-
-        <figure class="lnd-term-frame" aria-label="Terminal Pro preview: sample headlines, not live news">
+        <div class="lnd-term-inner">
+          <header class="lnd-term-masthead">
+            <p class="lnd-term-plate">
+              <span class="lnd-term-stamp">Terminal&nbsp;Pro</span>
+              <span>In development &middot; pro tier</span>
+            </p>
+            <h2 id="lndTermHeading" class="lnd-term-headline">A news <em>instrument</em>,<br />not a news feed.</h2>
+            <p class="lnd-term-lede">
+              A news terminal planned inside your journal: market-moving headlines
+              ranked by punch, an economic calendar on countdowns, and the pairs you
+              trade &mdash; desktop density, phone-sized when you are away from the desk.
+            </p>
+          </header>
+          <div class="lnd-term-side">
+            <ol class="lnd-term-spec">
+              <li style="--i:0">
+                <span class="lnd-term-spec-i">01</span>
+                <span class="lnd-term-spec-k">Wires</span>
+                <span class="lnd-term-spec-d">Breaking headlines from the major wires and financial TV, the moment they cross.</span>
+              </li>
+              <li style="--i:1">
+                <span class="lnd-term-spec-i">02</span>
+                <span class="lnd-term-spec-k">Posts</span>
+                <span class="lnd-term-spec-d">Head-of-state and central-bank posts, straight to the screen the second they land.</span>
+              </li>
+              <li style="--i:2">
+                <span class="lnd-term-spec-i">03</span>
+                <span class="lnd-term-spec-k">Calendar</span>
+                <span class="lnd-term-spec-d">CPI, NFP, rate decisions &mdash; every release on one countdown clock.</span>
+              </li>
+              <li style="--i:3">
+                <span class="lnd-term-spec-i">04</span>
+                <span class="lnd-term-spec-k">Impact</span>
+                <span class="lnd-term-spec-d">Ranked by market punch, not volume. Fundamentals read in one glance.</span>
+              </li>
+            </ol>
+            <p class="lnd-term-fine">
+              Sample screen: nothing on it is live. Pricing lands with the launch;
+              journalling itself stays free.
+            </p>
+          </div>
+          <figure class="lnd-term-frame" aria-label="Terminal Pro preview: sample headlines, not live news">
           <figcaption class="lnd-term-chrome">
             <span class="lnd-term-dot" aria-hidden="true"></span>
             <span class="lnd-term-title">Terminal Pro</span>
@@ -634,6 +657,7 @@
             </div>
           </div>
         </figure>
+        </div>
       </section>
 
       <section class="lnd-close" data-landing-reveal>
@@ -2922,6 +2946,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260808-herodial"></script>
+    <script type="module" src="app.js?v=20260808-controlroom"></script>
   </body>
 </html>
