@@ -644,6 +644,74 @@ body.is-guest:not(.demo-signup) .auth-shell {
   line-height: 1.55;
 }
 
+/* Stage: chips + one phone; on desktop the section splits copy | stage and
+   glance cards drift beside the phone so the width works for its living. */
+@media (min-width: 981px) {
+  .lnd-show {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    align-items: center;
+    gap: var(--space-12);
+  }
+}
+
+.lnd-show-phone-wrap {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  width: 100%;
+}
+
+.lnd-show-float {
+  position: absolute;
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 15px;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-1);
+  box-shadow: var(--clay-raised);
+  z-index: 2;
+}
+
+.lnd-show-float-k {
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lnd-show-float-v {
+  color: var(--text);
+  font: 700 13px/1 var(--font-mono);
+  font-feature-settings: "tnum";
+}
+
+@media (min-width: 981px) {
+  .lnd-show-float {
+    display: flex;
+  }
+
+  .lnd-show-float-a {
+    left: 2%;
+    top: 18%;
+    animation: lndTapeFloat 8s var(--ease-in-out) infinite;
+  }
+
+  .lnd-show-float-b {
+    right: 1%;
+    top: 44%;
+    animation: lndTapeFloat 10s var(--ease-in-out) infinite;
+    animation-delay: 1.2s;
+  }
+
+  .lnd-show-float-c {
+    left: 5%;
+    bottom: 14%;
+    animation: lndTapeFloat 9s var(--ease-in-out) infinite;
+    animation-delay: 2.4s;
+  }
+}
+
 /* Stage: chips + one phone. */
 .lnd-show-stage {
   display: grid;
@@ -1330,9 +1398,60 @@ body.is-guest:not(.demo-signup) .auth-shell {
   background: var(--surface-0);
 }
 
+.lnd-term-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lnd-term-tabs > span {
+  padding: 5px 10px;
+  border-radius: 6px;
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.lnd-term-tabs > span.is-on {
+  background: var(--surface-2);
+  color: var(--accent);
+  box-shadow: inset 0 1px 0 var(--clay-edge);
+}
+
+.lnd-term-clock {
+  margin-left: auto;
+  font-feature-settings: "tnum";
+}
+
+.lnd-term-imp {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  justify-self: end;
+}
+
+.lnd-term-imp i {
+  width: 4px;
+  border-radius: 1px;
+  background: var(--surface-3);
+}
+
+.lnd-term-imp i:nth-child(1) { height: 6px; }
+.lnd-term-imp i:nth-child(2) { height: 10px; }
+.lnd-term-imp i:nth-child(3) { height: 14px; }
+
+.lnd-term-imp[data-imp="1"] i:nth-child(1),
+.lnd-term-imp[data-imp="2"] i:nth-child(-n + 2),
+.lnd-term-imp[data-imp="3"] i {
+  background: var(--accent);
+}
+
 .lnd-term-row {
   display: grid;
-  grid-template-columns: 76px 64px minmax(0, 1fr);
+  grid-template-columns: 76px 64px minmax(0, 1fr) 22px;
   gap: 12px;
   align-items: center;
   padding: 11px 18px;
@@ -1439,7 +1558,7 @@ body.is-guest:not(.demo-signup) .auth-shell {
   }
 
   .lnd-term-row {
-    grid-template-columns: 64px 56px minmax(0, 1fr);
+    grid-template-columns: 64px 56px minmax(0, 1fr) 18px;
     gap: 8px;
     padding: 10px 14px;
   }
@@ -6672,6 +6791,15 @@ body:has(textarea:focus) .tabbar-fab {
   border-radius: var(--radius-clay-lg);
   background: var(--surface-2);
   box-shadow: inset 3px 0 0 var(--warn), var(--clay-raised);
+}
+
+/* Phones: sticky at 162px tall eats a fifth of the screen and floats over
+   the review cards as you scroll. In-flow on mobile; the DEMO chip in the
+   auth status keeps announcing the mode after it scrolls away. */
+@media (max-width: 720px) {
+  .demo-notice {
+    position: static;
+  }
 }
 
 .demo-notice[hidden] {

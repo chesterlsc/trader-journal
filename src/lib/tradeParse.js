@@ -237,7 +237,7 @@ export function parseQuickTrade(input) {
     return { ok: false, error: `Could not read “${unknown}”.`, value };
   }
   if (!value.symbol) {
-    return { ok: false, error: "No symbol yet — start with one, e.g. btc or eurusd.", value };
+    return { ok: false, error: "No symbol yet. Start with one, e.g. btc or eurusd.", value };
   }
   if (!value.direction) {
     return { ok: false, error: "Say long or short.", value };
@@ -246,7 +246,7 @@ export function parseQuickTrade(input) {
     return { ok: false, error: "No entry price yet.", value };
   }
   if (!(value.stopLoss > 0) && !(value.stopPips > 0)) {
-    return { ok: false, error: "No stop yet — a trade with no stop has no size.", value };
+    return { ok: false, error: "No stop yet. A trade with no stop has no size.", value };
   }
   if (value.stopLoss > 0 && value.direction === "Buy" && value.stopLoss >= value.entryPrice) {
     return { ok: false, error: "Long: the stop must sit below entry.", value };

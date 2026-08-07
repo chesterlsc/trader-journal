@@ -72,7 +72,7 @@ assert.ok(
   "every sample row carries the demo batch id so carry-over can exclude it"
 );
 assert.ok(
-  trades.every((t) => t.notes.startsWith("SAMPLE DATA —")),
+  trades.every((t) => t.notes.startsWith("SAMPLE DATA:")),
   "every sample row is labelled in its notes"
 );
 assert.ok(reflections.every((r) => r.tags.includes("sample")));

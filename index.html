@@ -12,7 +12,7 @@
     <title>Trader Journal | Trading Analytics</title>
     <meta
       name="description"
-      content="Trader Journal — log trades fast, review screenshots, track psychology, and measure your edge with execution analytics and risk control."
+      content="Trader Journal: log trades fast, review screenshots, track psychology, and measure your edge with execution analytics and risk control."
     />
     <!-- Clay V2 grounds: warm bone (light, primary) and warm ink (dark). -->
     <meta name="theme-color" content="#14161a" media="(prefers-color-scheme: dark)" />
@@ -38,21 +38,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260807-termfeats" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260807-termfeats" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260807-autoclose" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260807-autoclose" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260807-termfeats" />
+    <link rel="stylesheet" href="styles.css?v=20260807-autoclose" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260807-termfeats" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260807-autoclose" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260807-termfeats" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260807-autoclose" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -106,7 +106,7 @@
           </h1>
           <p class="lnd-hero-lede">
             Log the position in eight seconds. Say what you were thinking when it closed. The journal does
-            the arithmetic and tells you which of your setups actually pays — and which one only feels like
+            the arithmetic and tells you which of your setups actually pays, and which one only feels like
             it does.
           </p>
           <!-- The email is handed straight to the auth panel's identifier field
@@ -146,7 +146,7 @@
             <!-- Copy is re-stamped by renderHeroRecentTrades: it must never
                  call a demo/preview journal "the public feed". -->
             <p class="lnd-tape-note" id="lndTapeNote">
-              Raised rows made money. Sunk rows lost it. Nothing here is a mock-up — it is Leon&rsquo;s
+              Raised rows made money. Sunk rows lost it. Nothing here is a mock-up. It is Leon&rsquo;s
               public feed, one row per closed trade from his real journal.
             </p>
           </section>
@@ -225,7 +225,7 @@
           <h2 id="lndDemoHeading" class="lnd-demo-title">Watch a trade get journalled.</h2>
           <p class="lnd-demo-lede">
             One line opens a sized position. When it closes, the journal asks for two taps and a
-            sentence. This is the real interface replaying a scripted trade &mdash; sample numbers on a
+            sentence. This is the real interface replaying a scripted trade with sample numbers on a
             $10,000 demo account, no footage, nothing mocked up.
           </p>
           <div class="lnd-demo-controls">
@@ -310,7 +310,7 @@
           <p class="lnd-kicker">See it all first</p>
           <h2 id="lndShowHeading" class="lnd-value-title">The whole product,<br />playing on a loop.</h2>
           <p class="lnd-value-lede">
-            Real components, example figures — the same screens you get on day one, on your phone
+            Real components, example figures. The same screens you get on day one, on your phone
             and on the desk. Expectancy per setup, loss budgets that lock the desk, bulk import from
             Vantage, Binance or a spreadsheet.
           </p>
@@ -327,6 +327,22 @@
             <button class="lnd-show-chip" type="button" role="tab" aria-selected="false" data-show-scene="reflect">Reflection</button>
             <button class="lnd-show-chip" type="button" role="tab" aria-selected="false" data-show-scene="accounts">Accounts</button>
           </div>
+
+          <div class="lnd-show-phone-wrap">
+            <!-- Floating glance cards: example figures from the same trade the
+                 demo journals, drifting beside the phone on desktop. -->
+            <div class="lnd-show-float lnd-show-float-a" aria-hidden="true">
+              <span class="lnd-show-float-k">stop</span>
+              <span class="lnd-show-float-v">4,244 &middot; 10.0 pips</span>
+            </div>
+            <div class="lnd-show-float lnd-show-float-b" aria-hidden="true">
+              <span class="lnd-show-float-k">risk</span>
+              <span class="lnd-show-float-v">$20.00 &middot; 0.2%</span>
+            </div>
+            <div class="lnd-show-float lnd-show-float-c" aria-hidden="true">
+              <span class="lnd-show-float-k">discipline</span>
+              <span class="lnd-show-float-v">9 of 10 rules ticked</span>
+            </div>
 
           <div class="lnd-phone">
             <div class="lnd-phone-screen">
@@ -412,9 +428,10 @@
                   <div class="lnd-ph-acct" style="--a:3"><span class="lnd-ph-acct-id"><strong>200K challenge</strong><em>eval</em></span><span>$198,730</span></div>
                 </div>
                 <span class="lnd-ph-add">+ Add another account</span>
-                <p class="lnd-ph-foot">Evals, funded, live — each keeps its own journal, rules and drawdown math.</p>
+                <p class="lnd-ph-foot">Evals, funded, live. Each keeps its own journal, rules and drawdown math.</p>
               </div>
             </div>
+          </div>
           </div>
 
         </div>
@@ -446,55 +463,65 @@
             </div>
             <div class="lnd-term-feat">
               <span class="lnd-term-feat-k">Calendar</span>
-              <p>Economic releases with countdowns — CPI, NFP, rate decisions, all on one clock.</p>
+              <p>Economic releases with countdowns: CPI, NFP, rate decisions, all on one clock.</p>
             </div>
             <div class="lnd-term-feat">
               <span class="lnd-term-feat-k">Impact</span>
-              <p>Ranked by market punch, not volume — fundamentals read in one glance, desk or phone.</p>
+              <p>Ranked by market punch, not volume. Fundamentals read in one glance, desk or phone.</p>
             </div>
           </div>
           <p class="lnd-term-fine">
-            Sample screen below — nothing on it is live. Pricing lands with the launch; journalling
+            Sample screen below: nothing on it is live. Pricing lands with the launch; journalling
             itself stays free.
           </p>
         </div>
 
-        <figure class="lnd-term-frame" aria-label="Terminal Pro preview — sample headlines, not live news">
+        <figure class="lnd-term-frame" aria-label="Terminal Pro preview: sample headlines, not live news">
           <figcaption class="lnd-term-chrome">
             <span class="lnd-term-dot" aria-hidden="true"></span>
             <span class="lnd-term-title">Terminal Pro</span>
             <span class="lnd-term-tag">concept preview</span>
           </figcaption>
           <div class="lnd-term-screen" aria-hidden="true">
+            <div class="lnd-term-tabs">
+              <span class="is-on">wires</span><span>posts</span><span>calendar</span><span>my pairs</span>
+              <span class="lnd-term-clock">13:33:07 UTC</span>
+            </div>
             <div class="lnd-term-row is-flash" style="--r:0">
               <span class="lnd-term-time">13:30:00</span>
               <span class="lnd-term-flag">flash</span>
-              <span class="lnd-term-head">CPI 3.2% y/y &mdash; two tenths under consensus</span>
+              <span class="lnd-term-head">CPI 3.2% y/y, two tenths under consensus</span>
+              <span class="lnd-term-imp" data-imp="3"><i></i><i></i><i></i></span>
             </div>
             <div class="lnd-term-row" style="--r:1">
               <span class="lnd-term-time">13:30:04</span>
               <span class="lnd-term-flag is-fx">fx</span>
               <span class="lnd-term-head">Dollar index slips 40 pips on the print</span>
+              <span class="lnd-term-imp" data-imp="2"><i></i><i></i><i></i></span>
             </div>
             <div class="lnd-term-row" style="--r:2">
               <span class="lnd-term-time">13:31:12</span>
               <span class="lnd-term-flag is-metal">gold</span>
               <span class="lnd-term-head">XAUUSD takes out the Asia high</span>
+              <span class="lnd-term-imp" data-imp="2"><i></i><i></i><i></i></span>
             </div>
             <div class="lnd-term-row" style="--r:3">
               <span class="lnd-term-time">13:32:40</span>
               <span class="lnd-term-flag">macro</span>
-              <span class="lnd-term-head">2Y yield &minus;9bp &mdash; cuts repriced to June</span>
+              <span class="lnd-term-head">2Y yield &minus;9bp, cuts repriced to June</span>
+              <span class="lnd-term-imp" data-imp="2"><i></i><i></i><i></i></span>
             </div>
             <div class="lnd-term-row" style="--r:4">
               <span class="lnd-term-time">13:33:05</span>
               <span class="lnd-term-flag">post</span>
-              <span class="lnd-term-head">Head-of-state post on tariffs &mdash; USD bid</span>
+              <span class="lnd-term-head">Head-of-state post on tariffs, USD bid</span>
+              <span class="lnd-term-imp" data-imp="3"><i></i><i></i><i></i></span>
             </div>
             <div class="lnd-term-row is-cal" style="--r:5">
               <span class="lnd-term-time">14:00</span>
               <span class="lnd-term-flag is-cal">next</span>
-              <span class="lnd-term-head">FOMC minutes &mdash; countdown 27:20</span>
+              <span class="lnd-term-head">FOMC minutes, countdown 27:20</span>
+              <span class="lnd-term-imp" data-imp="1"><i></i><i></i><i></i></span>
             </div>
             <div class="lnd-term-strip">
               <span>XAUUSD 4,240.1</span><span>BTCUSD 64,368</span><span>EURUSD 1.0834</span><span>US10Y 4.21%</span><span class="lnd-term-cursor"></span>
@@ -506,7 +533,7 @@
       <section class="lnd-close" data-landing-reveal>
         <h2 class="lnd-close-title">Your next trade is worth journalling.</h2>
         <p class="lnd-close-lede">
-          Free to use. Your data stays yours — export it as CSV or JSON whenever you want.
+          Free to use. Your data stays yours. Export it as CSV or JSON whenever you want.
         </p>
         <button id="ctaRegisterBtn" class="lnd-btn lnd-btn-accent lnd-btn-lg" type="button">
           Create your free account
@@ -768,7 +795,7 @@
              RULES is an ACTION (jump to Risk Controls), not a view, so it is
              deliberately not a .nav-btn — it must never claim aria-current. -->
         <nav class="topnav" aria-label="Main sections">
-          <button class="topnav-mark nav-btn" type="button" data-target="dashboard" data-nav-silent aria-label="Trader Journal — dashboard">TJ</button>
+          <button class="topnav-mark nav-btn" type="button" data-target="dashboard" data-nav-silent aria-label="Trader Journal dashboard">TJ</button>
           <span class="topnav-rule" aria-hidden="true"></span>
           <div class="topnav-links">
             <button class="nav-btn topnav-btn is-active" type="button" data-target="dashboard" aria-current="page">
@@ -849,7 +876,7 @@
           <span class="demo-notice-mark" aria-hidden="true">demo</span>
           <p class="demo-notice-copy">
             <strong>Nothing here is saved.</strong>
-            You are exploring a sample journal &mdash; add, edit and export freely, but it all disappears
+            You are exploring a sample journal. Add, edit and export freely, but it all disappears
             when you close this tab.
           </p>
           <div class="demo-notice-actions">
@@ -1206,7 +1233,7 @@
               <span class="lnd-tape-delay">public feed &middot; 60s</span>
             </div>
             <div class="lnd-tape-list" id="dashLeonTapeList"></div>
-            <p class="lnd-tape-note">Leon&rsquo;s public feed &mdash; open positions first, then closed trades. The same rows the landing page shows.</p>
+            <p class="lnd-tape-note">Leon&rsquo;s public feed: open positions first, then closed trades. The same rows the landing page shows.</p>
           </section>
 
           <section class="dashboard-empty" id="dashboardEmptyState" hidden aria-label="No trades yet">
@@ -1237,14 +1264,14 @@
                 data-height="240"
                 role="slider"
                 tabindex="0"
-                aria-label="Equity curve — drag across it, or press the arrow keys, to walk the trades behind it"
+                aria-label="Equity curve. Drag across it, or press the arrow keys, to walk the trades behind it"
                 aria-valuemin="0"
                 aria-valuemax="0"
                 aria-valuenow="0"
                 aria-valuetext="No point selected"
               ></canvas>
               <p class="eq-scrub-hint" id="equityScrubHint">
-                Drag across the curve — or focus it and press <kbd>←</kbd> <kbd>→</kbd> — to read the trades behind it.
+                Drag across the curve, or focus it and press <kbd>←</kbd> <kbd>→</kbd>, to read the trades behind it.
               </p>
               <div class="eq-scrub" id="equityScrub" hidden>
                 <div class="eq-scrub-body">
@@ -1429,8 +1456,7 @@
             <div class="panel-head">
               <h3>Accounts</h3>
               <p>
-                One equity curve per account. Everything on every screen &mdash; dashboard, review,
-                calendar, exports &mdash; is scoped to the active one.
+                One equity curve per account. Everything on every screen is scoped to the active one: dashboard, review, calendar, exports.
               </p>
             </div>
             <ul class="account-list" id="accountList"></ul>
@@ -1483,7 +1509,7 @@
                 <legend>Cooldown lock</legend>
                 <p class="cooldown-fieldset-note">
                   When a loss budget is gone, or after a run of losses, &ldquo;Log a trade&rdquo; asks one
-                  question before it opens. You can always answer and carry on &mdash; the answer is stored
+                  question before it opens. You can always answer and carry on. The answer is stored
                   on the trade so the cost of trading through it is measurable.
                 </p>
                 <div class="cooldown-fieldset-grid">
@@ -1614,8 +1640,8 @@
           <div id="calendarGrid" class="calendar-grid" aria-label="Trading calendar"></div>
 
           <ul class="cal-legend">
-            <li><span class="cal-legend-swatch cal-legend-up" aria-hidden="true"></span>green day &mdash; the tile rises</li>
-            <li><span class="cal-legend-swatch cal-legend-down" aria-hidden="true"></span>red day &mdash; the tile sinks</li>
+            <li><span class="cal-legend-swatch cal-legend-up" aria-hidden="true"></span>green day: the tile rises</li>
+            <li><span class="cal-legend-swatch cal-legend-down" aria-hidden="true"></span>red day: the tile sinks</li>
             <li><span class="cal-legend-swatch cal-legend-flat" aria-hidden="true"></span>no trades</li>
           </ul>
         </section>
@@ -1624,7 +1650,7 @@
           <header class="view-head">
             <h2 id="tradeEntryHeading">Full trade detail</h2>
             <p>
-              Opening a position takes five fields &mdash; use &#8984;K or the Log&nbsp;a&nbsp;trade button. This form is
+              Opening a position takes five fields. Use &#8984;K or the Log&nbsp;a&nbsp;trade button. This form is
               every field there is: it is what &ldquo;Add detail&rdquo; and Edit open, and the only place to set
               exits, evidence and notes by hand.
             </p>
@@ -2323,8 +2349,8 @@
           </div>
           <div class="cmdk-readout" id="captureReadout" role="status" aria-live="polite"></div>
           <p class="cmdk-note">
-            Everything else &mdash; setup, session, timeframe, psychology &mdash; is inferred from the clock
-            and your last trade, and stays editable later.
+            Everything else, from setup and session to timeframe and psychology, is inferred from the
+            clock and your last trade, and stays editable later.
           </p>
         </div>
         <div class="cmdk-foot">
@@ -2427,7 +2453,7 @@
           <legend class="sheet-rules-title">Before you click &middot; your rules</legend>
           <div class="sheet-rules-list" id="sheetRulesList"></div>
           <p class="sheet-rules-note">
-            Which boxes you ticked is stored with the trade &mdash; so the discipline score stops being a guess.
+            Which boxes you ticked is stored with the trade, so the discipline score stops being a guess.
           </p>
         </fieldset>
 
@@ -2548,7 +2574,7 @@
               class="jrn-drop"
               type="button"
               id="journalDrop"
-              aria-label="Chart screenshot — drop a file here, paste one, or press to pick one"
+              aria-label="Chart screenshot: drop a file here, paste one, or press to pick one"
             >
               <span>drop, paste<br />or pick a screenshot</span>
             </button>
@@ -2650,7 +2676,7 @@
           </label>
           <p class="prop-note">
             Prefills only. The figures were read from public documentation on a stated date and are
-            reproduced here to save typing &mdash; firms change them, and during this feature&rsquo;s
+            reproduced here to save typing. Firms change them, and during this feature&rsquo;s
             research one firm&rsquo;s own two pages disagreed with each other. Check yours.
           </p>
 
@@ -2660,14 +2686,14 @@
               <input id="propProfitTarget" type="number" min="0" step="0.01" placeholder="3000" />
             </label>
             <label>
-              Max loss limit &mdash; drawdown ($)
+              Max loss limit / drawdown ($)
               <input id="propDrawdown" type="number" min="0" step="0.01" placeholder="2000" required />
             </label>
             <label>
               Limit behaviour
               <select id="propMode">
-                <option value="trailing">Trailing &mdash; the floor follows new highs</option>
-                <option value="static">Static &mdash; the floor never moves</option>
+                <option value="trailing">Trailing: the floor follows new highs</option>
+                <option value="static">Static: the floor never moves</option>
               </select>
             </label>
             <label id="propBasisRow">
@@ -2790,6 +2816,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260807-termfeats"></script>
+    <script type="module" src="app.js?v=20260807-autoclose"></script>
   </body>
 </html>

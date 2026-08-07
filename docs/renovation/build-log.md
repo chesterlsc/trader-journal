@@ -2430,3 +2430,24 @@ User-reported: the demo's Execution grades rendered as floating labels above emp
   screen gained a head-of-state "post" row. Fine print unchanged: in
   development, nothing live.
 - Busters → ?v=20260807-termfeats. All 26 tests pass.
+
+## 2026-08-07 — Auto-close at SL/TP, close fix, dash sweep, landing depth
+
+- **Auto-close:** stops and targets are orders now. openTradeTriggerLevel
+  (src/lib/core.js, pure; tests/autoClose.check.mjs pins every direction /
+  level / edge case) decides; autoCloseTriggeredTrades runs on each 5s poll,
+  fills AT the level, persists, and opens the journalling sheet. Stop wins a
+  simultaneous cross; wicks between polls are honestly out of reach.
+- **Close button fix:** with no live price, closeTradeAtMarket dead-ended
+  into a message node the dashboard never shows — "the button does nothing".
+  It now opens the trade in the full form with Exit Price focused.
+- **Trade Review mobile:** the sticky demo banner (162px, z 200) floated
+  over the filter chips and cards; it is in-flow on ≤720px.
+- **Copy:** every em dash removed from user-facing sentences (index.html,
+  app.js strings, modules, parser errors); test pins updated to match
+  (SAMPLE DATA: prefix, "No stop yet." wording).
+- **Showcase desktop:** section splits copy | stage at ≥981px; three glance
+  cards (stop / risk / discipline) drift beside the phone.
+- **Terminal Pro screen:** tab strip (wires · posts · calendar · my pairs +
+  UTC clock) and a three-bar impact meter per row, accent-filled by level.
+- Busters → ?v=20260807-autoclose. All 27 tests pass.

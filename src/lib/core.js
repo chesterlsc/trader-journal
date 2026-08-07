@@ -136,3 +136,24 @@ export function debounce(fn, delay) {
     timer = setTimeout(() => fn(...args), delay);
   };
 }
+
+// A stop or target is an ORDER in the journal's model: when the live price
+// crosses the level, the trade is done and the fill is the LEVEL itself —
+// the price a resting order would fill at, not whatever the 5s poll happened
+// to see on the far side of it. If one poll gaps past both levels at once,
+// the stop wins: the honest assumption is the pessimistic one.
+export function openTradeTriggerLevel(trade, price) {
+  if (!trade || trade.status !== "open" || !Number.isFinite(price) || price <= 0) {
+    return null;
+  }
+  const isSell = trade.direction === "Sell";
+  const stop = Number(trade.stopLoss);
+  const target = Number(trade.takeProfit);
+  if (stop > 0 && (isSell ? price >= stop : price <= stop)) {
+    return { level: "stop", fill: stop };
+  }
+  if (target > 0 && (isSell ? price <= target : price >= target)) {
+    return { level: "target", fill: target };
+  }
+  return null;
+}

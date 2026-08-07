@@ -71,7 +71,7 @@ export function createRecentTradesView(deps) {
     if (ui.lndTapeNote) {
       ui.lndTapeNote.textContent = isOwnJournal
         ? "Raised rows made money. Sunk rows lost it. These are trades from the journal open in this browser."
-        : "Raised rows made money. Sunk rows lost it. Open positions ride on top. Nothing here is a mock-up — it is Leon\u2019s public feed, straight from his real journal.";
+        : "Raised rows made money. Sunk rows lost it. Open positions ride on top. Nothing here is a mock-up. It is Leon\u2019s public feed, straight from his real journal.";
     }
 
     renderTapeWeekCount(rows);

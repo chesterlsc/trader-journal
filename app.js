@@ -16,7 +16,8 @@
   clamp,
   escapeHtml,
   getWeekKey,
-  debounce
+  debounce,
+  openTradeTriggerLevel
 } from "./src/lib/core.js";
 import { formatCurrency } from "./src/lib/format.js";
 import { getNextSessionOpen, formatCountdown } from "./src/lib/sessions.js";
@@ -105,8 +106,8 @@ const GUEST_KEY_PREFIX = "demo:";
 const DEMO_BATCH_ID = "demo-sample-journal";
 const DEMO_REFLECTION_TAG = "sample";
 const DEMO_NOTICE =
-  "Demo mode — nothing here is saved. Create a free account to keep it.";
-const DEMO_TRADE_NOTE_PREFIX = "SAMPLE DATA —";
+  "Demo mode: nothing here is saved. Create a free account to keep it.";
+const DEMO_TRADE_NOTE_PREFIX = "SAMPLE DATA:";
 
 // Sample journal spec. Deterministic and generated, not a shipped blob: four
 // instruments, a fixed R-outcome sequence and index-cycled context fields.
@@ -2742,7 +2743,7 @@ function updateAuthUi() {
   // Demo mode never fakes a session: the account controls become an explicit
   // exit, not a logout, because there is nothing logged in to log out of.
   if (state.auth.guestMode) {
-    ui.authStatus.textContent = "Demo mode — not signed in";
+    ui.authStatus.textContent = "Demo mode, not signed in";
     ui.authStatus.classList.add("is-off");
     ui.loginBtn.hidden = false;
     ui.registerBtn.hidden = false;
@@ -3228,7 +3229,7 @@ function readTradeForm() {
   } else if (!Number.isFinite(value.takeProfit) || value.takeProfit <= 0) {
     return {
       ok: false,
-      error: "Take Profit must be greater than zero — or leave it empty for no target.",
+      error: "Take Profit must be greater than zero, or leave it empty for no target.",
       field: ui.tradeFields.takeProfit
     };
   } else if (value.direction === "Buy" ? value.takeProfit <= value.entryPrice : value.takeProfit >= value.entryPrice) {
@@ -4423,7 +4424,7 @@ function renderCaptureReadout() {
     const pipTail = targetPips !== null ? ` · ${formatPips(targetPips)} pips` : "";
     chips.push(captureChip(`target ${formatCapturePrice(value.takeProfit)}${pipTail} · R:R ${rr.toFixed(2)}`));
   } else if (parsed.ok) {
-    chips.push(captureChip("no target — R:R unknown", "warn"));
+    chips.push(captureChip("no target · R:R unknown", "warn"));
   }
 
   const status = parsed.ok
@@ -4502,7 +4503,7 @@ function handleCaptureSubmit(event) {
   }
   if (!(value.positionSize > 0)) {
     ui.captureReadout.innerHTML =
-      '<p class="cmdk-status is-error">Cannot size this trade — set a risk % or a size.</p>';
+      '<p class="cmdk-status is-error">Cannot size this trade. Set a risk % or a size.</p>';
     return;
   }
 
@@ -4513,7 +4514,7 @@ function handleCaptureSubmit(event) {
   closeCaptureBar();
   showCaptureToast(
     state.auth.guestMode
-      ? `${value.symbol} ${value.direction === "Buy" ? "long" : "short"} opened in the demo — nothing here is saved.`
+      ? `${value.symbol} ${value.direction === "Buy" ? "long" : "short"} opened in the demo. Nothing here is saved.`
       : `${value.symbol} ${value.direction === "Buy" ? "long" : "short"} opened · ${formatPositionSize(value.positionSize, value.symbol, value.market)} at risk ${formatCurrency(riskAmount)}`
   );
 }
@@ -4721,7 +4722,7 @@ function handleSheetSubmit(event) {
   closeTradeSheet();
   showCaptureToast(
     state.auth.guestMode
-      ? `${check.value.symbol} ${check.value.direction === "Buy" ? "long" : "short"} opened in the demo — nothing here is saved.`
+      ? `${check.value.symbol} ${check.value.direction === "Buy" ? "long" : "short"} opened in the demo. Nothing here is saved.`
       : `${check.value.symbol} ${check.value.direction === "Buy" ? "long" : "short"} opened · ${formatPositionSize(check.value.positionSize, check.value.symbol, check.value.market)} at risk ${formatCurrency(check.riskAmount)}`
   );
 }
@@ -4884,7 +4885,7 @@ function renderJournalChart() {
 
   ui.journalDrop.classList.remove("is-filled");
   ui.journalDrop.innerHTML = journalState.screenshotName
-    ? `<span>${escapeHtml(journalState.screenshotName)}<br />filename only — too large to store</span>`
+    ? `<span>${escapeHtml(journalState.screenshotName)}<br />filename only, too large to store</span>`
     : "<span>drop, paste<br />or pick a screenshot</span>";
 }
 
@@ -4901,7 +4902,7 @@ async function acceptJournalImage(file) {
   setMessage(
     ui.journalSheetMessage,
     image.tooLarge
-      ? `Over ${Math.round(MAX_INLINE_IMAGE_BYTES / 1024)}KB — the filename is stored, the image is not.`
+      ? `Over ${Math.round(MAX_INLINE_IMAGE_BYTES / 1024)}KB: the filename is stored, the image is not.`
       : "Chart attached.",
     image.tooLarge ? "error" : "success"
   );
@@ -5031,7 +5032,7 @@ function commitVoiceClip(tradeId, clip) {
 
   if (voiceUsedChars(map, id) + clip.data.length > VOICE_TOTAL_CHARS) {
     const oldest = oldestVoiceClipLabel();
-    return `Voice storage is full at ${formatVoiceSize(VOICE_TOTAL_CHARS)}. The clip was not saved — everything else on this trade was.${
+    return `Voice storage is full at ${formatVoiceSize(VOICE_TOTAL_CHARS)}. The clip was not saved; everything else on this trade was.${
       oldest ? ` The oldest clip is ${oldest}; open it from Trade Review and delete it to free space.` : ""
     }`;
   }
@@ -5047,7 +5048,7 @@ function commitVoiceClip(tradeId, clip) {
   };
   return voiceStoreWrite(map)
     ? ""
-    : "The browser refused the clip — storage is full. Everything else on this trade was saved.";
+    : "The browser refused the clip: storage is full. Everything else on this trade was saved.";
 }
 
 // The first container this browser will record. Opus is the target; Safari
@@ -5101,12 +5102,12 @@ function voiceQuotaLine() {
   const near = used + staged >= VOICE_TOTAL_CHARS * 0.8;
   const oldest = near ? oldestVoiceClipLabel() : "";
   return (
-    `Audio only — a clip is not searchable, is not in exports, and stays on this device (it is never synced). ` +
+    `Audio only: a clip is not searchable, is not in exports, and stays on this device (it is never synced). ` +
     `${formatVoiceSize(used + staged)} of ${formatVoiceSize(VOICE_TOTAL_CHARS)} used across ${count} ${
       count === 1 ? "clip" : "clips"
     }.` +
     (near
-      ? ` Nearly full — new clips will be refused soon.${
+      ? ` Nearly full: new clips will be refused soon.${
           oldest ? ` The oldest is ${oldest}; delete it from Trade Review to free space.` : ""
         }`
       : "")
@@ -5217,7 +5218,7 @@ function tickVoiceTimer() {
   ui.journalVoiceTime.textContent = formatVoiceDuration(seconds);
   ui.journalVoiceTime.classList.toggle("is-warn", seconds >= VOICE_WARN_SECONDS);
   if (seconds >= VOICE_WARN_SECONDS && seconds < VOICE_MAX_SECONDS) {
-    setVoiceStatus(`${VOICE_MAX_SECONDS - seconds}s left — it stops on its own at ${formatVoiceDuration(VOICE_MAX_SECONDS)}.`, "warn");
+    setVoiceStatus(`${VOICE_MAX_SECONDS - seconds}s left. It stops on its own at ${formatVoiceDuration(VOICE_MAX_SECONDS)}.`, "warn");
   }
   // A hard stop, not a nudge. The per-clip ceiling is the only thing between a
   // forgotten recorder and a blown storage quota.
@@ -5284,7 +5285,7 @@ async function startVoiceRecording() {
   voiceState.timerId = window.setInterval(tickVoiceTimer, 200);
   startVoiceMeter(stream);
   renderVoicePanel();
-  setVoiceStatus(`Recording — it stops on its own at ${formatVoiceDuration(VOICE_MAX_SECONDS)}.`, "rec");
+  setVoiceStatus(`Recording. It stops on its own at ${formatVoiceDuration(VOICE_MAX_SECONDS)}.`, "rec");
 }
 
 function stopVoiceRecording() {
@@ -5539,7 +5540,7 @@ function handleJournalSubmit(event) {
   const voiceError = commitVoiceClip(trade.id, voiceState.clip);
   if (voiceError) {
     setVoiceStatus(voiceError, "error");
-    setMessage(ui.journalSheetMessage, "Trade saved. The voice clip was not — see below.", "error");
+    setMessage(ui.journalSheetMessage, "Trade saved. The voice clip was not; see below.", "error");
     renderVoicePanel();
     return;
   }
@@ -5549,7 +5550,7 @@ function handleJournalSubmit(event) {
   showCaptureToast(
     remaining
       ? `${journalled.asset} journalled · ${remaining} left in the queue.`
-      : `${journalled.asset} journalled — the queue is clear.`
+      : `${journalled.asset} journalled. The queue is clear.`
   );
 }
 
@@ -5882,7 +5883,15 @@ function closeTradeAtMarket(id) {
 
   const price = getOpenTradeLiveSnapshot(trade)?.currentPrice;
   if (!Number.isFinite(price) || price <= 0) {
-    setMessage(ui.journalMessage, `No live price for ${trade.asset} yet. Try again in a few seconds or close it manually via Edit.`, "error");
+    // The Close button lives on the DASHBOARD; ui.journalMessage does not.
+    // A message the user cannot see is a button that "does nothing" — so
+    // instead of dead-ending, open the trade in the full form with the exit
+    // field focused: the manual close path, one tap further.
+    setMessage(ui.journalMessage, `No live price for ${trade.asset} yet. Opening the trade so you can close it with your own exit price.`, "error");
+    loadTradeIntoForm(id);
+    window.setTimeout(() => {
+      ui.tradeFields.exitPrice?.focus();
+    }, 80);
     return;
   }
 
@@ -5978,7 +5987,7 @@ function isBulkDeleteConfirmed(answer, count) {
 function deleteFilteredTrades() {
   const doomed = getFilteredTrades();
   if (!doomed.length) {
-    setMessage(ui.journalMessage, "Nothing to delete — no trades match the current filters.", "error");
+    setMessage(ui.journalMessage, "Nothing to delete: no trades match the current filters.", "error");
     return;
   }
 
@@ -5986,7 +5995,7 @@ function deleteFilteredTrades() {
   const noun = `trade${doomed.length === 1 ? "" : "s"}`;
   const answer = window.prompt(
     `Delete all ${doomed.length} ${scope.length ? "filtered " : ""}${noun}?` +
-      (scope.length ? `\n\nFilter: ${scope.join(" · ")}` : "\n\nNo filter is applied — this is the whole journal.") +
+      (scope.length ? `\n\nFilter: ${scope.join(" · ")}` : "\n\nNo filter is applied; this is the whole journal.") +
       `\n\nA JSON backup downloads first, and you get ${Math.round(UNDO_TOAST_MS / 1000)} seconds to undo.` +
       `\n\nType DELETE (or ${doomed.length}) to confirm:`,
     ""
@@ -5994,7 +6003,7 @@ function deleteFilteredTrades() {
 
   if (!isBulkDeleteConfirmed(answer, doomed.length)) {
     if (answer !== null) {
-      setMessage(ui.journalMessage, "Delete cancelled — the confirmation did not match.", "error");
+      setMessage(ui.journalMessage, "Delete cancelled: the confirmation did not match.", "error");
     }
     return;
   }
@@ -6172,7 +6181,7 @@ function exportTradesCsv() {
   const csv = [headers.join(","), ...rows].join("\n");
   triggerDownload(new Blob([csv], { type: "text/csv;charset=utf-8" }), `trading-journal-${Date.now()}.csv`);
   if (state.auth.guestMode) {
-    nudgeGuest(ui.journalMessage, "CSV exported — it includes the sample rows.");
+    nudgeGuest(ui.journalMessage, "CSV exported. It includes the sample rows.");
     return;
   }
   setMessage(ui.journalMessage, "CSV exported.", "success");
@@ -6201,7 +6210,7 @@ function exportBackupJson() {
   // trader's whole journal, and settings carries the account list with it.
   downloadBackupJson(allTrades(), `trading-journal-backup-${Date.now()}.json`);
   if (state.auth.guestMode) {
-    nudgeGuest(ui.journalMessage, "JSON backup exported — it includes the sample rows.");
+    nudgeGuest(ui.journalMessage, "JSON backup exported. It includes the sample rows.");
     return;
   }
   setMessage(ui.journalMessage, "JSON backup exported.", "success");
@@ -7923,10 +7932,10 @@ function buildRiskConsequence(analytics, breached) {
   const weeklyLimit = state.settings.weeklyMaxLoss;
 
   if (weeklyLimit > 0 && analytics.weekPnl < -weeklyLimit) {
-    return "The weekly budget is gone — the desk is locked until next week.";
+    return "The weekly budget is gone. The desk is locked until next week.";
   }
   if (breached || (dailyLimit > 0 && analytics.todayPnl < -dailyLimit)) {
-    return "Today's budget is gone — the desk is locked until tomorrow.";
+    return "Today's budget is gone. The desk is locked until tomorrow.";
   }
   if (!(dailyLimit > 0)) {
     return "No daily loss budget set, so nothing stops you. Set one in Risk Controls.";
@@ -8120,7 +8129,7 @@ function renderEquityScrub(index) {
       ui.equityScrubMeta,
       dates[index] ? `Where the curve begins · ${formatIsoShort(dates[index])}` : "Where the curve begins"
     );
-    setText(ui.equityScrubNote, "No trade here — this is the balance the account opened with.");
+    setText(ui.equityScrubNote, "No trade here. This is the balance the account opened with.");
   } else {
     setText(ui.equityScrubSymbol, trade.asset || "Unknown symbol");
     setText(ui.equityScrubNet, playbookMoney(trade.netPnl));
@@ -8991,7 +9000,7 @@ function renderRuleCost() {
           ? ` Closest: &ldquo;${escapeHtml(best.rule.label)}&rdquo; — ${best.keptCount} ticked, ${best.skippedCount} skipped.`
           : " No trade has been through the checklist yet.";
       items.push(
-        `<li class="rule-cost-note">A rule needs ${RULE_COST_MIN_SIDE} closed trades on each side — ticked and skipped — before the money difference means anything.${progress}</li>`
+        `<li class="rule-cost-note">A rule needs ${RULE_COST_MIN_SIDE} closed trades on each side, ticked and skipped, before the money difference means anything.${progress}</li>`
       );
     }
   }
@@ -9166,7 +9175,7 @@ function handleCooldownSubmit(event) {
   event.preventDefault();
   const answer = ui.cooldownAnswer.value.trim();
   if (!answer) {
-    setMessage(ui.cooldownMessage, "Answer it in your own words — that is the whole speed bump.", "error");
+    setMessage(ui.cooldownMessage, "Answer it in your own words. That is the whole speed bump.", "error");
     ui.cooldownAnswer.focus();
     return;
   }
@@ -9378,7 +9387,7 @@ function setAccountArchived(id, archived) {
     return;
   }
   if (archived && getVisibleAccounts().length <= 1) {
-    showCaptureToast("That is your only live account — add another before archiving this one.", "warn");
+    showCaptureToast("That is your only live account. Add another before archiving this one.", "warn");
     return;
   }
   const everything = allTrades();
@@ -9532,7 +9541,7 @@ function renderPropTracker() {
         ? `Moved up ${moves.length} time${moves.length === 1 ? "" : "s"} — last on ${
             moves[moves.length - 1].date
           }, from ${money(moves[moves.length - 1].from)} to ${money(moves[moves.length - 1].to)}.`
-        : "Has not moved yet — it sits where it started."
+        : "Has not moved yet. It sits where it started."
     );
   }
 
@@ -9609,7 +9618,7 @@ function renderPropTracker() {
   if (ui.propHonesty) {
     const notes = [PROP_DISCLAIMER, PROP_VISIBILITY_NOTE];
     if (!evaluation.rules.confirmed) {
-      notes.unshift("These figures are still the prefilled defaults — open the account and confirm them against your statement.");
+      notes.unshift("These figures are still the prefilled defaults. Open the account and confirm them against your statement.");
     }
     notes.push(
       "Days are bucketed by the date on each trade. If your firm's trading day starts the evening before, an evening fill will sit on the wrong day here."
@@ -9656,14 +9665,14 @@ function buildPropWarning(evaluation, pressure) {
   if (pressure.level === "warn") {
     return {
       tone: "warn",
-      text: `${formatCurrency(evaluation.room)} of room left — one more typical loss of ${formatCurrency(
+      text: `${formatCurrency(evaluation.room)} of room left. One more typical loss of ${formatCurrency(
         typicalLossSize()
       )}, then the next one breaches the limit.`
     };
   }
   return {
     tone: "safe",
-    text: `${formatCurrency(evaluation.room)} of room — about ${pressure.lossesLeft} more typical losses of ${formatCurrency(
+    text: `${formatCurrency(evaluation.room)} of room, about ${pressure.lossesLeft} more typical losses of ${formatCurrency(
       typicalLossSize()
     )} before the limit.`
   };
@@ -9823,7 +9832,7 @@ function applyPropPreset(presetId) {
   if (fields.confirmed) fields.confirmed.checked = false;
   setMessage(
     ui.accountFormMessage,
-    `Prefilled from published figures read on ${PROP_PRESET_AS_OF}. ${preset.note} Check every number against your own account — firms change them.`,
+    `Prefilled from published figures read on ${PROP_PRESET_AS_OF}. ${preset.note} Check every number against your own account; firms change them.`,
     // "notice" is the only neutral kind setMessage styles; "info" would add an
     // unstyled class and the copy would read as ordinary body text.
     "notice"
@@ -9844,7 +9853,7 @@ function syncAccountDialogState() {
   if (ui.propBasisNote) {
     ui.propBasisNote.textContent =
       ui.accountFields.basis?.value === "trade"
-        ? "Trails after every closed trade. This is the closest a journal of closed trades can get to an intraday rule, and it draws a tighter floor than the end-of-day option. It is still not a real intraday peak — this app never sees one."
+        ? "Trails after every closed trade. This is the closest a journal of closed trades can get to an intraday rule, and it draws a tighter floor than the end-of-day option. It is still not a real intraday peak; this app never sees one."
         : "Trails your end-of-day closed balance. If your firm trails intraday highs instead, your real limit will sit higher than the one shown here.";
   }
   const zeroStart = parseNumber(ui.accountFields.startingBalance?.value) === 0;
@@ -10368,7 +10377,7 @@ function buildTradeDetailRow(trade, isOpen, voiceIndex = new Map()) {
         `<button class="mini-btn" data-action="voice" data-id="${id}" type="button">Play ${escapeHtml(
           formatVoiceDuration(voiceIndex.get(String(trade.id)))
         )}</button>` +
-        `<span class="rev-voice-hint">audio only — not searchable, this device only</span></p>`
+        `<span class="rev-voice-hint">audio only: not searchable, this device only</span></p>`
     );
   }
 
@@ -10867,7 +10876,7 @@ function buildWeeklyDigest(dateString) {
   const worstSetup = worstWeekSetup(trades);
   if (rule && rule.pnl < 0) {
     lever.push(
-      `Tick “${rule.label}” before every entry — the ${rule.skipped} trade${plural(
+      `Tick “${rule.label}” before every entry. The ${rule.skipped} trade${plural(
         rule.skipped
       )} that skipped it this week are ${digestMoney(rule.pnl)}.`
     );
@@ -10879,7 +10888,7 @@ function buildWeeklyDigest(dateString) {
     );
   } else if (mood) {
     lever.push(
-      `Watch the “${mood.label}” entries — they are ${mood.count} of your ${mood.of} losses this week.`
+      `Watch the “${mood.label}” entries. They are ${mood.count} of your ${mood.of} losses this week.`
     );
   } else if (worstSetup) {
     lever.push(
@@ -11542,9 +11551,56 @@ async function refreshLivePrices(options = {}) {
     // renderAll still owns real state mutations.
     patchLiveNodes();
     renderTickerPair();
+    autoCloseTriggeredTrades();
   } finally {
     state.marketData.inFlight = false;
   }
+}
+
+/* A stop or a target is an order, not a decoration: the moment a polled
+   price crosses the level, the trade closes itself AT the level (the fill a
+   resting order would get) and the journalling sheet opens — closing is the
+   trigger, same as every manual close route. One caveat the 5s cadence
+   imposes: a wick that touches the level and comes back between polls will
+   not be seen; the journal closes on what the poll can prove. */
+function autoCloseTriggeredTrades() {
+  if (!canAccessApp() || !Array.isArray(state.trades)) {
+    return;
+  }
+
+  const closed = [];
+  state.trades = state.trades.map((trade) => {
+    if (trade.status !== "open") {
+      return trade;
+    }
+    const price = getOpenTradeLiveSnapshot(trade)?.currentPrice;
+    const hit = openTradeTriggerLevel(trade, price);
+    if (!hit) {
+      return trade;
+    }
+    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, closedAt: _closedAt, ...tradeInput } = trade;
+    const record = buildTradeRecord(
+      { ...tradeInput, exitPrice: hit.fill, status: "closed" },
+      { id: trade.id, createdAt: trade.createdAt, existingTrade: trade }
+    );
+    closed.push({ record, level: hit.level, fill: hit.fill });
+    return record;
+  });
+
+  if (!closed.length) {
+    return;
+  }
+
+  persistState();
+  renderAll();
+  const first = closed[0];
+  setMessage(
+    ui.journalMessage,
+    `${first.record.asset} ${first.level === "stop" ? "stop" : "target"} hit. Closed at ${first.fill} (${formatCurrency(first.record.netPnl)}).`,
+    first.level === "stop" ? "error" : "success"
+  );
+  // Closing IS the trigger: the journalling sheet opens for the first fill.
+  openJournalSheet(first.record.id);
 }
 
 // Live-field registry: how each tagged node ("data-live-field") derives its
@@ -11859,22 +11915,22 @@ function buildLndDemoTimeline() {
 
   tween(s0, "typed", cmdLen, 52);
   const s1 = lndDemoState({ typed: cmdLen });
-  key(s1, "Parsed as you type — entry, stop, target, all measured in pips.", 1500);
+  key(s1, "Parsed as you type: entry, stop, target, all measured in pips.", 1500);
 
   const s2 = lndDemoState({ typed: cmdLen, entered: true });
   key(s2, "Enter.", 520);
 
   const s3 = lndDemoState({ typed: cmdLen, entered: true, toast: true });
-  key(s3, "Position open. 0.02 lots — the risk is derived for you: $20.", 1700);
+  key(s3, "Position open. 0.02 lots, and the risk is derived for you: $20.", 1700);
 
   const s4 = lndDemoState({ scene: "close" });
   key(s4, "The trade closed. Journalling it: two taps and a sentence.", 1300);
 
   const s5 = lndDemoState({ scene: "close", mood: true });
-  key(s5, "Tap — how it felt.", 900);
+  key(s5, "Tap. How it felt.", 900);
 
   const s6 = lndDemoState({ scene: "close", mood: true, grade: true });
-  key(s6, "Tap — how you executed.", 900);
+  key(s6, "Tap. How you executed.", 900);
 
   tween(s6, "note", noteLen, 34);
   const s7 = lndDemoState({ scene: "close", mood: true, grade: true, note: noteLen });
