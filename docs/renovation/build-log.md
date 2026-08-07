@@ -2562,3 +2562,11 @@ User-reported: the demo's Execution grades rendered as floating labels above emp
   they could restyle the untouched frame.
 - Busters -> ?v=20260808-controlroom. All 27 tests pass; 375px and 1440px
   verified, frame promoted above the manifest on phones.
+
+## 2026-08-08 — Hero dial un-boxed
+
+- The dial's clip wrapper was bounded to the content shell: its arcs cut off
+  on straight edges and the layer read as a box behind the hero. The wrapper
+  now spans the full viewport (ticker breakout math) and a radial mask
+  dissolves the dial's extremities — edges fade, never clip. No horizontal
+  scroll; verified at 1600px. Busters -> ?v=20260808-dialbleed.

@@ -4953,12 +4953,20 @@ body.demo-signup::before {
   z-index: 1;
 }
 
+/* Full-bleed: the clip box spans the entire viewport (the .lnd-ticker
+   breakout math), and a radial mask dissolves the dial's edges instead of
+   cutting its arcs on straight lines — no box can survive that. */
 .lnd-hero-dial {
   position: absolute;
-  inset: -8% 0 -12%;
+  top: -140px;
+  bottom: -120px;
+  left: calc(50% - 50vw);
+  width: 100vw;
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
+  -webkit-mask-image: radial-gradient(1150px 820px at 62% 46%, #000 52%, transparent 94%);
+  mask-image: radial-gradient(1150px 820px at 62% 46%, #000 52%, transparent 94%);
 }
 
 .lnd-hero-dial svg {
