@@ -11432,7 +11432,12 @@ function updateBranding() {
     ui.riskInputs.journalName.value = prefix;
   }
 
-  document.title = `${PRODUCT_BRAND_TEXT} | Trading Analytics`;
+  // Keep the SEO title on the logged-out landing: crawlers render JS, so an
+  // unconditional overwrite here was erasing the keyword title site-wide.
+  // Inside the app the brand title is the right one.
+  if (canAccessApp()) {
+    document.title = `${PRODUCT_BRAND_TEXT} | Trading Analytics`;
+  }
 }
 
 async function loadRecentTrades(options = {}) {
