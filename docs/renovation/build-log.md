@@ -2494,3 +2494,26 @@ User-reported: the demo's Execution grades rendered as floating labels above emp
   .lnd-row-result (5.9/6.1 light, 5.2/8.0 dark). (2) MED — --warn/--warn-soft
   pinned into clay-v3's dark scope instead of silently falling back two layers.
 - Busters → ?v=20260808-renov. All 27 tests pass.
+
+## 2026-08-08 — Hero renovation: wireframe draw, reveal timing, section rhythm
+
+- Blank-on-scroll root cause: the reveal observer's rootMargin was -10%
+  (sections revealed only after being 10% INSIDE the viewport). Flipped to
+  +20% (reveal starts a fifth of a viewport early), travel 34->24px,
+  --dur-reveal 980->760ms, shell gap space-16->space-12. No more blank
+  middles at any scroll speed.
+- Hero wireframe: a faint chart draws itself behind the headline (hairline
+  grid + two low-alpha oxide polylines, stroke-dash loops at 16s/22s,
+  copy z-raised, reduced-motion frozen). Verify workflow caught two real
+  defects before ship: opacity fading across the whole cycle (implicit 0%
+  keyframe) and the delayed line popping after 3s (no backwards fill) —
+  fixed with per-element --wire-alpha stroke-opacity restated in the
+  keyframes + backwards fill.
+- Accounts sample rows: 2-col grid with nowrap/ellipsis names — the
+  badge/amount collision from the reference screenshot is impossible now.
+- Section rhythm: showcase flips sides at >=981px (stage left, copy right)
+  so demo / showcase / terminal alternate. Terminal headline sharpened:
+  "Know it the second it breaks." (still under the in-development kicker).
+- Orchestration: design panel earlier in the day; this round one 2-lens
+  adversarial verify workflow (regression + design-system), 4 findings, all
+  fixed. Busters -> ?v=20260808-herowire. All 27 tests pass.

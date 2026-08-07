@@ -7803,7 +7803,9 @@ function setupLandingReveals() {
         }
       });
     },
-    { rootMargin: "0px 0px -10% 0px", threshold: 0.08 }
+    // Positive bottom margin: a section starts revealing ~20% of a viewport
+    // BEFORE it scrolls in, so fast scrolling never lands on blank space.
+    { rootMargin: "0px 0px 20% 0px", threshold: 0.01 }
   );
 
   targets.forEach((section) => observer.observe(section));

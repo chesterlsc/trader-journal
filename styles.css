@@ -280,7 +280,7 @@
      cascade is slower and wider than the Phase C snap. */
   --ease-clay: cubic-bezier(0.22, 1, 0.36, 1);
   --stagger-dash: 72ms;
-  --dur-reveal: 980ms;
+  --dur-reveal: 760ms;
 }
 
 /* Light theme — only raw values override; every var()-referencing token
@@ -601,9 +601,19 @@ body.is-guest:not(.demo-signup) .auth-shell {
    a glance rail docks beside the phone so the width works for its living. */
 @media (min-width: 981px) {
   .lnd-show {
-    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
     align-items: center;
     gap: var(--space-12);
+  }
+
+  /* Alternating rhythm: demo reads copy-left, this one copy-RIGHT, the
+     terminal copy-left again. */
+  .lnd-show-head {
+    order: 2;
+  }
+
+  .lnd-show-stage {
+    order: 1;
   }
 }
 
@@ -1016,9 +1026,10 @@ body.is-guest:not(.demo-signup) .auth-shell {
 }
 
 .lnd-ph-acct {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
+  gap: 4px 12px;
   padding: 12px 13px;
   border-radius: var(--radius-clay-sm);
   background: var(--surface-1);
@@ -1028,6 +1039,13 @@ body.is-guest:not(.demo-signup) .auth-shell {
 .lnd-ph-acct strong {
   font: 700 12.5px/1 var(--font-ui);
   color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lnd-ph-acct-id {
+  min-width: 0;
 }
 
 .lnd-ph-acct span {
@@ -4661,8 +4679,8 @@ body.demo-signup::before {
 .auth-shell {
   width: min(1320px, 94vw);
   justify-content: flex-start;
-  gap: var(--space-16);
-  padding: 0 0 var(--space-16);
+  gap: var(--space-12);
+  padding: 0 0 var(--space-12);
 }
 
 /* Big desktops: let the landing breathe instead of floating in a 1200px box. */
@@ -4700,6 +4718,83 @@ body.demo-signup::before {
   }
   50% {
     transform: translateY(-9px);
+  }
+}
+
+/* Hero wireframe: a faint chart drawing itself behind the headline. Grid in
+   hairline, lines in low-alpha oxide; transform/stroke only; frozen with
+   everything else under reduced motion. */
+.lnd-hero {
+  position: relative;
+}
+
+.lnd-hero-wire {
+  position: absolute;
+  inset: -6% -3%;
+  width: 106%;
+  height: 112%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.lnd-hero-copy,
+.lnd-hero-side {
+  position: relative;
+  z-index: 1;
+}
+
+.lnd-hero-wire-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+  opacity: 0.45;
+  fill: none;
+}
+
+/* Per-element alpha rides a custom property so ONE keyframe block serves
+   both lines: the fade lives only in the 90-100% tail (restated at 0/90,
+   not implicit — an absent property would fade across the whole cycle),
+   and backwards fill keeps the delayed line hidden through its delay
+   instead of showing fully drawn and blinking out. */
+.lnd-hero-wire-line {
+  --wire-alpha: 0.16;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-opacity: var(--wire-alpha);
+  stroke-dasharray: 2200;
+  stroke-dashoffset: 0;
+}
+
+.lnd-hero-wire-line-b {
+  --wire-alpha: 0.09;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lnd-hero-wire-line {
+    animation: lndWireDraw 16s var(--ease-in-out) infinite backwards;
+  }
+
+  .lnd-hero-wire-line-b {
+    animation-duration: 22s;
+    animation-delay: 3s;
+  }
+}
+
+@keyframes lndWireDraw {
+  0% {
+    stroke-dashoffset: 2200;
+    stroke-opacity: var(--wire-alpha);
+  }
+  45%,
+  90% {
+    stroke-dashoffset: 0;
+    stroke-opacity: var(--wire-alpha);
+  }
+  100% {
+    stroke-dashoffset: 0;
+    stroke-opacity: 0;
   }
 }
 
@@ -5399,9 +5494,9 @@ body.demo-signup::before {
    the global kill block plus setupLandingReveals()'s own opt-out. */
 body.auth-ready [data-landing-reveal] {
   opacity: 0;
-  /* 34px of rise over the longer --dur-reveal: continuous motion on a tall
-     desktop, not a quick pop. */
-  transform: translateY(34px);
+  /* 24px of rise, started a fifth of a viewport early: motion you catch
+     mid-scroll instead of blank space you wait on. */
+  transform: translateY(24px);
   transition: opacity var(--dur-reveal) var(--ease-clay), transform var(--dur-reveal) var(--ease-clay);
 }
 

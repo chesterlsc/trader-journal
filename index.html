@@ -38,21 +38,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260808-renov" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260808-renov" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260808-herowire" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260808-herowire" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260808-renov" />
+    <link rel="stylesheet" href="styles.css?v=20260808-herowire" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260808-renov" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260808-herowire" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260808-renov" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260808-herowire" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -90,6 +90,11 @@
       </header>
 
       <div class="lnd-hero">
+        <svg class="lnd-hero-wire" viewBox="0 0 1200 420" preserveAspectRatio="none" aria-hidden="true">
+          <path class="lnd-hero-wire-grid" d="M0 105 H1200 M0 210 H1200 M0 315 H1200" />
+          <polyline class="lnd-hero-wire-line" points="0,340 90,320 170,335 260,290 340,300 430,255 520,275 610,225 700,245 790,190 880,215 970,160 1060,185 1200,120" />
+          <polyline class="lnd-hero-wire-line lnd-hero-wire-line-b" points="0,380 110,370 200,378 300,350 400,362 520,330 640,345 760,310 880,330 1000,290 1200,255" />
+        </svg>
         <section class="lnd-hero-copy">
           <!-- Counted from the rows actually on the tape below — never a
                hard-coded platform statistic. app.js hides it at zero. -->
@@ -448,7 +453,7 @@
       <section class="lnd-term" id="terminalPro" data-landing-reveal aria-labelledby="lndTermHeading">
         <div class="lnd-term-copy">
           <p class="lnd-kicker">In development &middot; pro tier</p>
-          <h2 id="lndTermHeading" class="lnd-value-title">Terminal Pro.<br />The market, at desk speed.</h2>
+          <h2 id="lndTermHeading" class="lnd-value-title">Terminal Pro.<br />Know it the second it breaks.</h2>
           <p class="lnd-value-lede">
             A news terminal inside your journal, built for the moment a number crosses the wire:
             market-moving headlines ranked by punch, an economic calendar with countdowns, and the
@@ -2841,6 +2846,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260808-renov"></script>
+    <script type="module" src="app.js?v=20260808-herowire"></script>
   </body>
 </html>
