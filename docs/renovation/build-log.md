@@ -2517,3 +2517,26 @@ User-reported: the demo's Execution grades rendered as floating labels above emp
 - Orchestration: design panel earlier in the day; this round one 2-lens
   adversarial verify workflow (regression + design-system), 4 findings, all
   fixed. Busters -> ?v=20260808-herowire. All 27 tests pass.
+
+## 2026-08-08 — Premium hero (instrument dial), six-pair strip, SEO, headline
+
+- Hero rebuilt by a 3-lens design panel + judge (instrument / atmosphere /
+  editorial). Winner: a machined bezel dial — pathLength-exact tick track
+  (96 minors / 12 majors, seamless), hairline rim + inner ring, two
+  counter-rotating burnt-oxide arcs (64s/96s — speed difference is the depth
+  cue), grafted static film grain (inline feTurbulence, overlay on gunmetal /
+  multiply on concrete). Replaces the chart wireframe the user read as
+  "cheap stock market generic". Rotation end frame = rest frame, so the
+  reduced-motion freeze is just the dial. Form stays clickable; no
+  horizontal scroll at 375px in either theme.
+- Live strip grew to six pairs, all with REAL keyless live sources:
+  BTCUSDT/ETHUSDT/SOLUSDT (Binance), XAUUSD/XAGUSD (gold-api), EURUSD
+  (Binance EURUSDT proxy — same stable-quote pattern as the crypto bases;
+  other majors deliberately excluded: daily ECB rates under a "live" label
+  would be a lie). Marquee carries all six; dashboard pair/dock stay compact.
+  landingDemo pins updated (marquee 2 nodes/symbol, +2 for BTC/XAU).
+- Terminal Pro headline (3rd iteration, judge-picked): "Built for the
+  minute before the number."
+- SEO: keyword title, canonical, og:url/site_name/image, Twitter card,
+  JSON-LD SoftwareApplication (price 0), richer og description.
+- Busters -> ?v=20260808-herodial. All 27 tests pass.

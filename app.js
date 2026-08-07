@@ -920,7 +920,10 @@ const PROP_VISIBILITY_NOTE =
 /* ── V3 landing: live ticker pair + scripted product demo ──────────────────
    Above init() like every other module-level binding — a const declared below
    that call is in the temporal dead zone during the first render. */
-const TICKER_SYMBOLS = ["BTCUSDT", "XAUUSD"];
+// Marquee set: every symbol here has a LIVE keyless source (Binance spot,
+// gold-api, Binance EURUSDT proxy for EURUSD). The dashboard pair/dock render
+// only the first two; renderTickerPair patches whatever nodes exist.
+const TICKER_SYMBOLS = ["BTCUSDT", "XAUUSD", "ETHUSDT", "SOLUSDT", "XAGUSD", "EURUSD"];
 const TICKER_CACHE_KEY = "axiom_journal_ticker_v1";
 // Last price actually rendered per symbol — the strip's delta is "vs the
 // previous poll you saw", whether that came from cache or live.

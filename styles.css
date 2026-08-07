@@ -4721,20 +4721,16 @@ body.demo-signup::before {
   }
 }
 
-/* Hero wireframe: a faint chart drawing itself behind the headline. Grid in
-   hairline, lines in low-alpha oxide; transform/stroke only; frozen with
-   everything else under reduced motion. */
+/* Hero instrument: a machined dial behind the copy. Bezel tick track in
+   hairline greys (pathLength-exact: 96 minors, 12 majors), one inner
+   hairline ring, and two burnt-oxide arcs sweeping at different rates in
+   opposite directions — the speed difference is the depth cue. A static
+   film-grain tile (inline feTurbulence data URI, no asset) gives the
+   surface tooth; grain is felt, never noticed. Transform only, no JS.
+   The rotations land on an end frame identical to rest, so the frozen
+   reduced-motion dial is simply the dial. */
 .lnd-hero {
   position: relative;
-}
-
-.lnd-hero-wire {
-  position: absolute;
-  inset: -6% -3%;
-  width: 106%;
-  height: 112%;
-  z-index: 0;
-  pointer-events: none;
 }
 
 .lnd-hero-copy,
@@ -4743,58 +4739,113 @@ body.demo-signup::before {
   z-index: 1;
 }
 
-.lnd-hero-wire-grid {
+.lnd-hero-dial {
+  position: absolute;
+  inset: -8% 0 -12%;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.lnd-hero-dial svg {
+  position: absolute;
+  top: 50%;
+  left: 62%;
+  width: clamp(560px, 74vw, 1040px);
+  height: auto;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+}
+
+.lnd-dial-rim {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+.lnd-dial-ring {
+  fill: none;
   stroke: var(--line);
   stroke-width: 1;
-  opacity: 0.45;
-  fill: none;
+  opacity: 0.8;
 }
 
-/* Per-element alpha rides a custom property so ONE keyframe block serves
-   both lines: the fade lives only in the 90-100% tail (restated at 0/90,
-   not implicit — an absent property would fade across the whole cycle),
-   and backwards fill keeps the delayed line hidden through its delay
-   instead of showing fully drawn and blinking out. */
-.lnd-hero-wire-line {
-  --wire-alpha: 0.16;
+/* Tick track: the circle's stroke-width is the tick length; the dasharray
+   (in pathLength-960 units) is the tick width and pitch. 96 x 10 = 960
+   exactly, so the pattern closes with no seam. Both tick layers rotate at
+   the same rate to stay registered. */
+.lnd-dial-tick {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 22;
+  stroke-dasharray: 0.55 9.45;
+  opacity: 0.5;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.lnd-dial-tick-major {
+  stroke: var(--text-faint);
+  stroke-width: 32;
+  stroke-dasharray: 1.1 78.9;
+  opacity: 0.55;
+}
+
+/* Oxide sweeps: pathLength 360 makes the dasharray read in degrees.
+   Dashoffsets place the static frame — main arc over the headline's right
+   shoulder, counter-arc tucked behind the tape. */
+.lnd-dial-arc {
   fill: none;
   stroke: var(--accent);
-  stroke-width: 1.5;
+  stroke-width: 1.75;
   stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-opacity: var(--wire-alpha);
-  stroke-dasharray: 2200;
-  stroke-dashoffset: 0;
+  stroke-dasharray: 72 288;
+  stroke-dashoffset: -150;
+  stroke-opacity: 0.55;
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
-.lnd-hero-wire-line-b {
-  --wire-alpha: 0.09;
+.lnd-dial-arc-b {
+  stroke-width: 1.25;
+  stroke-dasharray: 26 334;
+  stroke-dashoffset: -10;
+  stroke-opacity: 0.3;
+}
+
+/* Film grain: one inline feTurbulence tile, static. Overlay on gunmetal;
+   multiply reads as paper tooth on concrete. */
+.lnd-hero-grain {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+}
+
+[data-theme="light"] .lnd-hero-grain {
+  mix-blend-mode: multiply;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .lnd-hero-wire-line {
-    animation: lndWireDraw 16s var(--ease-in-out) infinite backwards;
+  .lnd-dial-tick {
+    animation: lndDialTurn 480s linear infinite;
   }
 
-  .lnd-hero-wire-line-b {
-    animation-duration: 22s;
-    animation-delay: 3s;
+  .lnd-dial-arc {
+    animation: lndDialTurn 64s linear infinite;
+  }
+
+  .lnd-dial-arc-b {
+    animation-duration: 96s;
+    animation-direction: reverse;
   }
 }
 
-@keyframes lndWireDraw {
-  0% {
-    stroke-dashoffset: 2200;
-    stroke-opacity: var(--wire-alpha);
-  }
-  45%,
-  90% {
-    stroke-dashoffset: 0;
-    stroke-opacity: var(--wire-alpha);
-  }
-  100% {
-    stroke-dashoffset: 0;
-    stroke-opacity: 0;
+@keyframes lndDialTurn {
+  to {
+    transform: rotate(360deg);
   }
 }
 

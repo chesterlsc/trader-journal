@@ -65,6 +65,19 @@ export function resolveLivePriceSource(symbol) {
     };
   }
 
+  // EURUSD rides Binance's EUR/USDT market — the same stable-quote proxy the
+  // crypto bases use (BTCUSD -> BTCUSDT above). Live, keyless, and within
+  // the USDT peg spread of interbank. Other majors have no live keyless
+  // source (ECB feeds are daily), so they are deliberately NOT offered:
+  // a daily rate under a "live" label would be a lie.
+  if (normalized === 'EURUSD') {
+    return {
+      key: 'binance:EURUSDT',
+      url: 'https://api.binance.com/api/v3/ticker/price?symbol=EURUSDT',
+      readPrice: (body) => positivePrice(body?.price),
+    };
+  }
+
   if (normalized === 'XAUUSD' || normalized === 'XAGUSD') {
     const metal = normalized.startsWith('XAG') ? 'XAG' : 'XAU';
     return {

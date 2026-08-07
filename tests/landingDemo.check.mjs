@@ -87,9 +87,11 @@ assert.ok(symbols.length >= 2, "ticker pair shrank below two symbols");
 for (const symbol of symbols) {
   const prices = html.split(`data-ticker-price="${symbol}"`).length - 1;
   const deltas = html.split(`data-ticker-delta="${symbol}"`).length - 1;
-  // Landing marquee halves (2) + dashboard pair (1) + sticky dock (1) = 4.
-  assert.equal(prices, 4, `${symbol}: expected 4 price nodes (2 marquee halves + dashboard + dock), found ${prices}`);
-  assert.equal(deltas, 4, `${symbol}: expected 4 delta nodes, found ${deltas}`);
+  // Every polled symbol rides both marquee halves (2); the compact dashboard
+  // pair and the sticky dock carry only the first two symbols (+2).
+  const expected = ["BTCUSDT", "XAUUSD"].includes(symbol) ? 4 : 2;
+  assert.equal(prices, expected, `${symbol}: expected ${expected} price nodes, found ${prices}`);
+  assert.equal(deltas, expected, `${symbol}: expected ${expected} delta nodes, found ${deltas}`);
 }
 const strips = html.split("data-ticker-strip").length - 1;
 assert.equal(strips, 3, `expected the landing strip + dashboard pair + sticky dock, found ${strips} [data-ticker-strip]`);
