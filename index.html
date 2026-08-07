@@ -61,21 +61,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260808-seotitle" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260808-seotitle" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260808-openingshot" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260808-openingshot" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260808-seotitle" />
+    <link rel="stylesheet" href="styles.css?v=20260808-openingshot" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260808-seotitle" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260808-openingshot" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260808-seotitle" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260808-openingshot" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -113,14 +113,21 @@
       </header>
 
       <div class="lnd-hero">
-        <!-- Hero instrument: a machined bezel dial in place of the old chart
-             wireframe. Hairline rim + tick track in line greys, two oxide arcs
-             sweeping at different rates. pathLength normalises each circle so
-             tick counts and arc angles are exact (96 minors, 12 majors, 72deg
-             and 26deg sweeps). A static film-grain span sits over the dial and
-             under the copy. The wrapper clips so the oversized face can never
-             widen the page. -->
+        <!-- Opening-shot stack, back to front: (1) a monumental conic
+             light-beam that performs one fast ignition sweep on entry, then
+             settles into a 110s patrol; an annular mask cuts a hole at the
+             dial's hub and feathers the rim, so the light passes THROUGH the
+             bezel; (2) three pre-blurred accent/steel pools drifting at
+             unrelated periods (the only blurred elements; blur is static,
+             motion is transform-only); (3) the machined dial, geometry
+             unchanged, landing with a slow push-in; (4) a thin accent meteor
+             crossing every 9s; (5) a left scrim that guarantees copy
+             contrast in both themes; (6) static film grain. -->
         <div class="lnd-hero-dial" aria-hidden="true">
+          <span class="lnd-halo-cone"></span>
+          <span class="lnd-halo lnd-halo-a"></span>
+          <span class="lnd-halo lnd-halo-b"></span>
+          <span class="lnd-halo lnd-halo-c"></span>
           <svg viewBox="0 0 1000 1000" focusable="false">
             <circle class="lnd-dial-rim" cx="500" cy="500" r="488" />
             <circle class="lnd-dial-tick" cx="500" cy="500" r="452" pathLength="960" />
@@ -129,6 +136,8 @@
             <circle class="lnd-dial-arc" cx="500" cy="500" r="396" pathLength="360" />
             <circle class="lnd-dial-arc lnd-dial-arc-b" cx="500" cy="500" r="340" pathLength="360" />
           </svg>
+          <span class="lnd-hero-meteor"></span>
+          <span class="lnd-hero-scrim"></span>
           <span class="lnd-hero-grain"></span>
         </div>
         <section class="lnd-hero-copy">
@@ -2946,6 +2955,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260808-seotitle"></script>
+    <script type="module" src="app.js?v=20260808-openingshot"></script>
   </body>
 </html>

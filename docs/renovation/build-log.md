@@ -2570,3 +2570,22 @@ User-reported: the demo's Execution grades rendered as floating labels above emp
   now spans the full viewport (ticker breakout math) and a radial mask
   dissolves the dial's extremities — edges fade, never clip. No horizontal
   scroll; verified at 1600px. Busters -> ?v=20260808-dialbleed.
+
+## 2026-08-08 — Hero opening shot (spectacle round)
+
+- Third hero-background round; the brief flipped from restraint to
+  SPECTACLE after repeated "go crazy". Panel (aurora / cinema / machinist)
+  + judge; cinema won with machinist's annular beam-mask grafted.
+- The stack, back to front: monumental conic light-beam that IGNITES with a
+  2.6s sweep on entry then settles into a 110s patrol, its annular mask
+  letting the light pass THROUGH the dial bezel; three pre-blurred oxide/
+  steel pools breathing at 36/44/58s; the machined dial landing with a 2s
+  push-in; a thin meteor streak crossing every 9s; a theme-aware surface
+  scrim (88%→0 across the left half) that guarantees copy/form contrast; the
+  film grain. Wrapper mask widened so the atmosphere fills the hero.
+- Discipline held: exactly 3 statically-blurred elements, transform/opacity
+  motion only, everything behind no-preference + the global kill block, all
+  colours token-derived via color-mix (accent-strong resolves oxide in V3's
+  scopes — the blue/violet lower layers are dead overrides). Mobile drops to
+  cone + one pool + veil scrim. Form clickability, no-h-scroll and both
+  themes verified. Busters -> ?v=20260808-openingshot. 27 tests pass.

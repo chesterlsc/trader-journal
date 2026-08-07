@@ -4965,8 +4965,8 @@ body.demo-signup::before {
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
-  -webkit-mask-image: radial-gradient(1150px 820px at 62% 46%, #000 52%, transparent 94%);
-  mask-image: radial-gradient(1150px 820px at 62% 46%, #000 52%, transparent 94%);
+  -webkit-mask-image: radial-gradient(1500px 980px at 58% 46%, #000 56%, transparent 98%);
+  mask-image: radial-gradient(1500px 980px at 58% 46%, #000 56%, transparent 98%);
 }
 
 .lnd-hero-dial svg {
@@ -5068,6 +5068,194 @@ body.demo-signup::before {
 @keyframes lndDialTurn {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* ==========================================================================
+   HERO OPENING SHOT — title-sequence stack inside the full-bleed wrapper.
+   Layer speeds, slow to fast: ticks 480s, cone 110s, arcs 64/96s, pools
+   36-58s, meteor 9s, grain static. Motion is transform/opacity only; blur
+   is applied once, statically, to exactly three elements. Reduced motion
+   collapses everything to a composed still: cone at rest angle through the
+   bezel, pools at their from-pose, meteor invisible, dial landed. Colours
+   derive from tokens via color-mix, so both themes re-derive automatically.
+   ========================================================================== */
+.lnd-halo-cone {
+  position: absolute;
+  top: 50%;
+  left: 62%;
+  width: 140vmax;
+  height: 140vmax;
+  transform: translate(-50%, -50%);
+  background: conic-gradient(from 354deg at 50% 50%,
+    transparent 0deg,
+    color-mix(in srgb, var(--accent) 3%, transparent) 24deg,
+    color-mix(in srgb, var(--accent) 11%, transparent) 46deg,
+    color-mix(in srgb, var(--accent) 3%, transparent) 70deg,
+    transparent 96deg);
+  -webkit-mask-image: radial-gradient(closest-side, transparent 9%, #000 24%, #000 56%, transparent 80%);
+  mask-image: radial-gradient(closest-side, transparent 9%, #000 24%, #000 56%, transparent 80%);
+  will-change: transform;
+}
+
+.lnd-halo {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  will-change: transform;
+}
+
+.lnd-halo-a {
+  top: -14%;
+  left: 36%;
+  width: 54vw;
+  height: 54vw;
+  max-width: 780px;
+  max-height: 780px;
+  background: radial-gradient(closest-side,
+    color-mix(in srgb, var(--accent) 24%, transparent),
+    transparent 70%);
+}
+
+.lnd-halo-b {
+  bottom: -20%;
+  right: -8%;
+  width: 46vw;
+  height: 46vw;
+  max-width: 680px;
+  max-height: 680px;
+  background: radial-gradient(closest-side,
+    color-mix(in srgb, var(--accent-strong) 14%, transparent),
+    transparent 70%);
+}
+
+.lnd-halo-c {
+  top: 30%;
+  left: -10%;
+  width: 40vw;
+  height: 40vw;
+  max-width: 600px;
+  max-height: 600px;
+  background: radial-gradient(closest-side,
+    color-mix(in srgb, var(--text-faint) 12%, transparent),
+    transparent 70%);
+}
+
+/* Meteor: static opacity 0 — without the animation it does not exist. The
+   glow is a STATIC box-shadow riding the transform, never animated itself. */
+.lnd-hero-meteor {
+  position: absolute;
+  top: 22%;
+  left: -14%;
+  width: 240px;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-strong));
+  box-shadow: 0 0 12px 1px var(--accent-muted);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* THE READABILITY DECISION: a theme-aware surface gradient sits OVER every
+   moving layer and UNDER grain — 88% opaque at the left edge, gone by 60%.
+   Nothing bright reaches the headline, lede or form at more than ~12%
+   strength; the tape card keeps its own opaque surface. */
+.lnd-hero-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(96deg,
+    color-mix(in srgb, var(--surface-0) 88%, transparent) 0%,
+    color-mix(in srgb, var(--surface-0) 52%, transparent) 34%,
+    transparent 60%);
+}
+
+/* Light concrete: same geometry, quieter light. */
+[data-theme="light"] .lnd-halo { opacity: 0.55; }
+[data-theme="light"] .lnd-halo-cone { opacity: 0.5; }
+[data-theme="light"] .lnd-hero-meteor { box-shadow: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Ignition: one fast 2.6s sweep, then the 110s patrol takes over exactly
+     where it lands — both end/start at rotate(0), so the handoff is
+     seamless. */
+  .lnd-halo-cone {
+    animation:
+      lndConeIgnite 2.6s var(--ease-out) both,
+      lndConeTurn 110s linear 2.6s infinite;
+  }
+
+  .lnd-halo-a { animation: lndHaloA 44s var(--ease-in-out) infinite alternate; }
+  .lnd-halo-b { animation: lndHaloB 58s var(--ease-in-out) infinite alternate; }
+  .lnd-halo-c { animation: lndHaloC 36s var(--ease-in-out) infinite alternate; }
+
+  .lnd-hero-dial svg {
+    animation: lndDialLand 2s var(--ease-out) both;
+  }
+
+  .lnd-hero-meteor {
+    animation: lndMeteor 9s linear 3.4s infinite;
+  }
+}
+
+@keyframes lndConeIgnite {
+  from { transform: translate(-50%, -50%) rotate(-80deg) scale(1.12); opacity: 0; }
+  to   { transform: translate(-50%, -50%) rotate(0deg) scale(1); opacity: 1; }
+}
+
+@keyframes lndConeTurn {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes lndHaloA {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(-6vw, 5vh, 0) scale(1.16); }
+}
+
+@keyframes lndHaloB {
+  from { transform: translate3d(0, 0, 0) scale(1.1); }
+  to   { transform: translate3d(7vw, -6vh, 0) scale(0.94); }
+}
+
+@keyframes lndHaloC {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(5vw, 7vh, 0) scale(1.12); }
+}
+
+@keyframes lndDialLand {
+  from { transform: translate(-50%, -50%) scale(1.045); opacity: 0; }
+  to   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+@keyframes lndMeteor {
+  0%   { transform: translate3d(0, 0, 0) rotate(9deg); opacity: 0; }
+  4%   { opacity: 0.9; }
+  11%  { transform: translate3d(130vw, 22vh, 0) rotate(9deg); opacity: 0; }
+  100% { transform: translate3d(130vw, 22vh, 0) rotate(9deg); opacity: 0; }
+}
+
+/* Single column (hero stacks at 1080px): lighter stack, never blank. The
+   scrim adds a uniform veil because the copy sits over the dial's centre. */
+@media (max-width: 1080px) {
+  .lnd-halo-b,
+  .lnd-halo-c,
+  .lnd-hero-meteor {
+    display: none;
+  }
+
+  .lnd-halo-a {
+    top: -8%;
+    left: 26%;
+    width: 88vw;
+    height: 88vw;
+  }
+
+  .lnd-hero-scrim {
+    background:
+      linear-gradient(96deg,
+        color-mix(in srgb, var(--surface-0) 80%, transparent) 0%,
+        transparent 60%),
+      color-mix(in srgb, var(--surface-0) 38%, transparent);
   }
 }
 
