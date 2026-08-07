@@ -2451,3 +2451,20 @@ User-reported: the demo's Execution grades rendered as floating labels above emp
 - **Terminal Pro screen:** tab strip (wires · posts · calendar · my pairs +
   UTC clock) and a three-bar impact meter per row, accent-filled by level.
 - Busters → ?v=20260807-autoclose. All 27 tests pass.
+
+## 2026-08-07 — Auto-close verified end-to-end; landing wide-screen fixes; terminal depth 2
+
+- Auto-close PROVEN in-browser: stubbed the price feed (XAUUSD 4300 vs two
+  open shorts, stop 4244) — both closed at 4244, Loss, journal sheet opened,
+  storage persisted. The user-reported "not closing" is a stale cached
+  app.js; visibilitychange already re-polls immediately on tab return, so a
+  level crossed-and-held while hidden closes on arrival.
+- Wide-screen fixes: demo frame capped at 640px (no more full-width Save &
+  close), showcase float cards anchor to the phone edges (was: scattered
+  across the column) with slight rotation, phone bezel got a visible edge.
+- Terminal Pro screen, deeper: feed-status cluster (pulse dot · 18ms) in the
+  tabs bar, an "up next" queue rail with release countdowns and a high-impact
+  count, one blurred locked wire row tagged "pro" (scarcity, honestly:
+  decoration inside the labelled concept preview, not hidden content), and a
+  slow oxide scan sweep down the screen.
+- Busters → ?v=20260807-termdeep. All 27 tests pass.

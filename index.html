@@ -38,21 +38,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260807-autoclose" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260807-autoclose" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260807-termdeep" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260807-termdeep" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260807-autoclose" />
+    <link rel="stylesheet" href="styles.css?v=20260807-termdeep" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260807-autoclose" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260807-termdeep" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260807-autoclose" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260807-termdeep" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -485,8 +485,10 @@
           <div class="lnd-term-screen" aria-hidden="true">
             <div class="lnd-term-tabs">
               <span class="is-on">wires</span><span>posts</span><span>calendar</span><span>my pairs</span>
+              <span class="lnd-term-status"><span class="lnd-term-status-dot"></span>feed ok &middot; 18ms</span>
               <span class="lnd-term-clock">13:33:07 UTC</span>
             </div>
+            <div class="lnd-term-sweep" aria-hidden="true"></div>
             <div class="lnd-term-row is-flash" style="--r:0">
               <span class="lnd-term-time">13:30:00</span>
               <span class="lnd-term-flag">flash</span>
@@ -522,6 +524,20 @@
               <span class="lnd-term-flag is-cal">next</span>
               <span class="lnd-term-head">FOMC minutes, countdown 27:20</span>
               <span class="lnd-term-imp" data-imp="1"><i></i><i></i><i></i></span>
+            </div>
+            <!-- Scarcity, honestly: the rest of the wire exists behind the
+                 tier, and says so. Blurred decoration, not hidden content. -->
+            <div class="lnd-term-row is-locked" aria-hidden="true">
+              <span class="lnd-term-time">13:34:41</span>
+              <span class="lnd-term-flag">wire</span>
+              <span class="lnd-term-head lnd-term-blur">Central bank source signals surprise move on&hellip;</span>
+              <span class="lnd-term-lock">&#9679; pro</span>
+            </div>
+            <div class="lnd-term-queue" aria-hidden="true">
+              <span class="lnd-term-queue-k">up next</span>
+              <span class="lnd-term-queue-item">14:00 FOMC minutes <em>26:53</em></span>
+              <span class="lnd-term-queue-item">15:30 Crude inventories <em>1:56:53</em></span>
+              <span class="lnd-term-queue-item is-hot">2 high-impact in the next 4h</span>
             </div>
             <div class="lnd-term-strip">
               <span>XAUUSD 4,240.1</span><span>BTCUSD 64,368</span><span>EURUSD 1.0834</span><span>US10Y 4.21%</span><span class="lnd-term-cursor"></span>
@@ -2816,6 +2832,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260807-autoclose"></script>
+    <script type="module" src="app.js?v=20260807-termdeep"></script>
   </body>
 </html>

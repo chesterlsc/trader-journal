@@ -658,7 +658,8 @@ body.is-guest:not(.demo-signup) .auth-shell {
   position: relative;
   display: grid;
   justify-items: center;
-  width: 100%;
+  width: fit-content;
+  margin: 0 auto;
 }
 
 .lnd-show-float {
@@ -692,21 +693,24 @@ body.is-guest:not(.demo-signup) .auth-shell {
   }
 
   .lnd-show-float-a {
-    left: 2%;
-    top: 18%;
+    left: -128px;
+    top: 16%;
+    transform: rotate(-3deg);
     animation: lndTapeFloat 8s var(--ease-in-out) infinite;
   }
 
   .lnd-show-float-b {
-    right: 1%;
-    top: 44%;
+    right: -118px;
+    top: 42%;
+    transform: rotate(2.5deg);
     animation: lndTapeFloat 10s var(--ease-in-out) infinite;
     animation-delay: 1.2s;
   }
 
   .lnd-show-float-c {
-    left: 5%;
-    bottom: 14%;
+    left: -104px;
+    bottom: 12%;
+    transform: rotate(2deg);
     animation: lndTapeFloat 9s var(--ease-in-out) infinite;
     animation-delay: 2.4s;
   }
@@ -1031,12 +1035,15 @@ body.is-guest:not(.demo-signup) .auth-shell {
 
 /* Phone frame */
 .lnd-phone {
+  position: relative;
+  z-index: 1;
   justify-self: center;
   width: min(230px, 100%);
   padding: 10px;
   border-radius: 34px;
+  border: 1px solid var(--line-strong);
   background: var(--surface-0);
-  box-shadow: var(--clay-pressed);
+  box-shadow: var(--clay-raised), var(--clay-pressed);
 }
 
 .lnd-phone-screen {
@@ -1278,6 +1285,13 @@ body.is-guest:not(.demo-signup) .auth-shell {
   }
 }
 
+/* Wide desktops: the demo frame is a phone-flow replay, not a billboard. */
+.lnd-demo-frame {
+  max-width: 640px;
+  justify-self: center;
+  width: 100%;
+}
+
 /* --- Terminal Pro teaser --------------------------------------------------
    Terminal density without terminal kitsch: near-black screen, hairline rows,
    mono everywhere, the oxide accent doing the work an amber phosphor would.
@@ -1447,6 +1461,111 @@ body.is-guest:not(.demo-signup) .auth-shell {
 .lnd-term-imp[data-imp="2"] i:nth-child(-n + 2),
 .lnd-term-imp[data-imp="3"] i {
   background: var(--accent);
+}
+
+.lnd-term-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lnd-term-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pnl-pos);
+  animation: livePulse 2s var(--ease-in-out) infinite;
+}
+
+.lnd-term-tabs .lnd-term-clock {
+  margin-left: 0;
+}
+
+/* One thin light band drifting down the screen: terminal, not disco. */
+.lnd-term-screen {
+  position: relative;
+  overflow: hidden;
+}
+
+.lnd-term-sweep {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 72px;
+  background: linear-gradient(180deg, transparent, rgb(240 118 61 / 0.045), transparent);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lnd-term-sweep {
+    animation: lndSweep 7s linear infinite;
+  }
+}
+
+@keyframes lndSweep {
+  0% {
+    transform: translateY(-80px);
+  }
+  100% {
+    transform: translateY(480px);
+  }
+}
+
+.lnd-term-row.is-locked .lnd-term-blur {
+  filter: blur(4px);
+  opacity: 0.75;
+}
+
+.lnd-term-lock {
+  justify-self: end;
+  padding: 3px 8px;
+  border: 1px solid var(--line-accent, var(--accent));
+  border-radius: var(--radius-pill);
+  color: var(--accent);
+  font: 700 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.lnd-term-row.is-locked {
+  grid-template-columns: 76px 64px minmax(0, 1fr) auto;
+}
+
+.lnd-term-queue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lnd-term-queue-k {
+  color: var(--accent);
+  font: 700 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lnd-term-queue-item {
+  color: var(--text-soft);
+  font: 600 12px/1.3 var(--font-mono);
+  font-feature-settings: "tnum";
+  white-space: nowrap;
+}
+
+.lnd-term-queue-item em {
+  color: var(--text);
+  font-style: normal;
+}
+
+.lnd-term-queue-item.is-hot {
+  color: var(--warn);
 }
 
 .lnd-term-row {
