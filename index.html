@@ -38,21 +38,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260807-termdeep" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260807-termdeep" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260808-renov" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260808-renov" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260807-termdeep" />
+    <link rel="stylesheet" href="styles.css?v=20260808-renov" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260807-termdeep" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260808-renov" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260807-termdeep" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260808-renov" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -329,21 +329,6 @@
           </div>
 
           <div class="lnd-show-phone-wrap">
-            <!-- Floating glance cards: example figures from the same trade the
-                 demo journals, drifting beside the phone on desktop. -->
-            <div class="lnd-show-float lnd-show-float-a" aria-hidden="true">
-              <span class="lnd-show-float-k">stop</span>
-              <span class="lnd-show-float-v">4,244 &middot; 10.0 pips</span>
-            </div>
-            <div class="lnd-show-float lnd-show-float-b" aria-hidden="true">
-              <span class="lnd-show-float-k">risk</span>
-              <span class="lnd-show-float-v">$20.00 &middot; 0.2%</span>
-            </div>
-            <div class="lnd-show-float lnd-show-float-c" aria-hidden="true">
-              <span class="lnd-show-float-k">discipline</span>
-              <span class="lnd-show-float-v">9 of 10 rules ticked</span>
-            </div>
-
           <div class="lnd-phone">
             <div class="lnd-phone-screen">
               <div class="lnd-show-scene is-active" data-scene="dashboard" aria-hidden="true">
@@ -434,6 +419,24 @@
           </div>
           </div>
 
+          <!-- Glance rail: example figures from the same trade the demo
+               journals. In flow beside the phone, never absolute, so a
+               short scene can never collide them again. Desktop >=1280 only. -->
+          <div class="lnd-show-rail" aria-hidden="true">
+            <div class="lnd-show-float">
+              <span class="lnd-show-float-k">stop</span>
+              <span class="lnd-show-float-v">4,244 &middot; 10.0 pips</span>
+            </div>
+            <div class="lnd-show-float">
+              <span class="lnd-show-float-k">risk</span>
+              <span class="lnd-show-float-v">$20.00 &middot; 0.2%</span>
+            </div>
+            <div class="lnd-show-float">
+              <span class="lnd-show-float-k">discipline</span>
+              <span class="lnd-show-float-v">9 of 10 rules ticked</span>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -484,52 +487,58 @@
           </figcaption>
           <div class="lnd-term-screen" aria-hidden="true">
             <div class="lnd-term-tabs">
-              <span class="is-on">wires</span><span>posts</span><span>calendar</span><span>my pairs</span>
+              <span class="is-on">wires<i>24</i></span><span>posts<i>3</i></span><span>calendar<i>5</i></span><span>my pairs</span>
               <span class="lnd-term-status"><span class="lnd-term-status-dot"></span>feed ok &middot; 18ms</span>
               <span class="lnd-term-clock">13:33:07 UTC</span>
             </div>
             <div class="lnd-term-sweep" aria-hidden="true"></div>
             <div class="lnd-term-row is-flash" style="--r:0">
-              <span class="lnd-term-time">13:30:00</span>
-              <span class="lnd-term-flag">flash</span>
+              <span class="lnd-term-time">13:30:00<i>.2</i></span>
+              <span class="lnd-term-src is-hot">tv</span>
               <span class="lnd-term-head">CPI 3.2% y/y, two tenths under consensus</span>
+              <span class="lnd-term-rx is-neg">USD &minus;0.4%</span>
               <span class="lnd-term-imp" data-imp="3"><i></i><i></i><i></i></span>
             </div>
             <div class="lnd-term-row" style="--r:1">
-              <span class="lnd-term-time">13:30:04</span>
-              <span class="lnd-term-flag is-fx">fx</span>
+              <span class="lnd-term-time">13:30:04<i>.1</i></span>
+              <span class="lnd-term-src">wire</span>
               <span class="lnd-term-head">Dollar index slips 40 pips on the print</span>
+              <span class="lnd-term-rx is-neg">DXY &minus;0.38</span>
               <span class="lnd-term-imp" data-imp="2"><i></i><i></i><i></i></span>
             </div>
             <div class="lnd-term-row" style="--r:2">
-              <span class="lnd-term-time">13:31:12</span>
-              <span class="lnd-term-flag is-metal">gold</span>
+              <span class="lnd-term-time">13:31:12<i>.8</i></span>
+              <span class="lnd-term-src">wire</span>
               <span class="lnd-term-head">XAUUSD takes out the Asia high</span>
+              <span class="lnd-term-rx is-pos">XAU +18.4</span>
               <span class="lnd-term-imp" data-imp="2"><i></i><i></i><i></i></span>
             </div>
             <div class="lnd-term-row" style="--r:3">
-              <span class="lnd-term-time">13:32:40</span>
-              <span class="lnd-term-flag">macro</span>
+              <span class="lnd-term-time">13:32:40<i>.0</i></span>
+              <span class="lnd-term-src">wire</span>
               <span class="lnd-term-head">2Y yield &minus;9bp, cuts repriced to June</span>
+              <span class="lnd-term-rx is-pos">ES +0.6%</span>
               <span class="lnd-term-imp" data-imp="2"><i></i><i></i><i></i></span>
             </div>
             <div class="lnd-term-row" style="--r:4">
-              <span class="lnd-term-time">13:33:05</span>
-              <span class="lnd-term-flag">post</span>
+              <span class="lnd-term-time">13:33:05<i>.4</i></span>
+              <span class="lnd-term-src is-hot">post</span>
               <span class="lnd-term-head">Head-of-state post on tariffs, USD bid</span>
+              <span class="lnd-term-rx is-pos">USD +0.2%</span>
               <span class="lnd-term-imp" data-imp="3"><i></i><i></i><i></i></span>
             </div>
             <div class="lnd-term-row is-cal" style="--r:5">
               <span class="lnd-term-time">14:00</span>
-              <span class="lnd-term-flag is-cal">next</span>
-              <span class="lnd-term-head">FOMC minutes, countdown 27:20</span>
+              <span class="lnd-term-src">cal</span>
+              <span class="lnd-term-head">FOMC minutes on deck</span>
+              <span class="lnd-term-rx">T&minus;26:53</span>
               <span class="lnd-term-imp" data-imp="1"><i></i><i></i><i></i></span>
             </div>
             <!-- Scarcity, honestly: the rest of the wire exists behind the
                  tier, and says so. Blurred decoration, not hidden content. -->
             <div class="lnd-term-row is-locked" aria-hidden="true">
-              <span class="lnd-term-time">13:34:41</span>
-              <span class="lnd-term-flag">wire</span>
+              <span class="lnd-term-time">13:34:41<i>.9</i></span>
+              <span class="lnd-term-src">wire</span>
               <span class="lnd-term-head lnd-term-blur">Central bank source signals surprise move on&hellip;</span>
               <span class="lnd-term-lock">&#9679; pro</span>
             </div>
@@ -540,7 +549,7 @@
               <span class="lnd-term-queue-item is-hot">2 high-impact in the next 4h</span>
             </div>
             <div class="lnd-term-strip">
-              <span>XAUUSD 4,240.1</span><span>BTCUSD 64,368</span><span>EURUSD 1.0834</span><span>US10Y 4.21%</span><span class="lnd-term-cursor"></span>
+              <span>XAUUSD 4,240.1 <em class="is-pos">+0.4%</em></span><span>BTCUSD 64,368 <em class="is-neg">&minus;1.1%</em></span><span>EURUSD 1.0834 <em class="is-pos">+0.3%</em></span><span>US10Y 4.21% <em class="is-neg">&minus;9bp</em></span><span class="lnd-term-cursor"></span>
             </div>
           </div>
         </figure>
@@ -2832,6 +2841,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260807-termdeep"></script>
+    <script type="module" src="app.js?v=20260808-renov"></script>
   </body>
 </html>

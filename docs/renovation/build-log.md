@@ -2468,3 +2468,29 @@ User-reported: the demo's Execution grades rendered as floating labels above emp
   decoration inside the labelled concept preview, not hidden content), and a
   slow oxide scan sweep down the screen.
 - Busters → ?v=20260807-termdeep. All 27 tests pass.
+
+## 2026-08-08 — Ultracode renovation: showcase composition + terminal rebuild
+
+- Orchestrated via two workflows: a 3-lens design panel (composition /
+  terminal-authenticity / conversion) + judge produced one merged spec; after
+  integration, a 3-lens adversarial verify (design-system / regression /
+  honesty) audited the diff. Regression and honesty lenses: clean.
+- Showcase: glance cards moved out of the phone wrap into an IN-FLOW
+  .lnd-show-rail (collision structurally impossible); at >=1280px the stage
+  is grid areas "chips phone rail" — chips become a numbered vertical scene
+  index (counter, hairlines, inset oxide bar on active), rail cards dock with
+  hairline connector ticks sized to the column gap. No drift animation on
+  docked cards. Dead .lnd-show-grid/card/cap/name/tag/note CSS removed.
+- Terminal sample rebuilt: timestamp+tenths spine down the gutter (node dots,
+  flash node in oxide), category source monograms (TV/WIRE/POST/CAL — never a
+  brand), price-reaction chips (the only money color on screen, earned by a
+  move), flash row = accent-muted gradient + inset bar + bold caps headline,
+  tab unread counts, inset countdown queue chips (hot = warn-soft), strip
+  deltas in money colors. Mobile: strip/tabs wrap under 620px (the nowrap
+  strip was dragging rows to 516px and clipping the impact bars), rx/tenths/
+  spine drop, 4-col rows, no horizontal scroll at 375px.
+- Verify findings fixed: (1) HIGH — rx chips' pnl-soft tint over the screen's
+  --surface-0 measured 4.30/4.49 in light, under AA; now on --surface-2 like
+  .lnd-row-result (5.9/6.1 light, 5.2/8.0 dark). (2) MED — --warn/--warn-soft
+  pinned into clay-v3's dark scope instead of silently falling back two layers.
+- Busters → ?v=20260808-renov. All 27 tests pass.

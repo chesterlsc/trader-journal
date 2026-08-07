@@ -42,6 +42,12 @@
   --surface-inset: #101318;    /* wells, inputs, table heads */
 
   --line: #2b313a;             /* machined hairlines */
+
+  /* Amber warn, pinned for the gunmetal dark scope: the styles.css fallback
+     happened to hold (7.75:1 on --surface-0) but was tuned for the violet-era
+     surfaces — scoped here deliberately so a base-layer retune cannot drift it. */
+  --warn: #f0b34e;
+  --warn-soft: rgba(240, 179, 78, 0.12);
   --line-strong: #3d4552;
   --line-accent: rgba(240, 118, 61, 0.45);
 

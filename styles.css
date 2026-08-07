@@ -596,56 +596,9 @@ body.is-guest:not(.demo-signup) .auth-shell {
   max-width: 62ch;
 }
 
-.lnd-show-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-6);
-  align-items: start;
-}
-
-.lnd-show-card {
-  display: grid;
-  gap: var(--space-4);
-  margin: 0;
-  padding: var(--space-5);
-  border-radius: var(--radius-clay-lg);
-  background: var(--surface-1);
-  box-shadow: var(--clay-raised);
-}
-
-.lnd-show-cap {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.lnd-show-name {
-  color: var(--text-faint);
-  font: 600 var(--fs-micro)/1 var(--font-mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.lnd-show-tag {
-  padding: 4px 10px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-pill);
-  color: var(--text-faint);
-  font: 600 var(--fs-micro)/1 var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.lnd-show-note {
-  margin: 0;
-  color: var(--text-soft);
-  font-size: 13.5px;
-  line-height: 1.55;
-}
 
 /* Stage: chips + one phone; on desktop the section splits copy | stage and
-   glance cards drift beside the phone so the width works for its living. */
+   a glance rail docks beside the phone so the width works for its living. */
 @media (min-width: 981px) {
   .lnd-show {
     grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
@@ -655,23 +608,20 @@ body.is-guest:not(.demo-signup) .auth-shell {
 }
 
 .lnd-show-phone-wrap {
-  position: relative;
   display: grid;
   justify-items: center;
-  width: fit-content;
-  margin: 0 auto;
 }
 
+/* Glance card: neutral data, so soft depth; docked, never floating. */
 .lnd-show-float {
-  position: absolute;
-  display: none;
+  position: relative;
+  display: flex;
   flex-direction: column;
   gap: 5px;
   padding: 12px 15px;
   border-radius: var(--radius-clay-sm);
   background: var(--surface-1);
-  box-shadow: var(--clay-raised);
-  z-index: 2;
+  box-shadow: var(--clay-soft);
 }
 
 .lnd-show-float-k {
@@ -687,40 +637,57 @@ body.is-guest:not(.demo-signup) .auth-shell {
   font-feature-settings: "tnum";
 }
 
-@media (min-width: 981px) {
-  .lnd-show-float {
-    display: flex;
-  }
-
-  .lnd-show-float-a {
-    left: -128px;
-    top: 16%;
-    transform: rotate(-3deg);
-    animation: lndTapeFloat 8s var(--ease-in-out) infinite;
-  }
-
-  .lnd-show-float-b {
-    right: -118px;
-    top: 42%;
-    transform: rotate(2.5deg);
-    animation: lndTapeFloat 10s var(--ease-in-out) infinite;
-    animation-delay: 1.2s;
-  }
-
-  .lnd-show-float-c {
-    left: -104px;
-    bottom: 12%;
-    transform: rotate(2deg);
-    animation: lndTapeFloat 9s var(--ease-in-out) infinite;
-    animation-delay: 2.4s;
-  }
+.lnd-show-rail {
+  display: none;
 }
 
-/* Stage: chips + one phone. */
+/* Stage: chips + one phone + (wide desks) glance rail. */
 .lnd-show-stage {
   display: grid;
   gap: var(--space-6);
   justify-items: center;
+}
+
+/* Wide desks: copy | scene index | phone | glance rail reads as one
+   exploded product diagram. Everything grid-flowed; collision impossible.
+   981-1279px keeps chips-over-phone with the rail hidden — the phone
+   stands alone and the section still composes. */
+@media (min-width: 1280px) {
+  .lnd-show-stage {
+    grid-template-columns: auto auto auto;
+    grid-template-areas: "chips phone rail";
+    justify-content: center;
+    align-items: center;
+    column-gap: var(--space-8);
+  }
+
+  .lnd-show-chips {
+    grid-area: chips;
+  }
+
+  .lnd-show-phone-wrap {
+    grid-area: phone;
+  }
+
+  .lnd-show-rail {
+    grid-area: rail;
+    display: grid;
+    gap: var(--space-5);
+    align-content: center;
+    min-width: 176px;
+  }
+
+  /* Hairline tick to the phone: width equals the column gap, so it lands
+     exactly on the bezel. */
+  .lnd-show-float::before {
+    content: "";
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    width: var(--space-8);
+    height: 1px;
+    background: var(--line-strong);
+  }
 }
 
 .lnd-show-chips {
@@ -753,6 +720,61 @@ body.is-guest:not(.demo-signup) .auth-shell {
   background: var(--accent);
   color: var(--text-inverse);
   box-shadow: var(--clay-accent);
+}
+
+/* >=1280 the chips become a numbered scene index — a left edge for the
+   plate instead of a pill row floating over it. */
+@media (min-width: 1280px) {
+  .lnd-show-chips {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    min-width: 168px;
+    counter-reset: showchip;
+  }
+
+  .lnd-show-chip {
+    counter-increment: showchip;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 46px;
+    padding: 0 6px 0 14px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    background: none;
+    box-shadow: inset 2px 0 0 transparent;
+    color: var(--text-soft);
+    text-align: left;
+  }
+
+  .lnd-show-chip:first-child {
+    border-top: 1px solid var(--line);
+  }
+
+  .lnd-show-chip::before {
+    content: counter(showchip, decimal-leading-zero);
+    color: var(--text-faint);
+    font: 600 var(--fs-micro)/1 var(--font-mono);
+    letter-spacing: 0.08em;
+  }
+
+  .lnd-show-chip:hover {
+    transform: none;
+    color: var(--text);
+  }
+
+  .lnd-show-chip.is-active {
+    border-color: var(--line);
+    background: none;
+    color: var(--text);
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+
+  .lnd-show-chip.is-active::before {
+    color: var(--accent);
+  }
 }
 
 .lnd-show-scene {
@@ -1279,12 +1301,6 @@ body.is-guest:not(.demo-signup) .auth-shell {
   font-size: 16px;
 }
 
-@media (max-width: 980px) {
-  .lnd-show-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 /* Wide desktops: the demo frame is a phone-flow replay, not a billboard. */
 .lnd-demo-frame {
   max-width: 640px;
@@ -1435,6 +1451,17 @@ body.is-guest:not(.demo-signup) .auth-shell {
   box-shadow: inset 0 1px 0 var(--clay-edge);
 }
 
+.lnd-term-tabs > span i {
+  margin-left: 6px;
+  color: var(--text-faint);
+  font-style: normal;
+  font-feature-settings: "tnum";
+}
+
+.lnd-term-tabs > span.is-on i {
+  color: var(--text-soft);
+}
+
 .lnd-term-clock {
   margin-left: auto;
   font-feature-settings: "tnum";
@@ -1533,7 +1560,7 @@ body.is-guest:not(.demo-signup) .auth-shell {
 }
 
 .lnd-term-row.is-locked {
-  grid-template-columns: 76px 64px minmax(0, 1fr) auto;
+  grid-template-columns: 92px 44px minmax(0, 1fr) auto;
 }
 
 .lnd-term-queue {
@@ -1552,7 +1579,12 @@ body.is-guest:not(.demo-signup) .auth-shell {
   text-transform: uppercase;
 }
 
+/* Up-next queue as inset countdown chips. */
 .lnd-term-queue-item {
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset);
   color: var(--text-soft);
   font: 600 12px/1.3 var(--font-mono);
   font-feature-settings: "tnum";
@@ -1565,16 +1597,51 @@ body.is-guest:not(.demo-signup) .auth-shell {
 }
 
 .lnd-term-queue-item.is-hot {
+  border-color: transparent;
+  background: var(--warn-soft);
   color: var(--warn);
 }
 
+/* Wire row: timestamp spine down the gutter, everything on one grid. */
 .lnd-term-row {
+  position: relative;
   display: grid;
-  grid-template-columns: 76px 64px minmax(0, 1fr) 22px;
-  gap: 12px;
+  grid-template-columns: 92px 44px minmax(0, 1fr) auto 22px;
+  gap: 14px;
   align-items: center;
   padding: 11px 18px;
   border-bottom: 1px solid var(--line);
+}
+
+.lnd-term-row::before {
+  content: "";
+  position: absolute;
+  left: 117px;
+  top: 0;
+  bottom: -1px;
+  width: 1px;
+  background: var(--line);
+}
+
+.lnd-term-row::after {
+  content: "";
+  position: absolute;
+  left: 115px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--line-strong);
+  transform: translateY(-50%);
+}
+
+.lnd-term-row.is-flash {
+  background: linear-gradient(90deg, var(--accent-muted), transparent 65%);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.lnd-term-row.is-flash::after {
+  background: var(--accent);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1600,28 +1667,67 @@ body.is-guest:not(.demo-signup) .auth-shell {
   }
 }
 
+/* Timestamps carry the tape; tenths printed a step fainter. */
 .lnd-term-time {
-  color: var(--text-faint);
+  color: var(--text-soft);
   font: 600 12px/1 var(--font-mono);
   font-feature-settings: "tnum";
 }
 
-.lnd-term-flag {
+.lnd-term-time i {
+  font-style: normal;
+  color: var(--text-faint);
+}
+
+/* Source monogram: category badge (TV / WIRE / POST / CAL), never a
+   brand. Hot sources wear the accent; the rest stay machined steel. */
+.lnd-term-src {
   justify-self: start;
-  padding: 3px 8px;
-  border: 1px solid var(--line-accent, var(--accent));
-  border-radius: 4px;
-  color: var(--accent);
+  min-width: 44px;
+  padding: 5px 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset);
+  color: var(--text-soft);
   font: 700 var(--fs-micro)/1 var(--font-mono);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
+  text-indent: 0.14em;
+  text-align: center;
   text-transform: uppercase;
 }
 
-.lnd-term-flag.is-fx,
-.lnd-term-flag.is-metal,
-.lnd-term-flag.is-cal {
-  border-color: var(--line-strong);
+.lnd-term-src.is-hot {
+  border-color: var(--line-accent, var(--accent));
+  color: var(--accent);
+}
+
+/* Price-reaction chip: the only money color on the screen, earned by an
+   actual move. Neutral chip (countdowns) stays steel. */
+.lnd-term-rx {
+  justify-self: end;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset);
   color: var(--text-soft);
+  font: 700 var(--fs-micro)/1 var(--font-mono);
+  font-feature-settings: "tnum";
+  white-space: nowrap;
+}
+
+/* Money text sits on --surface-2, not the soft tint: over the screen's
+   --surface-0 the tinted recipe measures 4.30/4.49 in light — under the
+   4.5 floor. Surface-2 clears it in both themes (see .lnd-row-result). */
+.lnd-term-rx.is-pos {
+  border-color: var(--pnl-pos-line);
+  background: var(--surface-2);
+  color: var(--pnl-pos);
+}
+
+.lnd-term-rx.is-neg {
+  border-color: var(--pnl-neg-line);
+  background: var(--surface-2);
+  color: var(--pnl-neg);
 }
 
 .lnd-term-head {
@@ -1632,8 +1738,13 @@ body.is-guest:not(.demo-signup) .auth-shell {
   white-space: nowrap;
 }
 
+/* Flash headline: bold caps in text color; the accent stays on the row
+   edge and monogram where it reads as emphasis, not decoration. */
 .lnd-term-row.is-flash .lnd-term-head {
-  color: var(--accent);
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .lnd-term-strip {
@@ -1646,6 +1757,19 @@ body.is-guest:not(.demo-signup) .auth-shell {
   font: 600 12px/1 var(--font-mono);
   font-feature-settings: "tnum";
   white-space: nowrap;
+}
+
+/* Ticker deltas: money movement, money colors. */
+.lnd-term-strip em {
+  font-style: normal;
+}
+
+.lnd-term-strip em.is-pos {
+  color: var(--pnl-pos);
+}
+
+.lnd-term-strip em.is-neg {
+  color: var(--pnl-neg);
 }
 
 .lnd-term-cursor {
@@ -1677,9 +1801,53 @@ body.is-guest:not(.demo-signup) .auth-shell {
   }
 
   .lnd-term-row {
-    grid-template-columns: 64px 56px minmax(0, 1fr) 18px;
+    grid-template-columns: 78px 40px minmax(0, 1fr) auto 18px;
     gap: 8px;
     padding: 10px 14px;
+  }
+
+  .lnd-term-row.is-locked {
+    grid-template-columns: 78px 40px minmax(0, 1fr) auto;
+  }
+
+  .lnd-term-row::before {
+    left: 96px;
+  }
+
+  .lnd-term-row::after {
+    left: 94px;
+  }
+
+  .lnd-term-src {
+    min-width: 40px;
+  }
+}
+
+@media (max-width: 620px) {
+  .lnd-term-rx,
+  .lnd-term-time i,
+  .lnd-term-row::before,
+  .lnd-term-row::after {
+    display: none;
+  }
+
+  /* The strip's nowrap spans set the screen grid's min-content width —
+     unwrapped they drag every row out to ~516px and clip the impact bars. */
+  .lnd-term-strip {
+    flex-wrap: wrap;
+  }
+
+  .lnd-term-tabs {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .lnd-term-row {
+    grid-template-columns: 62px 40px minmax(0, 1fr) 18px;
+  }
+
+  .lnd-term-row.is-locked {
+    grid-template-columns: 62px 40px minmax(0, 1fr) auto;
   }
 }
 
