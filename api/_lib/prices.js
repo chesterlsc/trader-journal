@@ -65,16 +65,16 @@ export function resolveLivePriceSource(symbol) {
     };
   }
 
-  // EURUSD rides Binance's EUR/USDT market — the same stable-quote proxy the
-  // crypto bases use (BTCUSD -> BTCUSDT above). Live, keyless, and within
-  // the USDT peg spread of interbank. Other majors have no live keyless
-  // source (ECB feeds are daily), so they are deliberately NOT offered:
-  // a daily rate under a "live" label would be a lie.
+  // EURUSD comes from Coinbase's keyless live spot endpoint — reachable from
+  // US serverless regions, unlike Binance (HTTP 451 geo-block), and updated
+  // continuously. Other majors have no live keyless source (ECB feeds are
+  // daily), so they are deliberately NOT offered: a daily rate under a
+  // "live" label would be a lie.
   if (normalized === 'EURUSD') {
     return {
-      key: 'binance:EURUSDT',
-      url: 'https://api.binance.com/api/v3/ticker/price?symbol=EURUSDT',
-      readPrice: (body) => positivePrice(body?.price),
+      key: 'coinbase:EUR-USD',
+      url: 'https://api.coinbase.com/v2/prices/EUR-USD/spot',
+      readPrice: (body) => positivePrice(body?.data?.amount),
     };
   }
 
