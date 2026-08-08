@@ -61,21 +61,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260808-openingshot" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260808-openingshot" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260809-ghostjournal" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260809-ghostjournal" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260808-openingshot" />
+    <link rel="stylesheet" href="styles.css?v=20260809-ghostjournal" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260808-openingshot" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260809-ghostjournal" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260808-openingshot" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260809-ghostjournal" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -113,30 +113,60 @@
       </header>
 
       <div class="lnd-hero">
-        <!-- Opening-shot stack, back to front: (1) a monumental conic
-             light-beam that performs one fast ignition sweep on entry, then
-             settles into a 110s patrol; an annular mask cuts a hole at the
-             dial's hub and feathers the rim, so the light passes THROUGH the
-             bezel; (2) three pre-blurred accent/steel pools drifting at
-             unrelated periods (the only blurred elements; blur is static,
-             motion is transform-only); (3) the machined dial, geometry
-             unchanged, landing with a slow push-in; (4) a thin accent meteor
-             crossing every 9s; (5) a left scrim that guarantees copy
-             contrast in both themes; (6) static film grain. -->
+        <!-- GHOST JOURNAL — the background is built from the product itself.
+             Back to front: (1) three breathing light pools (the only blurred
+             elements; blur static, motion transform-only); (2) the capture
+             grammar as monumental ultra-faint mono type, its caret still
+             breathing — the journal is mid-sentence; (3) a far depth-field of
+             ghost trade-entry cards (real row anatomy: symbol, side tag,
+             sl/pips, R:R, mood); (4) ONE equity-terrain silhouette rising
+             from the hero's base — a landscape, not a chart; (5) the near
+             card field, larger and slower; (6) the left readability scrim;
+             (7) static grain. Every figure is the demo trade family at
+             decoration opacity — plausible samples, never real user data. -->
         <div class="lnd-hero-dial" aria-hidden="true">
-          <span class="lnd-halo-cone"></span>
           <span class="lnd-halo lnd-halo-a"></span>
           <span class="lnd-halo lnd-halo-b"></span>
           <span class="lnd-halo lnd-halo-c"></span>
-          <svg viewBox="0 0 1000 1000" focusable="false">
-            <circle class="lnd-dial-rim" cx="500" cy="500" r="488" />
-            <circle class="lnd-dial-tick" cx="500" cy="500" r="452" pathLength="960" />
-            <circle class="lnd-dial-tick lnd-dial-tick-major" cx="500" cy="500" r="452" pathLength="960" />
-            <circle class="lnd-dial-ring" cx="500" cy="500" r="340" />
-            <circle class="lnd-dial-arc" cx="500" cy="500" r="396" pathLength="360" />
-            <circle class="lnd-dial-arc lnd-dial-arc-b" cx="500" cy="500" r="340" pathLength="360" />
+
+          <p class="lnd-ghost-cmd lnd-ghost-cmd-a">xauusd short 4234 sl 4244 tp 4214 0.02 lots<span class="lnd-ghost-caret"></span></p>
+          <p class="lnd-ghost-cmd lnd-ghost-cmd-b">journal: waited for the retest</p>
+
+          <div class="lnd-ghost-field lnd-ghost-far">
+            <div class="lnd-gcard" style="--gx:12%;--gy:12%;--gt:15s"><span class="lnd-gc-sym">EURUSD</span><span class="lnd-gc-side is-long">LONG</span><span class="lnd-gc-meta">1.0830 &middot; sl 20p</span></div>
+            <div class="lnd-gcard" style="--gx:46%;--gy:6%;--gt:19s"><span class="lnd-gc-sym">USDJPY</span><span class="lnd-gc-side is-short">SHORT</span><span class="lnd-gc-meta">sl 155.40 &middot; 24 pips</span></div>
+            <div class="lnd-gcard" style="--gx:80%;--gy:20%;--gt:13s"><span class="lnd-gc-sym">XAUUSD</span><span class="lnd-gc-side is-long">LONG</span><span class="lnd-gc-meta">4,190 &middot; sl 8.0 pips</span></div>
+            <div class="lnd-gcard" style="--gx:26%;--gy:58%;--gt:17s"><span class="lnd-gc-sym">GBPUSD</span><span class="lnd-gc-side is-short">SHORT</span><span class="lnd-gc-meta">sl 15p &middot; 0.10 lots</span></div>
+            <div class="lnd-gcard" style="--gx:64%;--gy:76%;--gt:21s"><span class="lnd-gc-sym">US500</span><span class="lnd-gc-side is-long">LONG</span><span class="lnd-gc-meta">sl 22 pts</span></div>
+          </div>
+
+          <svg class="lnd-terrain" viewBox="0 0 1600 400" preserveAspectRatio="none" focusable="false">
+            <defs>
+              <linearGradient id="lndTerrainGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop class="lnd-terrain-stop-a" offset="0" />
+                <stop class="lnd-terrain-stop-b" offset="1" />
+              </linearGradient>
+              <path id="lndRidge" vector-effect="non-scaling-stroke" d="M0 336 L58 322 L114 332 L172 300 L236 312 L302 264 L356 280 L424 238 L482 256 L548 208 L610 230 L674 190 L734 204 L804 152 L858 196 L930 128 L996 150 L1062 100 L1124 122 L1202 72 L1262 94 L1340 48 L1402 68 L1482 30 L1556 46 L1600 36" />
+            </defs>
+            <g class="lnd-terrain-pan">
+              <path class="lnd-terrain-fill" d="M0 336 L58 322 L114 332 L172 300 L236 312 L302 264 L356 280 L424 238 L482 256 L548 208 L610 230 L674 190 L734 204 L804 152 L858 196 L930 128 L996 150 L1062 100 L1124 122 L1202 72 L1262 94 L1340 48 L1402 68 L1482 30 L1556 46 L1600 36 L1600 400 L0 400 Z" />
+              <use class="lnd-terrain-glow" href="#lndRidge" />
+              <use class="lnd-terrain-line" href="#lndRidge" />
+            </g>
           </svg>
-          <span class="lnd-hero-meteor"></span>
+
+          <div class="lnd-ghost-field lnd-ghost-near">
+            <div class="lnd-gcard" style="--gx:56%;--gy:30%;--gt:30s">
+              <span class="lnd-gc-sym">XAUUSD</span><span class="lnd-gc-side is-short">SHORT</span><span class="lnd-gc-meta">4234 &middot; sl 4,244 &middot; 10.0 pips</span><span class="lnd-gc-rr">2.0R</span><span class="lnd-gc-mood">patient</span>
+            </div>
+            <div class="lnd-gcard" style="--gx:70%;--gy:64%;--gt:38s">
+              <span class="lnd-gc-sym">EURUSD</span><span class="lnd-gc-side is-long">LONG</span><span class="lnd-gc-meta">1.0830 &middot; sl 20p &middot; 0.02 lots</span><span class="lnd-gc-rr">1.5R</span><span class="lnd-gc-mood">calm</span>
+            </div>
+            <div class="lnd-gcard" style="--gx:34%;--gy:82%;--gt:26s">
+              <span class="lnd-gc-sym">GBPUSD</span><span class="lnd-gc-side is-short">SHORT</span><span class="lnd-gc-meta">sl 15p &middot; 1.8R</span><span class="lnd-gc-mood">hesitant</span>
+            </div>
+          </div>
+
           <span class="lnd-hero-scrim"></span>
           <span class="lnd-hero-grain"></span>
         </div>
@@ -2955,6 +2985,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260808-openingshot"></script>
+    <script type="module" src="app.js?v=20260809-ghostjournal"></script>
   </body>
 </html>

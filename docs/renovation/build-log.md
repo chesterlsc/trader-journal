@@ -2589,3 +2589,27 @@ User-reported: the demo's Execution grades rendered as floating labels above emp
   scopes — the blue/violet lower layers are dead overrides). Mobile drops to
   cone + one pool + veil scrim. Form clickability, no-h-scroll and both
   themes verified. Busters -> ?v=20260808-openingshot. 27 tests pass.
+
+## 2026-08-09 — Ghost Journal hero + centred composition
+
+- Fifth and concept-final hero round (panel resumed across the session
+  limit: 3 cached designers + live judge). The user killed the circle and
+  meteor and asked for a background RELEVANT to the product. Winner:
+  GHOST JOURNAL — the atmosphere is the app itself.
+- The stack: capture grammar as monumental whisper-opacity mono type
+  ("xauusd short 4234 sl 4244 tp 4214 0.02 lots") with a breathing caret —
+  the journal is mid-sentence; eight ghost trade-entry cards at two depth
+  planes (real row anatomy: symbol, side tag, sl/pips, R:R, mood words),
+  de-phased float periods; ONE equity-terrain silhouette rising from the
+  hero's base (landscape, not chart — the ridge includes a drawdown); the
+  three breathing halos, scrim and grain retained. Cone, hero dial and
+  meteor deleted; .lnd-dial-*/lndDialTurn kept for the Terminal Pro radar.
+  Wrapper mask centre dropped low (54% 60%) so the terrain footing stays
+  solid (grafted from the terrain spec).
+- All background figures are the demo trade family at decoration opacity,
+  aria-hidden — samples, never real data. Floors: miniature card type is
+  desktop-scoped; 11px+ at phone widths.
+- Hero centring: the copy column was 1fr of the shell and hugged left;
+  now minmax(0,660px)/minmax(0,500px) centred as a pair (700/560 at 1600+).
+  Verified 200px/200px edge gaps at 1600px.
+- Busters -> ?v=20260809-ghostjournal. All 27 tests pass.

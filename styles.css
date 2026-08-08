@@ -4904,7 +4904,8 @@ body.demo-signup::before {
   }
 
   .lnd-hero {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 560px);
+    grid-template-columns: minmax(0, 700px) minmax(0, 560px);
+    justify-content: center;
     gap: var(--space-16);
   }
 }
@@ -4965,18 +4966,8 @@ body.demo-signup::before {
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
-  -webkit-mask-image: radial-gradient(1500px 980px at 58% 46%, #000 56%, transparent 98%);
-  mask-image: radial-gradient(1500px 980px at 58% 46%, #000 56%, transparent 98%);
-}
-
-.lnd-hero-dial svg {
-  position: absolute;
-  top: 50%;
-  left: 62%;
-  width: clamp(560px, 74vw, 1040px);
-  height: auto;
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
+  -webkit-mask-image: radial-gradient(1400px 920px at 54% 60%, #000 55%, transparent 97%);
+  mask-image: radial-gradient(1400px 920px at 54% 60%, #000 55%, transparent 97%);
 }
 
 .lnd-dial-rim {
@@ -5072,30 +5063,235 @@ body.demo-signup::before {
 }
 
 /* ==========================================================================
-   HERO OPENING SHOT — title-sequence stack inside the full-bleed wrapper.
-   Layer speeds, slow to fast: ticks 480s, cone 110s, arcs 64/96s, pools
-   36-58s, meteor 9s, grain static. Motion is transform/opacity only; blur
-   is applied once, statically, to exactly three elements. Reduced motion
-   collapses everything to a composed still: cone at rest angle through the
-   bezel, pools at their from-pose, meteor invisible, dial landed. Colours
-   derive from tokens via color-mix, so both themes re-derive automatically.
+   HERO — GHOST JOURNAL. The atmosphere is made of the app's own artifacts:
+   capture-grammar type, trade-entry card silhouettes at two depths, and one
+   equity-terrain landscape. Depth cues are size/opacity/speed, never blur
+   (the three halos keep the blur budget). All loops are transform/opacity,
+   gated behind no-preference, and freeze to a fully composed frame: cards
+   at their laid-out positions, terrain landed, caret solid. The cone, the
+   hero dial and the meteor are gone; .lnd-dial-* and lndDialTurn survive
+   for the Terminal Pro radar. The wrapper mask centre sits LOW (54% 60%)
+   so the terrain base stays solid while the sky and corners feather.
    ========================================================================== */
-.lnd-halo-cone {
+
+/* Ghost command stream: the cmdk grammar as monumental texture. Ultra-faint
+   derivations of --text-faint so both themes re-derive automatically. */
+.lnd-ghost-cmd {
   position: absolute;
-  top: 50%;
-  left: 62%;
-  width: 140vmax;
-  height: 140vmax;
-  transform: translate(-50%, -50%);
-  background: conic-gradient(from 354deg at 50% 50%,
-    transparent 0deg,
-    color-mix(in srgb, var(--accent) 3%, transparent) 24deg,
-    color-mix(in srgb, var(--accent) 11%, transparent) 46deg,
-    color-mix(in srgb, var(--accent) 3%, transparent) 70deg,
-    transparent 96deg);
-  -webkit-mask-image: radial-gradient(closest-side, transparent 9%, #000 24%, #000 56%, transparent 80%);
-  mask-image: radial-gradient(closest-side, transparent 9%, #000 24%, #000 56%, transparent 80%);
+  margin: 0;
+  white-space: nowrap;
+  font: 600 clamp(64px, 9.5vw, 150px)/1 var(--font-mono);
+  letter-spacing: -0.04em;
+  color: color-mix(in srgb, var(--text-faint) 11%, transparent);
   will-change: transform;
+}
+
+.lnd-ghost-cmd-a {
+  top: 17%;
+  left: -3%;
+}
+
+.lnd-ghost-cmd-b {
+  bottom: 31%;
+  left: 24%;
+  font-size: clamp(34px, 4.4vw, 68px);
+  color: color-mix(in srgb, var(--text-faint) 8%, transparent);
+}
+
+/* The caret is the tell: the journal is mid-sentence. Breathes on opacity
+   only; reduced motion leaves it solid — a composed cursor at rest. */
+.lnd-ghost-caret {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.78em;
+  margin-left: 0.12em;
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+/* Ghost journal depth field: real row anatomy at decoration opacity.
+   Near = larger, sharper, slower; far = smaller, fainter, faster. */
+.lnd-ghost-field {
+  position: absolute;
+  inset: 0;
+}
+
+.lnd-gcard {
+  position: absolute;
+  left: var(--gx);
+  top: var(--gy);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-1) 46%, transparent);
+  font: 500 12px/1 var(--font-mono);
+  color: var(--text-faint);
+  white-space: nowrap;
+  will-change: transform;
+}
+
+.lnd-gc-sym {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.lnd-gc-side {
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, currentColor 60%, transparent);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+/* Direction is not money: oxide for shorts, steel for longs. */
+.lnd-gc-side.is-short {
+  color: color-mix(in srgb, var(--accent) 78%, var(--text-faint));
+}
+
+.lnd-gc-rr {
+  font-weight: 700;
+}
+
+.lnd-gc-mood {
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.lnd-ghost-near { opacity: 0.5; }
+.lnd-ghost-far  { opacity: 0.28; }
+
+.lnd-ghost-far .lnd-gcard {
+  padding: 7px 10px;
+  gap: 7px;
+  border-radius: 8px;
+}
+
+/* The miniature type sizes exist only where the far field renders — desktop.
+   At phone widths the base 11px/12px hold, keeping the floor test honest. */
+@media (min-width: 1081px) {
+  .lnd-gc-side {
+    font-size: 9px;
+  }
+
+  .lnd-ghost-far .lnd-gcard {
+    font-size: 10px;
+  }
+}
+
+/* Equity terrain: ONE monumental filled silhouette at the hero's base.
+   Glow is a second, wider low-opacity stroke — no filters, ever. The
+   ridge is a per-trade polyline (with a real drawdown), not a chart. */
+.lnd-terrain {
+  position: absolute;
+  left: -6%;
+  bottom: 0;
+  width: 118%;
+  height: min(46%, 380px);
+}
+
+.lnd-terrain-pan { will-change: transform; }
+
+.lnd-terrain-stop-a { stop-color: var(--accent); stop-opacity: 0.13; }
+.lnd-terrain-stop-b { stop-color: var(--accent); stop-opacity: 0; }
+
+.lnd-terrain-fill { fill: url(#lndTerrainGrad); }
+
+.lnd-terrain-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-opacity: 0.5;
+}
+
+.lnd-terrain-glow {
+  fill: none;
+  stroke: var(--accent-strong);
+  stroke-width: 7;
+  stroke-opacity: 0.1;
+}
+
+/* Light concrete: same geometry, quieter ink. */
+[data-theme="light"] .lnd-ghost-cmd { color: color-mix(in srgb, var(--text-faint) 14%, transparent); }
+[data-theme="light"] .lnd-ghost-near { opacity: 0.42; }
+[data-theme="light"] .lnd-ghost-far { opacity: 0.2; }
+[data-theme="light"] .lnd-terrain-line { stroke-opacity: 0.4; }
+[data-theme="light"] .lnd-terrain-glow { stroke-opacity: 0.07; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Entry fades are opacity-only and coexist with each element's own
+     transform loop; `both` + delay keeps layers hidden until their cue. */
+  .lnd-ghost-cmd-a {
+    animation:
+      lndGhostIn 1.8s var(--ease-out) both,
+      lndGhostAdvance 260s linear infinite alternate;
+  }
+
+  .lnd-ghost-cmd-b {
+    animation:
+      lndGhostIn 1.8s var(--ease-out) 0.4s both,
+      lndGhostAdvance 340s linear infinite alternate-reverse;
+  }
+
+  .lnd-ghost-caret {
+    animation: lndCaretBreathe 2.4s var(--ease-in-out) infinite alternate;
+  }
+
+  .lnd-ghost-field {
+    animation: lndGhostIn 2s var(--ease-out) 0.3s both;
+  }
+
+  /* Per-card variance: duration from --gt, negative delay de-phases the
+     field so no two cards ever move in step. */
+  .lnd-gcard {
+    animation: lndGhostFloat var(--gt, 26s) var(--ease-in-out) calc(var(--gt, 26s) / -3) infinite alternate;
+  }
+
+  .lnd-ghost-far .lnd-gcard {
+    animation-name: lndGhostFloatFar;
+  }
+
+  .lnd-terrain {
+    animation: lndTerrainRise 2.2s var(--ease-out) both;
+  }
+
+  .lnd-terrain-pan {
+    animation: lndTerrainPan 160s var(--ease-in-out) infinite alternate;
+  }
+}
+
+@keyframes lndGhostIn {
+  from { opacity: 0; }
+}
+
+@keyframes lndGhostAdvance {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-4%, 0, 0); }
+}
+
+@keyframes lndCaretBreathe {
+  from { opacity: 1; }
+  to   { opacity: 0.15; }
+}
+
+@keyframes lndGhostFloat {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-18px, 12px, 0); }
+}
+
+@keyframes lndGhostFloatFar {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(26px, -18px, 0); }
+}
+
+@keyframes lndTerrainRise {
+  from { transform: translate3d(0, 48px, 0); opacity: 0; }
+}
+
+@keyframes lndTerrainPan {
+  to { transform: translate3d(-5%, 0, 0); }
 }
 
 .lnd-halo {
@@ -5141,20 +5337,6 @@ body.demo-signup::before {
     transparent 70%);
 }
 
-/* Meteor: static opacity 0 — without the animation it does not exist. The
-   glow is a STATIC box-shadow riding the transform, never animated itself. */
-.lnd-hero-meteor {
-  position: absolute;
-  top: 22%;
-  left: -14%;
-  width: 240px;
-  height: 2px;
-  border-radius: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent-strong));
-  box-shadow: 0 0 12px 1px var(--accent-muted);
-  opacity: 0;
-  will-change: transform, opacity;
-}
 
 /* THE READABILITY DECISION: a theme-aware surface gradient sits OVER every
    moving layer and UNDER grain — 88% opaque at the left edge, gone by 60%.
@@ -5171,40 +5353,12 @@ body.demo-signup::before {
 
 /* Light concrete: same geometry, quieter light. */
 [data-theme="light"] .lnd-halo { opacity: 0.55; }
-[data-theme="light"] .lnd-halo-cone { opacity: 0.5; }
-[data-theme="light"] .lnd-hero-meteor { box-shadow: none; }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* Ignition: one fast 2.6s sweep, then the 110s patrol takes over exactly
-     where it lands — both end/start at rotate(0), so the handoff is
-     seamless. */
-  .lnd-halo-cone {
-    animation:
-      lndConeIgnite 2.6s var(--ease-out) both,
-      lndConeTurn 110s linear 2.6s infinite;
-  }
-
   .lnd-halo-a { animation: lndHaloA 44s var(--ease-in-out) infinite alternate; }
   .lnd-halo-b { animation: lndHaloB 58s var(--ease-in-out) infinite alternate; }
   .lnd-halo-c { animation: lndHaloC 36s var(--ease-in-out) infinite alternate; }
 
-  .lnd-hero-dial svg {
-    animation: lndDialLand 2s var(--ease-out) both;
-  }
-
-  .lnd-hero-meteor {
-    animation: lndMeteor 9s linear 3.4s infinite;
-  }
-}
-
-@keyframes lndConeIgnite {
-  from { transform: translate(-50%, -50%) rotate(-80deg) scale(1.12); opacity: 0; }
-  to   { transform: translate(-50%, -50%) rotate(0deg) scale(1); opacity: 1; }
-}
-
-@keyframes lndConeTurn {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to   { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 @keyframes lndHaloA {
@@ -5222,25 +5376,23 @@ body.demo-signup::before {
   to   { transform: translate3d(5vw, 7vh, 0) scale(1.12); }
 }
 
-@keyframes lndDialLand {
-  from { transform: translate(-50%, -50%) scale(1.045); opacity: 0; }
-  to   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-}
-
-@keyframes lndMeteor {
-  0%   { transform: translate3d(0, 0, 0) rotate(9deg); opacity: 0; }
-  4%   { opacity: 0.9; }
-  11%  { transform: translate3d(130vw, 22vh, 0) rotate(9deg); opacity: 0; }
-  100% { transform: translate3d(130vw, 22vh, 0) rotate(9deg); opacity: 0; }
-}
-
 /* Single column (hero stacks at 1080px): lighter stack, never blank. The
    scrim adds a uniform veil because the copy sits over the dial's centre. */
 @media (max-width: 1080px) {
   .lnd-halo-b,
   .lnd-halo-c,
-  .lnd-hero-meteor {
+  .lnd-ghost-far,
+  .lnd-ghost-cmd-b {
     display: none;
+  }
+
+  .lnd-ghost-near {
+    opacity: 0.32;
+  }
+
+  .lnd-ghost-cmd-a {
+    top: 10%;
+    font-size: clamp(44px, 13vw, 90px);
   }
 
   .lnd-halo-a {
@@ -5387,7 +5539,11 @@ body.demo-signup::before {
 /* --- Hero ---------------------------------------------------------------- */
 .lnd-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 500px);
+  /* The copy column is capped at its content width and the PAIR is centered
+     as one unit — a 1fr copy column left the headline hugging the left edge
+     of an oversized track and read as off-balance. */
+  grid-template-columns: minmax(0, 660px) minmax(0, 500px);
+  justify-content: center;
   gap: var(--space-10);
   align-items: center;
   width: 100%;
