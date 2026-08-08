@@ -1326,12 +1326,6 @@ body.is-guest:not(.demo-signup) .auth-shell {
   width: 100%;
 }
 
-.lnd-term-fine {
-  margin: 0;
-  color: var(--text-faint);
-  font: 500 12px/1.6 var(--font-mono);
-}
-
 .lnd-soon-chip {
   display: inline-block;
   margin-left: 4px;
@@ -1348,16 +1342,15 @@ body.is-guest:not(.demo-signup) .auth-shell {
   white-space: nowrap;
 }
 
-/* --- Terminal Pro teaser: the control room --------------------------------
-   The section breaks out of the shell and runs full-bleed (the .lnd-ticker
-   trick): a recessed instrument band one step darker than the page in both
-   themes. Depth is layered light, not boxes — an oxide corner wash, a scan
-   band drifting down the room, the hero's machined dial turning in the
-   top-right corner, film grain on top. Every loop is transform-only and
-   dies in the global reduced-motion block; the reveal choreography is
-   additionally gated behind no-preference. NAMING: -masthead/-headline are
-   deliberately NOT -head/-title — those belong to the sample frame. */
-.lnd-term {
+/* --- Terminal Pro: the fusion desk -----------------------------------------
+   Full-bleed band (the .lnd-ticker breakout). The four-pane sample screen is
+   the hero: the wire and the user's OWN journal running as one stream. The
+   screen keeps its own light — Clay V3 gunmetal values are pinned inside
+   .lnd-tp-frame so it stays a dark instrument on the concrete theme (the
+   light-mode washout fix). The animation is one scripted ~26s cycle, pure
+   CSS, all transform/opacity, gated behind no-preference; the base
+   (no-animation) state is the finished, fully populated frame. */
+.lnd-tp {
   position: relative;
   width: 100vw;
   margin-left: calc(50% - 50vw);
@@ -1365,35 +1358,39 @@ body.is-guest:not(.demo-signup) .auth-shell {
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   background:
-    radial-gradient(900px 460px at 82% 0%, var(--accent-muted), transparent 70%),
-    radial-gradient(760px 420px at 8% 100%, var(--aurora-c), transparent 72%),
+    radial-gradient(900px 460px at 18% 0%, var(--accent-muted), transparent 70%),
+    radial-gradient(760px 420px at 92% 100%, var(--aurora-c), transparent 72%),
     var(--surface-inset);
   overflow: hidden;
 }
 
-.lnd-term-air {
+.lnd-tp-air {
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
 }
 
-/* Ruler tape crawling under the top hairline: the band's instrument edge.
-   24px pitch, animated exactly one pitch, so the loop is seamless. */
-.lnd-term-air::before {
-  content: "";
+/* Wireframe floor: a machined grid tipped into perspective under the screen,
+   crawling toward the viewer exactly one 56px pitch, so the loop is seamless.
+   Theme-aware via --line-strong; masked so the horizon dissolves. */
+.lnd-tp-floor {
   position: absolute;
-  top: 0;
-  left: -24px;
-  right: 0;
-  height: 9px;
-  background: repeating-linear-gradient(90deg, var(--line-strong) 0 1px, transparent 1px 24px);
-  opacity: 0.5;
+  left: -24vw;
+  right: -24vw;
+  bottom: -22%;
+  height: 58%;
+  background:
+    repeating-linear-gradient(90deg, var(--line-strong) 0 1px, transparent 1px 88px),
+    repeating-linear-gradient(0deg, var(--line-strong) 0 1px, transparent 1px 56px);
+  transform: perspective(900px) rotateX(62deg) translateY(0);
+  opacity: 0.22;
+  -webkit-mask-image: linear-gradient(180deg, transparent 4%, #000 52%);
+  mask-image: linear-gradient(180deg, transparent 4%, #000 52%);
 }
 
-/* One wide band of oxide light drifting down the room — the sample screen's
-   sweep, scaled to the whole section. */
-.lnd-term-scan {
+/* One band of oxide light drifting down the room. */
+.lnd-tp-scan {
   position: absolute;
   inset: 0 0 auto;
   height: 160px;
@@ -1401,91 +1398,44 @@ body.is-guest:not(.demo-signup) .auth-shell {
   transform: translateY(-160px);
 }
 
-/* Radar quadrant: hero dial classes reused, so tick geometry, arc speeds and
-   both theme derivations come for free. */
-.lnd-term-radar {
-  position: absolute;
-  top: clamp(-340px, -22vw, -180px);
-  right: clamp(-320px, -18vw, -160px);
-  width: clamp(480px, 44vw, 820px);
-  aspect-ratio: 1;
-  opacity: 0.8;
-}
-
 @media (prefers-reduced-motion: no-preference) {
-  .lnd-term-scan {
-    animation: lndTermScan 12s linear infinite;
+  .lnd-tp-floor {
+    animation: lndTpFloor 6s linear infinite;
   }
 
-  .lnd-term-air::before {
-    animation: lndTermCrawl 3.2s linear infinite;
+  .lnd-tp-scan {
+    animation: lndTpScan 13s linear infinite;
   }
 }
 
-@keyframes lndTermScan {
+@keyframes lndTpFloor {
+  to {
+    transform: perspective(900px) rotateX(62deg) translateY(56px);
+  }
+}
+
+@keyframes lndTpScan {
   to {
     transform: translateY(1200px);
   }
 }
 
-@keyframes lndTermCrawl {
-  to {
-    transform: translateX(24px);
-  }
-}
-
-/* Composition: heading spans the band, manifest left, frame right;
-   one column below 980px with the frame promoted above the manifest. */
-.lnd-term-inner {
+.lnd-tp-inner {
   position: relative;
   z-index: 1;
-  width: min(1320px, 94vw);
+  width: min(1180px, 94vw);
   margin: 0 auto;
   display: grid;
-  gap: var(--space-10);
+  gap: var(--space-8);
 }
 
-@media (min-width: 1600px) {
-  .lnd-term-inner {
-    width: min(1560px, 92vw);
-  }
-}
-
-@media (min-width: 981px) {
-  .lnd-term-inner {
-    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-    grid-template-areas:
-      "head head"
-      "side frame";
-    column-gap: var(--space-12);
-    row-gap: var(--space-12);
-  }
-
-  .lnd-term-masthead { grid-area: head; }
-
-  .lnd-term-side {
-    grid-area: side;
-    align-self: center;
-  }
-
-  .lnd-term-inner > .lnd-term-frame { grid-area: frame; }
-}
-
-@media (max-width: 980px) {
-  .lnd-term-side {
-    order: 2;
-  }
-}
-
-/* Spec plate: ink stamp + in-development line + a hairline that draws
-   across the band on reveal. */
-.lnd-term-masthead {
+.lnd-tp-masthead {
   display: grid;
   gap: var(--space-5);
   justify-items: start;
 }
 
-.lnd-term-plate {
+.lnd-tp-plate {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1498,7 +1448,7 @@ body.is-guest:not(.demo-signup) .auth-shell {
   white-space: nowrap;
 }
 
-.lnd-term-stamp {
+.lnd-tp-stamp {
   padding: 6px 9px;
   border-radius: 7px;
   background: var(--text);
@@ -1508,7 +1458,7 @@ body.is-guest:not(.demo-signup) .auth-shell {
   box-shadow: 0 0 0 1px var(--clay-edge-strong);
 }
 
-.lnd-term-plate::after {
+.lnd-tp-plate::after {
   content: "";
   flex: 1;
   height: 1px;
@@ -1516,511 +1466,618 @@ body.is-guest:not(.demo-signup) .auth-shell {
   transform-origin: left;
 }
 
-/* Statement headline: the accent word is the only color in it. */
-.lnd-term-headline {
+.lnd-tp-headline {
   margin: 0;
   color: var(--text);
-  font: 700 clamp(2.1rem, 4.8vw, 3.7rem)/1.04 var(--font-ui);
+  font: 700 clamp(2.05rem, 4.6vw, 3.55rem)/1.05 var(--font-ui);
   letter-spacing: -0.04em;
 }
 
-.lnd-term-headline em {
+.lnd-tp-headline em {
   font-style: normal;
   color: var(--accent);
 }
 
-.lnd-term-lede {
+.lnd-tp-lede {
   margin: 0;
-  max-width: 56ch;
+  max-width: 62ch;
   color: var(--text-soft);
   font: 400 var(--fs-md)/1.6 var(--font-ui);
 }
 
-/* Manifest: four engraved lines, no boxes — hairlines carry the structure. */
-.lnd-term-spec {
+/* THE SCREEN. A screen has its own light: gunmetal pinned here so the
+   instrument stays dark on concrete. Only this scope may hard-reference
+   dark-surface derivations. */
+.lnd-tp-frame {
+  --tp-s0: #101318;
+  --tp-s1: #14161a;
+  --tp-s2: #1d2126;
+  --tp-s3: #23282e;
+  --tp-line: #2b313a;
+  --tp-line2: #3d4552;
+  --tp-text: #e9edf1;
+  --tp-soft: #a2abb5;
+  --tp-faint: #9aa3ae;
+  --tp-acc: #f0763d;
+  --tp-acc-soft: rgba(240, 118, 61, 0.16);
+  --tp-pos: #3ecf8e;
+  --tp-neg: #f7758d;
+  --tp-warn: #f0b34e;
+  --tp-warn-soft: rgba(240, 179, 78, 0.16);
   margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-}
-
-.lnd-term-spec li {
-  display: grid;
-  grid-template-columns: 34px 92px minmax(0, 1fr);
-  gap: var(--space-4);
-  align-items: baseline;
-  padding: 15px 0;
-  border-top: 1px solid var(--line);
-}
-
-.lnd-term-spec li:last-child {
-  border-bottom: 1px solid var(--line);
-}
-
-.lnd-term-spec-i {
-  color: var(--accent);
-  font: 700 var(--fs-micro)/1.4 var(--font-mono);
-  font-feature-settings: "tnum";
-  letter-spacing: 0.08em;
-}
-
-.lnd-term-spec-k {
-  color: var(--text);
-  font: 700 var(--fs-micro)/1.4 var(--font-mono);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.lnd-term-spec-d {
-  color: var(--text-soft);
-  font: 400 13px/1.55 var(--font-ui);
-}
-
-.lnd-term-fine {
-  margin: var(--space-5) 0 0;
-  color: var(--text-faint);
-  font: 500 12px/1.6 var(--font-mono);
-}
-
-/* Reveal choreography: the plate hairline draws across the band, then the
-   manifest rows ride in one beat apart. Reduced motion gets the finished
-   sheet instantly — the hidden FROM states never apply there. */
-@media (prefers-reduced-motion: no-preference) {
-  body.auth-ready .lnd-term .lnd-term-plate::after {
-    transform: scaleX(0);
-    transition: transform 1100ms var(--ease-clay) 250ms;
-  }
-
-  body.auth-ready .lnd-term.is-revealed .lnd-term-plate::after {
-    transform: scaleX(1);
-  }
-
-  body.auth-ready .lnd-term .lnd-term-spec li {
-    opacity: 0;
-    transform: translateY(14px);
-    transition:
-      opacity 600ms var(--ease-clay) calc(var(--i, 0) * 110ms + 350ms),
-      transform 600ms var(--ease-clay) calc(var(--i, 0) * 110ms + 350ms);
-  }
-
-  body.auth-ready .lnd-term.is-revealed .lnd-term-spec li {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@media (max-width: 620px) {
-  .lnd-term-spec li {
-    grid-template-columns: 28px minmax(0, 1fr);
-  }
-
-  .lnd-term-spec-d {
-    grid-column: 2;
-  }
-}
-
-.lnd-term-frame {
-  margin: 0;
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-clay-lg);
-  background: var(--surface-1);
+  background: var(--tp-s1);
   box-shadow: var(--clay-raised);
   overflow: hidden;
 }
 
-.lnd-term-chrome {
+.lnd-tp-chrome {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 12px 18px;
-  border-bottom: 1px solid var(--line);
+  background: var(--tp-s2);
+  border-bottom: 1px solid var(--tp-line);
 }
 
-.lnd-term-dot {
+.lnd-tp-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--tp-acc);
   animation: livePulse 2s var(--ease-in-out) infinite;
 }
 
-.lnd-term-title {
-  color: var(--text);
+.lnd-tp-title {
+  color: var(--tp-text);
   font: 700 var(--fs-micro)/1 var(--font-mono);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
-.lnd-term-tag {
+.lnd-tp-tag {
   margin-left: auto;
-  color: var(--text-faint);
+  padding: 3px 8px;
+  border: 1px solid var(--tp-line2);
+  border-radius: var(--radius-pill);
+  color: var(--tp-faint);
   font: 600 var(--fs-micro)/1 var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-.lnd-term-screen {
-  display: grid;
-  padding: 6px 0 0;
-  background: var(--surface-0);
+.lnd-tp-screen {
+  position: relative;
+  background: var(--tp-s0);
+  color: var(--tp-soft);
+  font: 500 12px/1.45 var(--font-mono);
+  font-feature-settings: "tnum";
+  overflow: hidden;
 }
 
-.lnd-term-tabs {
+.lnd-tp-sweep {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 64px;
+  background: linear-gradient(180deg, transparent, rgba(240, 118, 61, 0.05), transparent);
+  pointer-events: none;
+}
+
+/* Command bar: prompt, function keys, desk clock. */
+.lnd-tp-cmd {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 18px 12px;
-  border-bottom: 1px solid var(--line);
+  gap: var(--space-4);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--tp-line);
+  white-space: nowrap;
 }
 
-.lnd-term-tabs > span {
-  padding: 5px 10px;
-  border-radius: 6px;
-  color: var(--text-faint);
-  font: 600 var(--fs-micro)/1 var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+.lnd-tp-prompt {
+  color: var(--tp-acc);
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
-.lnd-term-tabs > span.is-on {
-  background: var(--surface-2);
-  color: var(--accent);
-  box-shadow: inset 0 1px 0 var(--clay-edge);
-}
-
-.lnd-term-tabs > span i {
+.lnd-tp-caret {
+  display: inline-block;
+  width: 7px;
+  height: 12px;
   margin-left: 6px;
-  color: var(--text-faint);
-  font-style: normal;
-  font-feature-settings: "tnum";
+  background: var(--tp-acc);
+  vertical-align: -2px;
 }
 
-.lnd-term-tabs > span.is-on i {
-  color: var(--text-soft);
-}
-
-.lnd-term-clock {
-  margin-left: auto;
-  font-feature-settings: "tnum";
-}
-
-.lnd-term-imp {
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 2px;
-  justify-self: end;
-}
-
-.lnd-term-imp i {
-  width: 4px;
-  border-radius: 1px;
-  background: var(--surface-3);
-}
-
-.lnd-term-imp i:nth-child(1) { height: 6px; }
-.lnd-term-imp i:nth-child(2) { height: 10px; }
-.lnd-term-imp i:nth-child(3) { height: 14px; }
-
-.lnd-term-imp[data-imp="1"] i:nth-child(1),
-.lnd-term-imp[data-imp="2"] i:nth-child(-n + 2),
-.lnd-term-imp[data-imp="3"] i {
-  background: var(--accent);
-}
-
-.lnd-term-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-  color: var(--text-faint);
-  font: 600 var(--fs-micro)/1 var(--font-mono);
+.lnd-tp-fkeys {
+  color: var(--tp-faint);
+  font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.lnd-term-status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--pnl-pos);
-  animation: livePulse 2s var(--ease-in-out) infinite;
+.lnd-tp-clock {
+  margin-left: auto;
+  color: var(--tp-text);
+  font-weight: 700;
 }
 
-.lnd-term-tabs .lnd-term-clock {
-  margin-left: 0;
-}
-
-/* One thin light band drifting down the screen: terminal, not disco. */
-.lnd-term-screen {
-  position: relative;
-  overflow: hidden;
-}
-
-.lnd-term-sweep {
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 72px;
-  background: linear-gradient(180deg, transparent, rgb(240 118 61 / 0.045), transparent);
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .lnd-term-sweep {
-    animation: lndSweep 7s linear infinite;
-  }
-}
-
-@keyframes lndSweep {
-  0% {
-    transform: translateY(-80px);
-  }
-  100% {
-    transform: translateY(480px);
-  }
-}
-
-.lnd-term-row.is-locked .lnd-term-blur {
-  filter: blur(4px);
-  opacity: 0.75;
-}
-
-.lnd-term-lock {
-  justify-self: end;
-  padding: 3px 8px;
-  border: 1px solid var(--line-accent, var(--accent));
-  border-radius: var(--radius-pill);
-  color: var(--accent);
-  font: 700 var(--fs-micro)/1 var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.lnd-term-row.is-locked {
-  grid-template-columns: 92px 44px minmax(0, 1fr) auto;
-}
-
-.lnd-term-queue {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-4);
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--line);
-}
-
-.lnd-term-queue-k {
-  color: var(--accent);
-  font: 700 var(--fs-micro)/1 var(--font-mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-/* Up-next queue as inset countdown chips. */
-.lnd-term-queue-item {
-  padding: 4px 9px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface-inset);
-  color: var(--text-soft);
-  font: 600 12px/1.3 var(--font-mono);
-  font-feature-settings: "tnum";
-  white-space: nowrap;
-}
-
-.lnd-term-queue-item em {
-  color: var(--text);
-  font-style: normal;
-}
-
-.lnd-term-queue-item.is-hot {
-  border-color: transparent;
-  background: var(--warn-soft);
-  color: var(--warn);
-}
-
-/* Wire row: timestamp spine down the gutter, everything on one grid. */
-.lnd-term-row {
-  position: relative;
+/* Pane grid: hairline splitters via 1px gap over the line color — the
+   pro-terminal workspace. Single column on phones, wire pane leading. */
+.lnd-tp-panes {
   display: grid;
-  grid-template-columns: 92px 44px minmax(0, 1fr) auto 22px;
-  gap: 14px;
-  align-items: center;
-  padding: 11px 18px;
-  border-bottom: 1px solid var(--line);
+  gap: 1px;
+  background: var(--tp-line);
 }
 
-.lnd-term-row::before {
-  content: "";
-  position: absolute;
-  left: 117px;
-  top: 0;
-  bottom: -1px;
-  width: 1px;
-  background: var(--line);
-}
-
-.lnd-term-row::after {
-  content: "";
-  position: absolute;
-  left: 115px;
-  top: 50%;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--line-strong);
-  transform: translateY(-50%);
-}
-
-.lnd-term-row.is-flash {
-  background: linear-gradient(90deg, var(--accent-muted), transparent 65%);
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-
-.lnd-term-row.is-flash::after {
-  background: var(--accent);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .lnd-term-row {
-    animation: lndTermPop 9s var(--ease-out) infinite;
-    animation-delay: calc(var(--r, 0) * 420ms);
+@media (min-width: 701px) {
+  .lnd-tp-panes {
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    grid-template-areas:
+      "wire edge"
+      "wire journal"
+      "wire arm";
   }
+
+  .lnd-tp-wire { grid-area: wire; }
+  .lnd-tp-edge { grid-area: edge; }
+  .lnd-tp-journal { grid-area: journal; }
+  .lnd-tp-arm { grid-area: arm; }
 }
 
-@keyframes lndTermPop {
-  0% {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  4%,
-  92% {
-    opacity: 1;
-    transform: none;
-  }
-  100% {
-    opacity: 1;
-    transform: none;
-  }
+.lnd-tp-pane {
+  min-width: 0;
+  padding: 10px 0 12px;
+  background: var(--tp-s0);
 }
 
-/* Timestamps carry the tape; tenths printed a step fainter. */
-.lnd-term-time {
-  color: var(--text-soft);
-  font: 600 12px/1 var(--font-mono);
-  font-feature-settings: "tnum";
+.lnd-tp-pane-h {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 6px;
+  padding: 2px 16px 8px;
+  border-bottom: 1px solid var(--tp-line);
+  color: var(--tp-text);
+  font: 700 11px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
-.lnd-term-time i {
+.lnd-tp-pane-h b {
+  padding: 3px 6px;
+  border: 1px solid var(--tp-line2);
+  border-radius: 4px;
+  color: var(--tp-acc);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.lnd-tp-pane-h em {
+  margin-left: auto;
+  color: var(--tp-faint);
   font-style: normal;
-  color: var(--text-faint);
+  font-weight: 600;
+  letter-spacing: 0.08em;
 }
 
-/* Source monogram: category badge (TV / WIRE / POST / CAL), never a
-   brand. Hot sources wear the accent; the rest stay machined steel. */
-.lnd-term-src {
-  justify-self: start;
-  min-width: 44px;
-  padding: 5px 0;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface-inset);
-  color: var(--text-soft);
-  font: 700 var(--fs-micro)/1 var(--font-mono);
-  letter-spacing: 0.14em;
-  text-indent: 0.14em;
+/* Wire rows: time / monogram / headline / reaction, tabular throughout. */
+.lnd-tp-row {
+  display: grid;
+  grid-template-columns: 60px 40px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 16px;
+}
+
+.lnd-tp-row + .lnd-tp-row {
+  border-top: 1px solid var(--tp-s2);
+}
+
+.lnd-tp-t {
+  color: var(--tp-faint);
+  font-size: 11px;
+}
+
+.lnd-tp-s {
+  padding: 3px 0;
+  border: 1px solid var(--tp-line2);
+  border-radius: 5px;
+  color: var(--tp-soft);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-indent: 0.1em;
   text-align: center;
   text-transform: uppercase;
 }
 
-.lnd-term-src.is-hot {
-  border-color: var(--line-accent, var(--accent));
-  color: var(--accent);
+.lnd-tp-s.is-hot {
+  border-color: var(--tp-acc);
+  color: var(--tp-acc);
 }
 
-/* Price-reaction chip: the only money color on the screen, earned by an
-   actual move. Neutral chip (countdowns) stays steel. */
-.lnd-term-rx {
-  justify-self: end;
-  padding: 3px 8px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface-inset);
-  color: var(--text-soft);
-  font: 700 var(--fs-micro)/1 var(--font-mono);
-  font-feature-settings: "tnum";
-  white-space: nowrap;
+.lnd-tp-s.is-you {
+  border-color: var(--tp-pos);
+  color: var(--tp-pos);
 }
 
-/* Money text sits on --surface-2, not the soft tint: over the screen's
-   --surface-0 the tinted recipe measures 4.30/4.49 in light — under the
-   4.5 floor. Surface-2 clears it in both themes (see .lnd-row-result). */
-.lnd-term-rx.is-pos {
-  border-color: var(--pnl-pos-line);
-  background: var(--surface-2);
-  color: var(--pnl-pos);
-}
-
-.lnd-term-rx.is-neg {
-  border-color: var(--pnl-neg-line);
-  background: var(--surface-2);
-  color: var(--pnl-neg);
-}
-
-.lnd-term-head {
-  color: var(--text);
-  font: 600 13px/1.4 var(--font-mono);
+.lnd-tp-h {
+  color: var(--tp-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Flash headline: bold caps in text color; the accent stays on the row
-   edge and monogram where it reads as emphasis, not decoration. */
-.lnd-term-row.is-flash .lnd-term-head {
-  color: var(--text);
+.lnd-tp-x {
+  justify-self: end;
+  color: var(--tp-faint);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.lnd-tp-x.is-neg { color: var(--tp-neg); }
+.lnd-tp-x.is-pos { color: var(--tp-pos); }
+
+/* Flash row: the CPI ignition. The pulse is an opacity-only overlay. */
+.lnd-tp-row.is-flash {
+  position: relative;
+  box-shadow: inset 2px 0 0 var(--tp-acc);
+}
+
+.lnd-tp-row.is-flash .lnd-tp-h {
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
-.lnd-term-strip {
+.lnd-tp-row.is-flash::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--tp-acc-soft), transparent 70%);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Fusion rows: the journal talking ON the tape. */
+.lnd-tp-row.is-fuse .lnd-tp-h { color: var(--tp-acc); }
+
+.lnd-tp-row.is-you { box-shadow: inset 2px 0 0 var(--tp-pos); }
+.lnd-tp-row.is-you .lnd-tp-h { color: var(--tp-pos); }
+
+/* Edge pane: your file on this event type. */
+.lnd-tp-stat {
   display: flex;
-  align-items: center;
-  gap: var(--space-5);
-  padding: 12px 18px;
-  overflow: hidden;
-  color: var(--text-soft);
-  font: 600 12px/1 var(--font-mono);
-  font-feature-settings: "tnum";
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 16px;
+}
+
+.lnd-tp-stat span {
+  color: var(--tp-faint);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.lnd-tp-stat b {
+  color: var(--tp-text);
+  font-weight: 700;
   white-space: nowrap;
 }
 
-/* Ticker deltas: money movement, money colors. */
-.lnd-term-strip em {
+.lnd-tp-stat b.is-neg { color: var(--tp-neg); }
+.lnd-tp-stat b.is-pos { color: var(--tp-pos); }
+
+.lnd-tp-verdict {
+  margin: 8px 16px 2px;
+  padding: 7px 10px;
+  border: 1px dashed var(--tp-acc);
+  border-radius: var(--radius-sm);
+  color: var(--tp-acc);
+  font: 700 11px/1.3 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* Journal pane: the auto-stamp moment. */
+.lnd-tp-entry {
+  margin: 2px 0 8px;
+  padding: 0 16px;
+  color: var(--tp-text);
+  font-weight: 700;
+}
+
+.lnd-tp-entry i {
+  color: var(--tp-faint);
   font-style: normal;
+  font-weight: 600;
+  font-size: 11px;
 }
 
-.lnd-term-strip em.is-pos {
-  color: var(--pnl-pos);
+.lnd-tp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0 16px;
 }
 
-.lnd-term-strip em.is-neg {
-  color: var(--pnl-neg);
+.lnd-tp-chip {
+  padding: 4px 8px;
+  border: 1px solid var(--tp-line2);
+  border-radius: var(--radius-sm);
+  background: var(--tp-s2);
+  color: var(--tp-soft);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.lnd-term-cursor {
-  width: 8px;
-  height: 14px;
-  background: var(--accent);
+.lnd-tp-chip.is-warn {
+  border-color: var(--tp-warn);
+  background: var(--tp-warn-soft);
+  color: var(--tp-warn);
 }
 
+.lnd-tp-saved {
+  margin: 8px 0 0;
+  padding: 0 16px;
+  color: var(--tp-pos);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Arm pane: the rules engine ahead of the release. */
+.lnd-tp-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 8px;
+  padding: 0 16px;
+  color: var(--tp-soft);
+}
+
+.lnd-tp-count b {
+  color: var(--tp-text);
+  font-weight: 700;
+}
+
+.lnd-tp-armed {
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--tp-warn-soft);
+  color: var(--tp-warn);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lnd-tp-lockbar {
+  display: block;
+  height: 4px;
+  margin: 0 16px 10px;
+  border-radius: 2px;
+  background: var(--tp-s3);
+  overflow: hidden;
+}
+
+.lnd-tp-lockbar i {
+  display: block;
+  height: 100%;
+  background: var(--tp-warn);
+  transform: scaleX(0.68);
+  transform-origin: left;
+}
+
+.lnd-tp-check {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0 0 6px;
+  padding: 0 16px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.lnd-tp-check span { color: var(--tp-faint); }
+
+.lnd-tp-check span::before {
+  content: "○ ";
+  color: var(--tp-warn);
+  font-weight: 700;
+}
+
+.lnd-tp-check span.is-done { color: var(--tp-soft); }
+
+.lnd-tp-check span.is-done::before {
+  content: "✓ ";
+  color: var(--tp-pos);
+}
+
+.lnd-tp-locknote {
+  margin: 0;
+  padding: 0 16px;
+  color: var(--tp-faint);
+  font-size: 11px;
+}
+
+/* Status bar: honesty chip first, tilt radar report late in the cycle. */
+.lnd-tp-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  padding: 9px 16px;
+  border-top: 1px solid var(--tp-line);
+  background: var(--tp-s1);
+  color: var(--tp-faint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.lnd-tp-bar-sample {
+  padding: 3px 8px;
+  border: 1px solid var(--tp-acc);
+  border-radius: var(--radius-pill);
+  color: var(--tp-acc);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.lnd-tp-tilt { color: var(--tp-warn); }
+
+.lnd-tp-bar-clock { margin-left: auto; }
+
+/* --- The sample video: one 26s scripted cycle, pure CSS. Staggered entries
+   use fill-mode backwards so the pre-start frame is hidden during their
+   delay; without animation (reduced motion) every element sits in its
+   finished, fully populated state — a composed frozen frame. Script:
+   tape lands (0–3s) → CPI flash + edge file populates (1–4s) → verdict
+   stamps (4s) → your trade prints + auto-stamp (7–10s) → desk arms
+   (10–19s) → tilt radar reports (19s) → quiet → loop. --- */
 @media (prefers-reduced-motion: no-preference) {
-  .lnd-term-cursor {
-    animation: lndCursor 1.1s steps(1) infinite;
+  .lnd-tp-caret {
+    animation: lndTpBlink 1.06s steps(1) infinite;
+  }
+
+  .lnd-tp-sweep {
+    animation: lndTpSweep 9s linear infinite;
+  }
+
+  .lnd-tp-row,
+  .lnd-tp-stat,
+  .lnd-tp-entry,
+  .lnd-tp-saved {
+    animation: lndTpIn 26s var(--ease-out) infinite backwards;
+    animation-delay: var(--d, 0s);
+  }
+
+  .lnd-tp-stat { animation-delay: calc(1.9s + var(--i, 0) * 0.5s); }
+  .lnd-tp-entry { animation-delay: 7.2s; }
+  .lnd-tp-saved { animation-delay: 9.8s; }
+
+  .lnd-tp-chip,
+  .lnd-tp-verdict {
+    animation: lndTpStampIn 26s var(--ease-out) infinite backwards;
+  }
+
+  .lnd-tp-chip { animation-delay: calc(7.9s + var(--i, 0) * 0.6s); }
+  .lnd-tp-verdict { animation-delay: 4.1s; }
+
+  .lnd-tp-row.is-flash::after {
+    animation: lndTpFlash 26s linear infinite;
+  }
+
+  .lnd-tp-lockbar i {
+    animation: lndTpLock 26s linear infinite;
+  }
+
+  .lnd-tp-armed {
+    animation: lndTpArm 26s linear infinite;
+  }
+
+  .lnd-tp-tilt {
+    animation: lndTpTilt 26s linear infinite;
+  }
+
+  .lnd-tp-check span:last-child::before {
+    animation: lndTpBlink 1.4s steps(1) infinite;
   }
 }
 
-@keyframes lndCursor {
+@keyframes lndTpIn {
+  0% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  1.8%,
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes lndTpStampIn {
+  0% {
+    opacity: 0;
+    transform: scale(1.5) rotate(-4deg);
+  }
+  1.4%,
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes lndTpFlash {
+  0%,
+  4.6% {
+    opacity: 0;
+  }
+  5.6% {
+    opacity: 1;
+  }
+  10%,
+  96% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes lndTpLock {
+  0%,
+  40% {
+    transform: scaleX(0.05);
+  }
+  72%,
+  100% {
+    transform: scaleX(0.68);
+  }
+}
+
+@keyframes lndTpArm {
+  0%,
+  42% {
+    opacity: 0;
+  }
+  44%,
+  46% {
+    opacity: 1;
+  }
+  47%,
+  49% {
+    opacity: 0;
+  }
+  50%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes lndTpTilt {
+  0%,
+  72% {
+    opacity: 0;
+  }
+  76%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes lndTpBlink {
   0%,
   49% {
     opacity: 1;
@@ -2031,55 +2088,145 @@ body.is-guest:not(.demo-signup) .auth-shell {
   }
 }
 
-@media (max-width: 980px) {
-  .lnd-term-row {
-    grid-template-columns: 78px 40px minmax(0, 1fr) auto 18px;
-    gap: 8px;
-    padding: 10px 14px;
+@keyframes lndTpSweep {
+  0% {
+    transform: translateY(-70px);
   }
-
-  .lnd-term-row.is-locked {
-    grid-template-columns: 78px 40px minmax(0, 1fr) auto;
-  }
-
-  .lnd-term-row::before {
-    left: 96px;
-  }
-
-  .lnd-term-row::after {
-    left: 94px;
-  }
-
-  .lnd-term-src {
-    min-width: 40px;
+  100% {
+    transform: translateY(560px);
   }
 }
 
-@media (max-width: 620px) {
-  .lnd-term-rx,
-  .lnd-term-time i,
-  .lnd-term-row::before,
-  .lnd-term-row::after {
+/* Legend: the four fusion features, keyed to the pane F-labels above —
+   read the keycap, find the pane doing it. */
+.lnd-tp-legend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: var(--space-5) var(--space-6);
+}
+
+.lnd-tp-legend li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: 10px;
+  row-gap: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.lnd-tp-legend b {
+  padding: 4px 7px;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  color: var(--accent);
+  font: 700 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.08em;
+}
+
+.lnd-tp-legend-k {
+  color: var(--text);
+  font: 700 var(--fs-micro)/1.4 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.lnd-tp-legend-d {
+  grid-column: 2;
+  color: var(--text-soft);
+  font: 400 13px/1.55 var(--font-ui);
+}
+
+.lnd-tp-fine {
+  margin: 0;
+  color: var(--text-faint);
+  font: 500 12px/1.6 var(--font-mono);
+}
+
+/* Reveal choreography: hairline draws, the screen rises, legend rides in.
+   Gated behind auth-ready + no-preference so no-JS and reduced-motion
+   visitors get the finished sheet instantly. */
+@media (prefers-reduced-motion: no-preference) {
+  body.auth-ready .lnd-tp .lnd-tp-plate::after {
+    transform: scaleX(0);
+    transition: transform 1100ms var(--ease-clay) 250ms;
+  }
+
+  body.auth-ready .lnd-tp.is-revealed .lnd-tp-plate::after {
+    transform: scaleX(1);
+  }
+
+  body.auth-ready .lnd-tp .lnd-tp-frame {
+    opacity: 0;
+    transform: translateY(22px);
+    transition:
+      opacity 700ms var(--ease-clay) 300ms,
+      transform 700ms var(--ease-clay) 300ms;
+  }
+
+  body.auth-ready .lnd-tp.is-revealed .lnd-tp-frame {
+    opacity: 1;
+    transform: none;
+  }
+
+  body.auth-ready .lnd-tp .lnd-tp-legend li {
+    opacity: 0;
+    transform: translateY(14px);
+    transition:
+      opacity 600ms var(--ease-clay) calc(var(--i, 0) * 110ms + 500ms),
+      transform 600ms var(--ease-clay) calc(var(--i, 0) * 110ms + 500ms);
+  }
+
+  body.auth-ready .lnd-tp.is-revealed .lnd-tp-legend li {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Phone: single-column panes (declared above), tighter gutters. Everything
+   holds the 11px floor and the head column ellipsizes, so no h-scroll. */
+@media (max-width: 700px) {
+  .lnd-tp-fkeys {
     display: none;
   }
 
-  /* The strip's nowrap spans set the screen grid's min-content width —
-     unwrapped they drag every row out to ~516px and clip the impact bars. */
-  .lnd-term-strip {
-    flex-wrap: wrap;
+  .lnd-tp-row {
+    grid-template-columns: 54px 38px minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 7px 12px;
   }
 
-  .lnd-term-tabs {
-    flex-wrap: wrap;
-    row-gap: 6px;
+  .lnd-tp-pane-h,
+  .lnd-tp-stat,
+  .lnd-tp-chips,
+  .lnd-tp-entry,
+  .lnd-tp-saved,
+  .lnd-tp-count,
+  .lnd-tp-check,
+  .lnd-tp-locknote {
+    padding-left: 12px;
+    padding-right: 12px;
   }
 
-  .lnd-term-row {
-    grid-template-columns: 62px 40px minmax(0, 1fr) 18px;
+  .lnd-tp-lockbar,
+  .lnd-tp-verdict {
+    margin-left: 12px;
+    margin-right: 12px;
   }
 
-  .lnd-term-row.is-locked {
-    grid-template-columns: 62px 40px minmax(0, 1fr) auto;
+  .lnd-tp-cmd,
+  .lnd-tp-chrome,
+  .lnd-tp-bar {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .lnd-tp-bar-clock {
+    margin-left: 0;
   }
 }
 
@@ -4970,98 +5117,6 @@ body.demo-signup::before {
   mask-image: radial-gradient(1400px 920px at 54% 60%, #000 55%, transparent 97%);
 }
 
-.lnd-dial-rim {
-  fill: none;
-  stroke: var(--line-strong);
-  stroke-width: 1;
-  opacity: 0.6;
-}
-
-.lnd-dial-ring {
-  fill: none;
-  stroke: var(--line);
-  stroke-width: 1;
-  opacity: 0.8;
-}
-
-/* Tick track: the circle's stroke-width is the tick length; the dasharray
-   (in pathLength-960 units) is the tick width and pitch. 96 x 10 = 960
-   exactly, so the pattern closes with no seam. Both tick layers rotate at
-   the same rate to stay registered. */
-.lnd-dial-tick {
-  fill: none;
-  stroke: var(--line-strong);
-  stroke-width: 22;
-  stroke-dasharray: 0.55 9.45;
-  opacity: 0.5;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-.lnd-dial-tick-major {
-  stroke: var(--text-faint);
-  stroke-width: 32;
-  stroke-dasharray: 1.1 78.9;
-  opacity: 0.55;
-}
-
-/* Oxide sweeps: pathLength 360 makes the dasharray read in degrees.
-   Dashoffsets place the static frame — main arc over the headline's right
-   shoulder, counter-arc tucked behind the tape. */
-.lnd-dial-arc {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-dasharray: 72 288;
-  stroke-dashoffset: -150;
-  stroke-opacity: 0.55;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-.lnd-dial-arc-b {
-  stroke-width: 1.25;
-  stroke-dasharray: 26 334;
-  stroke-dashoffset: -10;
-  stroke-opacity: 0.3;
-}
-
-/* Film grain: one inline feTurbulence tile, static. Overlay on gunmetal;
-   multiply reads as paper tooth on concrete. */
-.lnd-hero-grain {
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
-  opacity: 0.05;
-  mix-blend-mode: overlay;
-}
-
-[data-theme="light"] .lnd-hero-grain {
-  mix-blend-mode: multiply;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .lnd-dial-tick {
-    animation: lndDialTurn 480s linear infinite;
-  }
-
-  .lnd-dial-arc {
-    animation: lndDialTurn 64s linear infinite;
-  }
-
-  .lnd-dial-arc-b {
-    animation-duration: 96s;
-    animation-direction: reverse;
-  }
-}
-
-@keyframes lndDialTurn {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* ==========================================================================
    HERO — GHOST JOURNAL. The atmosphere is made of the app's own artifacts:
    capture-grammar type, trade-entry card silhouettes at two depths, and one
@@ -5069,8 +5124,9 @@ body.demo-signup::before {
    (the three halos keep the blur budget). All loops are transform/opacity,
    gated behind no-preference, and freeze to a fully composed frame: cards
    at their laid-out positions, terrain landed, caret solid. The cone, the
-   hero dial and the meteor are gone; .lnd-dial-* and lndDialTurn survive
-   for the Terminal Pro radar. The wrapper mask centre sits LOW (54% 60%)
+   hero dial and the meteor are gone, and so is the dial geometry itself —
+   its last consumer (the Terminal Pro radar) was retired with the section
+   rebuild. The wrapper mask centre sits LOW (54% 60%)
    so the terrain base stays solid while the sky and corners feather.
    ========================================================================== */
 

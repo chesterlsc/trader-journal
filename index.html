@@ -61,21 +61,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260809-ghostjournal" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260809-ghostjournal" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260809-fusiondesk" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260809-fusiondesk" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260809-ghostjournal" />
+    <link rel="stylesheet" href="styles.css?v=20260809-fusiondesk" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260809-ghostjournal" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260809-fusiondesk" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260809-ghostjournal" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260809-fusiondesk" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -560,142 +560,161 @@
         </div>
       </section>
 
-      <!-- Terminal Pro: the control room. Full-bleed instrument band (same
-           breakout trick as .lnd-ticker). HONESTY RULES unchanged: "in
-           development" in the plate kicker, "nothing on it is live" in the
-           fine print, "concept preview" on the frame. No live-news claims
-           in the present tense. The sample frame is byte-identical. -->
-      <section class="lnd-term" id="terminalPro" data-landing-reveal aria-labelledby="lndTermHeading">
-        <div class="lnd-term-air" aria-hidden="true">
-          <span class="lnd-term-scan"></span>
-          <!-- The hero's machined dial, reused verbatim (same classes, same
-               counter-rotating oxide arcs), quarter-visible in the corner:
-               the band's radar quadrant. -->
-          <svg class="lnd-term-radar" viewBox="0 0 1000 1000" focusable="false">
-            <circle class="lnd-dial-rim" cx="500" cy="500" r="488" />
-            <circle class="lnd-dial-tick" cx="500" cy="500" r="452" pathLength="960" />
-            <circle class="lnd-dial-tick lnd-dial-tick-major" cx="500" cy="500" r="452" pathLength="960" />
-            <circle class="lnd-dial-ring" cx="500" cy="500" r="340" />
-            <circle class="lnd-dial-arc" cx="500" cy="500" r="396" pathLength="360" />
-            <circle class="lnd-dial-arc lnd-dial-arc-b" cx="500" cy="500" r="340" pathLength="360" />
-          </svg>
+      <!-- Terminal Pro: the fusion desk. NEW CONCEPT: the terminal reads the
+           user's OWN journal against the tape — edge file, auto-stamp,
+           discipline arming, tilt radar. The four-pane sample screen is the
+           hero and plays a scripted ~26s pure-CSS "sample video" (rows land,
+           CPI flashes, the edge file populates, a trade auto-stamps, the desk
+           arms, tilt reports, quiet, loop). HONESTY RULES: "in development"
+           on the plate, "concept preview" on the chrome, "sample data ·
+           nothing live" inside the frame and in the fine print. All figures
+           invented; category monograms, never brands. The screen pins Clay V3
+           gunmetal inside .lnd-tp-frame so it stays a dark instrument on the
+           concrete theme (a screen has its own light). -->
+      <section class="lnd-tp" id="terminalPro" data-landing-reveal aria-labelledby="lndTermHeading">
+        <div class="lnd-tp-air" aria-hidden="true">
+          <span class="lnd-tp-floor"></span>
+          <span class="lnd-tp-scan"></span>
           <span class="lnd-hero-grain"></span>
         </div>
-        <div class="lnd-term-inner">
-          <header class="lnd-term-masthead">
-            <p class="lnd-term-plate">
-              <span class="lnd-term-stamp">Terminal&nbsp;Pro</span>
-              <span>In development &middot; pro tier</span>
+        <div class="lnd-tp-inner">
+          <header class="lnd-tp-masthead">
+            <p class="lnd-tp-plate">
+              <span class="lnd-tp-stamp">Terminal&nbsp;Pro</span>
+              <span>In development &middot; journal-fusion tier</span>
             </p>
-            <h2 id="lndTermHeading" class="lnd-term-headline">A news <em>instrument</em>,<br />not a news feed.</h2>
-            <p class="lnd-term-lede">
-              A news terminal planned inside your journal: market-moving headlines
-              ranked by punch, an economic calendar on countdowns, and the pairs you
-              trade &mdash; desktop density, phone-sized when you are away from the desk.
+            <h2 id="lndTermHeading" class="lnd-tp-headline">Every terminal reads the tape.<br />This one has read <em>your journal</em>.</h2>
+            <p class="lnd-tp-lede">
+              In build for the pro tier: the wire, the calendar and your own trading
+              record, fused into one instrument. When a number drops it doesn't just
+              show you the news &mdash; it shows you what that news usually does to you.
             </p>
           </header>
-          <div class="lnd-term-side">
-            <ol class="lnd-term-spec">
-              <li style="--i:0">
-                <span class="lnd-term-spec-i">01</span>
-                <span class="lnd-term-spec-k">Wires</span>
-                <span class="lnd-term-spec-d">Breaking headlines from the major wires and financial TV, the moment they cross.</span>
-              </li>
-              <li style="--i:1">
-                <span class="lnd-term-spec-i">02</span>
-                <span class="lnd-term-spec-k">Posts</span>
-                <span class="lnd-term-spec-d">Head-of-state and central-bank posts, straight to the screen the second they land.</span>
-              </li>
-              <li style="--i:2">
-                <span class="lnd-term-spec-i">03</span>
-                <span class="lnd-term-spec-k">Calendar</span>
-                <span class="lnd-term-spec-d">CPI, NFP, rate decisions &mdash; every release on one countdown clock.</span>
-              </li>
-              <li style="--i:3">
-                <span class="lnd-term-spec-i">04</span>
-                <span class="lnd-term-spec-k">Impact</span>
-                <span class="lnd-term-spec-d">Ranked by market punch, not volume. Fundamentals read in one glance.</span>
-              </li>
-            </ol>
-            <p class="lnd-term-fine">
-              Sample screen: nothing on it is live. Pricing lands with the launch;
-              journalling itself stays free.
-            </p>
-          </div>
-          <figure class="lnd-term-frame" aria-label="Terminal Pro preview: sample headlines, not live news">
-          <figcaption class="lnd-term-chrome">
-            <span class="lnd-term-dot" aria-hidden="true"></span>
-            <span class="lnd-term-title">Terminal Pro</span>
-            <span class="lnd-term-tag">concept preview</span>
-          </figcaption>
-          <div class="lnd-term-screen" aria-hidden="true">
-            <div class="lnd-term-tabs">
-              <span class="is-on">wires<i>24</i></span><span>posts<i>3</i></span><span>calendar<i>5</i></span><span>my pairs</span>
-              <span class="lnd-term-status"><span class="lnd-term-status-dot"></span>feed ok &middot; 18ms</span>
-              <span class="lnd-term-clock">13:33:07 UTC</span>
+
+          <figure class="lnd-tp-frame" aria-label="Terminal Pro concept preview: a sample fusion workspace with invented figures, nothing live">
+            <figcaption class="lnd-tp-chrome">
+              <span class="lnd-tp-dot" aria-hidden="true"></span>
+              <span class="lnd-tp-title">Terminal&nbsp;Pro</span>
+              <span class="lnd-tp-tag">concept preview</span>
+            </figcaption>
+            <div class="lnd-tp-screen" aria-hidden="true">
+              <div class="lnd-tp-sweep"></div>
+              <div class="lnd-tp-cmd">
+                <span class="lnd-tp-prompt">&gt; wire --link journal<i class="lnd-tp-caret"></i></span>
+                <span class="lnd-tp-fkeys">F2 edge &middot; F5 stamp &middot; F8 arm &middot; F9 tilt</span>
+                <span class="lnd-tp-clock">13:32:05 UTC</span>
+              </div>
+              <div class="lnd-tp-panes">
+                <div class="lnd-tp-pane lnd-tp-wire">
+                  <p class="lnd-tp-pane-h"><b>F1</b>wire <em>journal link on</em></p>
+                  <div class="lnd-tp-row" style="--d:.2s">
+                    <span class="lnd-tp-t">13:29:41</span>
+                    <span class="lnd-tp-s">wire</span>
+                    <span class="lnd-tp-h">Desks lean long dollar into the print</span>
+                    <span class="lnd-tp-x">&mdash;</span>
+                  </div>
+                  <div class="lnd-tp-row is-flash" style="--d:.8s">
+                    <span class="lnd-tp-t">13:30:00</span>
+                    <span class="lnd-tp-s is-hot">tv</span>
+                    <span class="lnd-tp-h">CPI 3.1% y/y &mdash; two tenths under consensus</span>
+                    <span class="lnd-tp-x is-neg">USD &minus;0.4%</span>
+                  </div>
+                  <div class="lnd-tp-row is-fuse" style="--d:1.5s">
+                    <span class="lnd-tp-t">13:30:00</span>
+                    <span class="lnd-tp-s is-hot">edge</span>
+                    <span class="lnd-tp-h">Your CPI file pulled &mdash; 7 prior prints &rarr; F2</span>
+                    <span class="lnd-tp-x">2W&ndash;5L</span>
+                  </div>
+                  <div class="lnd-tp-row" style="--d:2.2s">
+                    <span class="lnd-tp-t">13:30:04</span>
+                    <span class="lnd-tp-s">wire</span>
+                    <span class="lnd-tp-h">2Y &minus;9bp &mdash; June cut back on the table</span>
+                    <span class="lnd-tp-x is-pos">ES +0.4%</span>
+                  </div>
+                  <div class="lnd-tp-row" style="--d:2.9s">
+                    <span class="lnd-tp-t">13:30:31</span>
+                    <span class="lnd-tp-s">wire</span>
+                    <span class="lnd-tp-h">Gold takes out the Asia high</span>
+                    <span class="lnd-tp-x is-pos">XAU +18.4</span>
+                  </div>
+                  <div class="lnd-tp-row is-you" style="--d:7s">
+                    <span class="lnd-tp-t">13:31:07</span>
+                    <span class="lnd-tp-s is-you">you</span>
+                    <span class="lnd-tp-h">Short EURUSD 1.0841 &mdash; context stamped &rarr; F5</span>
+                    <span class="lnd-tp-x">#482</span>
+                  </div>
+                  <div class="lnd-tp-row" style="--d:10.6s">
+                    <span class="lnd-tp-t">13:31:56</span>
+                    <span class="lnd-tp-s">cal</span>
+                    <span class="lnd-tp-h">FOMC minutes 14:00 &mdash; discipline arming &rarr; F8</span>
+                    <span class="lnd-tp-x">T&minus;27:55</span>
+                  </div>
+                </div>
+                <div class="lnd-tp-pane lnd-tp-edge">
+                  <p class="lnd-tp-pane-h"><b>F2</b>your edge <em>CPI prints</em></p>
+                  <div class="lnd-tp-stat" style="--i:0"><span>your record</span><b class="is-neg">2W&ndash;5L &middot; avg &minus;$84</b></div>
+                  <div class="lnd-tp-stat" style="--i:1"><span>worst window</span><b class="is-neg">first 15 min &middot; &minus;$212</b></div>
+                  <div class="lnd-tp-stat" style="--i:2"><span>best move</span><b class="is-pos">fade the spike +30m &middot; +$67</b></div>
+                  <p class="lnd-tp-verdict">verdict: stand down 15:00</p>
+                </div>
+                <div class="lnd-tp-pane lnd-tp-journal">
+                  <p class="lnd-tp-pane-h"><b>F5</b>journal <em>auto-context</em></p>
+                  <p class="lnd-tp-entry">13:31:07 &middot; short EURUSD 1.0841 <i>entry #482</i></p>
+                  <p class="lnd-tp-chips">
+                    <span class="lnd-tp-chip" style="--i:0">CPI miss &middot; 1 min prior</span>
+                    <span class="lnd-tp-chip" style="--i:1">USD &minus;0.4% &middot; 2Y &minus;9bp</span>
+                    <span class="lnd-tp-chip is-warn" style="--i:2">tilt: elevated</span>
+                  </p>
+                  <p class="lnd-tp-saved">stamped &mdash; review week will know why</p>
+                </div>
+                <div class="lnd-tp-pane lnd-tp-arm">
+                  <p class="lnd-tp-pane-h"><b>F8</b>discipline <em>arming</em></p>
+                  <p class="lnd-tp-count">FOMC minutes &middot; 14:00 <b>T&minus;27:55</b><span class="lnd-tp-armed">armed</span></p>
+                  <span class="lnd-tp-lockbar"><i></i></span>
+                  <p class="lnd-tp-check">
+                    <span class="is-done">size halved</span>
+                    <span class="is-done">news rule read</span>
+                    <span>revenge guard</span>
+                  </p>
+                  <p class="lnd-tp-locknote">desk locks at 13:58:00 unless every box is ticked</p>
+                </div>
+              </div>
+              <div class="lnd-tp-bar">
+                <span class="lnd-tp-bar-sample">sample data &middot; nothing live</span>
+                <span>journal: 482 trades linked</span>
+                <span class="lnd-tp-tilt">F9 tilt radar: dollar headlines overtraded 2.4&times;</span>
+                <span class="lnd-tp-bar-clock">14 event types on file</span>
+              </div>
             </div>
-            <div class="lnd-term-sweep" aria-hidden="true"></div>
-            <div class="lnd-term-row is-flash" style="--r:0">
-              <span class="lnd-term-time">13:30:00<i>.2</i></span>
-              <span class="lnd-term-src is-hot">tv</span>
-              <span class="lnd-term-head">CPI 3.2% y/y, two tenths under consensus</span>
-              <span class="lnd-term-rx is-neg">USD &minus;0.4%</span>
-              <span class="lnd-term-imp" data-imp="3"><i></i><i></i><i></i></span>
-            </div>
-            <div class="lnd-term-row" style="--r:1">
-              <span class="lnd-term-time">13:30:04<i>.1</i></span>
-              <span class="lnd-term-src">wire</span>
-              <span class="lnd-term-head">Dollar index slips 40 pips on the print</span>
-              <span class="lnd-term-rx is-neg">DXY &minus;0.38</span>
-              <span class="lnd-term-imp" data-imp="2"><i></i><i></i><i></i></span>
-            </div>
-            <div class="lnd-term-row" style="--r:2">
-              <span class="lnd-term-time">13:31:12<i>.8</i></span>
-              <span class="lnd-term-src">wire</span>
-              <span class="lnd-term-head">XAUUSD takes out the Asia high</span>
-              <span class="lnd-term-rx is-pos">XAU +18.4</span>
-              <span class="lnd-term-imp" data-imp="2"><i></i><i></i><i></i></span>
-            </div>
-            <div class="lnd-term-row" style="--r:3">
-              <span class="lnd-term-time">13:32:40<i>.0</i></span>
-              <span class="lnd-term-src">wire</span>
-              <span class="lnd-term-head">2Y yield &minus;9bp, cuts repriced to June</span>
-              <span class="lnd-term-rx is-pos">ES +0.6%</span>
-              <span class="lnd-term-imp" data-imp="2"><i></i><i></i><i></i></span>
-            </div>
-            <div class="lnd-term-row" style="--r:4">
-              <span class="lnd-term-time">13:33:05<i>.4</i></span>
-              <span class="lnd-term-src is-hot">post</span>
-              <span class="lnd-term-head">Head-of-state post on tariffs, USD bid</span>
-              <span class="lnd-term-rx is-pos">USD +0.2%</span>
-              <span class="lnd-term-imp" data-imp="3"><i></i><i></i><i></i></span>
-            </div>
-            <div class="lnd-term-row is-cal" style="--r:5">
-              <span class="lnd-term-time">14:00</span>
-              <span class="lnd-term-src">cal</span>
-              <span class="lnd-term-head">FOMC minutes on deck</span>
-              <span class="lnd-term-rx">T&minus;26:53</span>
-              <span class="lnd-term-imp" data-imp="1"><i></i><i></i><i></i></span>
-            </div>
-            <!-- Scarcity, honestly: the rest of the wire exists behind the
-                 tier, and says so. Blurred decoration, not hidden content. -->
-            <div class="lnd-term-row is-locked" aria-hidden="true">
-              <span class="lnd-term-time">13:34:41<i>.9</i></span>
-              <span class="lnd-term-src">wire</span>
-              <span class="lnd-term-head lnd-term-blur">Central bank source signals surprise move on&hellip;</span>
-              <span class="lnd-term-lock">&#9679; pro</span>
-            </div>
-            <div class="lnd-term-queue" aria-hidden="true">
-              <span class="lnd-term-queue-k">up next</span>
-              <span class="lnd-term-queue-item">14:00 FOMC minutes <em>26:53</em></span>
-              <span class="lnd-term-queue-item">15:30 Crude inventories <em>1:56:53</em></span>
-              <span class="lnd-term-queue-item is-hot">2 high-impact in the next 4h</span>
-            </div>
-            <div class="lnd-term-strip">
-              <span>XAUUSD 4,240.1 <em class="is-pos">+0.4%</em></span><span>BTCUSD 64,368 <em class="is-neg">&minus;1.1%</em></span><span>EURUSD 1.0834 <em class="is-pos">+0.3%</em></span><span>US10Y 4.21% <em class="is-neg">&minus;9bp</em></span><span class="lnd-term-cursor"></span>
-            </div>
-          </div>
-        </figure>
+          </figure>
+
+          <ul class="lnd-tp-legend">
+            <li style="--i:0">
+              <b>F2</b>
+              <span class="lnd-tp-legend-k">Your edge vs this event</span>
+              <span class="lnd-tp-legend-d">A number breaks and your own record on that event type prints beside it. 2W&ndash;5L is a fact, not a feeling.</span>
+            </li>
+            <li style="--i:1">
+              <b>F5</b>
+              <span class="lnd-tp-legend-k">Context auto-stamp</span>
+              <span class="lnd-tp-legend-d">Every trade is stamped with the tape it was opened into. Review week reads &ldquo;CPI miss, 1 min prior&rdquo; instead of a guess.</span>
+            </li>
+            <li style="--i:2">
+              <b>F8</b>
+              <span class="lnd-tp-legend-k">Discipline arming</span>
+              <span class="lnd-tp-legend-d">Before high-impact releases your own rules arm themselves &mdash; the desk locks ahead of the print unless your checklist is ticked.</span>
+            </li>
+            <li style="--i:3">
+              <b>F9</b>
+              <span class="lnd-tp-legend-k">Tilt radar</span>
+              <span class="lnd-tp-legend-d">Your revenge and hesitation patterns, correlated to headline types. It knows which news makes you overtrade &mdash; and says so live.</span>
+            </li>
+          </ul>
+          <p class="lnd-tp-fine">
+            Concept preview of a pro tier in development: every figure on the screen is
+            an invented sample and nothing on it is live. Pricing lands with the launch;
+            journalling itself stays free.
+          </p>
         </div>
       </section>
 
@@ -2985,6 +3004,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260809-ghostjournal"></script>
+    <script type="module" src="app.js?v=20260809-fusiondesk"></script>
   </body>
 </html>

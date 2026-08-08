@@ -2613,3 +2613,35 @@ User-reported: the demo's Execution grades rendered as floating labels above emp
   now minmax(0,660px)/minmax(0,500px) centred as a pair (700/560 at 1600+).
   Verified 200px/200px edge gaps at 1600px.
 - Busters -> ?v=20260809-ghostjournal. All 27 tests pass.
+
+## 2026-08-09 — Terminal Pro v5: the fusion desk (full teardown)
+
+- The user rejected the control-room section and all four prior headlines
+  outright. Panel of 3 (workstation / product-visionary / choreographer)
+  ran on Fable 5; the session limit killed the judge twice, so the judging
+  and merge were done inline on Opus 5 from the cached specs.
+- Winner: product-visionary. Its signature moment is the concept made
+  literal — YOUR OWN TRADE prints on the wire between two headlines,
+  already context-stamped. Rejected: workstation's "the only terminal..."
+  headline (unverifiable competitive superlative) and choreographer's dial
+  reuse (the user killed circles).
+- NEW CONCEPT — journal fusion, four never-seen features, each a visible
+  PANE, not a bullet: F2 YOUR EDGE (your record on this event type prints
+  beside the headline: 2W-5L, avg -$84, worst window, verdict), F5 CONTEXT
+  AUTO-STAMP (the trade is stamped with the tape it was opened into), F8
+  DISCIPLINE ARMING (rules arm before high-impact releases; desk locks
+  unless the checklist is ticked), F9 TILT RADAR (headline types correlated
+  to your revenge/hesitation).
+- Design: full-bleed band, perspective wireframe floor crawling one pitch,
+  four-pane workspace with command bar + F-keys + UTC clock, ~26s pure-CSS
+  scripted loop, bottom status bar. THE SCREEN PINS ITS OWN DARK TOKENS —
+  verified rgb(16,19,24) on the light concrete page, which fixes the
+  light-mode washout from the screenshot.
+- Headline v5: "Every terminal reads the tape. / This one has read your
+  journal."
+- Deleted: the whole .lnd-term-* control-room block, and the now-orphaned
+  .lnd-dial-* geometry + lndDialTurn (the radar was its last consumer).
+  Kept .lnd-term-link/.lnd-soon-chip for the topbar anchor.
+- Busters -> ?v=20260809-fusiondesk. All 27 tests pass; 1280/light/375
+  verified, no h-scroll, honesty chrome intact (in development, concept
+  preview, sample data - nothing live).
