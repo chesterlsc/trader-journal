@@ -68,3 +68,41 @@ CREATE TABLE IF NOT EXISTS login_info (
 
 CREATE INDEX IF NOT EXISTS idx_login_info_created_at ON login_info (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_login_info_username ON login_info (username);
+
+-- ── Terminal Pro (2026-08-10) ──────────────────────────────────────────────
+-- Applied to the live Neon database by hand on 2026-08-10 (the backend issues
+-- no DDL, ever). Kept here so a fresh database sets up in one pass.
+-- market_events is BOTH cache AND permanent archive: ForexFactory publishes
+-- only the current week (nextweek 404s), so a week never fetched is gone for
+-- good. The ingest upserts and NEVER deletes.
+CREATE TABLE IF NOT EXISTS market_events (
+    event_key     TEXT        NOT NULL,
+    starts_at     TIMESTAMPTZ NOT NULL,   -- UTC; the feed's times are UTC
+    currency      VARCHAR(8)  NOT NULL,
+    title         TEXT        NOT NULL,
+    impact        VARCHAR(8)  NOT NULL DEFAULT 'Low',  -- Low|Medium|High|Holiday
+    forecast      TEXT        NOT NULL DEFAULT '',     -- TEXT: "4.05M", "4.58|2.6"
+    previous      TEXT        NOT NULL DEFAULT '',
+    url           TEXT        NOT NULL DEFAULT '',
+    all_day       BOOLEAN     NOT NULL DEFAULT FALSE,
+    first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    -- (key, instant), never key alone: a key-only PK would collapse every
+    -- monthly CPI into one row and destroy the edge file.
+    PRIMARY KEY (event_key, starts_at)
+);
+CREATE INDEX IF NOT EXISTS idx_market_events_starts_at ON market_events (starts_at);
+CREATE INDEX IF NOT EXISTS idx_market_events_key_starts ON market_events (event_key, starts_at DESC);
+
+CREATE TABLE IF NOT EXISTS feed_state (
+    source          VARCHAR(32) PRIMARY KEY,
+    payload         JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    last_attempt_at TIMESTAMPTZ NOT NULL DEFAULT to_timestamp(0),  -- single-flight claim clock
+    last_success_at TIMESTAMPTZ NULL,                              -- drives the honest "as of"
+    last_status     TEXT        NOT NULL DEFAULT '',
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+-- Load bearing: the claim UPDATE matches nothing when the row is absent, which
+-- silently means "never fetch".
+INSERT INTO feed_state (source) VALUES ('ff_calendar') ON CONFLICT (source) DO NOTHING;
+INSERT INTO feed_state (source) VALUES ('mw_headlines') ON CONFLICT (source) DO NOTHING;
