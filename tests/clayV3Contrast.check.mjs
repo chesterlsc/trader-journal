@@ -90,9 +90,17 @@ function merged(selectors) {
 // Cascade per theme. Dark: :root plus the dark-only guard. Light: :root plus
 // the light attribute block ([data-theme="light"] out-specifies :root and the
 // sheets keep source order, so a straight merge in sheet order is the cascade).
+// Terminal mode is a THIRD cascade, not a variant of the other two: it pins
+// its own screen values and wins over both themes, so a pairing that is safe
+// on gunmetal and on concrete can still fail here. Merged last because
+// :root[data-term="on"] ties :root:not([data-theme="light"]) on specificity
+// and only source order separates them, which is exactly why the block had to
+// go in clay-v3.css. Without this entry the whole mode ships unverified.
 const THEMES = {
   dark: merged([":root", ':root:not([data-theme="light"])']),
   light: merged([":root", '[data-theme="light"]']),
+  terminal: merged([":root", ':root:not([data-theme="light"])', ':root[data-term="on"]']),
+  terminalOnLight: merged([":root", '[data-theme="light"]', ':root[data-term="on"]']),
 };
 
 /* ----------------------------------------------------------------- colour */
@@ -207,7 +215,7 @@ function check(theme, fgName, bgName, floor, bgColor, fgColor) {
   }
 }
 
-for (const theme of ["dark", "light"]) {
+for (const theme of ["dark", "light", "terminal", "terminalOnLight"]) {
   const surface = (n) => token(theme, n);
 
   // Body text (4.5:1) — every text tone on every surface it can land on.
@@ -363,6 +371,6 @@ if (failures.length) {
   process.exit(1);
 }
 console.log(
-  `clayV3Contrast: ${checked} pairings green in both themes. ` +
+  `clayV3Contrast: ${checked} pairings green across dark, light and terminal mode. ` +
     `Worst body-text pairing: ${worst.theme} ${worst.fg} on ${worst.bg} = ${worst.ratio.toFixed(2)}:1`
 );

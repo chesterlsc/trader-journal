@@ -9048,3 +9048,382 @@ body.auth-ready .lnd-tape-list .lnd-row {
   .tp-clockrow { grid-template-columns: 82px minmax(0, 1fr); }
   .tp-clockrow-v { grid-column: 2; justify-self: start; }
 }
+
+/* ==========================================================================
+   TERMINAL MODE — the rules.
+
+   The TOKENS live in clay-v3.css (specificity tie, see the note there). The
+   RULES live here, next to the .tp-desk block, because tests/mobileFloors
+   parses styles.css and clay-v2.css only: a font-size declared in clay-v3
+   would slip the suite and still be wrong on a phone.
+
+   Ten structural rules and no more. There is no per-view grid rewrite here
+   on purpose. The dashboard, the blotter and the calendar keep their own
+   layouts and simply square off, which is the whole reason for doing this
+   with tokens instead of a second DOM.
+   ========================================================================== */
+
+/* --- Structure ------------------------------------------------------------ */
+:root[data-term="on"] .panel,
+:root[data-term="on"] .metric-card,
+:root[data-term="on"] .dash-board {
+  border: 1px solid var(--line);
+}
+:root[data-term="on"] .view-kicker,
+:root[data-term="on"] .metric-label,
+:root[data-term="on"] .panel-head h3 {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+:root[data-term="on"] .topnav,
+:root[data-term="on"] .tp-desk {
+  border-radius: 0;
+}
+:root[data-term="on"] table {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The resting scanline. 3px pitch, static, no strobe: texture rather than an
+   effect. Sits above content and below every dialog, and eats no pointer. */
+:root[data-term="on"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgb(255 255 255 / 0.016) 0 1px, transparent 1px 3px);
+}
+
+/* --- The prose escape hatch ----------------------------------------------
+   Mono at paragraph length is exactly where terminal skins stop being
+   readable, so paragraph-length copy keeps the sans stack. This is a
+   legibility floor, not a taste call. If the list ever passes a dozen
+   selectors, promote it to a .prose class instead of growing it. */
+:root[data-term="on"] :is(p, .tp-empty, .form-message, .metric-note, .sheet-note,
+  .dash-risk-consequence, .reflection-body) {
+  font-family: var(--font-prose);
+}
+
+/* --- Depth-as-data becomes fill-as-data -----------------------------------
+   Clay encodes profit and loss as travel: raised is a win, pressed is a loss,
+   and the shadow scales with --row-intensity / --day-intensity. Nulling the
+   clay shadows would silently delete that channel, so it is re-channelled
+   here as a fill using the SAME custom properties and the same numbers. */
+:root[data-term="on"] #journal tbody tr.trade-row-win {
+  box-shadow: inset 3px 0 0 var(--pnl-pos);
+  background: color-mix(in srgb, var(--pnl-pos) calc(var(--row-intensity, 0) * 14%), var(--surface-1));
+}
+:root[data-term="on"] #journal tbody tr.trade-row-loss {
+  box-shadow: inset 3px 0 0 var(--pnl-neg);
+  background: color-mix(in srgb, var(--pnl-neg) calc(var(--row-intensity, 0) * 14%), var(--surface-1));
+}
+:root[data-term="on"] .calendar-cell-positive {
+  box-shadow: inset 0 -3px 0 var(--pnl-pos);
+  background: color-mix(in srgb, var(--pnl-pos) calc(var(--day-intensity, 0) * 16%), var(--surface-1));
+}
+:root[data-term="on"] .calendar-cell-negative {
+  box-shadow: inset 0 -3px 0 var(--pnl-neg);
+  background: color-mix(in srgb, var(--pnl-neg) calc(var(--day-intensity, 0) * 16%), var(--surface-1));
+}
+
+/* The mobile dock: squared, hairline rule, no floating pill. Markup is
+   untouched so mobileNav.check.mjs and the router never see this. */
+:root[data-term="on"] .tabbar {
+  border-radius: 0;
+  border-top: 1px solid var(--line-strong);
+  box-shadow: none;
+}
+
+/* --- The ARM key ----------------------------------------------------------
+   A key, not a button. It depresses on pointerdown so it answers the finger
+   rather than the click, and it never hides while armed, because the way out
+   has to be the way in. */
+.term-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--line-strong);
+  border-top-color: var(--clay-edge-strong);
+  border-radius: 2px;
+  background: var(--surface-inset);
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: color 90ms var(--ease-out), background 90ms var(--ease-out), transform 60ms var(--ease-out);
+}
+.term-key-led {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--line-strong);
+  flex: none;
+  transition: background 90ms var(--ease-out), box-shadow 90ms var(--ease-out);
+}
+.term-key:hover .term-key-led { background: rgb(240 118 61 / 0.4); }
+.term-key.is-pressed { transform: translateY(1px); border-top-color: var(--line-strong); }
+.term-key[aria-pressed="true"] {
+  color: var(--accent);
+  background: var(--surface-0);
+  transform: translateY(1px);
+}
+.term-key[aria-pressed="true"] .term-key-led {
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+.term-key.is-booting .term-key-led { animation: termLedStrobe 140ms steps(1) infinite alternate; }
+/* The cold-boot hold meter. Starts at 120ms so an ordinary click never shows it. */
+.term-key-hold {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 0;
+  background: var(--accent);
+  pointer-events: none;
+}
+.term-key.is-holding .term-key-hold { animation: termHold 480ms linear forwards; animation-delay: 120ms; }
+@keyframes termLedStrobe { from { background: var(--accent); } to { background: rgb(240 118 61 / 0.25); } }
+@keyframes termHold { from { width: 0; } to { width: 100%; } }
+
+/* --- The status strip: where the mount line lands and stays --------------- */
+#termStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: 5px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-inset);
+  color: var(--text-soft);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+#termStatus b { color: var(--text); font-weight: 500; }
+#termStatus .term-status-exit { margin-left: auto; color: var(--text-faint); }
+#termStatus .term-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+@media (min-width: 900px) {
+  #termStatus { font-size: 12px; }
+}
+
+/* --- The boot overlay -----------------------------------------------------
+   MUST be a sibling of .app-layout in the DOM, never a descendant: the
+   collapse transforms .app-layout, and a transformed ancestor becomes the
+   containing block for every position:fixed child. */
+#termBoot {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: #05070a;
+  color: #e9eef4;
+  font-family: var(--font-mono);
+  clip-path: inset(50% 0 50% 0);
+  overflow: hidden;
+  display: block;
+}
+#termBoot.is-open { animation: termAperture 140ms var(--ease-clay) 70ms forwards; }
+#termBoot.is-closing { animation: termCollapse 220ms var(--ease-clay) forwards; }
+#termBoot .term-boot-strike {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: 50% 50%;
+  animation: termStrike 70ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+#termBoot .term-boot-inner {
+  position: absolute;
+  inset: 0;
+  padding: 26px 18px;
+  overflow: hidden;
+  animation: termWarm 380ms var(--ease-out) 210ms both;
+}
+/* One single top-to-bottom pass on power-on. Not a resting loop: a permanent
+   sweep on a screen someone reads for hours is a headache, not an effect. */
+#termBoot .term-boot-sweep {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 38%;
+  top: -38%;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgb(240 118 61 / 0.05), transparent);
+  animation: termSweep 900ms var(--ease-out) 210ms both;
+}
+.term-log-line {
+  display: block;
+  font-size: 11px;
+  line-height: 1.65;
+  letter-spacing: 0.06em;
+  white-space: pre-wrap;
+  opacity: 0;
+}
+.term-log-line.is-printed { opacity: 1; }
+/* The strike: each line lands white and over-tracked, then settles. */
+.term-log-line.is-strike { color: #fff; letter-spacing: 0.3em; }
+.term-log-line .term-log-k { color: #66707d; }
+.term-log-line .term-log-v { color: #e9eef4; }
+.term-log-line.is-payload .term-log-v { color: var(--accent); }
+.term-log-meter { color: var(--accent); letter-spacing: 0.02em; }
+.term-log-meter i { color: #262d37; font-style: normal; }
+@media (min-width: 900px) {
+  .term-log-line { font-size: 12.5px; }
+}
+@keyframes termStrike { to { transform: scaleX(1); } }
+@keyframes termAperture { to { clip-path: inset(0 0 0 0); } }
+@keyframes termCollapse { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(50% 0 50% 0); } }
+@keyframes termWarm {
+  from { filter: brightness(0.35) contrast(1.4); }
+  to { filter: none; }
+}
+@keyframes termSweep { to { top: 100%; } }
+
+/* --- The desk rail: Terminal Pro's front door when the mode is off --------
+   The only element on the dashboard that pins its own dark values, the same
+   trick .tp-desk uses. On the concrete light theme this is a black instrument
+   bolted to a concrete console, and that contrast is the attention: it costs
+   no badge, no accent border and no looping animation. */
+#deskRail {
+  --tp-0: #0f1216;
+  --tp-1: #14181e;
+  --tp-line: #262d37;
+  --tp-text: #e9eef4;
+  --tp-soft: #99a4b2;
+  --tp-faint: #66707d;
+
+  display: grid;
+  gap: 1px;
+  border: 1px solid var(--tp-line);
+  border-radius: var(--radius-clay-lg);
+  background: var(--tp-line);
+  color: var(--tp-text);
+  overflow: hidden;
+  font-feature-settings: "tnum";
+}
+:root[data-term="on"] #deskRail { border-radius: 0; }
+.desk-cell { background: var(--tp-0); padding: 12px 14px; }
+.desk-k {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  color: var(--tp-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.desk-k span { margin-left: auto; letter-spacing: 0.04em; text-transform: none; }
+.desk-sub { margin: -4px 0 10px; color: var(--tp-faint); font-size: 11px; }
+.desk-cur { color: var(--accent); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.18em; }
+.desk-title { margin: 2px 0 0; color: var(--tp-text); font-size: 13px; }
+.desk-cd {
+  margin: 8px 0 0;
+  color: var(--tp-text);
+  font-family: var(--font-mono);
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.desk-cd[data-phase="imminent"], .desk-cd[data-phase="live"] { color: var(--accent); }
+.desk-figs {
+  display: flex;
+  gap: var(--space-4);
+  color: var(--tp-text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.desk-verdict { margin: 6px 0 0; color: var(--tp-soft); font-size: 11px; }
+.desk-empty { margin: 0; color: var(--tp-faint); font-size: 11px; line-height: 1.5; }
+
+/* THE ARM KEY IN THE RAIL — deliberately the loudest thing on the dashboard.
+   Oxide fill, full width, 44px so it clears the touch floor everywhere. */
+.desk-arm {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+  background: var(--accent);
+  color: #17110c;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: filter 90ms var(--ease-out), transform 60ms var(--ease-out);
+}
+.desk-arm:hover { filter: brightness(1.08); }
+.desk-arm.is-pressed { transform: translateY(1px); }
+.desk-arm .term-key-led { background: #17110c; box-shadow: none; animation: deskArmPulse 2.6s ease-in-out infinite; }
+.desk-arm-note {
+  margin: 8px 0 0;
+  color: var(--tp-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: center;
+}
+/* One property on one 7px element: a single cheap compositor layer, and the
+   only looping motion anywhere in the rail. */
+@keyframes deskArmPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+@media (min-width: 1200px) {
+  #dashboard {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: var(--space-3);
+    align-items: start;
+  }
+  /* Load bearing. Without an explicit column the metric grid flows into the
+     300px rail column and the most-viewed screen in the app breaks at exactly
+     the width most desktop users sit at. */
+  #dashboard > *:not(#deskRail) { grid-column: 1; }
+  #deskRail { grid-column: 2; grid-row: 1 / 30; position: sticky; top: 78px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #termBoot,
+  #termBoot.is-open,
+  #termBoot.is-closing,
+  #termBoot .term-boot-strike,
+  #termBoot .term-boot-inner,
+  #termBoot .term-boot-sweep,
+  .term-key.is-booting .term-key-led,
+  .term-key.is-holding .term-key-hold,
+  .desk-arm .term-key-led {
+    animation: none;
+  }
+  #termBoot { clip-path: none; }
+  #termBoot .term-boot-sweep { display: none; }
+}
+
+/* An author `display` beats the UA stylesheet's `[hidden] { display: none }`,
+   so every one of these needs its own hidden guard or the attribute silently
+   stops working. The status strip shipped visible on a non-armed dashboard
+   for exactly this reason. */
+#termStatus[hidden],
+#termBoot[hidden],
+#deskRail[hidden] {
+  display: none;
+}

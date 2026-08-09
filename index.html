@@ -56,26 +56,32 @@
           if (localStorage.getItem("axiom_journal_theme_v1") === "light") {
             document.documentElement.setAttribute("data-theme", "light");
           }
+          // Terminal mode is a second, orthogonal axis: it wins over the theme
+          // because a screen emits its own light. PAIRED with restoreTermMode()
+          // in app.js. A reload restores the skin silently and never boots.
+          if (localStorage.getItem("axiom_journal_term_v1") === "on") {
+            document.documentElement.setAttribute("data-term", "on");
+          }
         } catch (error) {
           /* storage blocked: fall through to the dark default */
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260810-terminal2" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260810-terminal2" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260810-term4" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260810-term4" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260810-terminal2" />
+    <link rel="stylesheet" href="styles.css?v=20260810-term4" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260810-terminal2" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260810-term4" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260810-terminal2" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260810-term4" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -989,6 +995,11 @@
           <section class="sheet-group" aria-labelledby="sheetGroupJournalLabel">
             <p class="sheet-group-label" id="sheetGroupJournalLabel">This journal</p>
             <div class="sheet-utils">
+              <button class="btn term-key sheet-util" id="termArmSheet" type="button" data-term-arm aria-pressed="false" aria-label="Arm terminal mode">
+                <span class="term-key-led" aria-hidden="true"></span>
+                <span data-term-arm-label>TERM</span>
+                <span class="term-key-hold" aria-hidden="true"></span>
+              </button>
               <!-- data-theme-glyph keeps applyTheme() out of this button's
                    textContent (it would wipe the SVGs); the accessible name is
                    still written into aria-label on every theme change. -->
@@ -1097,6 +1108,18 @@
               <select id="accountSwitchTop" class="account-switch-select" data-account-switch></select>
             </div>
             <button
+              class="term-key"
+              id="termArmTop"
+              type="button"
+              data-term-arm
+              aria-pressed="false"
+              aria-label="Arm terminal mode"
+            >
+              <span class="term-key-led" aria-hidden="true"></span>
+              <span data-term-arm-label>TERM</span>
+              <span class="term-key-hold" aria-hidden="true"></span>
+            </button>
+            <button
               class="topnav-icon-btn"
               type="button"
               data-theme-toggle
@@ -1121,6 +1144,14 @@
             </details>
           </div>
         </nav>
+
+        <!-- Where the boot's mount line lands and stays for the session. Same
+             DOM node as the boot log line: one FLIP, not a copy. -->
+        <div id="termStatus" hidden>
+          <span class="term-status-dot" aria-hidden="true"></span>
+          <span id="termStatusText">DESK ONLINE</span>
+          <span class="term-status-exit">ESC exit &middot; ALT+1..5 nav</span>
+        </div>
 
         <!-- Demo notice. Sits outside every .view, so it is honest on all six
              screens. Dismiss hides it for the current view only — navigating
@@ -1149,6 +1180,8 @@
                5s poll still patches its [data-live-field] nodes in place), and
                the primary action. #journalNewTradeBtn keeps its id so ⌘K, the
                FAB and every existing binding are untouched. -->
+          <aside id="deskRail" aria-label="Terminal" hidden></aside>
+
           <header class="dash-head">
             <div class="dash-greeting">
               <p class="dash-clock" id="dashClock"></p>
@@ -2524,10 +2557,10 @@
             </span>
             <h2 id="terminalHeading" class="visually-hidden">Terminal Pro</h2>
             <nav class="tp-fkeys" aria-label="Terminal panes">
-              <span class="is-on"><i>F1</i>next</span>
-              <span><i>F2</i>edge</span>
-              <span><i>F3</i>clock</span>
-              <span><i>F4</i>tilt</span>
+              <span class="is-on"><i>[1]</i>next</span>
+              <span><i>[2]</i>edge</span>
+              <span><i>[3]</i>clock</span>
+              <span><i>[4]</i>tilt</span>
             </nav>
             <span class="tp-bar-feed" id="tpFeedState">
               <span class="tp-bar-pulse" aria-hidden="true"></span>
@@ -2539,7 +2572,7 @@
           <div class="tp-grid">
             <!-- F1 — what is coming, ranked, counting down -->
             <article class="tp-pane tp-pane-next">
-              <p class="tp-pane-k"><i>F1</i>next releases<span id="tpNextScope">your pairs</span></p>
+              <p class="tp-pane-k"><i>[1]</i>next releases<span id="tpNextScope">your pairs</span></p>
               <div class="tp-scan" aria-hidden="true"></div>
               <ol class="tp-events" id="tpEvents"></ol>
               <p class="tp-empty" id="tpEventsEmpty" hidden>No scheduled releases ahead for the pairs you trade.</p>
@@ -2547,19 +2580,19 @@
 
             <!-- F2 — the moat: the trader's own record against that release -->
             <article class="tp-pane tp-pane-edge">
-              <p class="tp-pane-k"><i>F2</i>your edge<span id="tpEdgeScope">select a release</span></p>
+              <p class="tp-pane-k"><i>[2]</i>your edge<span id="tpEdgeScope">select a release</span></p>
               <div class="tp-edge-body" id="tpEdge"></div>
             </article>
 
             <!-- F3 — day-one value: real, and needs no stamps at all -->
             <article class="tp-pane tp-pane-clock">
-              <p class="tp-pane-k"><i>F3</i>release clock<span>your own hours, UTC</span></p>
+              <p class="tp-pane-k"><i>[3]</i>release clock<span>your own hours, UTC</span></p>
               <div class="tp-clockrows" id="tpClockRows"></div>
             </article>
 
             <!-- F4 — tilt against event windows -->
             <article class="tp-pane tp-pane-tilt">
-              <p class="tp-pane-k"><i>F4</i>tilt radar<span id="tpTiltScope"></span></p>
+              <p class="tp-pane-k"><i>[4]</i>tilt radar<span id="tpTiltScope"></span></p>
               <div class="tp-tilt" id="tpTilt"></div>
             </article>
           </div>
@@ -3136,6 +3169,13 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260810-terminal2"></script>
+    <script type="module" src="app.js?v=20260810-term4"></script>
+    <div id="termBoot" hidden aria-hidden="true">
+      <span class="term-boot-strike"></span>
+      <div class="term-boot-inner">
+        <span class="term-boot-sweep" aria-hidden="true"></span>
+        <div id="termBootLog"></div>
+      </div>
+    </div>
   </body>
 </html>

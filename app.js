@@ -28,13 +28,16 @@ import {
 import { createTradeDisplayHelpers, liveCellAttrs } from "./src/modules/tradeDisplay.js";
 import { createRecentTradesView } from "./src/modules/recentTradesView.js";
 import { rankEvents, countdown, tradedCurrencies, IMPACT_RANK } from "./src/lib/eventClock.js";
+import { buildBootLog as buildBootLines, meterText } from "./src/lib/bootLog.js";
 import {
   stampFromEvents,
   buildBaseline,
   eventFile,
   windowBuckets,
   releaseClockEdge,
-  tiltByEventType
+  tiltByEventType,
+  EDGE_MIN_LOG,
+  EDGE_MIN_VERDICT
 } from "./src/lib/eventEdge.js";
 import { createChartsModule, traceSmoothPath } from "./src/modules/charts.js";
 import { parseQuickTrade, resolveSymbol, inferMarket } from "./src/lib/tradeParse.js";
@@ -307,6 +310,12 @@ const ui = {
   desktopLogoutBtn: document.getElementById("desktopLogoutBtn"),
   mobileLogoutBtn: document.getElementById("mobileLogoutBtn"),
   themeToggles: Array.from(document.querySelectorAll("[data-theme-toggle]")),
+  termArms: Array.from(document.querySelectorAll("[data-term-arm]")),
+  termStatus: document.getElementById("termStatus"),
+  termStatusText: document.getElementById("termStatusText"),
+  termBoot: document.getElementById("termBoot"),
+  termBootLog: document.getElementById("termBootLog"),
+  deskRail: document.getElementById("deskRail"),
   metricNodes: Array.from(document.querySelectorAll("[data-metric]")),
   metricDeltaNodes: Array.from(document.querySelectorAll("[data-metric-delta]")),
   metricGrid: document.getElementById("dashboardMetricGrid"),
@@ -950,6 +959,14 @@ const PROP_VISIBILITY_NOTE =
 // render (tests/bootOrder.check.mjs enforces this; it has bitten four times).
 const terminal = { events: [], asOf: null, stale: true, skewMs: 0, selectedKey: "", timerId: 0, requested: false };
 
+// Terminal mode. Declared HERE, above the init() call at the bottom of this
+// block, because a module-level binding below it is in the temporal dead zone
+// when init() runs and throws on first render. That has shipped four times;
+// tests/bootOrder.check.mjs is what stops the fifth.
+const TERM_STORAGE_KEY = "axiom_journal_term_v1";
+const TERM_BOOTS_KEY = "axiom_journal_term_boots_v1";
+const term = { armed: false, booting: false, t0: 0, timers: [], holdTimer: 0, skipped: false };
+
 const TICKER_SYMBOLS = ["BTCUSDT", "XAUUSD", "ETHUSDT", "SOLUSDT", "XAGUSD", "EURUSD"];
 const TICKER_CACHE_KEY = "axiom_journal_ticker_v1";
 // Last price actually rendered per symbol — the strip's delta is "vs the
@@ -1003,6 +1020,7 @@ function init() {
     state.auth.mobileAuthVisible = false;
   }
   applyTheme(getStoredTheme());
+  restoreTermMode();
   loadState();
   // Reload inside a demo tab: sessionStorage still holds the journal. If it
   // somehow does not, re-seed rather than dropping the visitor into an empty app.
@@ -1114,6 +1132,54 @@ function toggleTheme() {
   }, THEME_CROSSFADE_MS);
 }
 
+/* --- Terminal mode -------------------------------------------------------
+   A second attribute on <html>, orthogonal to data-theme and winning over it,
+   because a screen emits its own light rather than reflecting the room. Same
+   storage shape and the same try/catch as the theme pair above. */
+function getStoredTerm() {
+  try {
+    return localStorage.getItem(TERM_STORAGE_KEY) === "on";
+  } catch (error) {
+    return false;
+  }
+}
+
+function applyTerm(on) {
+  const root = document.documentElement;
+  if (on) {
+    root.setAttribute("data-term", "on");
+  } else {
+    root.removeAttribute("data-term");
+  }
+  term.armed = Boolean(on);
+  if (ui.termStatus) {
+    ui.termStatus.hidden = !on;
+  }
+  ui.termArms.forEach((button) => {
+    button.setAttribute("aria-pressed", on ? "true" : "false");
+    button.setAttribute("aria-label", on ? "Disarm terminal mode" : "Arm terminal mode");
+    const label = button.querySelector("[data-term-arm-label]");
+    if (label) {
+      label.textContent = on ? "TERM" : "TERM";
+    }
+  });
+  // LOAD BEARING. Every canvas in the app (charts.js, renderDashSparkline)
+  // reads its palette from getComputedStyle(documentElement) and only repaints
+  // on this event. Without it they keep painting Clay oxide on a black ground
+  // and the mode looks broken rather than themed.
+  window.dispatchEvent(new CustomEvent("themechange", { detail: { theme: on ? "terminal" : getStoredTheme() } }));
+}
+
+/* A reload restores the skin SILENTLY: no overlay, no counter increment. A
+   boot animation the user did not ask for is a tax, not a feature. */
+function restoreTermMode() {
+  if (!getStoredTerm()) {
+    return;
+  }
+  applyTerm(true);
+  setText(ui.termStatusText, "DESK ONLINE · restored");
+}
+
 function bindEvents() {
   if (ui.loginBtn) {
     ui.loginBtn.addEventListener("click", handleLogin);
@@ -1129,6 +1195,82 @@ function bindEvents() {
   }
   ui.themeToggles.forEach((button) => {
     button.addEventListener("click", toggleTheme);
+  });
+
+  // The ARM key answers the finger, not the click: pressed on pointerdown,
+  // fired on pointerup. Holding past 600ms forces a cold boot. Delegated
+  // because renderDeskRail rebuilds its key on every render.
+  document.addEventListener("pointerdown", (event) => {
+    const key = event.target.closest("[data-term-arm]");
+    if (!key) {
+      return;
+    }
+    key.classList.add("is-pressed", "is-holding");
+    term.holdTimer = window.setTimeout(() => {
+      term.holdTimer = -1;
+    }, 600);
+  });
+  document.addEventListener("pointerup", (event) => {
+    const key = event.target.closest("[data-term-arm]");
+    document.querySelectorAll("[data-term-arm]").forEach((node) => {
+      node.classList.remove("is-pressed", "is-holding");
+    });
+    if (!key) {
+      window.clearTimeout(term.holdTimer);
+      return;
+    }
+    const cold = term.holdTimer === -1 || event.shiftKey;
+    window.clearTimeout(term.holdTimer);
+    term.holdTimer = 0;
+    if (term.armed) {
+      disarmTerminal();
+    } else {
+      armTerminal({ cold });
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    const typing =
+      /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "") ||
+      document.activeElement?.isContentEditable === true;
+    if (event.key === "`" && (event.ctrlKey || event.metaKey) && !typing) {
+      event.preventDefault();
+      if (term.armed) {
+        disarmTerminal();
+      } else {
+        armTerminal({ cold: event.shiftKey });
+      }
+      return;
+    }
+    // A boot is skippable from t=310ms. The information was never in the
+    // typing, so skipping jumps every pending line straight to printed.
+    if (term.booting && (event.key === "Escape" || event.key === "Enter" || event.key === " ")) {
+      event.preventDefault();
+      skipBoot();
+      return;
+    }
+    // Escape has two owners already: a native <dialog> eats it first, and the
+    // mobile drawer binds it below. Guarding on both keeps all three working;
+    // stealing it outright would make the drawer unclosable on a phone.
+    if (
+      event.key === "Escape" &&
+      term.armed &&
+      !document.querySelector("dialog[open]") &&
+      !ui.sidebar?.classList.contains("nav-open")
+    ) {
+      disarmTerminal();
+      return;
+    }
+    // Alt+1..5 route through the existing switchView by data-target. No router
+    // change: the strip prints ALT+1..5, which is what the keys actually are.
+    if (event.altKey && !typing && /^[1-5]$/.test(event.key)) {
+      const targets = ["dashboard", "journal", "calendar", "reflections", "terminal"];
+      const target = targets[Number(event.key) - 1];
+      if (target) {
+        event.preventDefault();
+        switchView(target);
+      }
+    }
   });
 
   // The sparkline is canvas: it must be repainted when the palette flips and
@@ -6851,6 +6993,8 @@ function renderAll() {
   renderDashLeonTape();
   syncTerminalAccess();
   renderTerminal();
+  syncTermChrome();
+  renderDeskRail();
   renderProgressTradeSummary();
   renderDashboardMetrics(state.analytics);
   renderRiskStrip(state.analytics);
@@ -12198,7 +12342,10 @@ function setupTerminal() {
   // One 1s tick drives every countdown. Cheap: it patches text, never markup.
   if (!terminal.timerId) {
     terminal.timerId = window.setInterval(() => {
-      if (isViewActive("terminal") && document.visibilityState === "visible") {
+      if (
+        (isViewActive("terminal") || term.armed || isViewActive("dashboard")) &&
+        document.visibilityState === "visible"
+      ) {
         renderTerminalClock();
       }
     }, 1000);
@@ -12340,10 +12487,11 @@ function renderTerminalEvents(events) {
 function renderTerminalClock() {
   const now = terminalNow();
   setText(ui.tpClock, now.toLocaleTimeString([], { hour12: false }));
-  document.querySelectorAll("#tpEvents .tp-event").forEach((row) => {
+  document.querySelectorAll("[data-starts]").forEach((row) => {
     const state = countdown({ startsAt: row.dataset.starts }, now);
     row.dataset.phase = state.phase;
-    const cell = row.querySelector(".tp-event-cd");
+    // The desk rail's countdown IS the element, so it falls back to itself.
+    const cell = row.querySelector(".tp-event-cd") || row;
     if (cell && cell.textContent !== state.text) {
       cell.textContent = state.text;
     }
@@ -12465,4 +12613,380 @@ function syncTerminalAccess() {
     terminal.requested = true;
     loadTerminalCalendar();
   }
+}
+
+/* ==========================================================================
+   TERMINAL MODE — the power on self test.
+
+   Every line below is read from live state at the instant of arming, or the
+   line does not exist. There is no placeholder, no "unknown", and no zero
+   dressed up as a figure. A brand new account boots to four lines and says so,
+   which is more persuasive than thirteen lines that invented nine numbers.
+
+   buildBootLog is deliberately a PURE read with no DOM in it, so the honesty
+   rule is enforced by tests/termBoot.check.mjs rather than remembered in the
+   markup. Same shape src/lib/eventEdge.js already uses when it refuses to
+   report a win rate under five samples.
+   ========================================================================== */
+function buildBootLog() {
+  const buster = document.querySelector('link[href*="clay-v3"]')?.getAttribute("href") || "";
+  const closed = getClosedTrades(state.trades);
+  const accounts = getVisibleAccounts();
+  const activeId = getActiveAccount()?.id;
+  const allRows = [...state.trades, ...state.otherTrades];
+
+  let lastWrite = "";
+  try {
+    const raw = journalStore().getItem(journalKey(STORAGE_KEYS.lastSaved));
+    lastWrite = raw ? new Date(raw).toLocaleTimeString([], { hour12: false }) : "";
+  } catch (error) {
+    lastWrite = "";
+  }
+
+  // The worst slot the trader actually has, or nothing. releaseClockEdge needs
+  // no stamps and no archive, so this is real on the very first visit.
+  const worstWindow =
+    releaseClockEdge(closed)
+      .filter((slot) => slot.n >= 3 && slot.netPnl < 0)
+      .sort((a, b) => a.netPnl - b.netPnl)[0] || null;
+
+  return buildBootLines({
+    build: buster.split("?v=")[1] || "",
+    session: {
+      username: state.auth.username,
+      authenticated: state.auth.isAuthenticated,
+      guest: state.auth.guestMode,
+      preview: state.auth.previewMode
+    },
+    storage: { lastWrite },
+    accounts: accounts.map((account) => ({
+      // The LABEL, not the uuid: "/acct/c438db45-7b1b-4fc4..." is noise on a
+      // screen whose whole claim is that it read your record. makeAccount
+      // guarantees a non-empty label, so there is no fallback to write.
+      // Slugged only for shape: it is still the name the trader chose.
+      id: account.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+      rows: allRows.filter((trade) => trade.accountId === account.id).length,
+      active: account.id === activeId
+    })),
+    closed: closed.length,
+    stamped: closed.filter((trade) => Array.isArray(trade.eventContext) && trade.eventContext.length > 0).length,
+    events: terminal.events.length,
+    asOf: terminal.asOf,
+    stale: terminal.stale,
+    skewMs: terminal.skewMs,
+    edgeMinLog: EDGE_MIN_LOG,
+    edgeMinVerdict: EDGE_MIN_VERDICT,
+    budgetLeft: getDailyBudgetLeft(),
+    dailyMax: state.settings.dailyMaxLoss,
+    debt: getUnjournalledTrades().length,
+    worstWindow,
+    money: formatCurrency,
+    signedMoney: formatSignedCurrency
+  });
+}
+
+function bootMeter(meter) {
+  const cells = window.matchMedia("(min-width: 900px)").matches ? 20 : 12;
+  const m = meterText(meter, cells, EDGE_MIN_LOG);
+  const lit = m.bar.slice(0, m.lit);
+  const dark = m.bar.slice(m.lit);
+  return `<span class="term-log-meter">${lit}<i>${dark}</i> ${escapeHtml(m.label)}</span>`;
+}
+
+/* The decay ladder. Boot 1 is a ceremony, boot 4 is a switch that still prints
+   its receipt. EVERY line prints at every scale: the lines are the honesty,
+   the pacing is not. If the record moved since the last boot the pace resets
+   to readable, because the mount line is new information. */
+function bootScale(closedCount, accountCount) {
+  let saved = { n: 0, closed: -1, accounts: -1 };
+  try {
+    saved = { ...saved, ...JSON.parse(localStorage.getItem(TERM_BOOTS_KEY) || "{}") };
+  } catch (error) {
+    /* storage blocked: every boot is a first boot, which is correct */
+  }
+  const n = Number(saved.n) || 0;
+  let scale = n === 0 ? 1 : n === 1 ? 0.45 : n === 2 ? 0.28 : 0.18;
+  if (saved.closed !== closedCount || saved.accounts !== accountCount) {
+    scale = Math.max(scale, 0.45);
+  }
+  try {
+    localStorage.setItem(TERM_BOOTS_KEY, JSON.stringify({ n: n + 1, closed: closedCount, accounts: accountCount }));
+  } catch (error) {
+    /* nothing to do: the boot still runs */
+  }
+  return scale;
+}
+
+function clearBootTimers() {
+  term.timers.forEach((id) => window.clearTimeout(id));
+  term.timers = [];
+}
+
+function armTerminal({ cold = false } = {}) {
+  if (term.booting || term.armed) {
+    return;
+  }
+  const lines = buildBootLog();
+  const closed = getClosedTrades(state.trades).length;
+  const scale = cold ? 1 : bootScale(closed, getVisibleAccounts().length);
+
+  try {
+    localStorage.setItem(TERM_STORAGE_KEY, "on");
+  } catch (error) {
+    /* private mode: the mode still holds for this session */
+  }
+
+  // Reduced motion gets the mode with no ceremony at all. The skin is the
+  // feature; the boot is the introduction to it.
+  if (prefersReducedMotion()) {
+    applyTerm(true);
+    setText(ui.termStatusText, bootStatusText(lines));
+    renderAll();
+    return;
+  }
+  runBoot(lines, scale, cold);
+}
+
+function bootStatusText(lines) {
+  const mount = lines.find((line) => line.mount);
+  return mount ? `DESK ONLINE · ${mount.v.toUpperCase()}` : "DESK ONLINE";
+}
+
+function runBoot(lines, scale, cold) {
+  const overlay = ui.termBoot;
+  const log = ui.termBootLog;
+  if (!overlay || !log) {
+    applyTerm(true);
+    renderAll();
+    return;
+  }
+  // Any open <dialog> would paint on top of a fixed overlay and survive the
+  // whole boot, so they are closed first.
+  document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
+
+  term.booting = true;
+  term.skipped = false;
+  term.t0 = performance.now();
+  clearBootTimers();
+
+  log.innerHTML = (cold ? [{ k: "COLD BOOT REQUESTED", v: "", head: true }] : [])
+    .concat(lines)
+    .map((line, index) => {
+      const stamp = line.head || line.payload ? "" : `<span class="term-log-k">[ 0.00 ]</span>  `;
+      const dots = line.k && !line.head && !line.sub ? " " + ".".repeat(Math.max(2, 16 - line.k.length)) : "";
+      return `<span class="term-log-line${line.payload ? " is-payload" : ""}" data-i="${index}">${stamp}<span class="term-log-k">${escapeHtml(
+        line.k
+      )}${dots}</span> <span class="term-log-v">${escapeHtml(line.v)}</span>${line.meter ? "<br>          " + bootMeter(line.meter) : ""}</span>`;
+    })
+    .join("");
+
+  overlay.hidden = false;
+  overlay.classList.add("is-open");
+  overlay.classList.remove("is-closing");
+
+  const rows = Array.from(log.querySelectorAll(".term-log-line"));
+  const mountIndex = (cold ? 1 : 0) + lines.findIndex((line) => line.mount);
+
+  // Gaps in ms at scale 1: an accelerating rhythm, then 320ms of nothing
+  // before the mount line and 340ms after it. That silence is the moment.
+  let t = 260 * scale;
+  rows.forEach((row, index) => {
+    if (index === mountIndex) {
+      t += 320 * scale;
+    }
+    const at = t;
+    term.timers.push(
+      window.setTimeout(() => {
+        row.classList.add("is-printed", "is-strike");
+        const stampCell = row.querySelector(".term-log-k");
+        if (stampCell && stampCell.textContent.startsWith("[ ")) {
+          stampCell.textContent = `[ ${((performance.now() - term.t0) / 1000).toFixed(2)} ]`;
+        }
+        window.setTimeout(() => row.classList.remove("is-strike"), 160);
+      }, at)
+    );
+    const base = index < 5 ? [170, 145, 120, 100, 88][index] : 66;
+    t += (index === mountIndex ? 340 + base : base) * scale;
+  });
+
+  // Stamp the mode in early, under the overlay, so the app behind is already
+  // the terminal when the aperture collapses to reveal it. applyTerm ONLY:
+  // measured at 23ms for the whole document. renderAll() is deliberately NOT
+  // called here, because it re-renders every chart, table and calendar cell
+  // and the app is not visible during the log anyway. It runs in finishBoot,
+  // behind the curtain, where a long frame costs nothing.
+  term.timers.push(window.setTimeout(() => applyTerm(true), 90 * scale));
+
+  term.timers.push(window.setTimeout(() => finishBoot(lines), t + 140 * scale));
+}
+
+/* The dock: the mount line does not fade out, it becomes the chrome. Same DOM
+   node from full screen to header row, one FLIP. The line that proved the
+   machine had read your journal turns into the machine's status strip. */
+function finishBoot(lines) {
+  const overlay = ui.termBoot;
+  const log = ui.termBootLog;
+  // Behind the curtain: the expensive full re-render happens while the log is
+  // still covering the screen, so its long frame is invisible.
+  renderAll();
+  setText(ui.termStatusText, bootStatusText(lines));
+  if (ui.termStatus) {
+    ui.termStatus.hidden = false;
+  }
+  if (!overlay || !log) {
+    term.booting = false;
+    return;
+  }
+  log.querySelectorAll(".term-log-line").forEach((row) => {
+    row.style.transition = "transform 180ms var(--ease-clay), opacity 180ms var(--ease-clay)";
+    row.style.transform = "translateY(-14px)";
+    row.style.opacity = "0";
+  });
+  overlay.classList.remove("is-open");
+  overlay.classList.add("is-closing");
+  term.timers.push(
+    window.setTimeout(() => {
+      overlay.hidden = true;
+      overlay.classList.remove("is-closing");
+      term.booting = false;
+      // renderAll ran while booting was still true, so the key is showing
+      // BOOT. Nothing else will re-render it until the next state change.
+      syncTermChrome();
+      document.getElementById("termArmTop")?.focus({ preventScroll: true });
+    }, 240)
+  );
+}
+
+function disarmTerminal() {
+  clearBootTimers();
+  term.booting = false;
+  if (ui.termBoot) {
+    ui.termBoot.hidden = true;
+    ui.termBoot.classList.remove("is-open", "is-closing");
+  }
+  try {
+    localStorage.removeItem(TERM_STORAGE_KEY);
+  } catch (error) {
+    /* nothing to do */
+  }
+  applyTerm(false);
+  renderAll();
+}
+
+function toggleTerm() {
+  if (term.armed) {
+    disarmTerminal();
+  } else {
+    armTerminal();
+  }
+}
+
+/* The status strip and the ARM keys. Called from renderAll so it stays true
+   after any state change, not just at arming. */
+function syncTermChrome() {
+  ui.termArms.forEach((button) => {
+    button.classList.toggle("is-booting", term.booting);
+    const label = button.querySelector("[data-term-arm-label]");
+    if (label) {
+      label.textContent = term.booting ? "BOOT" : "TERM";
+    }
+  });
+}
+
+/* --- The desk rail --------------------------------------------------------
+   Terminal Pro's front door on the dashboard, replacing a nav item most
+   people never press. Right, not centre: the dashboard's reading order is
+   balance, risk, prop, metrics, all left-anchored money, and a centre column
+   splits the money. Peripheral is where a countdown belongs.
+
+   It pins its own dark values, the same trick .tp-desk uses, so on the light
+   theme it is a black instrument bolted to a concrete console. That contrast
+   is the attention, and it costs no badge and no accent border. */
+function renderDeskRail() {
+  const host = ui.deskRail;
+  if (!host) {
+    return;
+  }
+  if (!canAccessApp()) {
+    host.hidden = true;
+    return;
+  }
+  host.hidden = false;
+
+  const closed = getClosedTrades(state.trades);
+  const currencies = tradedCurrencies(state.trades);
+  const next = rankEvents(terminal.events, { now: terminalNow(), currencies, minImpact: "Medium" })[0] || null;
+
+  // Said out loud on purpose: rankEvents already filters to the currencies
+  // behind the assets this trader actually touches, and nothing in the product
+  // ever mentioned it.
+  const nextCell = next
+    ? `<p class="desk-k">next release<span>${escapeHtml(
+        terminal.asOf ? new Date(terminal.asOf).toISOString().slice(11, 16) + "Z" : "no link"
+      )}</span></p>
+       <p class="desk-sub">ranked on your pairs, not the clock</p>
+       <p class="desk-cur">${escapeHtml(next.currency)} &middot; ${escapeHtml(next.impact)}</p>
+       <p class="desk-title">${escapeHtml(next.title)}</p>
+       <p class="desk-cd" data-starts="${escapeHtml(next.startsAt)}"></p>`
+    : `<p class="desk-k">next release</p>
+       <p class="desk-empty">No scheduled releases ahead for the pairs you trade.</p>`;
+
+  let fileCell;
+  if (!state.auth.terminalPro && !isLocalPreviewMode()) {
+    fileCell = `<p class="desk-k">your file on this release</p>
+                <p class="desk-empty">Terminal Pro &middot; in development</p>`;
+  } else {
+    const key = next?.key || mostStampedKey(closed);
+    const file = key ? eventFile(closed, key, buildBaseline(closed)) : null;
+    if (!file || file.samples === 0) {
+      fileCell = `<p class="desk-k">your file on this release</p>
+                  <p class="desk-empty">Not enough stamped trades yet to compare your record against this release. This fills in as you trade.</p>`;
+    } else {
+      const rate = file.winRate === null ? "&mdash;" : `${Math.round(file.winRate * 100)}%`;
+      const verdict =
+        file.verdict === "better"
+          ? "better than your average"
+          : file.verdict === "worse"
+            ? "worse than your average"
+            : `${file.samples} prints on record. ${EDGE_MIN_VERDICT} is where the number starts meaning something.`;
+      fileCell = `<p class="desk-k">your file on this release</p>
+                  <p class="desk-figs"><span>${file.wins}W/${file.losses}L</span><span>${rate}</span><span>${escapeHtml(
+                    formatSignedCurrency(file.netPnl)
+                  )}</span></p>
+                  <p class="desk-verdict">${escapeHtml(verdict)}</p>`;
+    }
+  }
+
+  // The mount line sits here at rest, all the time. Arming makes it fly, which
+  // is why the boot reads as a continuation rather than a performance.
+  const stamped = closed.filter((t) => Array.isArray(t.eventContext) && t.eventContext.length > 0).length;
+  const armCell = `
+    <button class="desk-arm" id="termArmRail" type="button" data-term-arm aria-pressed="${term.armed ? "true" : "false"}"
+            aria-label="${term.armed ? "Disarm terminal mode" : "Arm terminal mode"}">
+      <span class="term-key-led" aria-hidden="true"></span>
+      <span data-term-arm-label>${term.armed ? "TERM" : "ARM TERMINAL"}</span>
+      <span class="term-key-hold" aria-hidden="true"></span>
+    </button>
+    <p class="desk-arm-note">boots on ${closed.length} closed &middot; ${stamped} stamped &middot; ${terminal.events.length} events</p>`;
+
+  host.innerHTML = `<div class="desk-cell">${nextCell}</div><div class="desk-cell">${fileCell}</div><div class="desk-cell">${armCell}</div>`;
+  // The rail's ARM key is rebuilt on every render, so the cached list has to be
+  // refreshed or it holds a detached node and the key stops responding.
+  ui.termArms = Array.from(document.querySelectorAll("[data-term-arm]"));
+  renderTerminalClock();
+}
+
+/* Skip: every pending line jumps straight to printed and the dock runs. The
+   information was never in the typing, so a skip must never cost a line. */
+function skipBoot() {
+  if (!term.booting) {
+    return;
+  }
+  clearBootTimers();
+  ui.termBoot?.querySelectorAll(".term-log-line").forEach((row) => {
+    row.classList.add("is-printed");
+    row.classList.remove("is-strike");
+  });
+  applyTerm(true);
+  finishBoot(buildBootLog());
 }
