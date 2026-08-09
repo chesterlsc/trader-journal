@@ -2645,3 +2645,36 @@ User-reported: the demo's Execution grades rendered as floating labels above emp
 - Busters -> ?v=20260809-fusiondesk. All 27 tests pass; 1280/light/375
   verified, no h-scroll, honesty chrome intact (in development, concept
   preview, sample data - nothing live).
+
+## 2026-08-10 — Hero rebuilt: "the other eleven"
+
+- First run of the saved concept-bar method (memory/redesign-concept-bar.md)
+  on the conversion-critical element. Panel of 3 (the-parse / the-witness /
+  the-desk) + judge, all on Opus 5.
+- CONCEPT (mined from the product): the capture is the pitch. Headline
+  "You type one line. The journal writes the other eleven." — countable, not
+  superlative, and the instrument beside it renders exactly eleven things.
+- THE LENS (right column): (1) the six things you type, each token annotated
+  with the field it became; (2) TEN NUMBERS — YOU TYPED NONE OF THEM: stop
+  10.0 pips, target 20.0, R:R 1:2.00, pip value $2.00, risk $20.00, at
+  target +$40.00, notional $8,468, 0.20% of the account, daily loss left
+  $480 of $500, auto-close armed at 4,244.0/4,214.0 — every figure the app's
+  own math for the demo trade; (3) SIGNATURE: the eleventh, which is not a
+  number — a JOURNAL row at 14:02:31 that types itself because the app
+  closed the position at the stop and opened the note while nobody watched.
+- The lens shares .lnd-tp-frame (judge's call), so the dark-screen-in-both-
+  themes contract is INHERITED from Terminal Pro, not duplicated. Verified
+  rgb(20,22,26) on the concrete page.
+- Leon tape re-conceived as a docked module below the lens (user freed it);
+  #recentTradesList/#lndTapeNote/#lndTapeCount all still present and
+  rendered by app.js on first paint. Ghost-card depth field retired (the
+  lens renders a real parsed position, so faint copies were noise); halos,
+  capture grammar, equity terrain and scrim survive as desk light.
+- PRESERVATION CONTRACT HELD: #heroEmailForm block diff-verified
+  byte-identical (reference photo 1 untouched), no JS changes.
+- Splice bug caught in verification (mine, not the spec's): the fragment
+  carries its own <div class="lnd-hero">, and starting the replacement
+  inside the old one left it unclosed — the hero swallowed the page
+  (3479px tall, h-scroll). Fixed by anchoring the cut at the opening tag.
+- Busters -> ?v=20260810-eleven. All 27 tests pass; 1440 / light / 375
+  verified, no h-scroll, form hit-tested clickable at every width.

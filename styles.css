@@ -1488,7 +1488,8 @@ body.is-guest:not(.demo-signup) .auth-shell {
 /* THE SCREEN. A screen has its own light: gunmetal pinned here so the
    instrument stays dark on concrete. Only this scope may hard-reference
    dark-surface derivations. */
-.lnd-tp-frame {
+.lnd-tp-frame,
+.lnd-lens {
   --tp-s0: #101318;
   --tp-s1: #14161a;
   --tp-s2: #1d2126;
@@ -5049,12 +5050,6 @@ body.demo-signup::before {
   .auth-shell {
     width: min(1560px, 92vw);
   }
-
-  .lnd-hero {
-    grid-template-columns: minmax(0, 700px) minmax(0, 560px);
-    justify-content: center;
-    gap: var(--space-16);
-  }
 }
 
 /* The price marquee breaks out of the shell and runs the full viewport width
@@ -5065,41 +5060,6 @@ body.demo-signup::before {
   margin-left: calc(50% - 50vw);
 }
 
-/* The hero tape drifts — slow, transform-only, frozen by the global
-   reduced-motion block like every other loop. */
-@media (prefers-reduced-motion: no-preference) {
-  .lnd-tape {
-    animation: lndTapeFloat 9s var(--ease-in-out) infinite;
-  }
-}
-
-@keyframes lndTapeFloat {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-9px);
-  }
-}
-
-/* Hero instrument: a machined dial behind the copy. Bezel tick track in
-   hairline greys (pathLength-exact: 96 minors, 12 majors), one inner
-   hairline ring, and two burnt-oxide arcs sweeping at different rates in
-   opposite directions — the speed difference is the depth cue. A static
-   film-grain tile (inline feTurbulence data URI, no asset) gives the
-   surface tooth; grain is felt, never noticed. Transform only, no JS.
-   The rotations land on an end frame identical to rest, so the frozen
-   reduced-motion dial is simply the dial. */
-.lnd-hero {
-  position: relative;
-}
-
-.lnd-hero-copy,
-.lnd-hero-side {
-  position: relative;
-  z-index: 1;
-}
 
 /* Full-bleed: the clip box spans the entire viewport (the .lnd-ticker
    breakout math), and a radial mask dissolves the dial's edges instead of
@@ -5164,79 +5124,6 @@ body.demo-signup::before {
   background: color-mix(in srgb, var(--accent) 26%, transparent);
 }
 
-/* Ghost journal depth field: real row anatomy at decoration opacity.
-   Near = larger, sharper, slower; far = smaller, fainter, faster. */
-.lnd-ghost-field {
-  position: absolute;
-  inset: 0;
-}
-
-.lnd-gcard {
-  position: absolute;
-  left: var(--gx);
-  top: var(--gy);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-1) 46%, transparent);
-  font: 500 12px/1 var(--font-mono);
-  color: var(--text-faint);
-  white-space: nowrap;
-  will-change: transform;
-}
-
-.lnd-gc-sym {
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.lnd-gc-side {
-  padding: 3px 7px;
-  border: 1px solid color-mix(in srgb, currentColor 60%, transparent);
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-}
-
-/* Direction is not money: oxide for shorts, steel for longs. */
-.lnd-gc-side.is-short {
-  color: color-mix(in srgb, var(--accent) 78%, var(--text-faint));
-}
-
-.lnd-gc-rr {
-  font-weight: 700;
-}
-
-.lnd-gc-mood {
-  font-style: italic;
-  opacity: 0.85;
-}
-
-.lnd-ghost-near { opacity: 0.5; }
-.lnd-ghost-far  { opacity: 0.28; }
-
-.lnd-ghost-far .lnd-gcard {
-  padding: 7px 10px;
-  gap: 7px;
-  border-radius: 8px;
-}
-
-/* The miniature type sizes exist only where the far field renders — desktop.
-   At phone widths the base 11px/12px hold, keeping the floor test honest. */
-@media (min-width: 1081px) {
-  .lnd-gc-side {
-    font-size: 9px;
-  }
-
-  .lnd-ghost-far .lnd-gcard {
-    font-size: 10px;
-  }
-}
-
 /* Equity terrain: ONE monumental filled silhouette at the hero's base.
    Glow is a second, wider low-opacity stroke — no filters, ever. The
    ridge is a per-trade polyline (with a real drawdown), not a chart. */
@@ -5271,8 +5158,6 @@ body.demo-signup::before {
 
 /* Light concrete: same geometry, quieter ink. */
 [data-theme="light"] .lnd-ghost-cmd { color: color-mix(in srgb, var(--text-faint) 14%, transparent); }
-[data-theme="light"] .lnd-ghost-near { opacity: 0.42; }
-[data-theme="light"] .lnd-ghost-far { opacity: 0.2; }
 [data-theme="light"] .lnd-terrain-line { stroke-opacity: 0.4; }
 [data-theme="light"] .lnd-terrain-glow { stroke-opacity: 0.07; }
 
@@ -5294,21 +5179,6 @@ body.demo-signup::before {
   .lnd-ghost-caret {
     animation: lndCaretBreathe 2.4s var(--ease-in-out) infinite alternate;
   }
-
-  .lnd-ghost-field {
-    animation: lndGhostIn 2s var(--ease-out) 0.3s both;
-  }
-
-  /* Per-card variance: duration from --gt, negative delay de-phases the
-     field so no two cards ever move in step. */
-  .lnd-gcard {
-    animation: lndGhostFloat var(--gt, 26s) var(--ease-in-out) calc(var(--gt, 26s) / -3) infinite alternate;
-  }
-
-  .lnd-ghost-far .lnd-gcard {
-    animation-name: lndGhostFloatFar;
-  }
-
   .lnd-terrain {
     animation: lndTerrainRise 2.2s var(--ease-out) both;
   }
@@ -5330,16 +5200,6 @@ body.demo-signup::before {
 @keyframes lndCaretBreathe {
   from { opacity: 1; }
   to   { opacity: 0.15; }
-}
-
-@keyframes lndGhostFloat {
-  from { transform: translate3d(0, 0, 0); }
-  to   { transform: translate3d(-18px, 12px, 0); }
-}
-
-@keyframes lndGhostFloatFar {
-  from { transform: translate3d(0, 0, 0); }
-  to   { transform: translate3d(26px, -18px, 0); }
 }
 
 @keyframes lndTerrainRise {
@@ -5437,13 +5297,8 @@ body.demo-signup::before {
 @media (max-width: 1080px) {
   .lnd-halo-b,
   .lnd-halo-c,
-  .lnd-ghost-far,
   .lnd-ghost-cmd-b {
     display: none;
-  }
-
-  .lnd-ghost-near {
-    opacity: 0.32;
   }
 
   .lnd-ghost-cmd-a {
@@ -5593,30 +5448,6 @@ body.demo-signup::before {
 }
 
 /* --- Hero ---------------------------------------------------------------- */
-.lnd-hero {
-  display: grid;
-  /* The copy column is capped at its content width and the PAIR is centered
-     as one unit — a 1fr copy column left the headline hugging the left edge
-     of an oversized track and read as off-balance. */
-  grid-template-columns: minmax(0, 660px) minmax(0, 500px);
-  justify-content: center;
-  gap: var(--space-10);
-  align-items: center;
-  width: 100%;
-  max-width: none;
-  margin: 0;
-}
-
-.lnd-hero-copy {
-  display: grid;
-  gap: var(--space-5);
-  justify-items: start;
-  width: 100%;
-  max-width: none;
-  padding: 0;
-  text-align: left;
-}
-
 /* Counted from the rows on the tape below — app.js hides it at zero rather
    than printing a nought, and the label names exactly what it counted. */
 .lnd-hero-badge {
@@ -5637,22 +5468,8 @@ body.demo-signup::before {
   display: none;
 }
 
-.lnd-hero-title {
-  margin: 0;
-  font: 700 clamp(2.5rem, 5.6vw, 4.75rem) / 1.02 var(--font-ui);
-  letter-spacing: -0.045em;
-  color: var(--text);
-}
-
 .lnd-hero-title-accent {
   color: var(--accent);
-}
-
-.lnd-hero-lede {
-  margin: 0;
-  max-width: 44ch;
-  color: var(--text-soft);
-  font: 400 clamp(1rem, 1.2vw, 1.125rem) / 1.55 var(--font-ui);
 }
 
 /* One real step of sign-up: the value is handed to the auth panel's
@@ -5944,6 +5761,405 @@ body.demo-signup::before {
   margin: 6px 0 0;
   color: var(--text-soft);
   font: 500 11.5px/1.3 var(--font-ui);
+}
+
+/* ==========================================================================
+   HERO — THE OTHER ELEVEN.
+
+   Left column argues, right column proves. The instrument is not a picture of
+   the app: it is the parse itself, held still. Band 1 is the sentence you
+   type, and it arrives ALREADY ANNOTATED — every word carrying, underneath
+   it, the name of the field it became. Band 2 is ten numbers you did not
+   type. Band 3 is the eleventh thing the journal writes, and it is not a
+   number: at 14:02:31 the app closed the position at the stop and opened the
+   note, and that line types itself in while you watch. Six typed, eleven
+   written — the headline's count is verifiable in the frame beside it.
+
+   Every figure is the app's own demo trade (app.js:941 LND_DEMO_COMMAND,
+   "xauusd short 4234 sl 4244 tp 4214 0.02 lots") settled with the app's own
+   arithmetic (app.js:11970-11977: stop 10.0 pips, target 20.0 pips, R:R 2.00,
+   risk $20.00 = 0.2% on the $10,000 demo account; gold 0.01 lot = $1/pip per
+   tests/pips.check.mjs, so 0.02 lots = $2.00/pip and 2oz x 4234 = $8,468).
+   The auto-close row is the real behaviour, not a promise: app.js:11613
+   "Closing IS the trigger: the journalling sheet opens for the first fill."
+
+   No decorative wiring. The old spec's hairline "leaders" and travelling
+   "bus" are gone: alignment that means nothing is decoration, which is the
+   category this hero keeps failing on. The annotation IS the parse.
+
+   Budget: 3 blurred elements (the halos, untouched). Everything here is
+   transform/opacity, gated on body.auth-ready like the existing headline
+   stagger, and every animation's `to` state is the resting state — so a
+   no-JS visitor, a reduced-motion visitor and a light-mode screenshot all
+   get the same finished instrument.
+
+   PASTE: as one block at styles.css:5948, immediately after the closing brace
+   of `.lnd-stat-label` and before the "What you get back" section header.
+   Paste FIRST, then run the deletion list bottom-up; nothing in that list
+   sits below line 5947. (CSS comments do not nest — no comment in this block
+   may quote another comment's delimiters.)
+   ========================================================================== */
+
+/* --- 1. Composition ------------------------------------------------------ */
+/* 520 + 40 + 740 = 1300, inside .auth-shell's min(1320px, 94vw). The pair is
+   centred as one unit; a 1fr copy column left the headline hugging the edge
+   of an oversized track. */
+.lnd-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 520px) minmax(0, 740px);
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-10);
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.lnd-hero-copy,
+.lnd-hero-side {
+  position: relative;
+  z-index: 1;
+}
+
+.lnd-hero-copy {
+  display: grid;
+  gap: var(--space-5);
+  justify-items: start;
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  text-align: left;
+}
+
+/* justify-items:start would otherwise shrink the fact trio to its content. */
+.lnd-hero-copy .lnd-stats {
+  width: 100%;
+}
+
+/* Capped below the old 4.75rem: three lines have to hold inside 520px. */
+.lnd-hero-title {
+  margin: 0;
+  font: 700 clamp(2.25rem, 3.55vw, 3.35rem) / 1.04 var(--font-ui);
+  letter-spacing: -0.045em;
+  color: var(--text);
+}
+
+.lnd-hero-lede {
+  margin: 0;
+  max-width: 46ch;
+  color: var(--text-soft);
+  font: 400 clamp(1rem, 1.1vw, 1.0625rem) / 1.55 var(--font-ui);
+}
+
+/* --- 2. The lens: frame -------------------------------------------------- */
+/* NO NEW FRAME AND NO NEW PALETTE. The lens wears `.lnd-tp-frame` (styles.css
+   1491) alongside `.lnd-lens`, so it inherits the one scope in this codebase
+   allowed to hard-reference gunmetal — the Terminal Pro v5 contract, "dark
+   screen in both themes" (HEAD c35d13a). That gives the lens its border,
+   radius, --clay-raised shadow, overflow clip and the whole --tp-* scale for
+   free, and it guarantees the two instruments on this page can never drift
+   apart. Its chrome bar reuses .lnd-tp-chrome / -dot / -title / -tag for the
+   same reason. The reveal transitions on .lnd-tp-frame are scoped to
+   `.lnd-tp .lnd-tp-frame` (styles.css 2162), so nothing bleeds into the hero.
+   Everything below is only what the lens does that the terminal does not. */
+
+.lnd-lens-screen {
+  padding: 20px;
+  background: var(--tp-s0);
+  color: var(--tp-soft);
+  font-feature-settings: "tnum";
+}
+
+/* Block, not flex: a flex step turns the caption and its <em> into two
+   columns that split badly at 375px. As prose it simply wraps. */
+.lnd-lens-step {
+  display: block;
+  margin: 0 0 14px;
+  color: var(--tp-faint);
+  font: 600 var(--fs-micro)/1.6 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lnd-lens-step b {
+  display: inline-grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  margin-right: 9px;
+  border: 1px solid var(--tp-line2);
+  border-radius: 50%;
+  color: var(--tp-acc);
+  font: 700 var(--fs-micro)/1 var(--font-mono);
+  vertical-align: -5px;
+}
+
+.lnd-lens-step em {
+  color: var(--tp-acc);
+  font-style: normal;
+}
+
+/* --- 3. Band 1: the sentence, already annotated -------------------------- */
+/* The top line of the strip IS the sentence, in reading order. Under each
+   word, the field name the parser claimed from it. Wrapping is harmless
+   because nothing is aligned to anything below it. */
+.lnd-lens-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  gap: 14px 20px;
+  margin: 0 0 22px;
+}
+
+.lnd-lens-tok {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.lnd-lens-tok b {
+  color: var(--tp-text);
+  font: 700 15px/1 var(--font-mono);
+}
+
+.lnd-lens-tok i {
+  color: var(--tp-faint);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  font-style: normal;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lnd-lens-caret {
+  display: inline-block;
+  width: 7px;
+  height: 13px;
+  margin-left: 4px;
+  background: var(--tp-acc);
+  vertical-align: -2px;
+}
+
+/* --- 4. Band 2: the ten numbers nobody typed ----------------------------- */
+/* 1px gaps over the line colour — the splitters ARE the grid, no borders. */
+.lnd-lens-out {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0 0 22px;
+  border: 1px solid var(--tp-line);
+  border-radius: var(--radius-clay-sm);
+  background: var(--tp-line);
+  overflow: hidden;
+}
+
+.lnd-lens-f {
+  display: grid;
+  gap: 5px;
+  padding: 11px 13px;
+  background: var(--tp-s0);
+}
+
+.lnd-lens-f dt {
+  color: var(--tp-faint);
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.lnd-lens-f dd {
+  margin: 0;
+  color: var(--tp-text);
+  font: 700 var(--fs-data)/1.15 var(--font-mono);
+}
+
+.lnd-lens-f dd.is-pos {
+  color: var(--tp-pos);
+}
+
+.lnd-lens-f-wide {
+  grid-column: 1 / -1;
+}
+
+.lnd-lens-armed {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--tp-pos);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--tp-pos) 16%, transparent);
+  vertical-align: 1px;
+}
+
+/* --- 5. Band 3: the eleventh — the line it wrote by itself --------------- */
+/* THE SIGNATURE. Everything above is arithmetic; this is authorship. The
+   curtain is the screen's own colour retracting in steps, so the resting
+   state (and therefore the reduced-motion frame, and the screenshot) is
+   simply the finished row. */
+.lnd-lens-wrote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--tp-line2);
+  border-radius: var(--radius-clay-sm);
+  background: var(--tp-s2);
+  box-shadow: inset 3px 0 0 var(--tp-acc);
+  color: var(--tp-soft);
+  font: 500 12.5px/1.45 var(--font-ui);
+}
+
+.lnd-lens-wrote .lnd-lens-stamp {
+  padding: 4px 8px;
+  border: 1px solid var(--tp-acc);
+  border-radius: var(--radius-pill);
+  color: var(--tp-acc);
+  font: 700 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lnd-lens-wrote time {
+  color: var(--tp-faint);
+  font: 700 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.06em;
+}
+
+.lnd-lens-typed {
+  position: relative;
+  flex: 1 1 100%;
+  color: var(--tp-text);
+}
+
+.lnd-lens-typed::after {
+  content: "";
+  position: absolute;
+  inset: -2px -2px -2px -1px;
+  background: var(--tp-s2);
+  transform: scaleX(0);
+  transform-origin: right;
+}
+
+.lnd-lens-cap {
+  padding: 13px 20px 15px;
+  border-top: 1px solid var(--tp-line);
+  background: var(--tp-s2);
+  color: var(--tp-faint);
+  font: 400 12px/1.45 var(--font-ui);
+}
+
+/* --- 6. The tape: spooling, not floating --------------------------------- */
+/* Four rows in view inside the existing pressed well; the rest reach by
+   native scroll. No toggle, no new JS, and #recentTradesList keeps its id,
+   its place and its visibility for renderHeroRecentTrades. Scoped to the
+   hero so the dashboard's .dash-leon tape is untouched. */
+.lnd-hero-tape .lnd-tape-list {
+  max-height: 218px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  -webkit-mask-image: linear-gradient(180deg, #000 0 88%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0 88%, transparent 100%);
+}
+
+/* --- 7. Motion ----------------------------------------------------------- */
+/* One scripted ~4.5s build, once. The words land, then the field names they
+   became appear underneath them (that second pass IS the parse), then the ten
+   numbers resolve, then the journal writes the eleventh. */
+@media (prefers-reduced-motion: no-preference) {
+  .lnd-lens-armed {
+    animation: livePulse 2s var(--ease-in-out) infinite;
+  }
+
+  .lnd-lens-caret {
+    animation: lndCaretBreathe 2.4s var(--ease-in-out) infinite alternate;
+  }
+
+  body.auth-ready .lnd-lens-tok b {
+    animation: lndLensIn 500ms var(--ease-clay) backwards;
+    animation-delay: calc(300ms + var(--tok-i, 0) * 110ms);
+  }
+
+  body.auth-ready .lnd-lens-tok i {
+    animation: lndLensIn 440ms var(--ease-clay) backwards;
+    animation-delay: calc(1.16s + var(--tok-i, 0) * 80ms);
+  }
+
+  body.auth-ready .lnd-lens-f {
+    animation: lndLensIn 480ms var(--ease-clay) backwards;
+    animation-delay: calc(1.85s + var(--f-i, 0) * 90ms);
+  }
+
+  body.auth-ready .lnd-lens-step-3,
+  body.auth-ready .lnd-lens-wrote {
+    animation: lndLensIn 520ms var(--ease-clay) 2.95s backwards;
+  }
+
+  body.auth-ready .lnd-lens-typed::after {
+    animation: lndLensType 1.15s steps(30, end) 3.35s backwards;
+  }
+}
+
+@keyframes lndLensIn {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+@keyframes lndLensType {
+  from { transform: scaleX(1); }
+}
+
+/* --- 8. Responsive -------------------------------------------------------- */
+/* The single-column switch already lives at styles.css:6226 (@media
+   max-width:1080px) and comes later in the file, so it wins for .lnd-hero
+   without being restated here. */
+@media (max-width: 1080px) {
+  .lnd-hero-lede {
+    max-width: 54ch;
+  }
+}
+
+/* The phone version is designed down, not stripped: all six annotated tokens
+   and all eleven written fields survive. Only the column count changes. */
+@media (max-width: 760px) {
+  .lnd-lens-screen {
+    padding: 16px;
+  }
+
+  .lnd-lens-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px 10px;
+  }
+
+  .lnd-lens-tok b {
+    font-size: 14px;
+  }
+
+  /* Nine cells + one wide is an exact 3x3+1 at desktop; at two columns the
+     tenth stops spanning so there is never an empty cell showing the gap
+     colour as a hole. */
+  .lnd-lens-out {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lnd-lens-f-wide {
+    grid-column: auto;
+  }
+
+  .lnd-hero-tape .lnd-tape-list {
+    max-height: 176px;
+  }
+}
+
+/* --- 9. Big desktops ------------------------------------------------------ */
+@media (min-width: 1600px) {
+  .lnd-hero {
+    grid-template-columns: minmax(0, 560px) minmax(0, 880px);
+    gap: var(--space-12);
+  }
 }
 
 /* --- What you get back --------------------------------------------------- */

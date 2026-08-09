@@ -61,21 +61,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260809-fusiondesk" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260809-fusiondesk" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260810-eleven" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260810-eleven" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260809-fusiondesk" />
+    <link rel="stylesheet" href="styles.css?v=20260810-eleven" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260809-fusiondesk" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260810-eleven" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260809-fusiondesk" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260810-eleven" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -113,17 +113,16 @@
       </header>
 
       <div class="lnd-hero">
-        <!-- GHOST JOURNAL — the background is built from the product itself.
-             Back to front: (1) three breathing light pools (the only blurred
-             elements; blur static, motion transform-only); (2) the capture
-             grammar as monumental ultra-faint mono type, its caret still
-             breathing — the journal is mid-sentence; (3) a far depth-field of
-             ghost trade-entry cards (real row anatomy: symbol, side tag,
-             sl/pips, R:R, mood); (4) ONE equity-terrain silhouette rising
-             from the hero's base — a landscape, not a chart; (5) the near
-             card field, larger and slower; (6) the left readability scrim;
-             (7) static grain. Every figure is the demo trade family at
-             decoration opacity — plausible samples, never real user data. -->
+        <!-- GHOST JOURNAL, thinned. The background is now the BEFORE state of
+             the instrument on the right: the same capture sentence at 150px,
+             still mid-caret. The ghost trade-cards are gone — the lens renders
+             a real parsed position at full fidelity, so faint copies of it
+             behind the star were competing noise. What survives is what the
+             background was for: three breathing light pools (the whole blur
+             budget), the monumental capture grammar, one equity-terrain
+             silhouette (a landscape of closed trades, not a chart), and the
+             readability scrim. Every figure is decoration opacity, aria-hidden,
+             and never poses as real user data. -->
         <div class="lnd-hero-dial" aria-hidden="true">
           <span class="lnd-halo lnd-halo-a"></span>
           <span class="lnd-halo lnd-halo-b"></span>
@@ -131,14 +130,6 @@
 
           <p class="lnd-ghost-cmd lnd-ghost-cmd-a">xauusd short 4234 sl 4244 tp 4214 0.02 lots<span class="lnd-ghost-caret"></span></p>
           <p class="lnd-ghost-cmd lnd-ghost-cmd-b">journal: waited for the retest</p>
-
-          <div class="lnd-ghost-field lnd-ghost-far">
-            <div class="lnd-gcard" style="--gx:12%;--gy:12%;--gt:15s"><span class="lnd-gc-sym">EURUSD</span><span class="lnd-gc-side is-long">LONG</span><span class="lnd-gc-meta">1.0830 &middot; sl 20p</span></div>
-            <div class="lnd-gcard" style="--gx:46%;--gy:6%;--gt:19s"><span class="lnd-gc-sym">USDJPY</span><span class="lnd-gc-side is-short">SHORT</span><span class="lnd-gc-meta">sl 155.40 &middot; 24 pips</span></div>
-            <div class="lnd-gcard" style="--gx:80%;--gy:20%;--gt:13s"><span class="lnd-gc-sym">XAUUSD</span><span class="lnd-gc-side is-long">LONG</span><span class="lnd-gc-meta">4,190 &middot; sl 8.0 pips</span></div>
-            <div class="lnd-gcard" style="--gx:26%;--gy:58%;--gt:17s"><span class="lnd-gc-sym">GBPUSD</span><span class="lnd-gc-side is-short">SHORT</span><span class="lnd-gc-meta">sl 15p &middot; 0.10 lots</span></div>
-            <div class="lnd-gcard" style="--gx:64%;--gy:76%;--gt:21s"><span class="lnd-gc-sym">US500</span><span class="lnd-gc-side is-long">LONG</span><span class="lnd-gc-meta">sl 22 pts</span></div>
-          </div>
 
           <svg class="lnd-terrain" viewBox="0 0 1600 400" preserveAspectRatio="none" focusable="false">
             <defs>
@@ -155,43 +146,35 @@
             </g>
           </svg>
 
-          <div class="lnd-ghost-field lnd-ghost-near">
-            <div class="lnd-gcard" style="--gx:56%;--gy:30%;--gt:30s">
-              <span class="lnd-gc-sym">XAUUSD</span><span class="lnd-gc-side is-short">SHORT</span><span class="lnd-gc-meta">4234 &middot; sl 4,244 &middot; 10.0 pips</span><span class="lnd-gc-rr">2.0R</span><span class="lnd-gc-mood">patient</span>
-            </div>
-            <div class="lnd-gcard" style="--gx:70%;--gy:64%;--gt:38s">
-              <span class="lnd-gc-sym">EURUSD</span><span class="lnd-gc-side is-long">LONG</span><span class="lnd-gc-meta">1.0830 &middot; sl 20p &middot; 0.02 lots</span><span class="lnd-gc-rr">1.5R</span><span class="lnd-gc-mood">calm</span>
-            </div>
-            <div class="lnd-gcard" style="--gx:34%;--gy:82%;--gt:26s">
-              <span class="lnd-gc-sym">GBPUSD</span><span class="lnd-gc-side is-short">SHORT</span><span class="lnd-gc-meta">sl 15p &middot; 1.8R</span><span class="lnd-gc-mood">hesitant</span>
-            </div>
-          </div>
-
           <span class="lnd-hero-scrim"></span>
-          <span class="lnd-hero-grain"></span>
         </div>
+
         <section class="lnd-hero-copy">
-          <!-- Counted from the rows actually on the tape below — never a
+          <!-- Counted from the rows actually on the tape beside it — never a
                hard-coded platform statistic. app.js hides it at zero. -->
           <p class="lnd-hero-badge" id="lndTapeCount" hidden>
             <span class="live-pulse-dot" aria-hidden="true"></span>
             <span id="lndTapeCountText"></span>
           </p>
           <!-- Each line is a block so the reveal can stagger them; reduced
-               motion lands all three instantly via the global kill block. -->
+               motion lands all three instantly via the global kill block.
+               "Eleven" is not a slogan: the instrument beside it renders
+               exactly eleven things the journal wrote, so the claim is
+               countable on sight. -->
           <h1 class="lnd-hero-title">
-            <span class="lnd-title-line" style="--line-i: 0">Every trade</span>
-            <span class="lnd-title-line" style="--line-i: 1">you'd rather</span>
-            <span class="lnd-title-line lnd-hero-title-accent" style="--line-i: 2">not remember.</span>
+            <span class="lnd-title-line" style="--line-i: 0">You type one line.</span>
+            <span class="lnd-title-line" style="--line-i: 1">The journal writes</span>
+            <span class="lnd-title-line lnd-hero-title-accent" style="--line-i: 2">the other eleven.</span>
           </h1>
           <p class="lnd-hero-lede">
-            Log the position in eight seconds. Say what you were thinking when it closed. The journal does
-            the arithmetic and tells you which of your setups actually pays, and which one only feels like
-            it does.
+            Say the trade the way you would say it out loud. It works out the pips, the R:R, the money
+            at risk and the share of the account, watches the price, closes the position itself at your
+            stop or target &mdash; then opens the note while it still stings.
           </p>
           <!-- The email is handed straight to the auth panel's identifier field
                (it accepts a username or an email), so this is one real step of
-               sign-up, not a decorative capture box. -->
+               sign-up, not a decorative capture box. PRESERVED VERBATIM:
+               app.js binds #heroEmailForm and reads #heroEmail. -->
           <form class="lnd-hero-form" id="heroEmailForm" novalidate>
             <label class="visually-hidden" for="heroEmail">Email address</label>
             <input
@@ -212,27 +195,9 @@
               Or look around a sample journal first
             </button>
           </p>
-        </section>
-
-        <div class="lnd-hero-side">
-          <!-- The live tape is the proof: real rows from the public feed. -->
-          <section class="lnd-tape" aria-label="Recent closed trades">
-            <div class="lnd-tape-head">
-              <span class="live-pulse-dot" aria-hidden="true"></span>
-              <span class="lnd-tape-title">Leon trades &middot; live tape</span>
-              <span class="lnd-tape-delay">live &middot; 5s</span>
-            </div>
-            <div class="lnd-tape-list" id="recentTradesList"></div>
-            <!-- Copy is re-stamped by renderHeroRecentTrades: it must never
-                 call a demo/preview journal "the public feed". -->
-            <p class="lnd-tape-note" id="lndTapeNote">
-              Raised rows made money. Sunk rows lost it. Nothing here is a mock-up. It is Leon&rsquo;s
-              public feed, one row per closed trade from his real journal.
-            </p>
-          </section>
 
           <!-- Every figure here is checkable inside the product: 12 =
-               METRIC_DELTA_SPECS keys, $0 = the whole price list. -->
+               METRIC_DELTA_SPECS keys (app.js:855), $0 = the whole price list. -->
           <dl class="lnd-stats">
             <!-- dt before dd (the <dl> grouping requires it); .lnd-stat is
                  column-reverse so the numeral still reads first on screen. -->
@@ -249,6 +214,99 @@
               <dd class="lnd-stat-value">$0</dd>
             </div>
           </dl>
+        </section>
+
+        <div class="lnd-hero-side">
+          <!-- THE OTHER ELEVEN — the signature. The sentence is not shown and
+               then replaced: it arrives ALREADY ANNOTATED, every word carrying
+               underneath it the field it became, so the parse is the typography
+               rather than an effect laid over it. Then ten numbers nobody
+               typed. Then the eleventh, which is not a number at all: the line
+               the journal writes by itself when the stop trades through
+               (app.js:11613 — "Closing IS the trigger: the journalling sheet
+               opens for the first fill").
+
+               Sample figures are the app's own demo trade (app.js:941) settled
+               with the app's own arithmetic (app.js:11970-11977; gold 0.01 lot
+               = $1/pip per tests/pips.check.mjs, so 0.02 lots = 2oz = $2.00/pip
+               and 2 x 4234 = $8,468 notional). The screen is aria-hidden and
+               the figcaption says out loud that it is a sample, so it can never
+               pose as a live account. -->
+          <figure class="lnd-tp-frame lnd-lens">
+            <!-- The chrome bar and the whole gunmetal scale are the Terminal
+                 Pro instrument's, reused verbatim: .lnd-tp-frame is the one
+                 scope allowed to hard-reference dark surfaces, so wearing it
+                 is what keeps this a dark screen on the concrete theme without
+                 a second palette to maintain. A <figure> may carry only one
+                 <figcaption>, and it is the honesty line at the foot. -->
+            <div class="lnd-tp-chrome" aria-hidden="true">
+              <span class="lnd-tp-dot"></span>
+              <span class="lnd-tp-title">Capture</span>
+              <span class="lnd-tp-tag">sample</span>
+            </div>
+
+            <div class="lnd-lens-screen" aria-hidden="true">
+              <p class="lnd-lens-step"><b>1</b> the six things you type</p>
+
+              <div class="lnd-lens-strip">
+                <span class="lnd-lens-tok" style="--tok-i:0"><b>xauusd</b><i>symbol</i></span>
+                <span class="lnd-lens-tok" style="--tok-i:1"><b>short</b><i>side</i></span>
+                <span class="lnd-lens-tok" style="--tok-i:2"><b>4234</b><i>entry</i></span>
+                <span class="lnd-lens-tok" style="--tok-i:3"><b>sl 4244</b><i>stop</i></span>
+                <span class="lnd-lens-tok" style="--tok-i:4"><b>tp 4214</b><i>target</i></span>
+                <span class="lnd-lens-tok" style="--tok-i:5"><b>0.02 lots<span class="lnd-lens-caret"></span></b><i>size</i></span>
+              </div>
+
+              <p class="lnd-lens-step"><b>2</b> ten numbers <em>&mdash; you typed none of them</em></p>
+
+              <dl class="lnd-lens-out">
+                <div class="lnd-lens-f" style="--f-i:0"><dt>stop distance</dt><dd>10.0 pips</dd></div>
+                <div class="lnd-lens-f" style="--f-i:1"><dt>target distance</dt><dd>20.0 pips</dd></div>
+                <div class="lnd-lens-f" style="--f-i:2"><dt>risk : reward</dt><dd>1 : 2.00</dd></div>
+                <div class="lnd-lens-f" style="--f-i:3"><dt>pip value</dt><dd>$2.00</dd></div>
+                <div class="lnd-lens-f" style="--f-i:4"><dt>money at risk</dt><dd>$20.00</dd></div>
+                <div class="lnd-lens-f" style="--f-i:5"><dt>at target</dt><dd class="is-pos">+$40.00</dd></div>
+                <div class="lnd-lens-f" style="--f-i:6"><dt>notional</dt><dd>$8,468</dd></div>
+                <div class="lnd-lens-f" style="--f-i:7"><dt>of the account</dt><dd>0.20%</dd></div>
+                <div class="lnd-lens-f" style="--f-i:8"><dt>daily loss left</dt><dd>$480 of $500</dd></div>
+                <div class="lnd-lens-f lnd-lens-f-wide" style="--f-i:9"><dt>auto-close armed</dt><dd><span class="lnd-lens-armed"></span>4,244.0 &middot; 4,214.0</dd></div>
+              </dl>
+
+              <p class="lnd-lens-step lnd-lens-step-3"><b>3</b> and the eleventh, <em>which it wrote by itself</em></p>
+
+              <p class="lnd-lens-wrote">
+                <span class="lnd-lens-stamp">journal</span>
+                <time>14:02:31</time>
+                <span class="lnd-lens-typed">4,244.0 traded through your stop &mdash; position closed, and the note opened while it still stung. You were not at the screen.</span>
+              </p>
+            </div>
+
+            <figcaption class="lnd-lens-cap">
+              A sample capture on the $10,000 demo account this product ships with, not a live account.
+              Six things typed. Eleven written back &mdash; and the last one was written while nobody
+              was watching.
+            </figcaption>
+          </figure>
+
+          <!-- The tape is the proof under the demo: real rows from the public
+               feed, in view from the first frame. It spools inside its own
+               pressed well now — four rows visible, the rest by native scroll,
+               no toggle and no new JS. #recentTradesList and #lndTapeNote keep
+               their ids and their place for renderHeroRecentTrades. -->
+          <section class="lnd-tape lnd-hero-tape" aria-label="Recent closed trades">
+            <div class="lnd-tape-head">
+              <span class="live-pulse-dot" aria-hidden="true"></span>
+              <span class="lnd-tape-title">Leon trades &middot; live tape</span>
+              <span class="lnd-tape-delay">live &middot; 5s</span>
+            </div>
+            <div class="lnd-tape-list" id="recentTradesList"></div>
+            <!-- Copy is re-stamped by renderHeroRecentTrades: it must never
+                 call a demo/preview journal "the public feed". -->
+            <p class="lnd-tape-note" id="lndTapeNote">
+              Raised rows made money. Sunk rows lost it. Nothing here is a mock-up. It is Leon&rsquo;s
+              public feed, one row per closed trade from his real journal.
+            </p>
+          </section>
         </div>
       </div>
 
@@ -575,7 +633,6 @@
         <div class="lnd-tp-air" aria-hidden="true">
           <span class="lnd-tp-floor"></span>
           <span class="lnd-tp-scan"></span>
-          <span class="lnd-hero-grain"></span>
         </div>
         <div class="lnd-tp-inner">
           <header class="lnd-tp-masthead">
@@ -3004,6 +3061,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260809-fusiondesk"></script>
+    <script type="module" src="app.js?v=20260810-eleven"></script>
   </body>
 </html>
