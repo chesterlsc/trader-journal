@@ -4,5 +4,8 @@
   "rewrites": [
     { "source": "/trade_handler.php", "destination": "/api/handler" },
     { "source": "/:path(.*\\.php)", "destination": "/api/handler" }
+  ],
+  "crons": [
+    { "path": "/api/handler?action=cron_ingest", "schedule": "0 6 * * *" }
   ]
 }

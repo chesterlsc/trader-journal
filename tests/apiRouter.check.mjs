@@ -96,8 +96,64 @@ assert.deepStrictEqual(new Set(ACTION_NAMES), new Set([
   // Terminal Pro: the public economic calendar. requireAuth, GET, no tier gate
   // (nothing premium sits behind it — see the action's own comment).
   'market_calendar',
+  // Phase 2 archive integrity. NOT session-gated: it is called by Vercel Cron
+  // with a bearer secret, so its whole security model is requireCronAuth.
+  'cron_ingest',
 ]));
-assert.strictEqual(ACTION_NAMES.length, 16, 'the 15 PHP actions + market_calendar');
+assert.strictEqual(ACTION_NAMES.length, 17, 'the 15 PHP actions + market_calendar + cron_ingest');
+
+// --- cron_ingest is gated by a bearer secret, and fails CLOSED ------------
+// It is a GET on a public path with no session and no CSRF, so this gate is
+// the only thing in front of it. Every refusal must be byte-identical to the
+// unknown-action 400, or the endpoint confirms it exists to anyone probing.
+{
+  const unknown = await call(makeCtx({ action: 'not_a_real_action' }));
+  const shape = JSON.stringify(unknown.payload);
+
+  // No CRON_SECRET set at all: the action must not exist. A forgotten env var
+  // cannot be allowed to leave an open ingest trigger on the internet.
+  const noSecret = await call(makeCtx({ action: 'cron_ingest', env: {} }));
+  assert.strictEqual(noSecret.status, 400, 'cron_ingest must fail closed with no secret configured');
+  assert.strictEqual(JSON.stringify(noSecret.payload), shape, 'refusal must be indistinguishable from an unknown action');
+
+  // Set but too short to be a real secret: still closed.
+  const weak = await call(makeCtx({
+    action: 'cron_ingest', env: { CRON_SECRET: 'short' },
+    headers: { authorization: 'Bearer short' },
+  }));
+  assert.strictEqual(weak.status, 400, 'a sub-16-char secret must not open the gate');
+
+  const GOOD = 'a-sufficiently-long-cron-secret';
+  // Right length, wrong value.
+  const wrong = await call(makeCtx({
+    action: 'cron_ingest', env: { CRON_SECRET: GOOD },
+    headers: { authorization: 'Bearer not-the-right-secret-at-all' },
+  }));
+  assert.strictEqual(wrong.status, 400, 'a wrong bearer must be refused');
+
+  // Missing header entirely.
+  const bare = await call(makeCtx({ action: 'cron_ingest', env: { CRON_SECRET: GOOD } }));
+  assert.strictEqual(bare.status, 400, 'a missing Authorization header must be refused');
+
+  // The correct secret gets through, with NO session anywhere in the context.
+  // The upstream fetch fails on purpose: fetchCalendarEvents soft-fails to
+  // whatever the archive holds, so an unreachable feed must not throw.
+  const ok = await call(makeCtx({
+    action: 'cron_ingest',
+    env: { CRON_SECRET: GOOD },
+    headers: { authorization: `Bearer ${GOOD}` },
+    db: makeDb({
+      claimFeedFetch: async () => false,
+      loadMarketEvents: async () => [],
+      getFeedSuccessAt: async () => null,
+    }),
+  }));
+  // 503, not 500: the archive genuinely has not advanced, and that is exactly
+  // the state the Cron Jobs panel should colour red.
+  assert.strictEqual(ok.status, 503, 'an unadvanced archive reports unhealthy, it does not crash');
+  assert.strictEqual(ok.payload.source, 'ff_calendar');
+  assert.strictEqual(ok.payload.asOf, null);
+}
 
 {
   const response = await call(makeCtx({ action: 'not_a_real_action' }));

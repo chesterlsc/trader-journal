@@ -56,6 +56,13 @@ const RATE_LIMIT_MAX_FAILURES = 6;
 
 const PUBLIC_TRADES_LIMIT = 20;
 
+// How stale the archive may get before a cron run reports itself unhealthy.
+// 26 hours, not 24: a daily Hobby cron drifts up to 59 minutes either way, so
+// two consecutive GOOD runs can legitimately sit 24h59m apart. Past 26h means
+// two runs in a row failed to advance the archive, which is the shape of a
+// dead feed and the only thing worth colouring a run red.
+const ARCHIVE_ALARM_MS = 26 * 60 * 60 * 1000;
+
 // Deciding "did the user type an email or a username" and validating the
 // forgot-password field. Usernames are [a-z0-9._-] and cannot contain "@",
 // so the two never overlap.
@@ -247,6 +254,29 @@ async function isAdminUsername(ctx, username) {
 async function requireAdmin(ctx, auth) {
   if (!(await isAdminUsername(ctx, auth.username))) {
     respond(403, { ok: false, error: 'Admin access required.' });
+  }
+}
+
+// Vercel sends `Authorization: Bearer $CRON_SECRET` on every cron invocation
+// once CRON_SECRET is set on the project. That header is the ENTIRE gate on
+// cron_ingest, which is a GET on a public path with no session and no CSRF in
+// front of it.
+//
+// Fails closed on purpose: with CRON_SECRET unset, or shorter than the 16
+// characters Vercel itself recommends, the action does not exist. A forgotten
+// env var must never leave an open ingest trigger on the internet. The refusal
+// is the byte-identical 400 a misspelled action gets, so the endpoint never
+// confirms it is there. safeEqual sha256s both sides before timingSafeEqual,
+// so neither the secret nor its length leaks through the comparison.
+//
+// Deliberately NOT checked: the `x-vercel-cron-schedule` header and the
+// vercel-cron/1.0 user agent. Both are trivially forged from outside and would
+// read as security while providing none.
+function requireCronAuth(ctx) {
+  const secret = str(ctx.env.CRON_SECRET ?? '').trim();
+  const offered = str(ctx.headers.authorization ?? '').trim();
+  if (secret.length < 16 || !safeEqual(offered, `Bearer ${secret}`)) {
+    respond(400, { ok: false, error: 'Unknown action.' });
   }
 }
 
@@ -653,6 +683,51 @@ const actions = {
       // The client draws every countdown against this, not against its own
       // clock: a browser minutes fast would arm the desk early, on real money.
       serverNow: new Date().toISOString(),
+    });
+  },
+
+  // ARCHIVE INTEGRITY, not cache warming. ForexFactory publishes only the
+  // current week and nextweek.xml is a 404, so a week in which nobody opens
+  // the terminal is gone at any price. This is the floor under that: Vercel
+  // calls it once a day, and every logged-in user is a bonus on top.
+  //
+  // The feed carries the whole Sunday-to-Saturday week at every point during
+  // that week, so ONE successful run per week is enough to archive it. A daily
+  // cron gives seven chances, which is why the Hobby plan's daily-only limit
+  // costs this design nothing and why a single missed run is not an incident.
+  //
+  // It is deliberately the SAME call a browser makes. No force flag and no
+  // second code path: claimFeedFetch decides whether this run owns the upstream
+  // request exactly as it does for a user. A denied claim means the archive was
+  // written in the last 15 minutes, which is the outcome we wanted anyway, and
+  // forcing past it would defeat the single-flight that keeps our shared Vercel
+  // egress IP off the upstream's blocklist.
+  async cron_ingest(ctx) {
+    requireCronAuth(ctx);
+
+    const calendar = await fetchCalendarEvents(ctx.db, ctx.fetch);
+    const asOf = calendar.asOf === null ? null : new Date(calendar.asOf).toISOString();
+    const ageMs = asOf === null ? Infinity : Date.now() - new Date(asOf).getTime();
+    const healthy = ageMs < ARCHIVE_ALARM_MS;
+
+    // Hobby keeps runtime logs briefly, so this line is a convenience. The
+    // durable record is feed_state.last_success_at and market_events
+    // .first_seen_at, which is what the honest "as of" already reads: there is
+    // no cron_runs table storing a fact three columns already hold.
+    console.log(
+      `cron_ingest ff_calendar: events=${calendar.events.length} asOf=${asOf ?? 'never'} ` +
+        `age=${asOf === null ? 'n/a' : (ageMs / 3600000).toFixed(1) + 'h'} healthy=${healthy}`
+    );
+
+    // 503 rather than 200 when the archive did not advance. Vercel never
+    // retries a cron, but it does colour a failed invocation in the Cron Jobs
+    // panel, and on this plan that is the only free alarm there is.
+    respond(healthy ? 200 : 503, {
+      ok: healthy,
+      source: 'ff_calendar',
+      events: calendar.events.length,
+      asOf,
+      stale: calendar.stale,
     });
   },
 
