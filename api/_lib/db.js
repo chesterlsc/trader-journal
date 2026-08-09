@@ -322,6 +322,91 @@ export function createDb(pgPool) {
       };
     },
 
+    // ---- Terminal Pro calendar -------------------------------------------
+    // market_events is BOTH the cache AND a permanent archive, deliberately:
+    // ForexFactory publishes only the current week (nextweek 404s), so a week
+    // never fetched is gone forever at any price. Upsert only, never delete.
+
+    // The single-flight claim. rowCount 1 => this invocation owns the upstream
+    // fetch; 0 => another warm instance has it, serve the archive. Atomic under
+    // row locking, so no advisory lock and no cron. This matters more than
+    // usual: Vercel egress IPs are shared, so an unclaimed retry storm can keep
+    // us rate-limited on traffic that was never ours.
+    async claimFeedFetch(source, ttlSeconds) {
+      const { rowCount } = await query(
+        `UPDATE feed_state SET last_attempt_at = NOW(), updated_at = NOW()
+          WHERE source = $1 AND last_attempt_at < NOW() - make_interval(secs => $2)
+         RETURNING source`,
+        [source, ttlSeconds]
+      );
+      return rowCount === 1;
+    },
+
+    async markFeedSuccess(source, status) {
+      await query(
+        `UPDATE feed_state
+            SET last_success_at = NOW(), last_status = $2, updated_at = NOW()
+          WHERE source = $1`,
+        [source, String(status ?? 'ok').slice(0, 200)]
+      );
+    },
+
+    // Back off harder than the success TTL, and leave last_success_at alone so
+    // the "as of" the user sees stays truthful about the last GOOD fetch.
+    async markFeedFailure(source, status, backoffSeconds) {
+      await query(
+        `UPDATE feed_state
+            SET last_attempt_at = NOW() - make_interval(secs => $3),
+                last_status = $2, updated_at = NOW()
+          WHERE source = $1`,
+        [source, String(status ?? 'error').slice(0, 200), Math.max(0, 900 - Number(backoffSeconds || 0))]
+      );
+    },
+
+    async getFeedSuccessAt(source) {
+      const { rows } = await query('SELECT last_success_at FROM feed_state WHERE source = $1', [source]);
+      return rows[0]?.last_success_at ?? null;
+    },
+
+    async upsertMarketEvents(events) {
+      for (const event of events) {
+        await query(
+          `INSERT INTO market_events
+               (event_key, starts_at, currency, title, impact, forecast, previous, url, all_day)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+           ON CONFLICT (event_key, starts_at) DO UPDATE SET
+               currency = EXCLUDED.currency, title = EXCLUDED.title,
+               impact = EXCLUDED.impact, forecast = EXCLUDED.forecast,
+               previous = EXCLUDED.previous, url = EXCLUDED.url,
+               all_day = EXCLUDED.all_day, updated_at = NOW()`,
+          [event.key, event.startsAt, event.currency, event.title, event.impact,
+           event.forecast, event.previous, event.url, event.allDay]
+        );
+      }
+    },
+
+    // The -24h half is what lets "you opened this 8 minutes after CPI" resolve
+    // for trades taken today.
+    async loadMarketEvents() {
+      const { rows } = await query(
+        `SELECT event_key, starts_at, currency, title, impact, forecast, previous, url, all_day
+           FROM market_events
+          WHERE starts_at BETWEEN NOW() - INTERVAL '24 hours' AND NOW() + INTERVAL '8 days'
+          ORDER BY starts_at ASC`
+      );
+      return rows.map((row) => ({
+        key: row.event_key,
+        startsAt: new Date(row.starts_at).toISOString(),
+        currency: row.currency,
+        title: row.title,
+        impact: row.impact,
+        forecast: row.forecast,
+        previous: row.previous,
+        url: row.url,
+        allDay: row.all_day,
+      }));
+    },
+
     async listRecentTrades(userId) {
       const payload = await readTradesPayload(userId);
       if (payload === null) return [];

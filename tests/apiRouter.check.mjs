@@ -87,13 +87,17 @@ const loggedInSession = (csrf, extra = {}) => ({
 // 1. Router dispatch
 // ===========================================================================
 
-// All fifteen actions the PHP served, and nothing else.
+// The fifteen actions the PHP served, plus everything added since — listed
+// explicitly so a new action is a deliberate edit here, never a silent one.
 assert.deepStrictEqual(new Set(ACTION_NAMES), new Set([
   'session', 'register', 'login', 'forgot_password', 'validate_reset_token',
   'reset_password', 'logout', 'save', 'load', 'recent_trades',
   'public_recent_trades', 'live_prices', 'update_prices', 'login_logs', 'users_admin',
+  // Terminal Pro: the public economic calendar. requireAuth, GET, no tier gate
+  // (nothing premium sits behind it — see the action's own comment).
+  'market_calendar',
 ]));
-assert.strictEqual(ACTION_NAMES.length, 15, 'exactly the 15 actions trade_handler.php had');
+assert.strictEqual(ACTION_NAMES.length, 16, 'the 15 PHP actions + market_calendar');
 
 {
   const response = await call(makeCtx({ action: 'not_a_real_action' }));

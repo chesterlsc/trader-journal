@@ -27,6 +27,15 @@ import {
 } from "./src/modules/livePrices.js";
 import { createTradeDisplayHelpers, liveCellAttrs } from "./src/modules/tradeDisplay.js";
 import { createRecentTradesView } from "./src/modules/recentTradesView.js";
+import { rankEvents, countdown, tradedCurrencies, IMPACT_RANK } from "./src/lib/eventClock.js";
+import {
+  stampFromEvents,
+  buildBaseline,
+  eventFile,
+  windowBuckets,
+  releaseClockEdge,
+  tiltByEventType
+} from "./src/lib/eventEdge.js";
 import { createChartsModule, traceSmoothPath } from "./src/modules/charts.js";
 import { parseQuickTrade, resolveSymbol, inferMarket } from "./src/lib/tradeParse.js";
 import {
@@ -257,6 +266,19 @@ const ui = {
   lndTapeCount: document.getElementById("lndTapeCount"),
   lndTapeCountText: document.getElementById("lndTapeCountText"),
   lndTapeNote: document.getElementById("lndTapeNote"),
+  tpEvents: document.getElementById("tpEvents"),
+  tpEventsEmpty: document.getElementById("tpEventsEmpty"),
+  tpEdge: document.getElementById("tpEdge"),
+  tpEdgeScope: document.getElementById("tpEdgeScope"),
+  tpNextScope: document.getElementById("tpNextScope"),
+  tpClockRows: document.getElementById("tpClockRows"),
+  tpTilt: document.getElementById("tpTilt"),
+  tpTiltScope: document.getElementById("tpTiltScope"),
+  tpFeedState: document.getElementById("tpFeedState"),
+  tpFeedText: document.getElementById("tpFeedText"),
+  tpClock: document.getElementById("tpClock"),
+  tpFootLinked: document.getElementById("tpFootLinked"),
+  tpFootStamped: document.getElementById("tpFootStamped"),
   dashLeonTape: document.getElementById("dashLeonTape"),
   dashLeonTapeList: document.getElementById("dashLeonTapeList"),
   heroEmailForm: document.getElementById("heroEmailForm"),
@@ -923,6 +945,11 @@ const PROP_VISIBILITY_NOTE =
 // Marquee set: every symbol here has a LIVE keyless source (Binance spot,
 // gold-api, Binance EURUSDT proxy for EURUSD). The dashboard pair/dock render
 // only the first two; renderTickerPair patches whatever nodes exist.
+// Terminal Pro state. Declared ABOVE init() like every other module binding —
+// anything below that call is in the temporal dead zone during the first
+// render (tests/bootOrder.check.mjs enforces this; it has bitten four times).
+const terminal = { events: [], asOf: null, stale: true, skewMs: 0, selectedKey: "", timerId: 0, requested: false };
+
 const TICKER_SYMBOLS = ["BTCUSDT", "XAUUSD", "ETHUSDT", "SOLUSDT", "XAGUSD", "EURUSD"];
 const TICKER_CACHE_KEY = "axiom_journal_ticker_v1";
 // Last price actually rendered per symbol — the strip's delta is "vs the
@@ -1010,6 +1037,7 @@ function init() {
   setupLandingTicker();
   setupStickyDashTicker();
   setupShowcaseChooser();
+  setupTerminal();
   setupLandingDemo();
   startLivePriceLoop();
   // Hash router: restore the deep-linked view for preview sessions; the
@@ -2408,11 +2436,14 @@ async function checkAuthSession() {
       state.auth.isAuthenticated = true;
       state.auth.username = String(body.username || "");
       state.auth.isAdmin = Boolean(body.isAdmin);
+      state.auth.terminalPro = Boolean(body.terminalPro);
     } else {
       state.auth.checked = true;
       state.auth.isAuthenticated = false;
       state.auth.username = "";
       state.auth.isAdmin = false;
+  state.auth.terminalPro = false;
+      state.auth.terminalPro = false;
       state.auth.mobileAuthVisible = Boolean(state.auth.resetToken);
     }
   } catch (error) {
@@ -2423,6 +2454,7 @@ async function checkAuthSession() {
     state.auth.isAuthenticated = false;
     state.auth.username = "";
     state.auth.isAdmin = false;
+  state.auth.terminalPro = false;
     state.auth.mobileAuthVisible = true;
     setMessage(ui.authMessage, "Auth service unavailable. Ensure PHP server and PostgreSQL are running.", "error");
   }
@@ -2538,6 +2570,7 @@ async function handleLogout() {
   state.auth.isAuthenticated = false;
   state.auth.username = "";
   state.auth.isAdmin = false;
+  state.auth.terminalPro = false;
   state.auth.intent = "register";
   state.auth.mobileAuthVisible = false;
   state.recentTrades = [];
@@ -2822,6 +2855,7 @@ function updateAuthUi() {
       ui.authStatus.classList.add(isResetMode ? "is-on" : "is-off");
     }
     state.auth.isAdmin = false;
+  state.auth.terminalPro = false;
     ui.loginBtn.hidden = isResetMode || isResetPending;
     ui.registerBtn.hidden = isResetMode || isResetPending;
     ui.desktopLogoutBtn.hidden = true;
@@ -3277,6 +3311,21 @@ function buildTradeRecord(tradeInput, options = {}) {
     // filed under; a new row lands in whichever account is on screen. Placed
     // after the spread so a caller cannot half-set it.
     accountId: String(existingTrade?.accountId || tradeInput.accountId || state.settings.activeAccountId || ""),
+    // THE CONTEXT AUTO-STAMP. What was on the calendar when this position was
+    // opened, so review week reads "CPI miss, 8 min prior" instead of a guess.
+    // Guarded three ways, and the guard is the whole correctness story:
+    //   - an EDIT carries what it had (never re-stamps against today's tape);
+    //   - only a NEW row stamps;
+    //   - only a row dated TODAY. handleBulkImport routes through this same
+    //     function, and an imported row's createdAt is the paste time — without
+    //     the date check every historical import would be stamped with whatever
+    //     printed the afternoon you pasted it, fabricating correlations that
+    //     look real. That is the worst failure this feature could have.
+    eventContext: Array.isArray(existingTrade?.eventContext)
+      ? existingTrade.eventContext
+      : !existingId && tradeInput.date === toDateInputValue(new Date())
+        ? stampFromEvents(terminal.events, new Date(), 120)
+        : [],
     // 1b: the pre-trade rules the trader ticked in the sheet. The full form
     // does not ask for them, so an edit through it must CARRY them, not wipe
     // them — an empty array from readTradeForm is absence, not a de-tick.
@@ -6800,6 +6849,8 @@ function renderAll() {
   renderAccountsPanel();
   renderHeroRecentTrades();
   renderDashLeonTape();
+  syncTerminalAccess();
+  renderTerminal();
   renderProgressTradeSummary();
   renderDashboardMetrics(state.analytics);
   renderRiskStrip(state.analytics);
@@ -11341,6 +11392,20 @@ function normalizeTrades(input) {
         // isTradeJournalled().
         mistakeTags: Array.isArray(item.mistakeTags) ? item.mistakeTags.map(String) : [],
         journalledAt: String(item.journalledAt || ""),
+        // Terminal Pro's context auto-stamp. normalizeTrades rebuilds every
+        // trade from an explicit field list, so anything not named here is
+        // DROPPED on load — without this line the stamp would be written by
+        // buildTradeRecord and silently wiped by the next page load, and the
+        // edge file would stay empty forever while looking like it was working.
+        eventContext: Array.isArray(item.eventContext)
+          ? item.eventContext.slice(0, 3).map((stamp) => ({
+              k: String(stamp?.k || ""),
+              t: String(stamp?.t || ""),
+              c: String(stamp?.c || ""),
+              i: String(stamp?.i || ""),
+              m: ensureNumber(stamp?.m, 0)
+            }))
+          : [],
         notes: String(item.notes || "")
       };
 
@@ -12110,3 +12175,294 @@ function lndDemoStop() {
   lndDemoPlayer.playing = false;
 }
 
+
+/* ── Terminal Pro ──────────────────────────────────────────────────────────
+   The journal-fused desk. Two sources, both real:
+     - the calendar, from the public feed via action=market_calendar;
+     - every statistic, computed HERE from the trader's own closed trades by
+       src/lib/eventEdge.js.
+   The library refuses to emit a win rate under 5 samples or a verdict under
+   10, so this renderer cannot print a number the maths did not earn — the
+   honesty is enforced upstream of the markup, not by remembering to check. */
+function setupTerminal() {
+  if (!document.getElementById("terminal")) {
+    return;
+  }
+  document.getElementById("tpEvents")?.addEventListener("click", (event) => {
+    const row = event.target.closest("[data-event-key]");
+    if (row) {
+      terminal.selectedKey = row.dataset.eventKey;
+      renderTerminal();
+    }
+  });
+  // One 1s tick drives every countdown. Cheap: it patches text, never markup.
+  if (!terminal.timerId) {
+    terminal.timerId = window.setInterval(() => {
+      if (isViewActive("terminal") && document.visibilityState === "visible") {
+        renderTerminalClock();
+      }
+    }, 1000);
+  }
+}
+
+async function loadTerminalCalendar() {
+  if (!canAccessApp() || state.auth.guestMode || state.auth.previewMode) {
+    return;
+  }
+  try {
+    const response = await fetch("trade_handler.php?action=market_calendar", {
+      method: "GET",
+      credentials: "same-origin"
+    });
+    const body = await response.json();
+    if (!response.ok || !body.ok || !Array.isArray(body.events)) {
+      throw new Error(body.error || "calendar load failed");
+    }
+    terminal.events = body.events;
+    terminal.asOf = body.asOf || null;
+    terminal.stale = Boolean(body.stale);
+    // A browser clock minutes fast would fire the arming prompt early, on real
+    // money. Every countdown is drawn against the server's clock instead.
+    terminal.skewMs = body.serverNow ? Date.parse(body.serverNow) - Date.now() : 0;
+  } catch (error) {
+    terminal.stale = true;
+  }
+  renderTerminal();
+}
+
+// The event family the trader has the most closed trades against.
+function mostStampedKey(closed) {
+  const counts = new Map();
+  closed.forEach((trade) => {
+    (Array.isArray(trade.eventContext) ? trade.eventContext : []).forEach((stamp) => {
+      if (stamp?.k) {
+        counts.set(stamp.k, (counts.get(stamp.k) || 0) + 1);
+      }
+    });
+  });
+  let best = "";
+  let most = 0;
+  counts.forEach((count, key) => {
+    if (count > most) {
+      most = count;
+      best = key;
+    }
+  });
+  return best;
+}
+
+function terminalNow() {
+  return new Date(Date.now() + terminal.skewMs);
+}
+
+function renderTerminal() {
+  if (!document.getElementById("terminal")) {
+    return;
+  }
+
+  const closed = getClosedTrades(state.trades);
+  const baseline = buildBaseline(closed);
+  const currencies = tradedCurrencies(state.trades);
+  const upcoming = rankEvents(terminal.events, {
+    now: terminalNow(),
+    currencies,
+    minImpact: "Medium"
+  }).slice(0, 8);
+
+  setText(ui.tpNextScope, currencies.length ? currencies.join(" · ") : "all pairs");
+  renderTerminalEvents(upcoming);
+
+  // Default the edge pane to the next release; if the calendar is empty or
+  // stale, fall back to the release the trader has the MOST history with. The
+  // edge file is about their own record, so it must stay readable even when
+  // the feed is down — otherwise a dead upstream hides data the user owns.
+  if (!terminal.selectedKey) {
+    terminal.selectedKey = upcoming[0]?.key || mostStampedKey(closed);
+  }
+  renderTerminalEdge(closed, baseline);
+  renderTerminalClockRows(closed);
+  renderTerminalTilt(closed, baseline);
+
+  const stampedCount = closed.filter(
+    (trade) => Array.isArray(trade.eventContext) && trade.eventContext.length > 0
+  ).length;
+  setText(ui.tpFootLinked, `journal: ${closed.length} trade${closed.length === 1 ? "" : "s"} linked`);
+  setText(ui.tpFootStamped, `${stampedCount} stamped with context`);
+
+  const feed = ui.tpFeedState;
+  if (feed) {
+    feed.classList.toggle("is-stale", terminal.stale || terminal.asOf === null);
+    const asOf = terminal.asOf ? new Date(terminal.asOf) : null;
+    setText(
+      ui.tpFeedText,
+      asOf === null
+        ? "calendar · unavailable"
+        : `calendar · as of ${asOf.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${terminal.stale ? " · stale" : ""}`
+    );
+  }
+  renderTerminalClock();
+}
+
+function renderTerminalEvents(events) {
+  const list = ui.tpEvents;
+  if (!list) {
+    return;
+  }
+  if (ui.tpEventsEmpty) {
+    ui.tpEventsEmpty.hidden = events.length > 0;
+  }
+  list.innerHTML = events
+    .map((event, index) => {
+      const when = new Date(event.startsAt);
+      // The absolute local time rides beside the countdown on purpose: if the
+      // feed ever re-zones, a trader spots "CPI at 04:30" instantly, where a
+      // bare countdown would be silently hours wrong forever.
+      const clock = when.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const active = event.key === terminal.selectedKey ? " is-active" : "";
+      return `
+        <li>
+          <button class="tp-event${active}" type="button" data-event-key="${escapeHtml(event.key)}"
+                  data-impact="${escapeHtml(event.impact)}" data-starts="${escapeHtml(event.startsAt)}"
+                  style="--i:${index}">
+            <span class="tp-event-time">${escapeHtml(clock)}</span>
+            <span class="tp-event-cur"><span class="tp-imp" aria-hidden="true"><i></i><i></i><i></i></span>${escapeHtml(event.currency)}</span>
+            <span class="tp-event-title">${escapeHtml(event.title)}</span>
+            <span class="tp-event-cd"></span>
+          </button>
+        </li>`;
+    })
+    .join("");
+  renderTerminalClock();
+}
+
+/* The only per-second work: patch the countdown text and the phase attribute.
+   No markup is rebuilt, so a row's entrance animation never restarts. */
+function renderTerminalClock() {
+  const now = terminalNow();
+  setText(ui.tpClock, now.toLocaleTimeString([], { hour12: false }));
+  document.querySelectorAll("#tpEvents .tp-event").forEach((row) => {
+    const state = countdown({ startsAt: row.dataset.starts }, now);
+    row.dataset.phase = state.phase;
+    const cell = row.querySelector(".tp-event-cd");
+    if (cell && cell.textContent !== state.text) {
+      cell.textContent = state.text;
+    }
+  });
+}
+
+function renderTerminalEdge(closed, baseline) {
+  const host = ui.tpEdge;
+  if (!host) {
+    return;
+  }
+  if (!terminal.selectedKey) {
+    host.innerHTML = '<p class="tp-empty">No release selected yet.</p>';
+    setText(ui.tpEdgeScope, "select a release");
+    return;
+  }
+
+  const file = eventFile(closed, terminal.selectedKey, baseline);
+  const event = terminal.events.find((item) => item.key === terminal.selectedKey);
+  const title = file.title || event?.title || terminal.selectedKey;
+  setText(ui.tpEdgeScope, `${file.samples} print${file.samples === 1 ? "" : "s"} on record`);
+
+  // winRate is null below 5 samples — print an em dash, never a fabricated 0%.
+  const rate = file.winRate === null ? "—" : `${Math.round(file.winRate * 100)}%`;
+  const stats = `
+    <div class="tp-edge-stats">
+      <div class="tp-stat"><b>${file.wins}W–${file.losses}L</b><span>record</span></div>
+      <div class="tp-stat"><b>${escapeHtml(rate)}</b><span>win rate</span></div>
+      <div class="tp-stat"><b class="${file.netPnl >= 0 ? "is-pos" : "is-neg"}">${escapeHtml(formatSignedCurrency(file.netPnl))}</b><span>net</span></div>
+    </div>`;
+
+  const verdict =
+    file.verdict === ""
+      ? ""
+      : `<p class="tp-verdict ${file.verdict === "worse" ? "is-worse" : file.verdict === "better" ? "is-better" : ""}">
+           verdict · ${escapeHtml(file.verdict.replace("-", " "))} than your own average
+         </p>`;
+
+  const buckets = windowBuckets(closed, terminal.selectedKey);
+  const peak = Math.max(1, ...buckets.map((bucket) => Math.abs(bucket.netPnl)));
+  const bucketRows = buckets
+    .map(
+      (bucket, index) => `
+      <div class="tp-bucket${bucket.n < 3 ? " is-thin" : ""}">
+        <span class="tp-bucket-k">${escapeHtml(bucket.label)}</span>
+        <span class="tp-bucket-track"><span class="tp-bucket-fill${bucket.netPnl < 0 ? " is-neg" : ""}"
+              style="--i:${index};width:${Math.round((Math.abs(bucket.netPnl) / peak) * 100)}%"></span></span>
+        <span class="tp-bucket-v">${bucket.n === 0 ? "—" : `${bucket.n} · ${formatSignedCurrency(bucket.netPnl)}`}</span>
+      </div>`
+    )
+    .join("");
+
+  host.innerHTML = `
+    <p class="tp-edge-head">${escapeHtml(title)}</p>
+    <p class="tp-edge-sentence">${escapeHtml(file.sentence)}</p>
+    ${stats}
+    ${verdict}
+    <div class="tp-buckets">${bucketRows}</div>`;
+}
+
+/* Day-one value: this pane needs no stamps and no archive at all, so a brand
+   new trader learns something true about themselves on the first visit. */
+function renderTerminalClockRows(closed) {
+  const host = ui.tpClockRows;
+  if (!host) {
+    return;
+  }
+  const slots = releaseClockEdge(closed);
+  host.innerHTML = slots
+    .map(
+      (slot) => `
+      <div class="tp-clockrow${slot.n < 3 ? " is-thin" : ""}">
+        <span class="tp-clockrow-k">${escapeHtml(slot.slot)}</span>
+        <span class="tp-clockrow-l">${escapeHtml(slot.label)}</span>
+        <span class="tp-clockrow-v ${slot.n === 0 ? "" : slot.netPnl >= 0 ? "is-pos" : "is-neg"}">${
+          slot.n === 0 ? "no trades" : `${slot.n} · ${formatSignedCurrency(slot.netPnl)}`
+        }</span>
+      </div>`
+    )
+    .join("");
+}
+
+function renderTerminalTilt(closed, baseline) {
+  const host = ui.tpTilt;
+  if (!host) {
+    return;
+  }
+  const tilt = tiltByEventType(closed, baseline);
+  setText(ui.tpTiltScope, `${tilt.onEventN} on-event · ${tilt.offEventN} off`);
+
+  // A ratio needs both sides over the threshold, or it is noise dressed as a
+  // multiple — the library returns null and the pane says so plainly.
+  if (tilt.ratio === null) {
+    host.innerHTML = `<p class="tp-empty">Not enough stamped trades yet to compare your tilt inside event windows against the rest of your journal. This fills in as you trade.</p>`;
+    return;
+  }
+  host.innerHTML = `
+    <p class="tp-tilt-big">${tilt.ratio.toFixed(1)}×</p>
+    <p class="tp-tilt-note">You log emotional, revenge or cooldown-override trades ${tilt.ratio.toFixed(1)}× more often inside event windows than outside them.</p>`;
+}
+
+/* The Terminal Pro rollout gate. A hidden nav button is not a security
+   boundary — anyone can flip a boolean in devtools — and that is acceptable
+   here ONLY because there is no premium data behind it: the calendar is
+   public, and every statistic is computed in this browser from trades the user
+   already owns. When billing lands, the server gates the data, not the button. */
+function syncTerminalAccess() {
+  // Local preview (plain-http localhost / file:, or an explicit ?preview=1)
+  // grants the terminal so the view can be developed without a session. The
+  // hostname check makes this unreachable in production — it is the same gate
+  // the dev "Back to app" chip already rides on.
+  const granted = Boolean(state.auth.terminalPro) || isLocalPreviewMode();
+  document.querySelectorAll("[data-terminal-nav]").forEach((button) => {
+    button.hidden = !granted;
+  });
+  // Fetch the calendar once per session, not once per render — renderAll runs
+  // on every state change.
+  if (granted && !terminal.requested) {
+    terminal.requested = true;
+    loadTerminalCalendar();
+  }
+}

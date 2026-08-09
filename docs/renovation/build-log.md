@@ -2678,3 +2678,36 @@ User-reported: the demo's Execution grades rendered as floating labels above emp
   (3479px tall, h-scroll). Fixed by anchoring the cut at the opening tag.
 - Busters -> ?v=20260810-eleven. All 27 tests pass; 1440 / light / 375
   verified, no h-scroll, form hit-tested clickable at every width.
+
+## 2026-08-10 — Terminal Pro Phase 1 BUILT (the desk is real)
+
+- Not a mock. Two sources, both real: the public economic calendar via
+  action=market_calendar, and every statistic computed in the browser from
+  the trader's own closed trades.
+- NEW: api/_lib/calendar.js (UTC-pinned parser + soft-fail single-flight
+  fetcher), src/lib/eventClock.js (ranking/countdown/arming), src/lib/
+  eventEdge.js (fusion statistics), db.js calendar methods, the
+  market_calendar action, the #terminal view, and the TERMINAL_PRO_USERNAMES
+  rollout gate mirroring ADMIN_USERNAMES.
+- THE STAMP SHIPPED (the plan's highest-leverage call — it generates data
+  that cannot be recovered later): buildTradeRecord stamps the active
+  calendar into every NEW trade dated today. Guarded so an edit never
+  re-stamps and handleBulkImport never poisons history with the paste-time
+  tape.
+- Design: CRT-grade dark desk that keeps its own light on BOTH themes
+  (verified rgb(15,18,22) on the concrete page), 1px-gap pane splitters,
+  F-key rail, impact ladders readable without hue, a scan sweep, rows that
+  land in sequence, and ONLY the imminent/live countdown breathing.
+- Bugs caught in verification, all mine:
+  * normalizeTrades rebuilds trades from an explicit field list, so it was
+    SILENTLY STRIPPING eventContext on every load — the stamp would have
+    been written and wiped forever while looking like it worked.
+  * parseCalendarTime turned "25:00pm" into 13:00 via an unguarded modulo.
+  * renderTerminal was only wired into init(), whose preview branch returns
+    early; moved to renderAll so it re-renders whenever trades change.
+  * The edge pane only selected from UPCOMING events, so a trader with
+    history and a dead feed saw nothing; it now falls back to the release
+    they have the most record against.
+- Honesty rails live in the library, not the markup: no win rate under 5
+  samples (renders "—"), no verdict under 10, and every comparison is against
+  the trader's OWN baseline rather than 50%. 29 tests pass.

@@ -61,21 +61,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260810-eleven" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260810-eleven" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260810-terminal2" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260810-terminal2" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260810-eleven" />
+    <link rel="stylesheet" href="styles.css?v=20260810-terminal2" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260810-eleven" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260810-terminal2" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260810-eleven" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260810-terminal2" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -921,6 +921,14 @@
                 </span>
                 Trade Entry
               </button>
+              <button class="nav-btn sheet-tile" type="button" data-target="terminal" data-terminal-nav hidden>
+                <span class="sheet-tile-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M4.75 5.75h14.5v12.5H4.75zM8 9.5l2.5 2.5L8 14.5M12.75 14.5h3.5" />
+                  </svg>
+                </span>
+                Terminal Pro
+              </button>
               <button class="nav-btn sheet-tile" type="button" data-target="monthly">
                 <span class="sheet-tile-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" focusable="false">
@@ -1101,6 +1109,7 @@
               <summary class="topnav-icon-btn" aria-label="More menu"><span aria-hidden="true">&#8943;</span></summary>
               <div class="topnav-menu">
                 <button class="topnav-menu-item nav-btn" type="button" data-target="trade-entry">Trade entry</button>
+                <button class="topnav-menu-item nav-btn" type="button" data-target="terminal" data-terminal-nav hidden>Terminal&nbsp;Pro</button>
                 <button class="topnav-menu-item nav-btn" type="button" data-target="monthly">Monthly review</button>
                 <button id="exportCsvBtn" class="topnav-menu-item" type="button">Export CSV</button>
                 <button id="previewLandingBtnDesktop" class="topnav-menu-item nav-preview-landing" type="button" data-preview-landing hidden>
@@ -2495,6 +2504,72 @@
             </article>
           </section>
         </section>
+
+        <!-- ══ TERMINAL PRO ═══════════════════════════════════════════════
+             The journal-fused desk. Everything on this screen is REAL: the
+             calendar comes from the public feed (action=market_calendar), and
+             every statistic is computed in this browser from the trader's own
+             closed trades by src/lib/eventEdge.js — which refuses to emit a
+             rate under 5 samples or a verdict under 10, so the markup below
+             physically cannot print a number the maths did not earn.
+             Gated by state.auth.terminalPro (a rollout flag, not a paywall —
+             there is no premium DATA here to protect). -->
+        <section class="view tp-desk" id="terminal" aria-labelledby="terminalHeading">
+          <div class="tp-grain" aria-hidden="true"></div>
+
+          <header class="tp-bar">
+            <span class="tp-bar-brand">
+              <span class="tp-bar-dot" aria-hidden="true"></span>
+              <span>TERMINAL&nbsp;PRO</span>
+            </span>
+            <h2 id="terminalHeading" class="visually-hidden">Terminal Pro</h2>
+            <nav class="tp-fkeys" aria-label="Terminal panes">
+              <span class="is-on"><i>F1</i>next</span>
+              <span><i>F2</i>edge</span>
+              <span><i>F3</i>clock</span>
+              <span><i>F4</i>tilt</span>
+            </nav>
+            <span class="tp-bar-feed" id="tpFeedState">
+              <span class="tp-bar-pulse" aria-hidden="true"></span>
+              <span id="tpFeedText">calendar &middot; loading</span>
+            </span>
+            <span class="tp-bar-clock" id="tpClock">--:--:--</span>
+          </header>
+
+          <div class="tp-grid">
+            <!-- F1 — what is coming, ranked, counting down -->
+            <article class="tp-pane tp-pane-next">
+              <p class="tp-pane-k"><i>F1</i>next releases<span id="tpNextScope">your pairs</span></p>
+              <div class="tp-scan" aria-hidden="true"></div>
+              <ol class="tp-events" id="tpEvents"></ol>
+              <p class="tp-empty" id="tpEventsEmpty" hidden>No scheduled releases ahead for the pairs you trade.</p>
+            </article>
+
+            <!-- F2 — the moat: the trader's own record against that release -->
+            <article class="tp-pane tp-pane-edge">
+              <p class="tp-pane-k"><i>F2</i>your edge<span id="tpEdgeScope">select a release</span></p>
+              <div class="tp-edge-body" id="tpEdge"></div>
+            </article>
+
+            <!-- F3 — day-one value: real, and needs no stamps at all -->
+            <article class="tp-pane tp-pane-clock">
+              <p class="tp-pane-k"><i>F3</i>release clock<span>your own hours, UTC</span></p>
+              <div class="tp-clockrows" id="tpClockRows"></div>
+            </article>
+
+            <!-- F4 — tilt against event windows -->
+            <article class="tp-pane tp-pane-tilt">
+              <p class="tp-pane-k"><i>F4</i>tilt radar<span id="tpTiltScope"></span></p>
+              <div class="tp-tilt" id="tpTilt"></div>
+            </article>
+          </div>
+
+          <footer class="tp-foot">
+            <span id="tpFootLinked">journal: 0 trades linked</span>
+            <span id="tpFootStamped">0 stamped with context</span>
+            <span class="tp-foot-note">Scheduled releases are exact to the second. Every statistic is your own record.</span>
+          </footer>
+        </section>
       </main>
     </div>
 
@@ -3061,6 +3136,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260810-eleven"></script>
+    <script type="module" src="app.js?v=20260810-terminal2"></script>
   </body>
 </html>

@@ -16,6 +16,7 @@ import {
   serializeSessionCookie,
   sha256Hex,
 } from './session.js';
+import { fetchCalendarEvents } from './calendar.js';
 import { fetchLivePrices } from './prices.js';
 import { UniqueViolation } from './db.js';
 import { journalDefaults, sanitizeArray, sanitizeReplayNotes, sanitizeSettings, str } from './sanitize.js';
@@ -206,6 +207,24 @@ async function requireAuth(ctx) {
   return { id: user.id, username: user.username };
 }
 
+// Rollout gate, NOT a paywall — deliberately the same shape as the admin
+// allowlist so the two cannot drift. Granting access is editing one Vercel env
+// var. Safe as a client flag in Phase 1 precisely because there is no premium
+// DATA behind it: the calendar is public and every statistic is computed in the
+// user's own browser from their own trades. When billing exists, the server
+// must gate data, not buttons.
+function isTerminalProUsername(ctx, username) {
+  const candidate = str(username).trim().toLowerCase();
+  if (candidate === '') return false;
+  const configured = str(ctx.env.TERMINAL_PRO_USERNAMES ?? '').trim();
+  if (configured === '') return false;
+  return configured
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean)
+    .includes(candidate);
+}
+
 async function isAdminUsername(ctx, username) {
   const candidate = str(username).trim().toLowerCase();
   if (candidate === '') return false;
@@ -393,6 +412,7 @@ const actions = {
       authenticated: username !== null,
       username,
       isAdmin,
+      terminalPro: isTerminalProUsername(ctx, username),
       csrfToken: csrf,
     }, cookie);
   },
@@ -614,6 +634,25 @@ const actions = {
           ? (trade.profit_loss > 0 ? 'win' : (trade.profit_loss < 0 ? 'loss' : 'flat'))
           : '',
       })),
+    });
+  },
+
+  // Public data, so requireAuth only — no tier gate on the endpoint. In Phase 1
+  // there is nothing premium behind it: the calendar is public and every
+  // statistic is computed in the user's own browser from their own trades. The
+  // auth check exists to stop anonymous scraping of our rows and to keep us off
+  // the upstream's blocklist. GET, so router CSRF does not apply.
+  async market_calendar(ctx) {
+    await requireAuth(ctx);
+    const { events, asOf, stale } = await fetchCalendarEvents(ctx.db, ctx.fetch);
+    respond(200, {
+      ok: true,
+      events,
+      asOf: asOf === null ? null : new Date(asOf).toISOString(),
+      stale,
+      // The client draws every countdown against this, not against its own
+      // clock: a browser minutes fast would arm the desk early, on real money.
+      serverNow: new Date().toISOString(),
     });
   },
 
