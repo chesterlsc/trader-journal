@@ -149,22 +149,22 @@ export function eventFile(trades, eventKey, baseline = { winRate: null }) {
 function edgeSentence({ title, samples, wins, losses, netPnl, confidence, verdict }) {
   const name = title || "this release";
   if (confidence === "none") {
-    return `${name} — no prints on record yet. Your file starts with the next one.`;
+    return `${name}: no prints on record yet. Your file starts with the next one.`;
   }
-  const money = `${netPnl >= 0 ? "+" : "−"}$${Math.abs(netPnl).toFixed(2)}`;
+  const money = `${netPnl >= 0 ? "+" : "-"}$${Math.abs(netPnl).toFixed(2)}`;
   if (confidence === "anecdote") {
-    return `${name} — ${samples} print${samples === 1 ? "" : "s"} on record (${wins}W–${losses}L, ${money}). Too few to call a rate.`;
+    return `${name}: ${samples} print${samples === 1 ? "" : "s"} on record (${wins}W/${losses}L, ${money}). Too few to call a rate.`;
   }
   if (confidence === "thin") {
-    return `${name} — ${wins}W–${losses}L, ${money} across ${samples} prints. Not enough to call it an edge yet.`;
+    return `${name}: ${wins}W/${losses}L, ${money} across ${samples} prints. Not enough to call it an edge yet.`;
   }
   if (verdict === "worse") {
-    return `${name} — ${wins}W–${losses}L, ${money}. You do measurably worse here than you do everywhere else.`;
+    return `${name}: ${wins}W/${losses}L, ${money}. You do measurably worse here than you do everywhere else.`;
   }
   if (verdict === "better") {
-    return `${name} — ${wins}W–${losses}L, ${money}. You do measurably better here than your own average.`;
+    return `${name}: ${wins}W/${losses}L, ${money}. You do measurably better here than your own average.`;
   }
-  return `${name} — ${wins}W–${losses}L, ${money}. No measurable difference from your own average.`;
+  return `${name}: ${wins}W/${losses}L, ${money}. No measurable difference from your own average.`;
 }
 
 /** Fixed buckets by when the trade was opened relative to the print. */

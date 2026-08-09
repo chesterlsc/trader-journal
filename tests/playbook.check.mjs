@@ -185,7 +185,7 @@ assert.ok(!/1 trades/.test(sessionCopy), "singular trade count must not read '1 
 state.trades = [trade({ session: "London" }), trade({ session: "London" })];
 const single = api.buildPlaybookReport("Breakout");
 const singleCopy = api.playbookExtremes(single.sessions, "session");
-assert.match(singleCopy, /Only one session here — London, on all 2 trades\. Nothing to compare it against\./);
+assert.match(singleCopy, /Only one session here: London, on all 2 trades\. Nothing to compare it against\./);
 assert.ok(!/Best session/.test(singleCopy), "one group is a fact, not a ranking");
 assert.equal(api.playbookExtremes([], "session"), "");
 

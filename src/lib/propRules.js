@@ -103,18 +103,18 @@ export function normalizePropRules(input, startBalance = 0) {
 const COMBINE_TIERS = [
   {
     id: "ts-25k-static",
-    label: "Topstep 25K Static (Labs) — Combine",
+    label: "Topstep 25K Static (Labs): Combine",
     start: 25000,
     profitTarget: 2000,
     drawdown: 1000,
     mode: "static",
     dailyLossLimit: 500,
     maxContracts: 2,
-    note: "Labs drop, limited run, STATIC drawdown — the floor never moves. Read 2026-08-05."
+    note: "Labs drop, limited run, STATIC drawdown. The floor never moves. Read 2026-08-05."
   },
   {
     id: "ts-50k",
-    label: "Topstep 50K — Combine",
+    label: "Topstep 50K: Combine",
     start: 50000,
     profitTarget: 3000,
     drawdown: 2000,
@@ -125,7 +125,7 @@ const COMBINE_TIERS = [
   },
   {
     id: "ts-100k",
-    label: "Topstep 100K — Combine",
+    label: "Topstep 100K: Combine",
     start: 100000,
     profitTarget: 6000,
     drawdown: 3000,
@@ -136,7 +136,7 @@ const COMBINE_TIERS = [
   },
   {
     id: "ts-150k",
-    label: "Topstep 150K — Combine",
+    label: "Topstep 150K: Combine",
     start: 150000,
     profitTarget: 9000,
     drawdown: 4500,
@@ -147,7 +147,7 @@ const COMBINE_TIERS = [
   },
   {
     id: "ts-250k-freedom",
-    label: "Topstep 250K Freedom (Labs) — Combine",
+    label: "Topstep 250K Freedom (Labs): Combine",
     start: 250000,
     profitTarget: 15000,
     drawdown: 10000,
@@ -165,7 +165,7 @@ const XFA_SIZES = new Set(["ts-50k", "ts-100k", "ts-150k"]);
 export const PROP_PRESETS = [
   {
     id: "custom",
-    label: "Custom — enter my own numbers",
+    label: "Custom: enter my own numbers",
     firm: "",
     note: "Nothing is prefilled. Type the limits from your own account statement.",
     account: null,
@@ -195,7 +195,7 @@ export const PROP_PRESETS = [
     label: tier.label.replace("— Combine", "— Express Funded"),
     firm: "Topstep",
     note:
-      "Express Funded balances start at $0 — the tier name is buying power, not money. " +
+      "Express Funded balances start at $0. The tier name is buying power, not money. " +
       "The limit starts negative and stops moving at $0. Read 2026-08-05.",
     account: { startingBalance: 0, type: "funded" },
     rules: {

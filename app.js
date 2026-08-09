@@ -5079,7 +5079,7 @@ function commitVoiceClip(tradeId, clip) {
   if (clip.data.length > VOICE_MAX_CLIP_CHARS) {
     return `That clip is ${formatVoiceSize(clip.data.length)}, over the ${formatVoiceSize(
       VOICE_MAX_CLIP_CHARS
-    )} per-clip ceiling. It was not saved — everything else on this trade was.`;
+    )} per-clip ceiling. It was not saved. Everything else on this trade was.`;
   }
 
   if (voiceUsedChars(map, id) + clip.data.length > VOICE_TOTAL_CHARS) {
@@ -5402,7 +5402,7 @@ function finishVoiceRecording() {
     voiceState.clip = { data, mime, seconds };
     renderVoicePanel();
     setVoiceStatus(
-      `Clip ready — ${formatVoiceDuration(seconds)}, ${formatVoiceSize(data.length)}. It saves with the trade.`,
+      `Clip ready: ${formatVoiceDuration(seconds)}, ${formatVoiceSize(data.length)}. It saves with the trade.`,
       "success"
     );
   };
@@ -5434,7 +5434,7 @@ function resetVoicePanel(tradeId) {
   ui.journalVoiceBtn.disabled = false;
   setVoiceStatus(
     voiceState.clip
-      ? `Clip attached — ${formatVoiceDuration(voiceState.clip.seconds)}.`
+      ? `Clip attached: ${formatVoiceDuration(voiceState.clip.seconds)}.`
       : `Say it instead of typing it. ${VOICE_MAX_SECONDS} seconds max.`,
     ""
   );
@@ -7973,7 +7973,7 @@ function renderRiskStrip(analytics) {
   }
   if (ui.riskDialValue) {
     ui.riskDialValue.innerHTML = `${percentLeft}<span>%</span>`;
-    ui.riskDial?.setAttribute("aria-label", `${percentLeft}% of the tightest loss budget left — ${state3}`);
+    ui.riskDial?.setAttribute("aria-label", `${percentLeft}% of the tightest loss budget left, ${state3}`);
     ui.riskDial?.setAttribute("role", "img");
   }
   if (ui.riskConsequence) {
@@ -8503,7 +8503,7 @@ function playbookExtremes(rows, noun) {
     return "";
   }
   if (rows.length === 1) {
-    return `Only one ${noun} here — ${rows[0].label}, on all ${playbookTradeCount(rows[0].trades)}. Nothing to compare it against.`;
+    return `Only one ${noun} here: ${rows[0].label}, on all ${playbookTradeCount(rows[0].trades)}. Nothing to compare it against.`;
   }
   const best = rows[0];
   const worst = rows[rows.length - 1];
@@ -8964,7 +8964,7 @@ function handleRulesSubmit(event) {
   setMessage(
     ui.rulesFormMessage,
     cleaned.length
-      ? `Checklist saved — ${cleaned.length} rule${cleaned.length === 1 ? "" : "s"} will show in the New Trade sheet.`
+      ? `Checklist saved: ${cleaned.length} rule${cleaned.length === 1 ? "" : "s"} will show in the New Trade sheet.`
       : "Checklist cleared. The New Trade sheet will stop asking.",
     "success"
   );
@@ -9579,7 +9579,7 @@ function renderPropTracker() {
     setText(
       ui.propMllMeta,
       evaluation.rules.mode === "static"
-        ? `Static floor — ${money(evaluation.startBalance)} start less a ${money(
+        ? `Static floor: ${money(evaluation.startBalance)} start less a ${money(
             evaluation.rules.drawdown
           )} limit. It has never moved and never will.`
         : evaluation.mllLocked
@@ -11030,7 +11030,7 @@ function applyWeeklyDigest() {
 
   const replacing = state.reflections.some((entry) => entry.weekOf === digest.key);
   setDigestSummary(
-    `${digest.label} drafted — ${digest.count} trade${plural(digest.count)}, ${digestMoney(digest.net)}. ` +
+    `${digest.label} drafted: ${digest.count} trade${plural(digest.count)}, ${digestMoney(digest.net)}. ` +
       "Edit it below, then save." +
       (digest.improveTomorrow ? "" : " Nothing computed for “what will I improve” — that one is yours.") +
       (replacing ? " Saving replaces the digest already filed for this week." : "")
@@ -12370,7 +12370,7 @@ function renderTerminalEdge(closed, baseline) {
   const rate = file.winRate === null ? "—" : `${Math.round(file.winRate * 100)}%`;
   const stats = `
     <div class="tp-edge-stats">
-      <div class="tp-stat"><b>${file.wins}W–${file.losses}L</b><span>record</span></div>
+      <div class="tp-stat"><b>${file.wins}W/${file.losses}L</b><span>record</span></div>
       <div class="tp-stat"><b>${escapeHtml(rate)}</b><span>win rate</span></div>
       <div class="tp-stat"><b class="${file.netPnl >= 0 ? "is-pos" : "is-neg"}">${escapeHtml(formatSignedCurrency(file.netPnl))}</b><span>net</span></div>
     </div>`;
