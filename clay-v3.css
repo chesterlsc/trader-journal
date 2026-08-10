@@ -480,37 +480,86 @@
    Scope is <html> only. No component opts out: that is what makes one
    attribute convert every screen in the app at once.
    ========================================================================== */
-:root[data-term="on"] {
-  --surface-0: #0f1216;        /* screen ground */
-  --surface-1: #14181e;        /* panes, cards */
-  --surface-2: #1b2028;        /* raised cell, nav, modal */
-  --surface-3: #232a33;        /* hover / active fill */
-  --surface-inset: #0b0e12;    /* wells, inputs, table heads */
+/* ==========================================================================
+   TERMINAL MODE — the token flip.
 
-  --line: #262d37;
-  --line-strong: #333c49;
-  --line-accent: rgb(240 118 61 / 0.45);
+   THIS BLOCK CANNOT LIVE IN styles.css. `:root:not([data-theme="light"])` at
+   line 37 is specificity (0,2,0) and `:root[data-term="on"]` is also (0,2,0).
+   Equal specificity means source order decides, and this is the last sheet.
+   In styles.css the mode loses on the dark theme, which is the default.
+
+   COLOUR IS CARRIED BY GRAMMAR ROLE, NOT BY IMPORTANCE. Six fixed roles:
+   punctuation, comment, key, text, highlight, faint. A theme is one hue
+   expressed at those six steps, which is why swapping a theme needs no markup
+   change anywhere.
+
+   MONEY IS PINNED and never enters the hue system: --pnl-* is declared once
+   here and redeclared in NO theme block. The structural half of that rule is
+   in styles.css: theme hues paint the LEFT (keys, names, brackets), money
+   appears ONLY in the right-aligned value column. Colour on the left is
+   category, colour on the right is money.
+   ========================================================================== */
+:root[data-term="on"] {
+  --surface-0: #0a0d12;        /* screen ground */
+  --surface-1: #0e1218;        /* pane */
+  --surface-2: #171d26;        /* selected row, chip, preview box */
+  --surface-3: #1e2530;        /* hover. The LIGHTEST ground: every ratio is
+                                  solved against this one, not against #0a0d12 */
+  --surface-inset: #060910;    /* wells, bar tracks */
+
+  /* The six roles. Default theme is `syntax`: the spine stays near-neutral
+     slate on purpose, because here the RING carries the colour and the
+     structure stays grey, exactly as the reference shows. */
+  --tm-hi: #a4b1bd;
+  --tm-text: #95a4b2;
+  --tm-key: #7f90a2;
+  --tm-punc: #7f90a2;
+  --tm-comment: #878f97;
+  --tm-faint: #5f7284;
+
+  /* The ring. NAMES only, and assigned by SECTION INDEX (data-hue), never per
+     item and never by importance, so the colouring is learnable rather than
+     decorative. A section head and every item name inside it share one hue. */
+  --tm-h1: #c78614;  --tm-h1-hi: #e9a123;
+  --tm-h2: #2e9ec6;  --tm-h2-hi: #61bada;
+  --tm-h3: #6293e6;  --tm-h3-hi: #8db0ec;
+  --tm-h4: #ae7ce6;  --tm-h4-hi: #c4a0ed;
+  --tm-h5: #d768d7;  --tm-h5-hi: #e294e2;
+
+  /* App-wide tokens re-pointed, so one attribute repaints every button, link
+     and focus ring in the app and not merely the terminal view. */
+  --text: #e9eef4;
+  --text-soft: #aab4c0;
+  --text-faint: #8c96a3;
+  --text-inverse: #06090e;
+  --accent: var(--tm-text);
+  --accent-strong: var(--tm-hi);
+  --accent-muted: color-mix(in srgb, var(--tm-text) 14%, var(--surface-1));
+  --line: #1a212a;
+  --line-strong: #242c37;
+  --line-accent: var(--tm-faint);
+
+  /* MONEY. Pinned, identical in all four themes, never redeclared below. */
+  --pnl-pos: #3ecf8e;
+  --pnl-pos-soft: rgba(62, 207, 142, 0.13);
+  --pnl-pos-line: rgba(62, 207, 142, 0.38);
+  --pnl-neg: #f7758d;
+  --pnl-neg-soft: rgba(247, 117, 141, 0.13);
+  --pnl-neg-line: rgba(247, 117, 141, 0.38);
+
+  /* Squared and monospaced. --font-prose spells the sans stack out because a
+     custom property cannot read its own pre-flip value. */
+  --radius-clay-xl: 2px; --radius-clay-lg: 2px; --radius-clay-md: 2px;
+  --radius-clay-sm: 0;
+  --radius-xl: 2px; --radius-lg: 2px; --radius-md: 2px; --radius-sm: 0;
+  --radius-pill: 2px;
+  --font-ui: var(--font-mono);
+  --font-prose: "Space Grotesk", "Sora", system-ui, sans-serif;
+
+  /* Carried forward: everything the light theme re-points, pinned back to a
+     dark value so the mode is one screen regardless of theme. */
   --clay-edge: rgb(255 255 255 / 0.05);
   --clay-edge-strong: rgb(255 255 255 / 0.09);
-
-  --text: #e9eef4;
-  --text-soft: #a2abb5;
-  /* NOT the .tp-desk #66707d. Inside that pane the faint tone only ever
-     labelled chrome, but app-wide --text-faint carries real body text, and at
-     #66707d it lands at 3.25:1 on --surface-2. The dark theme's own value is
-     used instead: caught by clayV3Contrast once terminal mode became a scope
-     the harness could see. */
-  --text-faint: #9aa3ae;
-  --text-inverse: #0f1216;
-
-  /* Burnt oxide stays the ONLY interaction colour. There is deliberately no
-     terminal green: a second accent would break the V3 contract and every
-     contrast pairing shipped against it. Money colours stay money colours. */
-
-  /* This is the line that converts every card in the app. Clay's depth is a
-     real information channel (raised is profit, pressed is loss), so it is
-     not deleted here — it is re-channelled as a fill in styles.css, in this
-     same commit, or the mode ships colour-blind for a release. */
   --clay-raised: inset 0 0 0 1px var(--line);
   --clay-float: inset 0 0 0 1px var(--line-strong);
   --clay-soft: none;
@@ -518,41 +567,6 @@
   --clay-accent: inset 0 0 0 1px var(--accent);
   --edge-highlight: none;
   --shadow-modal: 0 0 0 1px var(--line-strong);
-
-  /* Every rounded corner in the app dies on these seven lines. */
-  --radius-clay-xl: 2px;
-  --radius-clay-lg: 2px;
-  --radius-clay-md: 2px;
-  --radius-clay-sm: 2px;
-  --radius-xl: 2px;
-  --radius-lg: 2px;
-  --radius-md: 2px;
-  --radius-sm: 0;
-  --radius-pill: 2px;
-
-  /* The mono flip, one line for the whole app. --font-prose has to spell the
-     sans stack out because a custom property cannot read its own pre-flip
-     value: var() resolves at use, not at declaration. styles.css points
-     paragraph-length copy back at it, since mono at paragraph length is
-     exactly where terminal skins stop being readable. */
-  --font-ui: var(--font-mono);
-  --font-prose: "Space Grotesk", "Sora", system-ui, sans-serif;
-
-  /* ---- Everything the LIGHT theme re-points, pinned back to its dark value.
-     Without this the mode inherits light-tuned money, warn, info, chart and
-     deck colours and paints them on a dark ground: caught by
-     tests/clayV3Contrast.check.mjs, which now runs terminal mode as its own
-     cascade on TOP of each theme rather than as a variant of one. Terminal
-     mode is one screen, and a screen looks the same in a lit room. ---- */
-  --accent: #f0763d;
-  --accent-strong: #f68d5c;
-  --accent-muted: rgba(240, 118, 61, 0.14);
-  --pnl-pos: #3ecf8e;
-  --pnl-pos-soft: rgba(62, 207, 142, 0.13);
-  --pnl-pos-line: rgba(62, 207, 142, 0.38);
-  --pnl-neg: #f7758d;
-  --pnl-neg-soft: rgba(247, 117, 141, 0.13);
-  --pnl-neg-line: rgba(247, 117, 141, 0.38);
   --warn: #f0b34e;
   --warn-soft: rgba(240, 179, 78, 0.12);
   --chart-grid: #262c34;
@@ -596,8 +610,48 @@
   --deck-edge: hsl(210 20% 85% / 0.10);
   --deck-wash: rgba(240, 118, 61, 0.04);
   --deck-groove: hsl(220 45% 2% / 0.70);
-  /* --info has no dark override in this file: it inherits :root (styles.css:62),
-     which the light theme replaces. Restated here for the same reason. */
   --info: #4cc3e8;
   --info-soft: rgba(76, 195, 232, 0.12);
+  --control-edge: var(--tm-faint);
+  --info: #4cc3e8;
+  --info-soft: rgba(76, 195, 232, 0.12);
+}
+
+/* ---- The three monochrome themes. Hue only; structure is identical. ------
+   Hue choices are load bearing against the money colours, not taste:
+     ansi is pinned to 92 (lime phosphor), NOT the obvious 120, because 120
+     sits 33 degrees from --pnl-pos and 92 sits 61 away, which is the widest
+     separation that still unambiguously reads as a green terminal.
+     magenta was chosen over a cyan fourth for the same reason: cyan's usable
+     hue lands about 40 degrees from money-green, magenta lands 147 away.
+   The theme hue yields by MOVING OFF the money hue; money never moves. ---- */
+:root[data-term="on"][data-term-theme="oxide"] {
+  --tm-hi: #e99d79; --tm-text: #e58b60; --tm-key: #df6e39;
+  --tm-punc: #df6e39; --tm-comment: #b4836d; --tm-faint: #ba4f1e;
+  /* One hue at six steps. The ring collapses onto the text step, so the SAME
+     markup and the same data-hue attributes work with no JS branch. */
+  --tm-h1: var(--tm-text); --tm-h2: var(--tm-text); --tm-h3: var(--tm-text);
+  --tm-h4: var(--tm-text); --tm-h5: var(--tm-text);
+  --tm-h1-hi: var(--tm-hi); --tm-h2-hi: var(--tm-hi); --tm-h3-hi: var(--tm-hi);
+  --tm-h4-hi: var(--tm-hi); --tm-h5-hi: var(--tm-hi);
+}
+:root[data-term="on"][data-term-theme="ansi"] {
+  --tm-hi: #75c331; --tm-text: #6cb42d; --tm-key: #5f9e27;
+  --tm-punc: #5f9e27; --tm-comment: #769958; --tm-faint: #4b7d1f;
+  /* One hue at six steps. The ring collapses onto the text step, so the SAME
+     markup and the same data-hue attributes work with no JS branch. */
+  --tm-h1: var(--tm-text); --tm-h2: var(--tm-text); --tm-h3: var(--tm-text);
+  --tm-h4: var(--tm-text); --tm-h5: var(--tm-text);
+  --tm-h1-hi: var(--tm-hi); --tm-h2-hi: var(--tm-hi); --tm-h3-hi: var(--tm-hi);
+  --tm-h4-hi: var(--tm-hi); --tm-h5-hi: var(--tm-hi);
+}
+:root[data-term="on"][data-term-theme="magenta"] {
+  --tm-hi: #e095e0; --tm-text: #db82db; --tm-key: #d262d1;
+  --tm-punc: #d262d1; --tm-comment: #b17db1; --tm-faint: #b835b7;
+  /* One hue at six steps. The ring collapses onto the text step, so the SAME
+     markup and the same data-hue attributes work with no JS branch. */
+  --tm-h1: var(--tm-text); --tm-h2: var(--tm-text); --tm-h3: var(--tm-text);
+  --tm-h4: var(--tm-text); --tm-h5: var(--tm-text);
+  --tm-h1-hi: var(--tm-hi); --tm-h2-hi: var(--tm-hi); --tm-h3-hi: var(--tm-hi);
+  --tm-h4-hi: var(--tm-hi); --tm-h5-hi: var(--tm-hi);
 }

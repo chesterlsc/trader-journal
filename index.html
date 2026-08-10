@@ -67,21 +67,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260810-term4" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260810-term4" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260810-tm1" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260810-tm1" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260810-term4" />
+    <link rel="stylesheet" href="styles.css?v=20260810-tm1" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260810-term4" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260810-tm1" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260810-term4" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260810-tm1" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -2547,61 +2547,48 @@
              physically cannot print a number the maths did not earn.
              Gated by state.auth.terminalPro (a rollout flag, not a paywall —
              there is no premium DATA here to protect). -->
-        <section class="view tp-desk" id="terminal" aria-labelledby="terminalHeading">
-          <div class="tp-grain" aria-hidden="true"></div>
-
-          <header class="tp-bar">
-            <span class="tp-bar-brand">
-              <span class="tp-bar-dot" aria-hidden="true"></span>
-              <span>TERMINAL&nbsp;PRO</span>
-            </span>
-            <h2 id="terminalHeading" class="visually-hidden">Terminal Pro</h2>
-            <nav class="tp-fkeys" aria-label="Terminal panes">
-              <span class="is-on"><i>[1]</i>next</span>
-              <span><i>[2]</i>edge</span>
-              <span><i>[3]</i>clock</span>
-              <span><i>[4]</i>tilt</span>
-            </nav>
-            <span class="tp-bar-feed" id="tpFeedState">
-              <span class="tp-bar-pulse" aria-hidden="true"></span>
-              <span id="tpFeedText">calendar &middot; loading</span>
-            </span>
-            <span class="tp-bar-clock" id="tpClock">--:--:--</span>
-          </header>
-
-          <div class="tp-grid">
-            <!-- F1 — what is coming, ranked, counting down -->
-            <article class="tp-pane tp-pane-next">
-              <p class="tp-pane-k"><i>[1]</i>next releases<span id="tpNextScope">your pairs</span></p>
-              <div class="tp-scan" aria-hidden="true"></div>
-              <ol class="tp-events" id="tpEvents"></ol>
-              <p class="tp-empty" id="tpEventsEmpty" hidden>No scheduled releases ahead for the pairs you trade.</p>
-            </article>
-
-            <!-- F2 — the moat: the trader's own record against that release -->
-            <article class="tp-pane tp-pane-edge">
-              <p class="tp-pane-k"><i>[2]</i>your edge<span id="tpEdgeScope">select a release</span></p>
-              <div class="tp-edge-body" id="tpEdge"></div>
-            </article>
-
-            <!-- F3 — day-one value: real, and needs no stamps at all -->
-            <article class="tp-pane tp-pane-clock">
-              <p class="tp-pane-k"><i>[3]</i>release clock<span>your own hours, UTC</span></p>
-              <div class="tp-clockrows" id="tpClockRows"></div>
-            </article>
-
-            <!-- F4 — tilt against event windows -->
-            <article class="tp-pane tp-pane-tilt">
-              <p class="tp-pane-k"><i>[4]</i>tilt radar<span id="tpTiltScope"></span></p>
-              <div class="tp-tilt" id="tpTilt"></div>
-            </article>
+        <!-- ══ TERMINAL — THE DAILY DESK ══════════════════════════════════════
+             One column of syntax-highlighted lines. Every checkbox on this screen
+             is a boolean the app already owned; every figure is read from state at
+             render time or the line does not exist. Colour is carried by GRAMMAR
+             ROLE (punctuation / comment / key / value / highlight / faint), never
+             by importance, so a theme is one hue at six steps and the structure
+             never moves. Money is the one exception and it never enters the hue
+             system: P&L stays green and red in all four themes, always in the
+             right-hand value column, always carrying an ASCII sign or glyph.
+             Gated by state.auth.terminalPro (rollout flag, not a paywall). -->
+        <section class="view tm-desk" id="terminal" aria-labelledby="terminalHeading">
+          <h2 id="terminalHeading" class="visually-hidden">Terminal, the daily desk</h2>
+        
+          <div class="tm-col">
+            <p class="tm-prompt" id="tmPrompt"></p>
+        
+            <p class="tm-epi">
+              <span class="tm-epi-l">a losing day you wrote down is worth more than</span>
+              <span class="tm-epi-l">a winning day you did not.</span>
+            </p>
+        
+            <div class="tm-toks" role="group" aria-label="theme">
+              <button class="tm-tok is-on" type="button" data-term-theme="syntax" aria-pressed="true">syntax</button>
+              <button class="tm-tok" type="button" data-term-theme="oxide" aria-pressed="false">oxide</button>
+              <button class="tm-tok" type="button" data-term-theme="ansi" aria-pressed="false">ansi</button>
+              <button class="tm-tok" type="button" data-term-theme="magenta" aria-pressed="false">magenta</button>
+            </div>
+        
+            <p class="tm-date"><span class="tm-emoji" aria-hidden="true">🗓</span><span id="tmDate"></span></p>
+            <p class="tm-streak" id="tmStreak"></p>
+        
+            <div class="tm-week" id="tmWeek"></div>
+            <p class="tm-sub is-flush">## up   \\ down   == flat   .. no trades</p>
+            <p class="tm-sub is-flush" id="tmFeed">calendar loading</p>
+        
+            <div id="tmSections"></div>
+        
+            <dl class="tm-kv tm-foot">
+              <div class="tm-kv-row"><dt>now</dt><dd id="tpClock">--:--:--</dd></div>
+              <div class="tm-kv-row"><dt>journal</dt><dd id="tmFoot">--</dd></div>
+            </dl>
           </div>
-
-          <footer class="tp-foot">
-            <span id="tpFootLinked">journal: 0 trades linked</span>
-            <span id="tpFootStamped">0 stamped with context</span>
-            <span class="tp-foot-note">Scheduled releases are exact to the second. Every statistic is your own record.</span>
-          </footer>
         </section>
       </main>
     </div>
@@ -3169,7 +3156,7 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260810-term4"></script>
+    <script type="module" src="app.js?v=20260810-tm1"></script>
     <div id="termBoot" hidden aria-hidden="true">
       <span class="term-boot-strike"></span>
       <div class="term-boot-inner">

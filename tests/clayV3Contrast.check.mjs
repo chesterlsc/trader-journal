@@ -103,6 +103,20 @@ const THEMES = {
   terminalOnLight: merged([":root", '[data-theme="light"]', ':root[data-term="on"]']),
 };
 
+// The three monochrome themes are separate selector blocks, and merged()
+// matches selector strings EXACTLY, so without this loop three of the four
+// terminal themes would ship completely unmeasured. Each is checked over both
+// underlying themes, because the mode has to hold on concrete as well.
+for (const name of ["oxide", "ansi", "magenta"]) {
+  const scoped = `:root[data-term="on"][data-term-theme="${name}"]`;
+  THEMES[`term-${name}`] = merged([
+    ":root", ':root:not([data-theme="light"])', ':root[data-term="on"]', scoped,
+  ]);
+  THEMES[`term-${name}-light`] = merged([
+    ":root", '[data-theme="light"]', ':root[data-term="on"]', scoped,
+  ]);
+}
+
 /* ----------------------------------------------------------------- colour */
 
 function resolve(tokens, value, seen = new Set()) {
@@ -114,11 +128,36 @@ function resolve(tokens, value, seen = new Set()) {
     assert.ok(tokens[m[1]] !== undefined, `undefined token ${m[1]}`);
     return resolve(tokens, tokens[m[1]], seen);
   }
+  // A var() nested INSIDE a function (color-mix, rgb(from ...)) is not a whole
+  // -value match, so substitute in place before handing the string on. Without
+  // this the harness silently cannot measure any composed colour, which is
+  // exactly the kind of token most likely to be too low contrast.
+  if (v.includes('var(')) {
+    return v.replace(/var\((--[\w-]+)\)/g, (_, name) => {
+      assert.ok(tokens[name] !== undefined, `undefined token ${name}`);
+      return resolve(tokens, tokens[name], new Set(seen).add(name));
+    });
+  }
   return v;
 }
 
 function parseColor(str) {
   const v = str.trim().toLowerCase();
+  // color-mix(in srgb, <c1> <p>%, <c2>) — a straight sRGB lerp, which is what
+  // browsers do for this form. Recursive so a mix of a mix still measures.
+  const mix = v.match(/^color-mix\(\s*in\s+srgb\s*,\s*(.+?)\s+([\d.]+)%\s*,\s*(.+?)\s*\)$/);
+  if (mix) {
+    const a = parseColor(mix[1]);
+    const b = parseColor(mix[3]);
+    if (!a || !b) return null;
+    const w = Number(mix[2]) / 100;
+    return {
+      r: a.r * w + b.r * (1 - w),
+      g: a.g * w + b.g * (1 - w),
+      b: a.b * w + b.b * (1 - w),
+      a: a.a * w + b.a * (1 - w),
+    };
+  }
   let m = v.match(/^#([0-9a-f]{6})$/);
   if (m) {
     return {
@@ -215,7 +254,7 @@ function check(theme, fgName, bgName, floor, bgColor, fgColor) {
   }
 }
 
-for (const theme of ["dark", "light", "terminal", "terminalOnLight"]) {
+for (const theme of Object.keys(THEMES)) {
   const surface = (n) => token(theme, n);
 
   // Body text (4.5:1) — every text tone on every surface it can land on.
@@ -371,6 +410,6 @@ if (failures.length) {
   process.exit(1);
 }
 console.log(
-  `clayV3Contrast: ${checked} pairings green across dark, light and terminal mode. ` +
+  `clayV3Contrast: ${checked} pairings green across dark, light and ${Object.keys(THEMES).length - 2} terminal themes. ` +
     `Worst body-text pairing: ${worst.theme} ${worst.fg} on ${worst.bg} = ${worst.ratio.toFixed(2)}:1`
 );

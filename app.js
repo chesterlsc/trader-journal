@@ -311,6 +311,14 @@ const ui = {
   mobileLogoutBtn: document.getElementById("mobileLogoutBtn"),
   themeToggles: Array.from(document.querySelectorAll("[data-theme-toggle]")),
   termArms: Array.from(document.querySelectorAll("[data-term-arm]")),
+  tmPrompt: document.getElementById("tmPrompt"),
+  tmDate: document.getElementById("tmDate"),
+  tmStreak: document.getElementById("tmStreak"),
+  tmWeek: document.getElementById("tmWeek"),
+  tmFeed: document.getElementById("tmFeed"),
+  tmSections: document.getElementById("tmSections"),
+  tmFoot: document.getElementById("tmFoot"),
+  tpClock: document.getElementById("tpClock"),
   termStatus: document.getElementById("termStatus"),
   termStatusText: document.getElementById("termStatusText"),
   termBoot: document.getElementById("termBoot"),
@@ -965,7 +973,9 @@ const terminal = { events: [], asOf: null, stale: true, skewMs: 0, selectedKey: 
 // tests/bootOrder.check.mjs is what stops the fifth.
 const TERM_STORAGE_KEY = "axiom_journal_term_v1";
 const TERM_BOOTS_KEY = "axiom_journal_term_boots_v1";
-const term = { armed: false, booting: false, t0: 0, timers: [], holdTimer: 0, skipped: false };
+const TERM_THEME_KEY = "axiom_journal_term_theme_v1";
+const TERM_THEMES = ["syntax", "oxide", "ansi", "magenta"];
+const term = { armed: false, booting: false, t0: 0, timers: [], holdTimer: 0, skipped: false, theme: "syntax" };
 
 const TICKER_SYMBOLS = ["BTCUSDT", "XAUUSD", "ETHUSDT", "SOLUSDT", "XAGUSD", "EURUSD"];
 const TICKER_CACHE_KEY = "axiom_journal_ticker_v1";
@@ -1148,8 +1158,10 @@ function applyTerm(on) {
   const root = document.documentElement;
   if (on) {
     root.setAttribute("data-term", "on");
+    root.setAttribute("data-term-theme", term.theme);
   } else {
     root.removeAttribute("data-term");
+    root.removeAttribute("data-term-theme");
   }
   term.armed = Boolean(on);
   if (ui.termStatus) {
@@ -1173,6 +1185,14 @@ function applyTerm(on) {
 /* A reload restores the skin SILENTLY: no overlay, no counter increment. A
    boot animation the user did not ask for is a tax, not a feature. */
 function restoreTermMode() {
+  try {
+    const stored = localStorage.getItem(TERM_THEME_KEY);
+    if (TERM_THEMES.includes(stored)) {
+      term.theme = stored;
+    }
+  } catch (error) {
+    /* storage blocked: the default theme still applies */
+  }
   if (!getStoredTerm()) {
     return;
   }
@@ -1226,6 +1246,39 @@ function bindEvents() {
       disarmTerminal();
     } else {
       armTerminal({ cold });
+    }
+  });
+
+  // Theme tokens and section collapse. Delegated: renderTerminal rebuilds both
+  // on every render, so a direct listener would bind to a detached node.
+  document.addEventListener("click", (event) => {
+    const tok = event.target.closest("[data-term-theme]");
+    if (tok) {
+      const next = tok.dataset.termTheme;
+      if (TERM_THEMES.includes(next)) {
+        term.theme = next;
+        try {
+          localStorage.setItem(TERM_THEME_KEY, next);
+        } catch (error) {
+          /* private mode: the theme still holds for this session */
+        }
+        document.documentElement.setAttribute("data-term-theme", next);
+        document.querySelectorAll("[data-term-theme]").forEach((node) => {
+          const on = node.dataset.termTheme === next;
+          node.classList.toggle("is-on", on);
+          node.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+        // Canvases read their palette from getComputedStyle and only repaint
+        // on this event, so a theme swap without it leaves every chart on the
+        // previous hue.
+        window.dispatchEvent(new CustomEvent("themechange", { detail: { theme: next } }));
+      }
+      return;
+    }
+    const head = event.target.closest(".tm-sec-head");
+    if (head) {
+      const open = head.getAttribute("aria-expanded") !== "false";
+      head.setAttribute("aria-expanded", open ? "false" : "true");
     }
   });
 
@@ -9884,6 +9937,14 @@ function setText(node, text) {
   }
 }
 
+// Sibling of setText for renderers that compose markup. Same null guard, so a
+// missing node is a no-op rather than a thrown render.
+function setHtml(node, html) {
+  if (node) {
+    node.innerHTML = html;
+  }
+}
+
 /* ══ THE ACCOUNT SWITCHER + EDITOR ════════════════════════════════════════ */
 
 function renderAccountSwitcher() {
@@ -12402,6 +12463,124 @@ function terminalNow() {
   return new Date(Date.now() + terminal.skewMs);
 }
 
+/* ==========================================================================
+   TERMINAL — the daily desk.
+
+   One column of syntax-highlighted lines. Every checkbox on this screen is a
+   boolean the app ALREADY owned, and every figure is read from state at render
+   time or the line does not exist. Nothing here is decorative.
+
+   Colour is carried by grammar role, never by importance, and the money rule
+   has a structural half that lives in this file: theme and ring hues paint the
+   LEFT (section heads, item names), and money appears ONLY in the right-hand
+   value column with an ASCII sign. A .tm-name carrying --pnl-pos is a bug.
+   ========================================================================== */
+
+// Per-day P&L for the week strip. Same derivation buildCalendarDayStats uses
+// (app.js:10289), scoped to a date range rather than a month.
+function termDayStats(fromIso, toIso) {
+  const map = new Map();
+  getClosedTrades().forEach((trade) => {
+    if (trade.date < fromIso || trade.date > toIso) {
+      return;
+    }
+    const day = map.get(trade.date) || { pnl: 0, trades: 0 };
+    day.pnl = round(day.pnl + trade.netPnl);
+    day.trades += 1;
+    map.set(trade.date, day);
+  });
+  return map;
+}
+
+function termIsoDay(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
+// Consecutive days back from today that closed green. A day with no trades
+// ends the streak rather than extending it: a streak you did not trade is not
+// a streak, and inflating it would be the first lie on the screen.
+function termGreenStreak(days) {
+  let streak = 0;
+  const cursor = new Date();
+  for (let i = 0; i < 400; i += 1) {
+    const day = days.get(termIsoDay(cursor));
+    if (i === 0 && day === undefined) {
+      cursor.setDate(cursor.getDate() - 1);
+      continue;
+    }
+    if (day === undefined || day.pnl <= 0) {
+      break;
+    }
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+function termBox() {
+  return '<span class="tm-box" aria-hidden="true"></span>';
+}
+
+function termItem({ done, emoji, name, meta, metaTone = "", starts = "", sub = "" }) {
+  const metaAttr = starts ? ` data-starts="${escapeHtml(starts)}"` : "";
+  const metaCell =
+    meta === undefined || meta === ""
+      ? starts
+        ? `<span class="tm-meta"${metaAttr}></span>`
+        : ""
+      : `<span class="tm-meta ${metaTone}"${metaAttr}>${escapeHtml(String(meta))}</span>`;
+  return `
+    <li class="tm-item">
+      <div class="tm-item-main"${done === null ? "" : ` aria-pressed="${done ? "true" : "false"}"`}>
+        ${termBox()}
+        <span class="tm-emoji" aria-hidden="true">${emoji}</span>
+        <span class="tm-name">${escapeHtml(name)}</span>
+        ${metaCell}
+      </div>
+      ${sub ? `<p class="tm-sub">${escapeHtml(sub)}</p>` : ""}
+    </li>`;
+}
+
+function termSection({ hue, key, emoji, name, count, sub, body }) {
+  return `
+    <section class="tm-sec" data-hue="${hue}">
+      <button class="tm-sec-head" type="button" aria-expanded="true" data-sec="${escapeHtml(key)}">
+        <span class="tm-emoji" aria-hidden="true">${emoji}</span>
+        <span class="tm-sec-name">${escapeHtml(name)}</span>
+        ${count === "" ? "" : `<span class="tm-count">${escapeHtml(count)}</span>`}
+        <span class="tm-caret" aria-hidden="true">v</span>
+      </button>
+      <div class="tm-sec-body">
+        ${sub ? `<p class="tm-sub is-flush">${escapeHtml(sub)}</p>` : ""}
+        ${body}
+      </div>
+    </section>`;
+}
+
+function termKv(rows, indent = true) {
+  return `<dl class="tm-kv${indent ? " is-indent" : ""}">${rows
+    .map(
+      ([k, v, tone]) =>
+        `<div class="tm-kv-row"><dt>${escapeHtml(k)}</dt><dd class="${tone || ""}">${escapeHtml(
+          String(v)
+        )}</dd></div>`
+    )
+    .join("")}</dl>`;
+}
+
+/* The segmented block bar. Filled left to right, with the raw fraction beside
+   it, so the number is readable when the colour is not. */
+function termBar(done, total, cells = 7) {
+  const lit = total > 0 ? Math.round((done / total) * cells) : 0;
+  const seg = Array.from(
+    { length: cells },
+    (_, i) => `<i class="${i < lit ? "is-on" : ""}"></i>`
+  ).join("");
+  return `<p class="tm-bar"><span class="tm-bar-track">${seg}</span><span class="tm-bar-frac">${done}/${total}</span></p>`;
+}
+
 function renderTerminal() {
   if (!document.getElementById("terminal")) {
     return;
@@ -12410,194 +12589,292 @@ function renderTerminal() {
   const closed = getClosedTrades(state.trades);
   const baseline = buildBaseline(closed);
   const currencies = tradedCurrencies(state.trades);
-  const upcoming = rankEvents(terminal.events, {
-    now: terminalNow(),
-    currencies,
-    minImpact: "Medium"
-  }).slice(0, 8);
+  const now = terminalNow();
+  const todayIso = termIsoDay(new Date());
 
-  setText(ui.tpNextScope, currencies.length ? currencies.join(" · ") : "all pairs");
-  renderTerminalEvents(upcoming);
+  // ---- prompt, epigraph, date, streak ------------------------------------
+  const account = getActiveAccount();
+  const host = (account?.label || "journal").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const pro = state.auth.terminalPro || isLocalPreviewMode();
+  setHtml(
+    ui.tmPrompt,
+    `<span class="tm-user">${escapeHtml(state.auth.username || "trader")}</span>${
+      pro ? `<span class="tm-punc">[</span><span class="tm-tier">pro</span><span class="tm-punc">]</span>` : ""
+    }<span class="tm-punc">@</span><span class="tm-host">${escapeHtml(host)}</span> <span class="tm-punc">$</span> <span class="tm-cmd">daily</span>`
+  );
+  setText(
+    ui.tmDate,
+    new Date().toLocaleDateString([], { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+  );
 
-  // Default the edge pane to the next release; if the calendar is empty or
-  // stale, fall back to the release the trader has the MOST history with. The
-  // edge file is about their own record, so it must stay readable even when
-  // the feed is down — otherwise a dead upstream hides data the user owns.
+  // ---- the week strip, from real per-day P&L ------------------------------
+  const monday = new Date();
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  const weekFrom = termIsoDay(monday);
+  const weekEnd = new Date(monday);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  const days = termDayStats(weekFrom, termIsoDay(weekEnd));
+  const allDays = termDayStats("0000-01-01", "9999-12-31");
+
+  const cells = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(monday);
+    date.setDate(date.getDate() + i);
+    const iso = termIsoDay(date);
+    const day = days.get(iso);
+    // The GLYPH differs by shape, not only by colour, so the strip still reads
+    // in greyscale and to a colour-blind trader.
+    const glyph = day === undefined ? ".." : day.pnl > 0 ? "##" : day.pnl < 0 ? "\\\\" : "==";
+    const tone = day === undefined ? "" : day.pnl > 0 ? "is-pos" : day.pnl < 0 ? "is-neg" : "";
+    return `
+      <span class="tm-week-day">${date.toLocaleDateString([], { weekday: "short" }).toLowerCase()}</span>
+      <span class="tm-week-num${iso === todayIso ? " is-today" : ""}">${date.getDate()}</span>
+      <span class="tm-week-bar ${tone}">${glyph}</span>`;
+  });
+  setHtml(
+    ui.tmWeek,
+    `<span class="tm-week-nav" aria-hidden="true">&lt;</span>${cells.join("")}<span class="tm-week-nav" aria-hidden="true">&gt;</span>`
+  );
+
+  const stamped = closed.filter((t) => Array.isArray(t.eventContext) && t.eventContext.length > 0).length;
+  setHtml(
+    ui.tmStreak,
+    `<span class="tm-emoji" aria-hidden="true">🔥</span><span class="tm-name">${termGreenStreak(
+      allDays
+    )} green days</span>  <span class="tm-emoji" aria-hidden="true">💎</span><span class="tm-name">${stamped} stamped</span>`
+  );
+
+  setText(
+    ui.tmFeed,
+    terminal.asOf === null
+      ? "calendar link down. the desk runs on your record alone"
+      : `calendar as of ${new Date(terminal.asOf).toISOString().slice(11, 16)} UTC, ${
+          terminal.stale ? "stale" : "link up"
+        }`
+  );
+
+  // ---- sections ----------------------------------------------------------
+  const upcoming = rankEvents(terminal.events, { now, currencies, minImpact: "Medium" }).slice(0, 6);
+  const next = upcoming[0] || null;
+  const minutesToNext = next ? (Date.parse(next.startsAt) - now.getTime()) / 60000 : Infinity;
+
+  const rules = Array.isArray(state.settings.preTradeRules) ? state.settings.preTradeRules : [];
+  const budgetLeft = getDailyBudgetLeft();
+  const debt = getUnjournalledTrades();
+  const olderDebt = debt.filter((trade) => trade.date < todayIso).length;
+
+  const pre = [
+    { done: rules.length > 0, emoji: "📋", name: "checklist written", meta: `${rules.length} rules` },
+    {
+      done: state.settings.dailyMaxLoss > 0,
+      emoji: "🛡",
+      name: "daily loss cap set",
+      meta: state.settings.dailyMaxLoss > 0 ? formatCurrency(state.settings.dailyMaxLoss) : "not set",
+    },
+    {
+      done: budgetLeft === null ? false : budgetLeft > 0,
+      emoji: "💰",
+      name: "budget still open",
+      meta: budgetLeft === null ? "no cap" : formatCurrency(budgetLeft),
+    },
+    {
+      done: olderDebt === 0,
+      emoji: "📓",
+      name: "yesterday closed out",
+      meta: olderDebt === 0 ? "clear" : String(olderDebt),
+      sub: olderDebt === 0 ? "" : `${olderDebt} closed trade${olderDebt === 1 ? "" : "s"} from before today have no note`,
+    },
+    {
+      done: minutesToNext > 15,
+      emoji: "🗞",
+      name: "clear of the next print",
+      starts: next ? next.startsAt : "",
+      meta: next ? undefined : "nothing scheduled",
+    },
+  ];
+  const preDone = pre.filter((item) => item.done).length;
+
+  // ---- the tape ----------------------------------------------------------
   if (!terminal.selectedKey) {
-    terminal.selectedKey = upcoming[0]?.key || mostStampedKey(closed);
+    terminal.selectedKey = next?.key || mostStampedKey(closed);
   }
-  renderTerminalEdge(closed, baseline);
-  renderTerminalClockRows(closed);
-  renderTerminalTilt(closed, baseline);
+  const file = terminal.selectedKey ? eventFile(closed, terminal.selectedKey, baseline) : null;
+  const tilt = tiltByEventType(closed, baseline);
 
-  const stampedCount = closed.filter(
-    (trade) => Array.isArray(trade.eventContext) && trade.eventContext.length > 0
-  ).length;
-  setText(ui.tpFootLinked, `journal: ${closed.length} trade${closed.length === 1 ? "" : "s"} linked`);
-  setText(ui.tpFootStamped, `${stampedCount} stamped with context`);
+  let tapeBody = upcoming.length
+    ? `<ul class="tm-list">${upcoming
+        .map((event) =>
+          termItem({
+            done: null,
+            emoji: "🗞",
+            name: `${event.currency} ${event.title}`,
+            starts: event.startsAt,
+          })
+        )
+        .join("")}</ul>`
+    : `<p class="tm-sub">no scheduled releases ahead for the pairs you trade.</p>`;
 
-  const feed = ui.tpFeedState;
-  if (feed) {
-    feed.classList.toggle("is-stale", terminal.stale || terminal.asOf === null);
-    const asOf = terminal.asOf ? new Date(terminal.asOf) : null;
-    setText(
-      ui.tpFeedText,
-      asOf === null
-        ? "calendar · unavailable"
-        : `calendar · as of ${asOf.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${terminal.stale ? " · stale" : ""}`
-    );
+  if (file && file.samples > 0) {
+    const rate = file.winRate === null ? "--" : `${Math.round(file.winRate * 100)}%`;
+    tapeBody +=
+      `<p class="tm-sub">your file on ${file.title || terminal.selectedKey}</p>` +
+      termKv([
+        ["prints", file.samples],
+        ["record", `${file.wins}W/${file.losses}L`],
+        ["win rate", rate],
+        ["net", formatSignedCurrency(file.netPnl), file.netPnl >= 0 ? "is-pos" : "is-neg"],
+        [
+          "verdict",
+          file.verdict === "" ? `needs ${EDGE_MIN_VERDICT} prints` : `${file.verdict.replace("-", " ")} than your own average`,
+        ],
+      ]) +
+      `<p class="tm-sub">${escapeHtml(file.sentence)}</p>`;
+  } else {
+    tapeBody += `<p class="tm-sub">no prints on record yet. your file starts with the next one.</p>`;
   }
+
+  if (tilt.ratio !== null) {
+    tapeBody +=
+      `<p class="tm-sub">tilt inside event windows</p><p class="tm-big">${tilt.ratio.toFixed(1)}x</p>` +
+      `<p class="tm-sub">you log emotional, revenge or cooldown-override trades ${tilt.ratio.toFixed(
+        1
+      )}x more often inside event windows than outside them</p>`;
+  }
+
+  // ---- open positions ----------------------------------------------------
+  const open = state.trades.filter((trade) => trade.status === "open");
+  const openBody = open.length
+    ? `<ul class="tm-list">${open
+        .map((trade) => {
+          const stopPips = pipsBetween(trade.asset, trade.market, trade.entryPrice, trade.stopLoss);
+          const targetPips = pipsBetween(trade.asset, trade.market, trade.entryPrice, trade.takeProfit);
+          const rows = [["entry", trade.entryPrice]];
+          if (Number(trade.stopLoss) > 0) {
+            rows.push(["stop", `${trade.stopLoss}   ${formatPips(Math.abs(stopPips))}`]);
+          }
+          if (Number(trade.takeProfit) > 0) {
+            rows.push(["target", `${trade.takeProfit}   ${formatPips(Math.abs(targetPips))}`]);
+          }
+          return (
+            termItem({
+              done: null,
+              emoji: "📈",
+              name: `${trade.asset} ${String(trade.direction || "").toLowerCase()}`,
+              meta: trade.lotSize ? `${trade.lotSize} lots` : "",
+            }) + `<li class="tm-item is-bare">${termKv(rows)}</li>`
+          );
+        })
+        .join("")}</ul>`
+    : `<p class="tm-sub">nothing open. the desk is flat.</p>`;
+
+  // ---- today -------------------------------------------------------------
+  const todayTrades = closed.filter((trade) => trade.date === todayIso);
+  const todayDone = todayTrades.filter((trade) => isTradeJournalled(trade)).length;
+  const todayNet = todayTrades.reduce((sum, trade) => sum + (Number(trade.netPnl) || 0), 0);
+  let todayBody = todayTrades.length
+    ? `<ul class="tm-list">${todayTrades
+        .map((trade) =>
+          termItem({
+            done: isTradeJournalled(trade),
+            emoji: "📓",
+            name: `${trade.asset} ${trade.result || ""}`.trim(),
+            meta: formatSignedCurrency(trade.netPnl),
+            metaTone: trade.netPnl >= 0 ? "is-pos" : "is-neg",
+          })
+        )
+        .join("")}</ul>` + termBar(todayDone, todayTrades.length)
+    : `<p class="tm-sub">nothing closed today yet.</p>`;
+  todayBody += termKv([
+    ["net today", formatSignedCurrency(todayNet), todayNet >= 0 ? "is-pos" : "is-neg"],
+    ["budget left", budgetLeft === null ? "no cap" : `${formatCurrency(budgetLeft)} of ${formatCurrency(state.settings.dailyMaxLoss)}`],
+    ["trades", todayTrades.length],
+  ]);
+
+  // ---- the wind down -----------------------------------------------------
+  const reflectedToday = (state.reflections || []).some((entry) => entry.date === todayIso);
+  const wind = [
+    { done: reflectedToday, emoji: "📝", name: "reflection written today", meta: reflectedToday ? "done" : "" },
+    { done: debt.length === 0, emoji: "📓", name: "journal debt clear", meta: debt.length === 0 ? "clear" : String(debt.length) },
+    {
+      done: budgetLeft === null ? true : todayNet > -state.settings.dailyMaxLoss,
+      emoji: "🛡",
+      name: "inside the loss cap",
+      meta: formatSignedCurrency(todayNet),
+      metaTone: todayNet >= 0 ? "is-pos" : "is-neg",
+    },
+  ];
+  const windDone = wind.filter((item) => item.done).length;
+
+  setHtml(
+    ui.tmSections,
+    [
+      termSection({
+        hue: 1,
+        key: "premarket",
+        emoji: "📋",
+        name: "pre-market",
+        count: `${preDone}/${pre.length}`,
+        sub: "what the desk knows before you click buy",
+        body: `<ul class="tm-list">${pre.map(termItem).join("")}</ul>`,
+      }),
+      termSection({
+        hue: 2,
+        key: "tape",
+        emoji: "🗞",
+        name: "the tape",
+        count: upcoming.length ? String(upcoming.length) : "",
+        sub: "ranked on the currencies behind the assets you trade",
+        body: tapeBody,
+      }),
+      termSection({
+        hue: 3,
+        key: "open",
+        emoji: "📈",
+        name: "open positions",
+        count: open.length ? String(open.length) : "",
+        sub: "",
+        body: openBody,
+      }),
+      termSection({
+        hue: 4,
+        key: "today",
+        emoji: "📓",
+        name: "today",
+        count: todayTrades.length ? `${todayDone}/${todayTrades.length}` : "",
+        sub: "a tick means the trade has a note",
+        body: todayBody,
+      }),
+      termSection({
+        hue: 5,
+        key: "wind",
+        emoji: "🌙",
+        name: "the wind down",
+        count: `${windDone}/${wind.length}`,
+        sub: "",
+        body: `<ul class="tm-list">${wind.map(termItem).join("")}</ul>`,
+      }),
+    ].join("")
+  );
+
+  setText(ui.tmFoot, `${closed.length} closed, ${stamped} stamped`);
   renderTerminalClock();
 }
 
-function renderTerminalEvents(events) {
-  const list = ui.tpEvents;
-  if (!list) {
-    return;
-  }
-  if (ui.tpEventsEmpty) {
-    ui.tpEventsEmpty.hidden = events.length > 0;
-  }
-  list.innerHTML = events
-    .map((event, index) => {
-      const when = new Date(event.startsAt);
-      // The absolute local time rides beside the countdown on purpose: if the
-      // feed ever re-zones, a trader spots "CPI at 04:30" instantly, where a
-      // bare countdown would be silently hours wrong forever.
-      const clock = when.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      const active = event.key === terminal.selectedKey ? " is-active" : "";
-      return `
-        <li>
-          <button class="tp-event${active}" type="button" data-event-key="${escapeHtml(event.key)}"
-                  data-impact="${escapeHtml(event.impact)}" data-starts="${escapeHtml(event.startsAt)}"
-                  style="--i:${index}">
-            <span class="tp-event-time">${escapeHtml(clock)}</span>
-            <span class="tp-event-cur"><span class="tp-imp" aria-hidden="true"><i></i><i></i><i></i></span>${escapeHtml(event.currency)}</span>
-            <span class="tp-event-title">${escapeHtml(event.title)}</span>
-            <span class="tp-event-cd"></span>
-          </button>
-        </li>`;
-    })
-    .join("");
-  renderTerminalClock();
-}
-
-/* The only per-second work: patch the countdown text and the phase attribute.
-   No markup is rebuilt, so a row's entrance animation never restarts. */
+/* The only per-second work: patch countdown text in place. No markup is
+   rebuilt, so a row's entrance never restarts. One selector drives the desk,
+   the pre-market print row and the dashboard rail. */
 function renderTerminalClock() {
   const now = terminalNow();
   setText(ui.tpClock, now.toLocaleTimeString([], { hour12: false }));
   document.querySelectorAll("[data-starts]").forEach((row) => {
-    const state = countdown({ startsAt: row.dataset.starts }, now);
-    row.dataset.phase = state.phase;
-    // The desk rail's countdown IS the element, so it falls back to itself.
-    const cell = row.querySelector(".tp-event-cd") || row;
-    if (cell && cell.textContent !== state.text) {
-      cell.textContent = state.text;
+    const phase = countdown({ startsAt: row.dataset.starts }, now);
+    row.dataset.phase = phase.phase;
+    const cell = row.querySelector(".tm-event-cd") || row;
+    if (cell.textContent !== phase.text) {
+      cell.textContent = phase.text;
     }
   });
 }
 
-function renderTerminalEdge(closed, baseline) {
-  const host = ui.tpEdge;
-  if (!host) {
-    return;
-  }
-  if (!terminal.selectedKey) {
-    host.innerHTML = '<p class="tp-empty">No release selected yet.</p>';
-    setText(ui.tpEdgeScope, "select a release");
-    return;
-  }
-
-  const file = eventFile(closed, terminal.selectedKey, baseline);
-  const event = terminal.events.find((item) => item.key === terminal.selectedKey);
-  const title = file.title || event?.title || terminal.selectedKey;
-  setText(ui.tpEdgeScope, `${file.samples} print${file.samples === 1 ? "" : "s"} on record`);
-
-  // winRate is null below 5 samples — print an em dash, never a fabricated 0%.
-  const rate = file.winRate === null ? "—" : `${Math.round(file.winRate * 100)}%`;
-  const stats = `
-    <div class="tp-edge-stats">
-      <div class="tp-stat"><b>${file.wins}W/${file.losses}L</b><span>record</span></div>
-      <div class="tp-stat"><b>${escapeHtml(rate)}</b><span>win rate</span></div>
-      <div class="tp-stat"><b class="${file.netPnl >= 0 ? "is-pos" : "is-neg"}">${escapeHtml(formatSignedCurrency(file.netPnl))}</b><span>net</span></div>
-    </div>`;
-
-  const verdict =
-    file.verdict === ""
-      ? ""
-      : `<p class="tp-verdict ${file.verdict === "worse" ? "is-worse" : file.verdict === "better" ? "is-better" : ""}">
-           verdict · ${escapeHtml(file.verdict.replace("-", " "))} than your own average
-         </p>`;
-
-  const buckets = windowBuckets(closed, terminal.selectedKey);
-  const peak = Math.max(1, ...buckets.map((bucket) => Math.abs(bucket.netPnl)));
-  const bucketRows = buckets
-    .map(
-      (bucket, index) => `
-      <div class="tp-bucket${bucket.n < 3 ? " is-thin" : ""}">
-        <span class="tp-bucket-k">${escapeHtml(bucket.label)}</span>
-        <span class="tp-bucket-track"><span class="tp-bucket-fill${bucket.netPnl < 0 ? " is-neg" : ""}"
-              style="--i:${index};width:${Math.round((Math.abs(bucket.netPnl) / peak) * 100)}%"></span></span>
-        <span class="tp-bucket-v">${bucket.n === 0 ? "—" : `${bucket.n} · ${formatSignedCurrency(bucket.netPnl)}`}</span>
-      </div>`
-    )
-    .join("");
-
-  host.innerHTML = `
-    <p class="tp-edge-head">${escapeHtml(title)}</p>
-    <p class="tp-edge-sentence">${escapeHtml(file.sentence)}</p>
-    ${stats}
-    ${verdict}
-    <div class="tp-buckets">${bucketRows}</div>`;
-}
-
-/* Day-one value: this pane needs no stamps and no archive at all, so a brand
-   new trader learns something true about themselves on the first visit. */
-function renderTerminalClockRows(closed) {
-  const host = ui.tpClockRows;
-  if (!host) {
-    return;
-  }
-  const slots = releaseClockEdge(closed);
-  host.innerHTML = slots
-    .map(
-      (slot) => `
-      <div class="tp-clockrow${slot.n < 3 ? " is-thin" : ""}">
-        <span class="tp-clockrow-k">${escapeHtml(slot.slot)}</span>
-        <span class="tp-clockrow-l">${escapeHtml(slot.label)}</span>
-        <span class="tp-clockrow-v ${slot.n === 0 ? "" : slot.netPnl >= 0 ? "is-pos" : "is-neg"}">${
-          slot.n === 0 ? "no trades" : `${slot.n} · ${formatSignedCurrency(slot.netPnl)}`
-        }</span>
-      </div>`
-    )
-    .join("");
-}
-
-function renderTerminalTilt(closed, baseline) {
-  const host = ui.tpTilt;
-  if (!host) {
-    return;
-  }
-  const tilt = tiltByEventType(closed, baseline);
-  setText(ui.tpTiltScope, `${tilt.onEventN} on-event · ${tilt.offEventN} off`);
-
-  // A ratio needs both sides over the threshold, or it is noise dressed as a
-  // multiple — the library returns null and the pane says so plainly.
-  if (tilt.ratio === null) {
-    host.innerHTML = `<p class="tp-empty">Not enough stamped trades yet to compare your tilt inside event windows against the rest of your journal. This fills in as you trade.</p>`;
-    return;
-  }
-  host.innerHTML = `
-    <p class="tp-tilt-big">${tilt.ratio.toFixed(1)}×</p>
-    <p class="tp-tilt-note">You log emotional, revenge or cooldown-override trades ${tilt.ratio.toFixed(1)}× more often inside event windows than outside them.</p>`;
-}
-
-/* The Terminal Pro rollout gate. A hidden nav button is not a security
-   boundary — anyone can flip a boolean in devtools — and that is acceptable
-   here ONLY because there is no premium data behind it: the calendar is
-   public, and every statistic is computed in this browser from trades the user
-   already owns. When billing lands, the server gates the data, not the button. */
 function syncTerminalAccess() {
   // Local preview (plain-http localhost / file:, or an explicit ?preview=1)
   // grants the terminal so the view can be developed without a session. The
