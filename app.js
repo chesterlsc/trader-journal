@@ -323,7 +323,6 @@ const ui = {
   termStatusText: document.getElementById("termStatusText"),
   termBoot: document.getElementById("termBoot"),
   termBootLog: document.getElementById("termBootLog"),
-  deskRail: document.getElementById("deskRail"),
   metricNodes: Array.from(document.querySelectorAll("[data-metric]")),
   metricDeltaNodes: Array.from(document.querySelectorAll("[data-metric-delta]")),
   metricGrid: document.getElementById("dashboardMetricGrid"),
@@ -1172,7 +1171,7 @@ function applyTerm(on) {
     button.setAttribute("aria-label", on ? "Disarm terminal mode" : "Arm terminal mode");
     const label = button.querySelector("[data-term-arm-label]");
     if (label) {
-      label.textContent = on ? "TERM" : "TERM";
+      label.textContent = on ? "TERM" : "ARM";
     }
   });
   // LOAD BEARING. Every canvas in the app (charts.js, renderDashSparkline)
@@ -7050,7 +7049,7 @@ function renderAll() {
   syncTerminalAccess();
   renderTerminal();
   syncTermChrome();
-  renderDeskRail();
+  renderEdgeBoard();
   renderProgressTradeSummary();
   renderDashboardMetrics(state.analytics);
   renderRiskStrip(state.analytics);
@@ -13168,91 +13167,260 @@ function syncTermChrome() {
     button.classList.toggle("is-booting", term.booting);
     const label = button.querySelector("[data-term-arm-label]");
     if (label) {
-      label.textContent = term.booting ? "BOOT" : "TERM";
+      label.textContent = term.booting ? "BOOT" : term.armed ? "TERM" : "ARM";
     }
   });
 }
 
-/* --- The desk rail --------------------------------------------------------
-   Terminal Pro's front door on the dashboard, replacing a nav item most
-   people never press. Right, not centre: the dashboard's reading order is
-   balance, risk, prop, metrics, all left-anchored money, and a centre column
-   splits the money. Peripheral is where a countdown belongs.
+/* --- Release edge: Terminal Pro living on the dashboard as a board ---------
+   ONE COMPONENT, TWO SKINS. This renderer emits nothing but app-wide classes
+   (.dash-board, .metric-card, .metric-label, .nav-btn), so the terminal skin
+   arrives from the app's own grammar rather than from a second stylesheet, and
+   the Clay skin is simply what those classes already are.
 
-   It pins its own dark values, the same trick .tp-desk uses, so on the light
-   theme it is a black instrument bolted to a concrete console. That contrast
-   is the attention, and it costs no badge and no accent border. */
-function renderDeskRail() {
-  const host = ui.deskRail;
-  if (!host) {
+   The rail this replaces pinned --surface-* on its own subtree, which
+   out-specified its own repair and kept it black on a Clay dashboard. Nothing
+   here declares a custom property on an element, which is the whole fix.
+
+   Honesty is enforced upstream, not here: eventFile returns winRate === null
+   below EDGE_MIN_LOG, so THE NULL IS THE RENDER SIGNAL and this function
+   carries no threshold branch of its own. */
+function renderEdgeBoard() {
+  const board = document.getElementById("dashEdge");
+  if (!board) {
     return;
   }
-  if (!canAccessApp()) {
-    host.hidden = true;
+  const granted = Boolean(state.auth.terminalPro) || isLocalPreviewMode();
+  board.hidden = !canAccessApp();
+  if (board.hidden) {
     return;
   }
-  host.hidden = false;
 
   const closed = getClosedTrades(state.trades);
+  const baseline = buildBaseline(closed);
   const currencies = tradedCurrencies(state.trades);
-  const next = rankEvents(terminal.events, { now: terminalNow(), currencies, minImpact: "Medium" })[0] || null;
+  const now = terminalNow();
 
-  // Said out loud on purpose: rankEvents already filters to the currencies
-  // behind the assets this trader actually touches, and nothing in the product
-  // ever mentioned it.
-  const nextCell = next
-    ? `<p class="desk-k">next release <span>${escapeHtml(
-        terminal.asOf ? new Date(terminal.asOf).toISOString().slice(11, 16) + "Z" : "no link"
-      )}</span></p>
-       <p class="desk-sub">ranked on your pairs, not the clock</p>
-       <p class="desk-cur">${escapeHtml(next.currency)} &middot; ${escapeHtml(next.impact)}</p>
-       <p class="desk-title">${escapeHtml(next.title)}</p>
-       <p class="desk-cd" data-starts="${escapeHtml(next.startsAt)}"></p>`
-    : `<p class="desk-k">next release</p>
-       <p class="desk-empty">No scheduled releases ahead for the pairs you trade.</p>`;
+  // ---- freshness, the pattern every product in the category ships ---------
+  const asOf = document.getElementById("dashEdgeAsOf");
+  if (asOf) {
+    const stale = terminal.stale || terminal.asOf === null;
+    asOf.dataset.stale = stale ? "true" : "false";
+    asOf.textContent =
+      terminal.asOf === null
+        ? "calendar unavailable"
+        : `calendar ${new Date(terminal.asOf).toISOString().slice(11, 16)} UTC${stale ? " (stale)" : ""}`;
+  }
 
-  let fileCell;
-  if (!state.auth.terminalPro && !isLocalPreviewMode()) {
-    fileCell = `<p class="desk-k">your file on this release</p>
-                <p class="desk-empty">Terminal Pro &middot; in development</p>`;
-  } else {
-    const key = next?.key || mostStampedKey(closed);
-    const file = key ? eventFile(closed, key, buildBaseline(closed)) : null;
-    if (!file || file.samples === 0) {
-      fileCell = `<p class="desk-k">your file on this release</p>
-                  <p class="desk-empty">Not enough stamped trades yet to compare your record against this release. This fills in as you trade.</p>`;
+  // ---- card 1: what is coming --------------------------------------------
+  const next = rankEvents(terminal.events, { now, currencies, minImpact: "Medium" })[0] || null;
+  const nextCard = document.getElementById("dashEdgeNext");
+  if (nextCard) {
+    if (next) {
+      nextCard.dataset.starts = next.startsAt;
+      const phase = countdown(next, now);
+      setHtml(
+        nextCard,
+        `<p class="metric-label">Next release</p>
+         <p class="dash-edge-fig tm-event-cd">${escapeHtml(phase.text)}</p>
+         <span class="dash-edge-phase" aria-hidden="true"><i></i></span>
+         <p class="dash-edge-n">${escapeHtml(next.currency)} ${escapeHtml(next.title)}, ${escapeHtml(
+          next.impact
+        )} impact.</p>`
+      );
     } else {
-      const rate = file.winRate === null ? "&mdash;" : `${Math.round(file.winRate * 100)}%`;
-      const verdict =
-        file.verdict === "better"
-          ? "better than your average"
-          : file.verdict === "worse"
-            ? "worse than your average"
-            : `${file.samples} prints on record. ${EDGE_MIN_VERDICT} is where the number starts meaning something.`;
-      fileCell = `<p class="desk-k">your file on this release</p>
-                  <p class="desk-figs"><span>${file.wins}W/${file.losses}L</span><span>${rate}</span><span>${escapeHtml(
-                    formatSignedCurrency(file.netPnl)
-                  )}</span></p>
-                  <p class="desk-verdict">${escapeHtml(verdict)}</p>`;
+      delete nextCard.dataset.starts;
+      setHtml(
+        nextCard,
+        `<p class="metric-label">Next release</p>
+         <p class="dash-edge-fig">--</p>
+         <p class="dash-edge-n">${
+           terminal.asOf === null
+             ? "No calendar link. The board runs on your record alone."
+             : "Nothing scheduled ahead for the pairs you trade."
+         }</p>`
+      );
     }
   }
 
-  // The mount line sits here at rest, all the time. Arming makes it fly, which
-  // is why the boot reads as a continuation rather than a performance.
-  const stamped = closed.filter((t) => Array.isArray(t.eventContext) && t.eventContext.length > 0).length;
-  const armCell = `
-    <button class="desk-arm" id="termArmRail" type="button" data-term-arm aria-pressed="${term.armed ? "true" : "false"}"
-            aria-label="${term.armed ? "Disarm terminal mode" : "Arm terminal mode"}">
-      <span class="term-key-led" aria-hidden="true"></span>
-      <span data-term-arm-label>${term.armed ? "TERM" : "ARM TERMINAL"}</span>
-      <span class="term-key-hold" aria-hidden="true"></span>
-    </button>
-    <p class="desk-arm-note">boots on ${closed.length} closed &middot; ${stamped} stamped &middot; ${terminal.events.length} events</p>`;
+  // ---- card 2: the trader's own record against it ------------------------
+  if (!terminal.selectedKey) {
+    terminal.selectedKey = next?.key || mostStampedKey(closed);
+  }
+  const file = terminal.selectedKey ? eventFile(closed, terminal.selectedKey, baseline) : null;
+  const fileCard = document.getElementById("dashEdgeFile");
+  if (fileCard) {
+    if (file && file.samples > 0) {
+      // winRate is null under EDGE_MIN_LOG, so a thin sample prints the record
+      // rather than a rate. No percentage can appear under five prints.
+      const fig = file.winRate === null ? `${file.wins}W/${file.losses}L` : `${Math.round(file.winRate * 100)}%`;
+      const marks = closed
+        .filter((trade) => (trade.eventContext || []).some((stamp) => stamp?.k === terminal.selectedKey))
+        .slice(-12)
+        .map((trade) => `<i class="${trade.netPnl > 0 ? "is-pos" : trade.netPnl < 0 ? "is-neg" : ""}"></i>`)
+        .join("");
+      setHtml(
+        fileCard,
+        `<p class="metric-label">Your file on it</p>
+         <p class="dash-edge-fig">${escapeHtml(fig)}</p>
+         <span class="dash-edge-marks" role="img" aria-label="${file.wins} wins, ${file.losses} losses">${marks}</span>
+         <p class="dash-edge-n">${file.samples} print${file.samples === 1 ? "" : "s"} on record. ${
+          file.winRate === null ? `${EDGE_MIN_LOG} needed for a rate.` : `${EDGE_MIN_VERDICT} for a verdict.`
+        }</p>`
+      );
+    } else {
+      setHtml(
+        fileCard,
+        `<p class="metric-label">Your file on it</p>
+         <p class="dash-edge-fig">--</p>
+         <p class="dash-edge-n">No prints on record yet. Your file starts with the next one.</p>`
+      );
+    }
+  }
 
-  host.innerHTML = `<div class="desk-cell">${nextCell}</div><div class="desk-cell">${fileCell}</div><div class="desk-cell">${armCell}</div>`;
-  // The rail's ARM key is rebuilt on every render, so the cached list has to be
-  // refreshed or it holds a detached node and the key stops responding.
-  ui.termArms = Array.from(document.querySelectorAll("[data-term-arm]"));
+  // ---- card 3: day one. Needs no stamps and no archive. -------------------
+  const slots = releaseClockEdge(closed);
+  const live = slots.filter((slot) => slot.n > 0);
+  const best = live.slice().sort((a, b) => b.netPnl - a.netPnl)[0] || null;
+  const peak = Math.max(1, ...slots.map((slot) => Math.abs(slot.netPnl)));
+  const clockCard = document.getElementById("dashEdgeClock");
+  if (clockCard) {
+    if (best) {
+      const bars = slots
+        .map(
+          (slot) =>
+            `<i class="${slot.n === 0 ? "" : slot.netPnl >= 0 ? "is-pos" : "is-neg"}" style="height:${Math.max(
+              6,
+              Math.round((Math.abs(slot.netPnl) / peak) * 100)
+            )}%"></i>`
+        )
+        .join("");
+      setHtml(
+        clockCard,
+        `<p class="metric-label">Your clock</p>
+         <p class="dash-edge-fig ${best.netPnl >= 0 ? "is-pos" : "is-neg"}">${escapeHtml(
+          formatSignedCurrency(best.netPnl)
+        )}</p>
+         <span class="dash-edge-bars" aria-hidden="true">${bars}</span>
+         <p class="dash-edge-n">${escapeHtml(best.label)}, ${best.n} live trade${
+          best.n === 1 ? "" : "s"
+        }. Your best.</p>`
+      );
+    } else {
+      setHtml(
+        clockCard,
+        `<p class="metric-label">Your clock</p>
+         <p class="dash-edge-fig">--</p>
+         <p class="dash-edge-n">No live-logged trades yet. Imported rows are excluded, because their timestamps are the paste time.</p>`
+      );
+    }
+  }
+
+  // ---- the ONE insight line, never a list --------------------------------
+  const say = document.getElementById("dashEdgeSay");
+  if (say) {
+    const show = Boolean(file && file.samples > 0);
+    say.hidden = !show;
+    if (show) {
+      setText(say, file.sentence);
+    }
+  }
+
+  // ---- pane 1: the clock as a LIST, not a chart --------------------------
+  setHtml(
+    document.getElementById("dashEdgeSlots"),
+    slots
+      .map(
+        (slot) => `
+      <div class="dash-edge-slot">
+        <div class="dash-edge-slot-top">
+          <span class="dash-edge-slot-name">${escapeHtml(slot.label)}</span>
+          <span class="dash-edge-slot-n">${slot.n}</span>
+          <span class="dash-edge-slot-val ${
+            slot.n === 0 ? "" : slot.netPnl >= 0 ? "is-pos" : "is-neg"
+          }">${slot.n === 0 ? "no trades" : escapeHtml(formatSignedCurrency(slot.netPnl))}</span>
+        </div>
+        ${
+          slot.n === 0
+            ? ""
+            : `<span class="dash-edge-bar" aria-hidden="true"><i class="${
+                slot.netPnl >= 0 ? "is-pos" : "is-neg"
+              }" style="width:${Math.round((Math.abs(slot.netPnl) / peak) * 100)}%"></i></span>`
+        }
+      </div>`
+      )
+      .join("")
+  );
+
+  // ---- pane 2: the evaluation table --------------------------------------
+  setText(
+    document.getElementById("dashEdgeTag"),
+    file && file.title ? file.title : terminal.selectedKey ? terminal.selectedKey : ""
+  );
+  const evalHost = document.getElementById("dashEdgeEval");
+  if (evalHost) {
+    if (!file || file.samples === 0) {
+      setHtml(
+        evalHost,
+        `<p class="dash-edge-note">Nothing stamped against this release yet. Every trade you log from now carries what was on the calendar when you clicked buy, and this fills in on its own.</p>`
+      );
+    } else {
+      const rows = [
+        ["Prints on record", String(file.samples), ""],
+        ["Wins / losses", `${file.wins} / ${file.losses}`, ""],
+        ["Net", formatSignedCurrency(file.netPnl), file.netPnl >= 0 ? "is-pos" : "is-neg"],
+        ["Average R", file.avgR.toFixed(2), ""],
+      ];
+      // No percentage of any kind below the log floor, so the whole rate block
+      // is withheld rather than softened.
+      if (file.samples >= EDGE_MIN_LOG && baseline.winRate !== null) {
+        rows.push(["Your own baseline", `${Math.round(baseline.winRate * 100)}%`, ""]);
+        rows.push(["On this release", `${Math.round(file.winRate * 100)}%`, ""]);
+        rows.push([
+          "Rate range (95%)",
+          `${Math.round(file.winRateCI.lo * 100)}% to ${Math.round(file.winRateCI.hi * 100)}%`,
+          "",
+        ]);
+      }
+      rows.push(["Confidence", `${file.samples} of ${EDGE_MIN_VERDICT}`, "is-soft"]);
+      if (file.verdict !== "") {
+        rows.push([
+          "Verdict",
+          file.verdict === "no-difference"
+            ? "No measurable difference"
+            : `${file.verdict === "better" ? "Better" : "Worse"} than your own average`,
+          "",
+        ]);
+      }
+
+      // THE ONE DECORATED ROW: the oxide bar is the 95% interval and the tick
+      // is the trader's OWN baseline, so the comparison is never against 50%.
+      // If the band clears the tick, that is the verdict before you read a word.
+      const band =
+        file.samples >= EDGE_MIN_LOG && baseline.winRate !== null
+          ? `<div class="dash-edge-ci" aria-hidden="true" style="--lo:${(file.winRateCI.lo * 100).toFixed(
+              1
+            )}%; --span:${((file.winRateCI.hi - file.winRateCI.lo) * 100).toFixed(1)}%; --base:${(
+              baseline.winRate * 100
+            ).toFixed(1)}%"><i></i><b></b></div>`
+          : "";
+
+      setHtml(
+        evalHost,
+        rows
+          .map(([k, v, tone]) => `<dt>${escapeHtml(k)}</dt><dd class="${tone}">${escapeHtml(v)}</dd>`)
+          .join("") + band
+      );
+    }
+  }
+
+  // The gate is a rollout flag, not a paywall: the board is public because the
+  // schedule is public and every statistic is the trader's own, computed here.
+  // Only the deeper workspace is gated.
+  document.querySelectorAll(".dash-edge-open").forEach((link) => {
+    link.hidden = !granted;
+  });
+
   renderTerminalClock();
 }
 

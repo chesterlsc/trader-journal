@@ -9474,64 +9474,6 @@ button.tm-item-main:focus-visible { outline: none; box-shadow: var(--focus-ring)
 }
 .tm-boot .tm-bar { margin-top: 6px; }
 .tm-boot .tm-sub { display: block; margin-left: 0; margin-top: 2px; }
-
-/* ═══ THE DESK RAIL ═══════════════════════════════════════════════════════
-   The only element in the app that speaks this language while the mode is
-   OFF, so it pins the syntax ramp and the DARK money pair locally. That pin
-   is LOAD BEARING: on the light theme clay-v3.css:182 repoints --pnl-pos to
-   #146b49, which measures 2.89:1 on this rail's #0e1218 ground, and
-   --pnl-neg #b32b4f measures 3.02:1. Both fail the 4.5:1 text floor, and
-   clayV3Contrast.check.mjs cannot see it because this is an element-scoped
-   override its merged() never walks.
-
-   Under [data-term="on"] this block stops matching and the rail inherits
-   whichever of the four themes the trader picked, with no second selector.
-   ══════════════════════════════════════════════════════════════════════════ */
-:root:not([data-term="on"]) #deskRail {
-  --surface-0: #0a0d12;
-  --surface-1: #0e1218;
-  --surface-2: #171d26;
-  --surface-3: #1e2530;
-  --surface-inset: #060910;
-  --line: #1a212a;
-  --line-strong: #242c37;
-  --text-inverse: #06090e;
-
-  --tm-hi: #a4b1bd;
-  --tm-text: #95a4b2;
-  --tm-key: #7f90a2;
-  --tm-punc: #7f90a2;
-  --tm-comment: #878f97;
-  --tm-faint: #5f7284;
-  --tm-h1: #c78614;
-  --tm-h2: #2e9ec6;
-  --tm-h3: #6293e6;
-  --tm-h4: #ae7ce6;
-  --tm-h5: #d768d7;
-
-  --pnl-pos: #3ecf8e;
-  --pnl-neg: #f7758d;
-
-  --focus-ring: 0 0 0 3px var(--surface-1), 0 0 0 6px var(--tm-hi);
-}
-#deskRail {
-  display: grid;
-  gap: 1px;
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  background: var(--line);
-  color: var(--tm-text);
-  font-family: var(--font-mono);
-  font-size: var(--tm-fs-body);
-  line-height: var(--tm-lh);
-  letter-spacing: 0;
-  text-transform: none;
-  font-variant-numeric: tabular-nums;
-  overflow: hidden;
-}
-/* every direct child is a cell; the 1px grid gap shows the rail ground */
-#deskRail > * { background: var(--surface-1); padding: var(--tm-gut); }
-#deskRail .tm-head { padding-bottom: 0; }
 /* countdown() returns "" for a past event. A genuinely absent value prints two
    ASCII hyphens, never an em dash. */
 .tm-hero:empty::before { content: "--"; color: var(--tm-key); font-weight: 400; }
@@ -9591,12 +9533,11 @@ button.tm-item-main:focus-visible { outline: none; box-shadow: var(--focus-ring)
 .tm-arm.is-holding .term-key-hold { animation: termHold 480ms linear forwards; animation-delay: 120ms; }
 
 /* An author `display` beats the UA stylesheet's `[hidden] { display: none }`,
-   so every one of these needs its own hidden guard or the attribute silently
+so every one of these needs its own hidden guard or the attribute silently
    stops working. The status strip shipped visible on a non-armed dashboard
    for exactly this reason. */
 #termStatus[hidden],
-#termBoot[hidden],
-#deskRail[hidden] { display: none; }
+#termBoot[hidden] { display: none; }
 
 /* --- 2. THE RESET THAT DELETES THE REJECTED LANGUAGE ----------------------
    Two declarations, whole app, one rule. The old sheet set uppercase and
@@ -9637,28 +9578,40 @@ button.tm-item-main:focus-visible { outline: none; box-shadow: var(--focus-ring)
   text-transform: none;
 }
 
-/* --- 4. // COMMENTS ARE THE ONLY SECONDARY TEXT --------------------------
-   There are no small grey labels in this language. Every descriptive
-   paragraph the app already ships becomes a comment.
-
-   HONEST LIMIT: the ref repeats `//` on every wrapped line. CSS cannot
-   prefix a line box, so a two-line paragraph gets one leading `//`. The
-   68ch measure below keeps most of them to one or two lines, which is the
-   reason the measure is there as well as the legibility one. */
 :root[data-term="on"] :is(
-  .view-head p, .panel-head p, .trade-section-head p, .metric-note,
-  .sheet-rules-note, .sheet-note, .digest-lede, .prop-note, .desk-sub,
-  .dash-risk-consequence, .eq-scrub-hint, .cal-legend li, .empty-row td,
-  .muted, .rule-cost-note
+  .view-head p,
+.panel-head p,
+.trade-section-head p,
+.metric-note,
+.sheet-rules-note,
+.sheet-note,
+.digest-lede,
+.prop-note,
+.dash-risk-consequence,
+.eq-scrub-hint,
+.cal-legend li,
+.empty-row td,
+.muted,
+.rule-cost-note
 )::before {
   content: "// ";
   color: var(--tm-punc);
 }
 
 :root[data-term="on"] :is(
-  .view-head p, .panel-head p, .trade-section-head p, .metric-note,
-  .sheet-rules-note, .sheet-note, .digest-lede, .prop-note, .desk-sub,
-  .dash-risk-consequence, .eq-scrub-hint, .empty-row td, .muted, .rule-cost-note
+  .view-head p,
+.panel-head p,
+.trade-section-head p,
+.metric-note,
+.sheet-rules-note,
+.sheet-note,
+.digest-lede,
+.prop-note,
+.dash-risk-consequence,
+.eq-scrub-hint,
+.empty-row td,
+.muted,
+.rule-cost-note
 ) {
   max-width: 68ch;
   color: var(--tm-comment);
@@ -9804,9 +9757,21 @@ button.tm-item-main:focus-visible { outline: none; box-shadow: var(--focus-ring)
 }
 
 :root[data-term="on"] :is(
-  .dash-range-btn, .strategy-toggle-btn, .sheet-seg-btn, .sheet-risk-btn,
-  .rev-chip, .jrn-chip, .jrn-grade, .jrn-chip-add, .direction-btn,
-  .btn, .sheet-submit, .sheet-detail, .jrn-mini, .digest-draft, .desk-arm, .term-key
+  .dash-range-btn,
+.strategy-toggle-btn,
+.sheet-seg-btn,
+.sheet-risk-btn,
+.rev-chip,
+.jrn-chip,
+.jrn-grade,
+.jrn-chip-add,
+.direction-btn,
+.btn,
+.sheet-submit,
+.sheet-detail,
+.jrn-mini,
+.digest-draft,
+.term-key
 ) {
   padding: 0 2px;
   border: 0;
@@ -9820,15 +9785,39 @@ button.tm-item-main:focus-visible { outline: none; box-shadow: var(--focus-ring)
 }
 
 :root[data-term="on"] :is(
-  .dash-range-btn, .strategy-toggle-btn, .sheet-seg-btn, .sheet-risk-btn,
-  .rev-chip, .jrn-chip, .jrn-grade, .jrn-chip-add, .direction-btn,
-  .btn, .sheet-submit, .sheet-detail, .jrn-mini, .digest-draft, .desk-arm, .term-key
+  .dash-range-btn,
+.strategy-toggle-btn,
+.sheet-seg-btn,
+.sheet-risk-btn,
+.rev-chip,
+.jrn-chip,
+.jrn-grade,
+.jrn-chip-add,
+.direction-btn,
+.btn,
+.sheet-submit,
+.sheet-detail,
+.jrn-mini,
+.digest-draft,
+.term-key
 )::before { content: "["; color: var(--tm-punc); }
 
 :root[data-term="on"] :is(
-  .dash-range-btn, .strategy-toggle-btn, .sheet-seg-btn, .sheet-risk-btn,
-  .rev-chip, .jrn-chip, .jrn-grade, .jrn-chip-add, .direction-btn,
-  .btn, .sheet-submit, .sheet-detail, .jrn-mini, .digest-draft, .desk-arm, .term-key
+  .dash-range-btn,
+.strategy-toggle-btn,
+.sheet-seg-btn,
+.sheet-risk-btn,
+.rev-chip,
+.jrn-chip,
+.jrn-grade,
+.jrn-chip-add,
+.direction-btn,
+.btn,
+.sheet-submit,
+.sheet-detail,
+.jrn-mini,
+.digest-draft,
+.term-key
 )::after { content: "]"; color: var(--tm-punc); }
 
 :root[data-term="on"] :is(
@@ -9850,16 +9839,23 @@ button.tm-item-main:focus-visible { outline: none; box-shadow: var(--focus-ring)
   box-shadow: none;
 }
 
-/* The one primary action per screen is the highlight step, not a fill. */
-:root[data-term="on"] :is(.btn.primary, .sheet-submit, .desk-arm) {
+:root[data-term="on"] :is(.btn.primary,
+.sheet-submit {
   color: var(--tm-hi);
   font-weight: 700;
 }
 
 :root[data-term="on"] :is(
-  .dash-range-btn, .strategy-toggle-btn, .sheet-seg-btn, .sheet-risk-btn,
-  .rev-chip, .jrn-chip, .jrn-grade, .direction-btn, .btn, .term-key, .desk-arm
-):focus-visible {
+  .dash-range-btn,
+.strategy-toggle-btn,
+.sheet-seg-btn,
+.sheet-risk-btn,
+.rev-chip,
+.jrn-chip,
+.jrn-grade,
+.direction-btn,
+.btn,
+.term-key {
   outline: none;
   box-shadow: var(--focus-ring);
 }
@@ -10092,39 +10088,6 @@ button.tm-item-main:focus-visible { outline: none; box-shadow: var(--focus-ring)
 }
 :root[data-term="on"] .tm-chip:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
-/* --- 12. The desk rail follows the theme ---------------------------------
-   It pinned its own --tp-* ramp, which is correct with the mode OFF (a black
-   instrument on a concrete console) and wrong with it ON (a second palette
-   that cannot follow the hue). Re-pointed, not rewritten. */
-:root[data-term="on"] #deskRail {
-  --tp-0: var(--surface-0);
-  --tp-1: var(--surface-1);
-  --tp-line: var(--line);
-  --tp-text: var(--tm-text);
-  --tp-soft: var(--tm-comment);
-  --tp-faint: var(--tm-key);
-  border: 0;
-  border-radius: 0;
-  background: none;
-  gap: var(--tm-row);
-}
-:root[data-term="on"] .desk-cell { background: none; padding: 0; }
-:root[data-term="on"] .desk-k {
-  color: var(--tm-key);
-  font: 400 var(--tm-fs-body)/var(--tm-lh) var(--font-mono);
-}
-:root[data-term="on"] .desk-k::after { content: ":"; color: var(--tm-punc); }
-:root[data-term="on"] .desk-cur { color: var(--tm-key); font-size: var(--tm-fs-sm); }
-:root[data-term="on"] .desk-title { color: var(--tm-text); font-size: var(--tm-fs-body); }
-:root[data-term="on"] .desk-cd {
-  color: var(--tm-text);
-  font-size: var(--tm-fs-big);
-}
-:root[data-term="on"] .desk-cd[data-phase="imminent"],
-:root[data-term="on"] .desk-cd[data-phase="live"] { color: var(--tm-hi); font-weight: 700; }
-:root[data-term="on"] .desk-empty { color: var(--tm-comment); font-size: var(--tm-fs-sm); }
-:root[data-term="on"] .desk-arm-note { color: var(--tm-comment); font-size: var(--tm-fs-sm); }
-
 /* --- 13. The POST log keeps its job, loses its tracking ------------------- */
 :root[data-term="on"] #termBoot { background: var(--surface-0); color: var(--text); }
 .term-log-line { letter-spacing: 0; }          /* was 0.06em */
@@ -10134,13 +10097,8 @@ button.tm-item-main:focus-visible { outline: none; box-shadow: var(--focus-ring)
 .term-log-line.is-payload .term-log-v { color: var(--tm-hi, #a4b1bd); }
 .term-log-meter i { color: var(--tm-faint, #5f7284); font-style: normal; }
 
-/* --- 17. An author `display` beats the UA sheet's [hidden] rule, so every
-   one of these needs its own guard or the attribute silently stops working.
-   The status strip shipped visible on a non-armed dashboard for exactly
-   this reason. KEPT VERBATIM. */
 #termStatus[hidden],
-#termBoot[hidden],
-#deskRail[hidden] {
+#termBoot[hidden] {
   display: none;
 }
 @media (min-width: 900px) {
@@ -10205,7 +10163,7 @@ button.tm-item-main:focus-visible { outline: none; box-shadow: var(--focus-ring)
   :root[data-term="on"] :is(
       .dash-range-btn, .strategy-toggle-btn, .sheet-seg-btn, .sheet-risk-btn,
       .rev-chip, .jrn-chip, .jrn-grade, .jrn-chip-add, .direction-btn,
-      .btn, .sheet-submit, .sheet-detail, .digest-draft, .desk-arm, .term-key,
+      .btn, .sheet-submit, .sheet-detail, .digest-draft, .term-key,
       .tm-chip, .tm-chipwrap
     ) {
       min-height: 44px;
@@ -10256,7 +10214,7 @@ button.tm-item-main:focus-visible { outline: none; box-shadow: var(--focus-ring)
     #termBoot .term-boot-sweep,
     .term-key.is-booting .term-key-led,
     .term-key.is-holding .term-key-hold,
-    .desk-arm .term-key-led {
+    .term-key-led {
       animation: none;
     }
   #termBoot .term-boot-sweep { display: none; }
@@ -10275,137 +10233,447 @@ button.tm-item-main:focus-visible { outline: none; box-shadow: var(--focus-ring)
   to { clip-path: inset(50% 0 50% 0); }
 }
 
-@media (min-width: 1200px) {
-  #dashboard {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 300px;
-      gap: var(--space-3);
-      align-items: start;
-    }
-  /* Load bearing. Without an explicit column the metric grid flows into the
-       300px rail column and the most-viewed screen in the app breaks at exactly
-       the width most desktop users sit at. */
-    #dashboard > *:not(#deskRail) { grid-column: 1; }
-  #deskRail { grid-column: 2; grid-row: 1 / 30; position: sticky; top: 78px; }
-}
-
 /* An author `display` beats the UA stylesheet's `[hidden] { display: none }`,
-   so every overlay needs its own hidden guard or the attribute silently stops
-   working. #termBoot is position:fixed inset:0, so without this it covers the
+so every overlay needs its own hidden guard or the attribute silently stops
+   working. #termBoot is position:fixed inset:0,
+so without this it covers the
    entire app and the page reads as blank. This has now bitten twice. */
 #termStatus[hidden],
 #termBoot[hidden],
-#deskRail[hidden],
 .tm-sec-head[aria-expanded="false"] + .tm-sec-body {
   display: none;
-}
+}/* ==========================================================================
+   RELEASE EDGE — Terminal Pro as a dashboard board.
 
-/* ==========================================================================
-   DESK RAIL — interim repair.
+   ONE COMPONENT, TWO SKINS, AND ONE LINE OF SKIN CODE.
 
-   The rail's own stylesheet went out with the .tp-* deletion, and what replaced
-   it referenced --tm-* tokens that are only declared under [data-term="on"].
-   On the Clay dashboard those resolve to nothing, so the rail fell back to
-   browser defaults: unspaced labels, default type, a grey button. That is the
-   "major flaw" reported, and it was a regression, not a design choice.
+   Nothing below declares a custom property on an element, and nothing below
+   reads a --tm-* token. The rail this replaces did both: it pinned
+   --surface-0..3 under :root:not([data-term="on"]) #deskRail (styles.css:9490,
+   specificity 1,2,0), which out-specified its own "interim repair" at
+   #deskRail (1,0,0) and kept the rail black on a Clay dashboard in both themes.
+   tests/clayV3Contrast.check.mjs walks :root-level token blocks only, so it
+   could not see it. Element-scoped token pins are the bug class. Not one here.
 
-   Repaired the way it should have shipped: CLAY on a Clay dashboard, terminal
-   only once the mode is armed. One component, two skins. A fuller redesign is
-   in flight; this makes the current build correct rather than broken.
+   The terminal skin arrives from three places that already ship:
+     clay-v3.css:502   surfaces, text, lines, shadows, radii, --font-ui -> mono
+     styles.css:9717   .dash-board and .metric-card lose their boxes
+     styles.css:9684   .metric-label becomes `key:` in the mode's key colour
    ========================================================================== */
-#deskRail {
-  /* Fallbacks so the rail is self-sufficient outside terminal mode. */
-  --tm-gut: var(--space-4);
-  --tm-fs-body: var(--fs-body);
-  --tm-lh: 1.55;
-  --tm-text: var(--text);
 
-  border: 1px solid var(--line);
-  border-radius: var(--radius-clay-lg);
-  background: var(--surface-1);
-  box-shadow: var(--clay-raised);
-  color: var(--text);
-  font-family: var(--font-ui);
-  gap: 0;
+/* The lead board, spanning both columns of .dash-boards. Shell, padding,
+   radius and shadow all come from .dash-board. Nothing is restated. */
+.dash-edge {
+  grid-column: 1 / -1;
 }
-#deskRail > * {
-  background: transparent;
-  padding: var(--space-4) var(--space-5);
-}
-#deskRail > * + * { border-top: 1px solid var(--line); }
 
-.desk-k {
+.dash-edge-stamp {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-2);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+/* Freshness near the title. --text-faint on --surface-1 measures 6.34 / 5.90 / 6.26. */
+.dash-edge-asof {
   color: var(--text-faint);
-  font-size: var(--fs-micro);
-  letter-spacing: 0.12em;
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.desk-k span { margin-left: auto; letter-spacing: 0.04em; text-transform: none; }
-.desk-sub { margin: 0 0 var(--space-3); color: var(--text-faint); font-size: var(--fs-micro); }
-.desk-cur { color: var(--accent); font-size: var(--fs-label); letter-spacing: 0.1em; }
-.desk-title { margin: 2px 0 0; color: var(--text); font-size: var(--fs-body); }
-.desk-cd {
-  margin: var(--space-2) 0 0;
-  color: var(--text);
-  font-family: var(--font-mono);
-  font-size: 22px;
-  font-variant-numeric: tabular-nums;
-}
-.desk-cd[data-phase="imminent"], .desk-cd[data-phase="live"] { color: var(--accent); }
-.desk-figs {
-  display: flex;
-  gap: var(--space-4);
-  margin: 0;
-  color: var(--text);
-  font-family: var(--font-mono);
-  font-size: var(--fs-body);
-  font-variant-numeric: tabular-nums;
-}
-.desk-verdict { margin: var(--space-2) 0 0; color: var(--text-soft); font-size: var(--fs-micro); }
-.desk-empty { margin: 0; color: var(--text-faint); font-size: var(--fs-micro); line-height: 1.5; }
 
-/* The ARM key. Oxide fill on Clay, because the user asked for it to be the
-   thing that pops on the dashboard. */
-.desk-arm {
-  display: flex;
+/* --warn on --surface-1: 8.68 / 6.07 / 10.07. Stale is a status, not an
+   interaction, so it never takes the accent. */
+.dash-edge-asof[data-stale="true"] {
+  color: var(--warn);
+}
+
+/* The ARM key. Base rule sits ON the 44px touch floor, so there is no phone
+   branch to forget. Oxide fill: --text-inverse on --accent = 6.35 / 6.61 / 7.82. */
+.dash-edge-arm {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  width: 100%;
   min-height: 44px;
+  padding: 0 var(--space-4);
   border: 1px solid var(--accent);
   border-radius: var(--radius-md);
   background: var(--accent);
   color: var(--text-inverse);
-  font-family: var(--font-ui);
-  font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font: 700 var(--fs-micro)/1 var(--font-ui);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   cursor: pointer;
   transition: filter 90ms var(--ease-out), transform 60ms var(--ease-out);
 }
-.desk-arm:hover { filter: brightness(1.06); }
-.desk-arm.is-pressed { transform: translateY(1px); }
-.desk-arm-note {
-  margin: var(--space-2) 0 0;
-  color: var(--text-faint);
-  font-size: var(--fs-micro);
-  text-align: center;
+
+.dash-edge-arm:hover { filter: brightness(1.06); }
+.dash-edge-arm.is-pressed { transform: translateY(1px); }
+.dash-edge-arm:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* Armed: the key inverts, so the state is a fill change and not only a word.
+   --text on --surface-2 = 12.62 / 16.10 / 14.51. */
+.dash-edge-arm[aria-pressed="true"] {
+  background: var(--surface-2);
+  color: var(--text);
 }
 
-/* ARMED: the same markup, squared and monospaced, following the terminal. */
-:root[data-term="on"] #deskRail {
-  border-radius: 0;
-  box-shadow: none;
-  font-family: var(--font-mono);
+.dash-edge-arm .term-key-led {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--text-inverse);
 }
-:root[data-term="on"] .desk-k { text-transform: none; letter-spacing: 0; }
-:root[data-term="on"] .desk-arm {
-  border-radius: 2px;
-  font-family: var(--font-mono);
-  letter-spacing: 0.18em;
+
+.dash-edge-arm[aria-pressed="true"] .term-key-led { background: var(--accent); }
+
+/* .nav-btn sets three properties .dash-board-link does not; reset them here
+   rather than fight the cascade from a shared selector. */
+.dash-edge-open {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  gap: 0;
+  border-radius: 0;
+}
+
+.dash-edge-open[hidden] { display: none; }
+
+/* The single insight line, carved into the board. The ONLY element here that
+   is allowed to collapse: a banner with nothing to say is noise, but a stat
+   card with nothing to say is still obliged to name its threshold.
+   --text-soft on --surface-inset = 8.00 / 4.85 / 9.48. 4.85 is the tightest
+   text pairing in the whole board and it clears 4.5. */
+.dash-edge-say {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-inset);
+  color: var(--text-soft);
+  font: 400 var(--fs-body)/1.5 var(--font-ui);
+}
+
+/* An author display beats the UA [hidden] rule. This repo's own comment at
+   styles.css:10292 says it has bitten twice. */
+.dash-edge-say[hidden] { display: none; }
+
+/* 3-up -> 2-up -> 1-up with no second media query. */
+.dash-edge-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(184px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+/* .metric-card already owns the anatomy. This lifts the ground one step and
+   softens the corner, because a card nested in a board that shares the board's
+   ground reads flat. In terminal mode styles.css:9717 wins on specificity
+   (0,3,0 vs 0,1,0) and this becomes a plain block: correct, and free. */
+.dash-edge-card {
+  align-content: start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 0;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-2);
+  box-shadow: var(--clay-soft), var(--edge-highlight);
+}
+
+/* THE figure. Not .metric-value: styles.css:9764 shrinks .metric-value to
+   --tm-fs-body inside a quad card, and the countdown is the one number on this
+   board that has to stay big. --text on --surface-2 = 12.62 / 16.10 / 14.51. */
+.dash-edge-fig {
+  margin: 0;
+  color: var(--text);
+  font: 700 var(--fs-metric)/1.1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.dash-edge-fig.is-pos { color: var(--pnl-pos); }   /* 7.44 / 6.12 / 8.48 */
+.dash-edge-fig.is-neg { color: var(--pnl-neg); }   /* 5.57 / 5.86 / 6.36 */
+
+/* An empty card keeps its slot and says what is missing in words. */
+.dash-edge-fig.is-empty {
+  color: var(--text-soft);
+  font: 600 var(--fs-md)/1.3 var(--font-ui);
+  letter-spacing: 0;
+}
+
+/* Sample size sits under the figure and is the smallest, faintest thing in the
+   card. Never a tooltip. --text-faint on --surface-2 = 5.81 / 6.23 / 5.65. */
+.dash-edge-n {
+  margin: 0;
+  color: var(--text-faint);
+  font: 400 var(--fs-micro)/1.45 var(--font-mono);
+}
+
+/* --- the three hero visuals, no two alike ------------------------------- */
+
+/* PHASE METER. Four discrete states, driven entirely by the [data-phase] the
+   shipped tick already stamps (app.js:12873, phases far/near/imminent/live/past
+   from eventClock.js:83). No JS, no --fuse property, no second timer. It is a
+   PHASE indicator, not a progress bar, and the line beneath it says the phase
+   in words, so the bar carries no meaning of its own and is aria-hidden.
+   --accent on --surface-inset = 6.53 / 4.99 / 7.77, non-text floor 3. */
+.dash-edge-phase {
+  display: block;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+  overflow: hidden;
+}
+
+.dash-edge-phase i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--accent);
+  transition: width 400ms var(--ease-out);
+}
+
+[data-phase="far"]      .dash-edge-phase i { width: 8%; }
+[data-phase="near"]     .dash-edge-phase i { width: 55%; }
+[data-phase="imminent"] .dash-edge-phase i { width: 92%; }
+[data-phase="live"]     .dash-edge-phase i { width: 100%; background: var(--warn); }
+
+/* WIN/LOSS MARKS. --radius-sm is 10px on Clay (a circle on a 10px box) and 0 in
+   terminal, so the marks become hard blocks in the mode for free.
+   MEASURED AND REJECTED: --pnl-pos-line / --pnl-neg-line are 38% alpha and land
+   at 2.33 / 1.71 / 2.27 on --surface-inset. They FAIL the 3:1 non-text floor,
+   so every mark and every bar uses the FULL money token. --line-strong measures
+   1.67 / 1.65 / 1.33 and can never carry meaning at all. */
+.dash-edge-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.dash-edge-marks i {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--text-faint);   /* flat: 5.81 / 6.23 / 5.65 on --surface-2 */
+}
+
+.dash-edge-marks i.is-pos { background: var(--pnl-pos); }
+.dash-edge-marks i.is-neg { background: var(--pnl-neg); }
+
+/* FIVE SESSION BARS. */
+.dash-edge-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 30px;
+}
+
+.dash-edge-bars i {
+  flex: 1;
+  min-height: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--text-faint);
+}
+
+.dash-edge-bars i.is-pos { background: var(--pnl-pos); }
+.dash-edge-bars i.is-neg { background: var(--pnl-neg); }
+
+/* --- the two panes ------------------------------------------------------- */
+
+.dash-edge-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.dash-edge-pane {
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-1);
+}
+
+.dash-edge-pane h4 {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dash-edge-tag {
+  margin-left: auto;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.dash-edge-note {
+  margin: var(--space-3) 0 0;
+  color: var(--text-faint);
+  font: 400 var(--fs-micro)/1.5 var(--font-ui);
+}
+
+/* Tradervue's Hourly widget: a LIST, not a chart, which is precisely why it
+   survives the terminal re-skin with no second rule. */
+.dash-edge-slot {
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--line);
+}
+
+.dash-edge-slot:first-child { border-top: 0; }
+
+.dash-edge-slot-top {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.dash-edge-slot-name {
+  flex: 1 1 auto;
+  color: var(--text);
+  font: 400 var(--fs-body)/1.4 var(--font-ui);
+}
+
+.dash-edge-slot-n {
+  color: var(--text-faint);
+  font: 400 var(--fs-micro)/1.4 var(--font-mono);
+}
+
+/* Money on the right, category on the left: the same split the terminal view
+   already keeps. Default tone is --text-faint, which is what an empty slot
+   prints ("no trades"). */
+.dash-edge-slot-val {
+  min-width: 9ch;
+  color: var(--text-faint);
+  font: 600 var(--fs-body)/1.4 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.dash-edge-slot-val.is-pos { color: var(--pnl-pos); }   /* 8.11 / 5.80 / 9.41 */
+.dash-edge-slot-val.is-neg { color: var(--pnl-neg); }   /* 6.07 / 5.54 / 7.05 */
+
+.dash-edge-bar {
+  display: block;
+  height: 3px;
+  margin-top: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+  overflow: hidden;
+}
+
+.dash-edge-bar i {
+  display: block;
+  height: 100%;
+  background: var(--text-faint);   /* 7.29 / 5.00 / 6.65 on --surface-inset */
+  transition: width 220ms var(--ease-out);
+}
+
+.dash-edge-bar i.is-pos { background: var(--pnl-pos); }   /* 9.32 / 4.91 / 9.98 */
+.dash-edge-bar i.is-neg { background: var(--pnl-neg); }   /* 6.99 / 4.70 / 7.48 */
+
+/* Edgewonk's "Evaluation": label left, value right, no chrome. */
+.dash-edge-kv {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2) var(--space-3);
+  align-items: baseline;
+  margin: 0;
+}
+
+.dash-edge-kv dt {
+  color: var(--text-soft);              /* 6.96 / 5.72 / 8.94 on --surface-1 */
+  font: 400 var(--fs-body)/1.4 var(--font-ui);
+}
+
+.dash-edge-kv dd {
+  margin: 0;
+  color: var(--text);
+  font: 600 var(--fs-body)/1.4 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.dash-edge-kv dd.is-pos  { color: var(--pnl-pos); }
+.dash-edge-kv dd.is-neg  { color: var(--pnl-neg); }
+.dash-edge-kv dd.is-soft { color: var(--text-faint); font-weight: 400; }
+
+/* THE one decorated row. The oxide band is the Wilson interval, the light tick
+   is the trader's OWN baseline, so the comparison is never against 50%. Drawn
+   only at samples >= EDGE_MIN_LOG, so no percentage appears under 5.
+   --accent on --surface-inset 6.53 / 4.99 / 7.77; --text on --surface-inset
+   15.82 / 12.92 / 17.07. Both clear the 3:1 non-text floor. */
+.dash-edge-ci {
+  position: relative;
+  grid-column: 1 / -1;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+}
+
+.dash-edge-ci i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--lo, 0%);
+  width: var(--span, 0%);
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.dash-edge-ci b {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  left: var(--base, 50%);
+  width: 2px;
+  background: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-edge-phase i,
+  .dash-edge-bar i,
+  .dash-edge-arm {
+    transition: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   THE ONE [data-term] RULE THIS COMPONENT OWNS.
+
+   Everything else re-skins from the cascade. This exists because the mode has
+   its own type scale: --tm-fs-big (17px) is "the one hero number per pane"
+   (styles.css:8806), and a 26px numeral inside a boxless mono pane reads as a
+   component that did not get the memo. It changes size, never colour.
+   -------------------------------------------------------------------------- */
+:root[data-term="on"] .dash-edge-fig {
+  font-size: var(--tm-fs-big);
+}
+
+/* --------------------------------------------------------------------------
+   THE SINGLE DESKTOP BUMP. Separate and top-level, per
+   tests/mobileFloors.check.mjs, which resolves the last phone-applicable rule
+   per exact selector string and reads literal px. Every base rule above is
+   already at or over the 11px type floor and the 44px touch floor.
+   -------------------------------------------------------------------------- */
+@media (min-width: 900px) {
+  .dash-edge-split {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .dash-edge-card { padding: var(--space-5); }
+  .dash-edge-pane { padding: var(--space-5); }
+  .dash-edge-bars { height: 38px; }
+
+  .dash-edge-slot-name,
+  .dash-edge-slot-val,
+  .dash-edge-kv dt,
+  .dash-edge-kv dd {
+    font-size: 14px;
+  }
 }
