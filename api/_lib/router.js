@@ -486,6 +486,9 @@ const actions = {
       ok: true,
       username,
       isAdmin: await isAdminUsername(ctx, username),
+      // Same shape as the `session` action. Omitting it here meant a user who
+      // had just signed in was told they had no tier until they reloaded.
+      terminalPro: isTerminalProUsername(ctx, username),
       csrfToken: csrf,
     }, cookie);
   },
@@ -524,6 +527,7 @@ const actions = {
       ok: true,
       username: user.username,
       isAdmin: await isAdminUsername(ctx, user.username),
+      terminalPro: isTerminalProUsername(ctx, user.username),
       csrfToken: csrf,
     }, cookie);
   },

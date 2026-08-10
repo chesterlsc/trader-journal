@@ -319,6 +319,57 @@ for (const [failures, expected] of [[0, false], [5, false], [6, true], [99, true
   );
 }
 
+// THE TIER FLAG MUST TRAVEL ON EVERY AUTH RESPONSE, NOT JUST `session`.
+// It shipped on `session` alone, so a user who had just signed in was told they
+// had no tier and the Terminal Pro nav stayed hidden for the entire session,
+// appearing only after a page reload. The three endpoints are asserted together
+// because the defect was drift between them, not a fault in any one.
+{
+  const bcryptjs = (await import('bcryptjs')).default;
+  const hash = bcryptjs.hashSync('password123', 4);
+  const user = { id: 7, username: 'chesterlsc', passwordHash: hash, email: "a@b.co" };
+  const env = { TERMINAL_PRO_USERNAMES: 'chesterlsc, someone-else' };
+
+  const login = await call(makeCtx({
+    action: 'login', method: 'POST', env,
+    rawBody: JSON.stringify({ identifier: 'chesterlsc', password: 'password123' }),
+    db: makeDb({ findUserByIdentifier: async () => user }),
+  }));
+  assert.strictEqual(login.status, 200, 'the fixture login must succeed');
+  assert.strictEqual(login.payload.terminalPro, true, 'login must report the tier it just granted');
+
+  // Case and spacing in the env allowlist must not decide who gets a feature.
+  const cased = await call(makeCtx({
+    action: 'login', method: 'POST', env: { TERMINAL_PRO_USERNAMES: '  ChesterLSC  ' },
+    rawBody: JSON.stringify({ identifier: 'chesterlsc', password: 'password123' }),
+    db: makeDb({ findUserByIdentifier: async () => user }),
+  }));
+  assert.strictEqual(cased.payload.terminalPro, true, 'the allowlist must match case-insensitively and trim');
+
+  // Someone not on the list is told so, explicitly, rather than by omission.
+  const other = await call(makeCtx({
+    action: 'login', method: 'POST', env,
+    rawBody: JSON.stringify({ identifier: 'chesterlsc', password: 'password123' }),
+    db: makeDb({ findUserByIdentifier: async () => ({ ...user, username: 'nobody' }) }),
+  }));
+  assert.strictEqual(other.payload.terminalPro, false, 'an ungranted user must get an explicit false');
+
+  // register carries it too: a new account on the allowlist should not have to
+  // reload before the feature it was granted becomes reachable.
+  const reg = await call(makeCtx({
+    action: 'register', method: 'POST', env,
+    rawBody: JSON.stringify({ identifier: 'chesterlsc', password: 'password123' }),
+    db: makeDb({ usernameExists: async () => false }),
+  }));
+  assert.strictEqual(reg.status, 200, 'the fixture register must succeed');
+  assert.strictEqual(reg.payload.terminalPro, true, 'register must report the tier too');
+
+  for (const [name, payload] of [['login', login.payload], ['register', reg.payload]]) {
+    assert.strictEqual(typeof payload.terminalPro, 'boolean', `${name} must send a real boolean`);
+    assert.strictEqual(typeof payload.isAdmin, 'boolean', `${name} still sends isAdmin`);
+  }
+}
+
 // A failed login writes the failure row that the limiter counts — without it
 // the window never fills and the limit is decorative.
 {

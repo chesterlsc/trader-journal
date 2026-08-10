@@ -2637,7 +2637,6 @@ async function checkAuthSession() {
       state.auth.isAuthenticated = false;
       state.auth.username = "";
       state.auth.isAdmin = false;
-  state.auth.terminalPro = false;
       state.auth.terminalPro = false;
       state.auth.mobileAuthVisible = Boolean(state.auth.resetToken);
     }
@@ -2649,7 +2648,7 @@ async function checkAuthSession() {
     state.auth.isAuthenticated = false;
     state.auth.username = "";
     state.auth.isAdmin = false;
-  state.auth.terminalPro = false;
+    state.auth.terminalPro = false;
     state.auth.mobileAuthVisible = true;
     setMessage(ui.authMessage, "Auth service unavailable. Ensure PHP server and PostgreSQL are running.", "error");
   }
@@ -2812,6 +2811,10 @@ async function submitAuth(action, password, successMessage, identifier = "") {
     state.auth.isAuthenticated = true;
     state.auth.username = String(body.username || identifier);
     state.auth.isAdmin = Boolean(body.isAdmin);
+    // Read alongside isAdmin, not left to the next checkAuthSession. Without
+    // this the Terminal Pro nav stayed hidden for the whole session after a
+    // fresh login and only appeared on the next page load.
+    state.auth.terminalPro = Boolean(body.terminalPro);
     state.auth.resetToken = "";
     state.auth.resetTokenStatus = "idle";
     setResetTokenInUrl("");
@@ -3050,7 +3053,7 @@ function updateAuthUi() {
       ui.authStatus.classList.add(isResetMode ? "is-on" : "is-off");
     }
     state.auth.isAdmin = false;
-  state.auth.terminalPro = false;
+    state.auth.terminalPro = false;
     ui.loginBtn.hidden = isResetMode || isResetPending;
     ui.registerBtn.hidden = isResetMode || isResetPending;
     ui.desktopLogoutBtn.hidden = true;
