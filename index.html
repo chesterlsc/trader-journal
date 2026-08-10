@@ -67,21 +67,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260810-tm1" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260810-tm1" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260810-tm2" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260810-tm2" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260810-tm1" />
+    <link rel="stylesheet" href="styles.css?v=20260810-tm2" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260810-tm1" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260810-tm2" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260810-tm1" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260810-tm2" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -1089,6 +1089,15 @@
               </span>
               <span class="topnav-label">Journal</span>
             </button>
+            <!-- Terminal Pro is a destination, not an overflow item. It lived in
+                 the "..." menu, which is why a granted user reported they could
+                 not see it at all. Still gated by [data-terminal-nav]. -->
+            <button class="nav-btn topnav-btn" type="button" data-target="terminal" data-terminal-nav hidden>
+              <span class="topnav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 5.75h14.5v12.5H4.75zM8 10l2.5 2L8 14M12.75 14.5h3.5" /></svg>
+              </span>
+              <span class="topnav-label">Term</span>
+            </button>
             <button class="topnav-btn topnav-btn-action" type="button" id="riskRulesBtn">
               <span class="topnav-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false"><path d="M12 4.75 5 8v5c0 4 3 7.3 7 8.2 4-.9 7-4.2 7-8.2V8z" /><path d="M9.3 12.2l2 2 3.4-3.8" /></svg>
@@ -1132,7 +1141,6 @@
               <summary class="topnav-icon-btn" aria-label="More menu"><span aria-hidden="true">&#8943;</span></summary>
               <div class="topnav-menu">
                 <button class="topnav-menu-item nav-btn" type="button" data-target="trade-entry">Trade entry</button>
-                <button class="topnav-menu-item nav-btn" type="button" data-target="terminal" data-terminal-nav hidden>Terminal&nbsp;Pro</button>
                 <button class="topnav-menu-item nav-btn" type="button" data-target="monthly">Monthly review</button>
                 <button id="exportCsvBtn" class="topnav-menu-item" type="button">Export CSV</button>
                 <button id="previewLandingBtnDesktop" class="topnav-menu-item nav-preview-landing" type="button" data-preview-landing hidden>
@@ -3156,7 +3164,7 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260810-tm1"></script>
+    <script type="module" src="app.js?v=20260810-tm2"></script>
     <div id="termBoot" hidden aria-hidden="true">
       <span class="term-boot-strike"></span>
       <div class="term-boot-inner">

@@ -13201,7 +13201,7 @@ function renderDeskRail() {
   // behind the assets this trader actually touches, and nothing in the product
   // ever mentioned it.
   const nextCell = next
-    ? `<p class="desk-k">next release<span>${escapeHtml(
+    ? `<p class="desk-k">next release <span>${escapeHtml(
         terminal.asOf ? new Date(terminal.asOf).toISOString().slice(11, 16) + "Z" : "no link"
       )}</span></p>
        <p class="desk-sub">ranked on your pairs, not the clock</p>

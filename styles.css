@@ -10299,3 +10299,113 @@ button.tm-item-main:focus-visible { outline: none; box-shadow: var(--focus-ring)
 .tm-sec-head[aria-expanded="false"] + .tm-sec-body {
   display: none;
 }
+
+/* ==========================================================================
+   DESK RAIL — interim repair.
+
+   The rail's own stylesheet went out with the .tp-* deletion, and what replaced
+   it referenced --tm-* tokens that are only declared under [data-term="on"].
+   On the Clay dashboard those resolve to nothing, so the rail fell back to
+   browser defaults: unspaced labels, default type, a grey button. That is the
+   "major flaw" reported, and it was a regression, not a design choice.
+
+   Repaired the way it should have shipped: CLAY on a Clay dashboard, terminal
+   only once the mode is armed. One component, two skins. A fuller redesign is
+   in flight; this makes the current build correct rather than broken.
+   ========================================================================== */
+#deskRail {
+  /* Fallbacks so the rail is self-sufficient outside terminal mode. */
+  --tm-gut: var(--space-4);
+  --tm-fs-body: var(--fs-body);
+  --tm-lh: 1.55;
+  --tm-text: var(--text);
+
+  border: 1px solid var(--line);
+  border-radius: var(--radius-clay-lg);
+  background: var(--surface-1);
+  box-shadow: var(--clay-raised);
+  color: var(--text);
+  font-family: var(--font-ui);
+  gap: 0;
+}
+#deskRail > * {
+  background: transparent;
+  padding: var(--space-4) var(--space-5);
+}
+#deskRail > * + * { border-top: 1px solid var(--line); }
+
+.desk-k {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  color: var(--text-faint);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.desk-k span { margin-left: auto; letter-spacing: 0.04em; text-transform: none; }
+.desk-sub { margin: 0 0 var(--space-3); color: var(--text-faint); font-size: var(--fs-micro); }
+.desk-cur { color: var(--accent); font-size: var(--fs-label); letter-spacing: 0.1em; }
+.desk-title { margin: 2px 0 0; color: var(--text); font-size: var(--fs-body); }
+.desk-cd {
+  margin: var(--space-2) 0 0;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+.desk-cd[data-phase="imminent"], .desk-cd[data-phase="live"] { color: var(--accent); }
+.desk-figs {
+  display: flex;
+  gap: var(--space-4);
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  font-variant-numeric: tabular-nums;
+}
+.desk-verdict { margin: var(--space-2) 0 0; color: var(--text-soft); font-size: var(--fs-micro); }
+.desk-empty { margin: 0; color: var(--text-faint); font-size: var(--fs-micro); line-height: 1.5; }
+
+/* The ARM key. Oxide fill on Clay, because the user asked for it to be the
+   thing that pops on the dashboard. */
+.desk-arm {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--text-inverse);
+  font-family: var(--font-ui);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: filter 90ms var(--ease-out), transform 60ms var(--ease-out);
+}
+.desk-arm:hover { filter: brightness(1.06); }
+.desk-arm.is-pressed { transform: translateY(1px); }
+.desk-arm-note {
+  margin: var(--space-2) 0 0;
+  color: var(--text-faint);
+  font-size: var(--fs-micro);
+  text-align: center;
+}
+
+/* ARMED: the same markup, squared and monospaced, following the terminal. */
+:root[data-term="on"] #deskRail {
+  border-radius: 0;
+  box-shadow: none;
+  font-family: var(--font-mono);
+}
+:root[data-term="on"] .desk-k { text-transform: none; letter-spacing: 0; }
+:root[data-term="on"] .desk-arm {
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.18em;
+}
