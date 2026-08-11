@@ -67,21 +67,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260810-v3" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260810-v3" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260810-v4" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260810-v4" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260810-v3" />
+    <link rel="stylesheet" href="styles.css?v=20260810-v4" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260810-v3" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260810-v4" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260810-v3" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260810-v4" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -1257,6 +1257,85 @@
           <!-- Bento stats: command deck (balance hero + risk meters), edge quad,
                dense rail. #dashboardMetricGrid stays the id JS toggles against
                the empty state; every [data-metric] node is preserved. -->
+<!-- ============================================================================
+               RELEASE EDGE — Terminal Pro living on the dashboard as a BOARD.
+          
+               TWO SKINS, ONE DOM. This markup lands on nothing but app-wide tokens and on
+               classes the app's own terminal grammar (styles.css:9615..9800) already
+               re-skins. It declares no custom property on any element: the rail this
+               replaces pinned --surface-* locally at styles.css:9490, which out-specified
+               its own repair and is why the rail is still black on a Clay dashboard.
+          
+               Static shell, JS-filled containers, exactly like #dashPlaybook.
+               ============================================================================ -->
+          <section class="dash-board dash-edge" id="dashEdge" hidden aria-labelledby="dashEdgeHeading">
+            <div class="dash-board-head">
+              <div>
+                <h3 id="dashEdgeHeading">Release edge</h3>
+                <p>What the calendar does to your record. Ranked on the pairs you trade, not the clock.</p>
+              </div>
+          
+              <div class="dash-edge-stamp">
+                <!-- Freshness near the title: the one pattern every product in the
+                     category ships. terminal.asOf / terminal.stale, nothing invented. -->
+                <span class="dash-edge-asof" id="dashEdgeAsOf" data-stale="false"></span>
+          
+                <!-- STATIC, and that is the point. ui.termArms is built at app.js:313 by
+                     a querySelectorAll at module-eval time, and app.js is a deferred
+                     module, so a button that exists in the parsed HTML is already in the
+                     cache. The delegated pointerdown/pointerup handlers (app.js:1224)
+                     then work with no re-query, which is why renderDeskRail's
+                     `ui.termArms = Array.from(...)` at app.js:13255 is deleted with it.
+                     The label text is owned by applyTerm/syncTermChrome, not by us. -->
+                <button class="dash-edge-arm" type="button" data-term-arm
+                        aria-pressed="false" aria-label="Arm terminal mode">
+                  <span class="term-key-led" aria-hidden="true"></span>
+                  <span data-term-arm-label>ARM</span>
+                </button>
+          
+                <!-- .nav-btn is the existing router hook: ui.navButtons (app.js:261) is
+                     also a module-eval querySelectorAll, and [data-terminal-nav] is what
+                     syncTerminalAccess (app.js:12886) shows and hides. Zero new JS.
+                     Every .nav-btn rule lives in styles.css, which loads before
+                     clay-v2.css, so .dash-board-link wins on equal specificity; the three
+                     properties it does not set are reset in .dash-edge-open. -->
+                <button class="nav-btn dash-board-link dash-edge-open" type="button"
+                        data-target="terminal" data-terminal-nav hidden>Open the desk &rarr;</button>
+              </div>
+            </div>
+          
+            <!-- ONE insight line, never a list. eventFile().sentence is built inside
+                 src/lib/eventEdge.js:145 precisely so a renderer cannot soften it.
+                 THE ONLY ELEMENT IN THIS BOARD PERMITTED TO COLLAPSE. -->
+            <p class="dash-edge-say" id="dashEdgeSay" hidden></p>
+          
+            <!-- Hero row. .metric-card carries the anatomy and, in terminal mode, is
+                 already box-stripped by styles.css:9717. No two cards share a visual
+                 form: a phase meter, a row of win/loss marks, five session bars. -->
+            <div class="dash-edge-row">
+              <article class="metric-card dash-edge-card" id="dashEdgeNext"></article>
+              <article class="metric-card dash-edge-card" id="dashEdgeFile"></article>
+              <article class="metric-card dash-edge-card" id="dashEdgeClock"></article>
+            </div>
+          
+            <div class="dash-edge-split">
+              <!-- Tradervue's "Hourly" widget: a LIST, not a chart. Being a list is
+                   exactly why it survives the terminal re-skin with no second rule. -->
+              <section class="dash-edge-pane">
+                <h4>Your clock</h4>
+                <div id="dashEdgeSlots"></div>
+                <p class="dash-edge-note">Live logged trades only. Imported rows carry the import time, not the entry time.</p>
+              </section>
+          
+              <!-- Edgewonk's "Evaluation" verbatim in structure: label left, value right,
+                   no chrome, related figures paired into one row, exactly ONE decorated. -->
+              <section class="dash-edge-pane">
+                <h4>Your file <span class="dash-edge-tag" id="dashEdgeTag"></span></h4>
+                <dl class="dash-edge-kv" id="dashEdgeEval"></dl>
+              </section>
+            </div>
+          </section>
+
           <div class="dash-stats" id="dashboardMetricGrid" aria-label="Performance metrics">
             <section class="dash-deck">
               <article class="metric-card metric-card-balance dash-hero dash-reveal" data-tilt style="--i: 0">
@@ -1426,84 +1505,7 @@
                  and the unjournalled queue. Both render from real state and
                  hide themselves when there is nothing honest to show. -->
             <div class="dash-boards">
-              <!-- ============================================================================
-                   RELEASE EDGE — Terminal Pro living on the dashboard as a BOARD.
               
-                   TWO SKINS, ONE DOM. This markup lands on nothing but app-wide tokens and on
-                   classes the app's own terminal grammar (styles.css:9615..9800) already
-                   re-skins. It declares no custom property on any element: the rail this
-                   replaces pinned --surface-* locally at styles.css:9490, which out-specified
-                   its own repair and is why the rail is still black on a Clay dashboard.
-              
-                   Static shell, JS-filled containers, exactly like #dashPlaybook.
-                   ============================================================================ -->
-              <section class="dash-board dash-edge" id="dashEdge" hidden aria-labelledby="dashEdgeHeading">
-                <div class="dash-board-head">
-                  <div>
-                    <h3 id="dashEdgeHeading">Release edge</h3>
-                    <p>What the calendar does to your record. Ranked on the pairs you trade, not the clock.</p>
-                  </div>
-              
-                  <div class="dash-edge-stamp">
-                    <!-- Freshness near the title: the one pattern every product in the
-                         category ships. terminal.asOf / terminal.stale, nothing invented. -->
-                    <span class="dash-edge-asof" id="dashEdgeAsOf" data-stale="false"></span>
-              
-                    <!-- STATIC, and that is the point. ui.termArms is built at app.js:313 by
-                         a querySelectorAll at module-eval time, and app.js is a deferred
-                         module, so a button that exists in the parsed HTML is already in the
-                         cache. The delegated pointerdown/pointerup handlers (app.js:1224)
-                         then work with no re-query, which is why renderDeskRail's
-                         `ui.termArms = Array.from(...)` at app.js:13255 is deleted with it.
-                         The label text is owned by applyTerm/syncTermChrome, not by us. -->
-                    <button class="dash-edge-arm" type="button" data-term-arm
-                            aria-pressed="false" aria-label="Arm terminal mode">
-                      <span class="term-key-led" aria-hidden="true"></span>
-                      <span data-term-arm-label>ARM</span>
-                    </button>
-              
-                    <!-- .nav-btn is the existing router hook: ui.navButtons (app.js:261) is
-                         also a module-eval querySelectorAll, and [data-terminal-nav] is what
-                         syncTerminalAccess (app.js:12886) shows and hides. Zero new JS.
-                         Every .nav-btn rule lives in styles.css, which loads before
-                         clay-v2.css, so .dash-board-link wins on equal specificity; the three
-                         properties it does not set are reset in .dash-edge-open. -->
-                    <button class="nav-btn dash-board-link dash-edge-open" type="button"
-                            data-target="terminal" data-terminal-nav hidden>Open the desk &rarr;</button>
-                  </div>
-                </div>
-              
-                <!-- ONE insight line, never a list. eventFile().sentence is built inside
-                     src/lib/eventEdge.js:145 precisely so a renderer cannot soften it.
-                     THE ONLY ELEMENT IN THIS BOARD PERMITTED TO COLLAPSE. -->
-                <p class="dash-edge-say" id="dashEdgeSay" hidden></p>
-              
-                <!-- Hero row. .metric-card carries the anatomy and, in terminal mode, is
-                     already box-stripped by styles.css:9717. No two cards share a visual
-                     form: a phase meter, a row of win/loss marks, five session bars. -->
-                <div class="dash-edge-row">
-                  <article class="metric-card dash-edge-card" id="dashEdgeNext"></article>
-                  <article class="metric-card dash-edge-card" id="dashEdgeFile"></article>
-                  <article class="metric-card dash-edge-card" id="dashEdgeClock"></article>
-                </div>
-              
-                <div class="dash-edge-split">
-                  <!-- Tradervue's "Hourly" widget: a LIST, not a chart. Being a list is
-                       exactly why it survives the terminal re-skin with no second rule. -->
-                  <section class="dash-edge-pane">
-                    <h4>Your clock</h4>
-                    <div id="dashEdgeSlots"></div>
-                    <p class="dash-edge-note">Live logged trades only. Imported rows carry the import time, not the entry time.</p>
-                  </section>
-              
-                  <!-- Edgewonk's "Evaluation" verbatim in structure: label left, value right,
-                       no chrome, related figures paired into one row, exactly ONE decorated. -->
-                  <section class="dash-edge-pane">
-                    <h4>Your file <span class="dash-edge-tag" id="dashEdgeTag"></span></h4>
-                    <dl class="dash-edge-kv" id="dashEdgeEval"></dl>
-                  </section>
-                </div>
-              </section>
               <section class="dash-board dash-playbook" id="dashPlaybook" hidden aria-labelledby="dashPlaybookHeading">
                 <div class="dash-board-head">
                   <div>
@@ -3241,7 +3243,7 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260810-v3"></script>
+    <script type="module" src="app.js?v=20260810-v4"></script>
     <div id="termBoot" hidden aria-hidden="true">
       <span class="term-boot-strike"></span>
       <div class="term-boot-inner">

@@ -9839,23 +9839,15 @@ so every one of these needs its own hidden guard or the attribute silently
   box-shadow: none;
 }
 
-:root[data-term="on"] :is(.btn.primary,
-.sheet-submit {
+:root[data-term="on"] :is(.btn.primary, .sheet-submit) {
   color: var(--tm-hi);
   font-weight: 700;
 }
 
 :root[data-term="on"] :is(
-  .dash-range-btn,
-.strategy-toggle-btn,
-.sheet-seg-btn,
-.sheet-risk-btn,
-.rev-chip,
-.jrn-chip,
-.jrn-grade,
-.direction-btn,
-.btn,
-.term-key {
+  .dash-range-btn, .strategy-toggle-btn, .sheet-seg-btn, .sheet-risk-btn,
+  .rev-chip, .jrn-chip, .jrn-grade, .direction-btn, .btn, .term-key
+):focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
@@ -10676,4 +10668,47 @@ so without this it covers the
   .dash-edge-kv dd {
     font-size: 14px;
   }
+}
+/* ==========================================================================
+   RELEASE EDGE AS THE RIGHT RAIL.
+
+   Same board, same DOM, same renderer. Only placement changes: at desktop
+   widths it becomes a sticky right column so the countdown and the record sit
+   in the periphery where a glanceable thing belongs, and the money the trader
+   opened the app for keeps the main column.
+
+   NO TOKEN PINS HERE EITHER. Everything below is layout only, so the board
+   stays Clay on Clay and terminal when armed, exactly as before.
+   ========================================================================== */
+@media (min-width: 1240px) {
+  #dashboard {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: var(--space-5);
+    align-items: start;
+  }
+  /* Load bearing: without an explicit column every other dashboard child would
+     flow into the 340px rail and the most-viewed screen in the app would break
+     at exactly the width most desktop users sit at. */
+  #dashboard > *:not(#dashEdge) { grid-column: 1; }
+  #dashEdge {
+    grid-column: 2;
+    grid-row: 1 / 30;
+    position: sticky;
+    top: 78px;
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  /* In a 340px column the hero row and the split stack instead of sitting
+     across. One rule each, because the markup does not change. */
+  #dashEdge .dash-edge-row,
+  #dashEdge .dash-edge-split { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Below the rail breakpoint it is a full-width board again, in normal flow,
+   directly under the dashboard head and ABOVE the metric grid, because a
+   countdown below the fold is a countdown that does not exist. */
+@media (max-width: 1239px) {
+  #dashEdge { grid-column: 1 / -1; }
 }
