@@ -10214,3 +10214,92 @@ body.auth-locked {
   .dash-stats { gap: var(--space-3); }
   .dash-board { padding: var(--space-4) var(--space-5); }
 }
+
+/* --- WALL SIZE ------------------------------------------------------------
+   Three sizes, one attribute. The tiles are never rebuilt when the size
+   changes, because re-creating an iframe kills the stream and makes it buffer
+   from scratch; only the box around them moves.
+
+   band  a strip under the desk, four across, the default
+   half  2x2 at half height, for watching while still reading the desk
+   max   2x2 filling the viewport, so each monitor is a true quarter of the
+         screen, which is what a four-monitor wall actually means
+   ========================================================================== */
+.bb-wall-size {
+  display: inline-flex;
+  gap: 8px;
+  margin-left: 10px;
+}
+.bb-wall-tok {
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--term-faint);
+  font: 600 11px/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+  cursor: pointer;
+}
+.bb-wall-tok::before { content: "["; color: var(--term-line); }
+.bb-wall-tok::after { content: "]"; color: var(--term-line); }
+.bb-wall-tok:hover { color: var(--term-ink); }
+.bb-wall-tok[aria-pressed="true"] { color: var(--term-acc); }
+.bb-wall-tok:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* half: two across, taller tiles, still inside the page flow. */
+.bb-wall[data-size="half"] .bb-wall-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bb-wall[data-size="half"] .bb-mon-screen,
+.bb-wall[data-size="half"] .bb-mon iframe { max-height: 34vh; }
+
+/* max: the wall takes the screen. 2x2, each cell half the width and half the
+   remaining height, which is the 25% each a four-monitor wall means. The
+   masthead stays so the size tokens and the channel pickers remain reachable. */
+.bb-wall[data-size="max"] {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--term-void);
+}
+.bb-wall[data-size="max"] .bb-wall-h {
+  margin: 0;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--term-line);
+  background: var(--term-rail);
+}
+.bb-wall[data-size="max"] .bb-wall-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  height: 100%;
+  border: 0;
+}
+.bb-wall[data-size="max"] .bb-mon { min-height: 0; grid-template-rows: auto minmax(0, 1fr); }
+/* The aspect cap is dropped here on purpose: at max the CELL decides the size,
+   so a 16:9 stream letterboxes inside its quarter instead of overflowing it. */
+.bb-wall[data-size="max"] .bb-mon-screen,
+.bb-wall[data-size="max"] .bb-mon iframe {
+  aspect-ratio: auto;
+  max-height: none;
+  height: 100%;
+}
+.bb-wall[data-size="max"] .bb-wall-note {
+  margin: 0;
+  padding: 8px 14px;
+  border-top: 1px solid var(--term-line);
+  background: var(--term-rail);
+}
+
+@media (max-width: 899px) {
+  /* One column on a phone at every size: two 16:9 tiles side by side on a
+     375px screen is 84px tall each, which is not a monitor. */
+  .bb-wall .bb-wall-grid,
+  .bb-wall[data-size="half"] .bb-wall-grid { grid-template-columns: minmax(0, 1fr); }
+  .bb-wall[data-size="max"] .bb-wall-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: repeat(4, minmax(0, 1fr));
+  }
+  .bb-wall-tok { min-height: 44px; }
+}

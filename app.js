@@ -1013,6 +1013,10 @@ const WALL_CHANNELS = [
   { id: "UCknLrEdhRCp1aegoMqRaCZg", name: "DW News", desk: "Europe" }
 ];
 const WALL_STORAGE_KEY = "axiom_journal_wall_v1";
+const WALL_SIZE_KEY = "axiom_journal_wall_size_v1";
+// band: a strip under the desk. half: 2x2 at half height. max: 2x2 filling
+// the viewport, so each monitor is a true quarter of the screen.
+const WALL_SIZES = ["band", "half", "max"];
 const WALL_SLOTS = 4;
 const TICKER_CACHE_KEY = "axiom_journal_ticker_v1";
 // Last price actually rendered per symbol — the strip's delta is "vs the
@@ -4022,6 +4026,17 @@ function getPipSpec(trade) {
   const asset = String(trade.asset || "").toUpperCase();
   const market = String(trade.market || "").toLowerCase();
   const isCryptoLike = isCryptoMarketSymbol(asset, market);
+
+  // CME gold futures, sized by CONTRACT not by lot. MGC is 10 troy oz, so a
+  // 1.0 point move is $10 per contract; GC is 100 oz, so the same move is $100.
+  // Position size is the number of contracts. Getting this wrong misstates
+  // every P&L on the account, which is worse than showing nothing.
+  if (asset === "MGC") {
+    return { mode: "pip-lot", pipSize: 1, pipValuePerLot: 10 };
+  }
+  if (asset === "GC") {
+    return { mode: "pip-lot", pipSize: 1, pipValuePerLot: 100 };
+  }
 
   // User-requested XAUUSD model: 0.01 lot => $1 per pip (1.0 price move).
   if (asset.startsWith("XAU")) {
@@ -12450,6 +12465,27 @@ function setupTerminal() {
     frame.setAttribute("allowfullscreen", "");
     button.replaceWith(frame);
   });
+  // Size tokens. Delegated from the wall section, not the grid, because the
+  // control lives in the masthead above it.
+  document.getElementById("bbWall")?.addEventListener("click", (event) => {
+    const token = event.target.closest("[data-wall-size]");
+    if (token) {
+      applyWallSize(token.dataset.wallSize);
+    }
+  });
+  // Escape leaves max, so a full-screen wall is never a trap. Guarded the same
+  // way the other Escape handlers are: a native dialog eats it first, and the
+  // mobile drawer keeps its own binding.
+  document.addEventListener("keydown", (event) => {
+    if (
+      event.key === "Escape" &&
+      document.getElementById("bbWall")?.dataset.size === "max" &&
+      !document.querySelector("dialog[open]")
+    ) {
+      applyWallSize("band");
+    }
+  });
+
   wall?.addEventListener("change", (event) => {
     const pick = event.target.closest(".bb-mon-pick");
     const tile = pick?.closest(".bb-mon");
@@ -13092,6 +13128,7 @@ function renderWall() {
     return;
   }
   grid.dataset.sig = sig;
+  applyWallSize(getWallSize());
 
   grid.innerHTML = chosen
     .map((channelId, index) => {
@@ -13118,6 +13155,34 @@ function renderWall() {
 
 /* Which four, and in which slots. Falls back to the first four, and drops any
    stored id that is no longer on the roster rather than rendering a dead tile. */
+function getWallSize() {
+  try {
+    const stored = localStorage.getItem(WALL_SIZE_KEY);
+    return WALL_SIZES.includes(stored) ? stored : "band";
+  } catch (error) {
+    return "band";
+  }
+}
+
+/* One attribute on the wall drives the whole layout, so the tiles are never
+   rebuilt and a playing stream is never interrupted by a resize: an iframe that
+   is re-created loses its stream and has to buffer again. */
+function applyWallSize(size) {
+  const next = WALL_SIZES.includes(size) ? size : "band";
+  const wall = document.getElementById("bbWall");
+  if (wall) {
+    wall.dataset.size = next;
+  }
+  document.querySelectorAll("[data-wall-size]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.wallSize === next));
+  });
+  try {
+    localStorage.setItem(WALL_SIZE_KEY, next);
+  } catch (error) {
+    /* private mode: the size still holds for this session */
+  }
+}
+
 function getWallChoice() {
   let stored = [];
   try {

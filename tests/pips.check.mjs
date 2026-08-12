@@ -3,6 +3,7 @@
 // 4-dp forex, JPY pairs, XAUUSD (their 0.01-lot = $1/pip model), and crypto.
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
+import { normalizeMarketSymbol } from '../src/modules/livePrices.js';
 
 // The helpers live in app.js (browser module). Extract and evaluate just the
 // three pure functions so this test needs no DOM.
@@ -42,3 +43,43 @@ assert.ok(src.includes('pips`') || /\bpips\b.*captureChip|captureChip.*pips/.tes
 assert.ok(src.includes('sheetPips'), 'the open sheet must carry the pips cell');
 
 console.log('pips.check.mjs — all assertions passed');
+
+// --- CME GOLD FUTURES ARE SIZED BY CONTRACT, NOT BY LOT --------------------
+// The trader is on Topstep in MGC (Micro Gold). The app was pricing that
+// position off gold SPOT: measured, futures 4466 against spot 4410, a 56 point
+// gap. That is not a rounding error, it is the wrong instrument, and it made a
+// stop the market never traded through look breached.
+//
+// MGC is 10 troy oz, so 1.0 point is $10 per contract. GC is 100 oz, so the
+// same move is $100. positionSize is a CONTRACT COUNT here, not a lot size.
+{
+  const move = (spec, points, contracts) => spec.pipValuePerLot * points * contracts;
+
+  // Six MGC contracts, the size on the user's chart, over a 1.0 point move.
+  assert.equal(move({ pipValuePerLot: 10 }, 1, 6), 60, "6 MGC x 1.0 point = $60");
+  // The same six contracts over the 4.0 points between 4466.4 and 4470.4.
+  assert.equal(move({ pipValuePerLot: 10 }, 4, 6), 240);
+  // One GC contract is ten micros.
+  assert.equal(move({ pipValuePerLot: 100 }, 1, 1), 100, "1 GC x 1.0 point = $100");
+  assert.equal(
+    move({ pipValuePerLot: 10 }, 1, 10),
+    move({ pipValuePerLot: 100 }, 1, 1),
+    "ten micros are one full contract",
+  );
+}
+
+// --- A CONTRACT ROLL IS THE SAME INSTRUMENT --------------------------------
+// MGCZ26 rolls to MGCH27. A journal that treats those as two instruments loses
+// the record and the price. normalizeMarketSymbol strips the month letter and
+// the two digit year for the metals codes this app prices, and nothing else.
+{
+  assert.equal(normalizeMarketSymbol("MGCZ26"), "MGC", "December 2026 micro gold");
+  assert.equal(normalizeMarketSymbol("MGCH27"), "MGC", "the next roll is the same instrument");
+  assert.equal(normalizeMarketSymbol("GCZ26"), "GC");
+  assert.equal(normalizeMarketSymbol("mgcz26"), "MGC", "case does not matter");
+  // A six letter FX pair must never be mangled by the contract-code rule.
+  assert.equal(normalizeMarketSymbol("EURUSD"), "EURUSD");
+  assert.equal(normalizeMarketSymbol("XAUUSD"), "XAUUSD");
+  // Nor anything that merely starts with the same letters.
+  assert.equal(normalizeMarketSymbol("GCUSD"), "GCUSD");
+}

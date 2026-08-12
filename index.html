@@ -61,21 +61,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260811-eq3" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260811-eq3" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260811-mgc1" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260811-mgc1" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260811-eq3" />
+    <link rel="stylesheet" href="styles.css?v=20260811-mgc1" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260811-eq3" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260811-mgc1" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260811-eq3" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260811-mgc1" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -2169,6 +2169,11 @@
             </form>
 
             <datalist id="assetSuggestions">
+      <!-- CME gold futures. MGC is the Micro contract (10 troy oz), GC the
+           full one (100 oz). A dated code such as MGCZ26 is accepted too and
+           normalises to the same instrument across a contract roll. -->
+      <option value="MGC"></option>
+      <option value="GC"></option>
               <option value="XAUUSD"></option>
               <option value="XAGUSD"></option>
               <option value="BTCUSD"></option>
@@ -2660,7 +2665,15 @@
                its live TV sits behind cable and CNN Max, so there is nothing
                legitimate to embed. -->
           <section class="bb-wall" id="bbWall" aria-labelledby="bbWallH">
-            <p class="bb-wall-h" id="bbWallH"><b>F6</b>the wall<em>click a monitor to play</em></p>
+            <p class="bb-wall-h" id="bbWallH">
+              <b>F6</b>the wall
+              <span class="bb-wall-size" id="bbWallSize" role="group" aria-label="Wall size">
+                <button class="bb-wall-tok" type="button" data-wall-size="band" aria-pressed="true">band</button>
+                <button class="bb-wall-tok" type="button" data-wall-size="half" aria-pressed="false">half</button>
+                <button class="bb-wall-tok" type="button" data-wall-size="max" aria-pressed="false">max</button>
+              </span>
+              <em>click a monitor to play</em>
+            </p>
             <div class="bb-wall-grid" id="bbWallGrid"></div>
             <p class="bb-wall-note">Live feeds are the broadcasters' own public streams, embedded unmodified. Nothing here is stored or rebroadcast.</p>
           </section>
@@ -3231,7 +3244,7 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260811-eq3"></script>
+    <script type="module" src="app.js?v=20260811-mgc1"></script>
     </div>
   </body>
 </html>

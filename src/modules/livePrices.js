@@ -8,6 +8,13 @@ export function normalizeMarketSymbol(symbol) {
     .replace(/[:/\s_-]+/g, "")
     .replace(/[^A-Z0-9.]/g, "");
 
+  // FUTURES CONTRACT CODES. MGCZ26 is the December 2026 Micro Gold contract;
+  // the trader rolls to MGCH27 and it is the same instrument to a journal. The
+  // month letter and two digit year are stripped so a roll does not orphan the
+  // record or lose its price. Only the metals codes this app actually prices
+  // are matched, so an ordinary six letter FX pair can never be mangled.
+  normalized = normalized.replace(/^(MGC|GC|SIL|SI)[FGHJKMNQUVXZ]\d{2}$/, "$1");
+
   normalized = normalized.replace(/\.(P|M|PRO|RAW|CASH)$/i, "");
   normalized = normalized.replace(/(USDT|USDC|USD|BTC|ETH)(PERP|FUT|SWAP|SPOT)$/i, "$1");
   normalized = normalized.replace(/(USDT|USDC|USD|BTC|ETH)(M|PRO)$/i, "$1");

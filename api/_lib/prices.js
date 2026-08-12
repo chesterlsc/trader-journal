@@ -78,6 +78,25 @@ export function resolveLivePriceSource(symbol) {
     };
   }
 
+  // GOLD FUTURES, not spot. A trader on Topstep is in MGC (Micro Gold, 10 oz)
+  // or GC (100 oz), and futures carry a basis over spot: measured 4466 against
+  // a spot 4410, a 56 point gap. Pricing a futures position off spot is not a
+  // rounding error, it is the wrong instrument, and it is what made a stop that
+  // the market never traded through look breached.
+  if (normalized === 'MGC' || normalized === 'GC') {
+    return {
+      key: `yahoo:${normalized}=F`,
+      url: `https://query1.finance.yahoo.com/v8/finance/chart/${normalized}%3DF?interval=1m&range=1d`,
+      readPrice: (body) => positivePrice(body?.chart?.result?.[0]?.meta?.regularMarketPrice),
+      // Yahoo stamps the quote, so the freshness rule reads the market's clock
+      // rather than ours, exactly as the metals feed now does.
+      readAsOf: (body) => {
+        const seconds = body?.chart?.result?.[0]?.meta?.regularMarketTime;
+        return Number.isFinite(seconds) ? seconds * 1000 : null;
+      },
+    };
+  }
+
   if (normalized === 'XAUUSD' || normalized === 'XAGUSD') {
     const metal = normalized.startsWith('XAG') ? 'XAG' : 'XAU';
     return {
