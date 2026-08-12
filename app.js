@@ -977,6 +977,21 @@ const terminal = { events: [], asOf: null, stale: true, skewMs: 0, selectedKey: 
 // tests/bootOrder.check.mjs is what stops the fifth.
 
 const TICKER_SYMBOLS = ["BTCUSDT", "XAUUSD", "ETHUSDT", "SOLUSDT", "XAGUSD", "EURUSD"];
+
+/* THE WALL. Four monitors, each an official free 24/7 news stream embedded by
+   CHANNEL id rather than video id, so a nightly stream restart does not break
+   the tile. Verified reachable before shipping.
+
+   CNN IS NOT HERE, and that is not an oversight. CNN runs no free public live
+   stream: its live TV is behind a cable login and CNN Max, so there is nothing
+   legitimate to embed. Adding a dead tile labelled CNN would be worse than
+   leaving it out. */
+const WALL_CHANNELS = [
+  { id: "UCoMdktPbSTixAyNGwb-UYkQ", name: "Sky News", desk: "UK / global" },
+  { id: "UCNye-wNBqNL5ZzHSJj3l8Bg", name: "Al Jazeera", desk: "MENA / global" },
+  { id: "UCknLrEdhRCp1aegoMqRaCZg", name: "DW News", desk: "Europe" },
+  { id: "UChqUTb7kYRX8-EiaN3XFrSQ", name: "Reuters", desk: "markets" }
+];
 const TICKER_CACHE_KEY = "axiom_journal_ticker_v1";
 // Last price actually rendered per symbol — the strip's delta is "vs the
 // previous poll you saw", whether that came from cache or live.
@@ -6881,6 +6896,8 @@ function renderAll() {
   syncTerminalAccess();
   renderEdgeBoard();
   renderEdgeMini();
+  renderTape();
+  renderWall();
   renderProgressTradeSummary();
   renderDashboardMetrics(state.analytics);
   renderRiskStrip(state.analytics);
@@ -12831,6 +12848,95 @@ function bbReckHtml(closed, file, baseline) {
     ${band}
     <div class="bb-marks" role="img" aria-label="${file.wins} wins, ${file.losses} losses">${marks}<span>last 12</span></div>
     ${verdict}`;
+}
+
+/* THE TAPE. The prices the app already polls every 5s, scrolled horizontally.
+   The run is duplicated in the markup so the loop is seamless; only the text is
+   rewritten per tick, never the markup, so the scroll never jumps. */
+function renderTape() {
+  const run = document.getElementById("bbTapeRun");
+  if (!run) {
+    return;
+  }
+  const cells = TICKER_SYMBOLS.map((symbol) => {
+    const price = state.marketData.currentPrices[symbol];
+    const fresh = priceCanCloseTrade(
+      state.marketData.priceAsOf?.[symbol],
+      Date.now(),
+      LIVE_PRICE_TRIGGER_MAX_AGE_MS
+    );
+    // A price nobody has confirmed recently is shown but marked, never dressed
+    // as live. Same rule the close path uses, for the same reason.
+    return `<span class="bb-tape-c${fresh ? "" : " is-stale"}">
+      <b>${escapeHtml(symbol.replace("USDT", ""))}</b>
+      <i>${Number.isFinite(price) ? escapeHtml(formatTapePrice(price)) : "--"}</i>
+    </span>`;
+  }).join("");
+  const html = cells + cells;
+  if (terminal.sigs.tape !== html) {
+    terminal.sigs.tape = html;
+    run.innerHTML = html;
+    const copy = document.getElementById("bbTapeRun2");
+    if (copy) {
+      copy.innerHTML = html;
+    }
+  }
+}
+
+function formatTapePrice(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) {
+    return "--";
+  }
+  return n >= 1000 ? n.toFixed(0) : n >= 1 ? n.toFixed(2) : n.toFixed(4);
+}
+
+/* THE WALL. Four monitors, click to play.
+
+   Nothing autoplays: an iframe per tile would pull four video streams the
+   moment the tab opened, which on a trading desk is bandwidth and CPU the
+   trader did not ask for. Each tile is a poster until it is clicked, and only
+   then is the iframe created. */
+function renderWall() {
+  const grid = document.getElementById("bbWallGrid");
+  if (!grid || grid.dataset.built === "1") {
+    return;
+  }
+  grid.dataset.built = "1";
+  grid.innerHTML = WALL_CHANNELS.map(
+    (channel, index) => `
+    <article class="bb-mon" data-channel="${escapeHtml(channel.id)}" style="--i:${index}">
+      <p class="bb-mon-h"><span class="bb-mon-dot" aria-hidden="true"></span>${escapeHtml(
+        channel.name
+      )}<em>${escapeHtml(channel.desk)}</em></p>
+      <button class="bb-mon-screen" type="button" aria-label="Play ${escapeHtml(channel.name)} live">
+        <span class="bb-mon-scan" aria-hidden="true"></span>
+        <span class="bb-mon-play" aria-hidden="true">&#9654;</span>
+        <span class="bb-mon-off">standby</span>
+      </button>
+    </article>`
+  ).join("");
+
+  grid.addEventListener("click", (event) => {
+    const button = event.target.closest(".bb-mon-screen");
+    if (!button) {
+      return;
+    }
+    const tile = button.closest(".bb-mon");
+    const channel = tile?.dataset.channel;
+    if (!channel || tile.querySelector("iframe")) {
+      return;
+    }
+    const frame = document.createElement("iframe");
+    // Embedded by CHANNEL, so a nightly stream restart does not break the tile.
+    frame.src = `https://www.youtube.com/embed/live_stream?channel=${encodeURIComponent(channel)}&autoplay=1&mute=1`;
+    frame.title = tile.querySelector(".bb-mon-h")?.textContent || "Live news";
+    frame.loading = "lazy";
+    frame.allow = "autoplay; encrypted-media; picture-in-picture";
+    frame.referrerPolicy = "strict-origin-when-cross-origin";
+    frame.setAttribute("allowfullscreen", "");
+    button.replaceWith(frame);
+  });
 }
 
 /* RELEASE EDGE, DOCKED. The dashboard's right-hand instrument.
