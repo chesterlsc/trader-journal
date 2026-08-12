@@ -10157,3 +10157,28 @@ body.auth-locked {
 @media (max-width: 899px) {
   .bb-mon-pick { min-height: 44px; }
 }
+
+/* --- THE WALL, SIZED ------------------------------------------------------
+   Four 16:9 tiles in two columns is about 1100px tall, which pushed the desk
+   entirely below the fold: the page read as "only news TV" and the instrument
+   looked deleted. The wall is an accessory to the desk, not the page.
+
+   All four now fit one band: 4 across on a wide screen, 2x2 below that, with
+   the tile height capped so the band can never grow past a quarter of the
+   viewport. 16:9 is kept as a MAX, not a floor, so a tile letterboxes rather
+   than dictating the layout. */
+.bb-wall-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 1100px) {
+  .bb-wall-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.bb-mon-screen,
+.bb-mon iframe {
+  aspect-ratio: 16 / 9;
+  max-height: 24vh;
+  width: 100%;
+}
+/* A played tile keeps the same box as its standby poster, so starting a stream
+   never reflows the wall or shoves the desk. */
+.bb-mon iframe { height: auto; }
