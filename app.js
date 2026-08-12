@@ -978,20 +978,30 @@ const terminal = { events: [], asOf: null, stale: true, skewMs: 0, selectedKey: 
 
 const TICKER_SYMBOLS = ["BTCUSDT", "XAUUSD", "ETHUSDT", "SOLUSDT", "XAGUSD", "EURUSD"];
 
-/* THE WALL. Four monitors, each an official free 24/7 news stream embedded by
-   CHANNEL id rather than video id, so a nightly stream restart does not break
-   the tile. Verified reachable before shipping.
+/* THE WALL. Every channel here runs an OFFICIAL free 24/7 live stream and is
+   embedded by CHANNEL id rather than video id, so a nightly stream restart does
+   not break a tile. All nine embeds were confirmed reachable before shipping.
 
-   CNN IS NOT HERE, and that is not an oversight. CNN runs no free public live
-   stream: its live TV is behind a cable login and CNN Max, so there is nothing
-   legitimate to embed. Adding a dead tile labelled CNN would be worse than
-   leaving it out. */
+   CNN IS NOT IN THIS LIST and that is not an oversight: CNN runs no free public
+   live stream, its live TV sits behind a cable login and CNN Max, so there is
+   nothing legitimate to embed. The US networks below are the substitutes that
+   DO stream free, which is the closest honest answer.
+
+   Nine channels, four monitors: the trader picks. The choice is stored, because
+   a desk you have to re-tune every morning is not a desk. */
 const WALL_CHANNELS = [
-  { id: "UCoMdktPbSTixAyNGwb-UYkQ", name: "Sky News", desk: "UK / global" },
-  { id: "UCNye-wNBqNL5ZzHSJj3l8Bg", name: "Al Jazeera", desk: "MENA / global" },
-  { id: "UCknLrEdhRCp1aegoMqRaCZg", name: "DW News", desk: "Europe" },
-  { id: "UChqUTb7kYRX8-EiaN3XFrSQ", name: "Reuters", desk: "markets" }
+  { id: "UChqUTb7kYRX8-EiaN3XFrSQ", name: "Reuters", desk: "markets" },
+  { id: "UCvJJ_dzjViJCoLf5uKUTwoA", name: "CNBC", desk: "US markets" },
+  { id: "UCEAZeUIeJs0IjQiqTCdVSIg", name: "Yahoo Finance", desk: "markets" },
+  { id: "UCeY0bbntWzzVIaj2z3QigXg", name: "NBC News", desk: "US" },
+  { id: "UCBi2mrWuNuyYy4gbM6fU18Q", name: "ABC News", desk: "US" },
+  { id: "UC8p1vwvWtl6T73JiExfWs1g", name: "CBS News", desk: "US" },
+  { id: "UCoMdktPbSTixAyNGwb-UYkQ", name: "Sky News", desk: "UK" },
+  { id: "UCNye-wNBqNL5ZzHSJj3l8Bg", name: "Al Jazeera", desk: "MENA" },
+  { id: "UCknLrEdhRCp1aegoMqRaCZg", name: "DW News", desk: "Europe" }
 ];
+const WALL_STORAGE_KEY = "axiom_journal_wall_v1";
+const WALL_SLOTS = 4;
 const TICKER_CACHE_KEY = "axiom_journal_ticker_v1";
 // Last price actually rendered per symbol — the strip's delta is "vs the
 // previous poll you saw", whether that came from cache or live.
@@ -12267,11 +12277,50 @@ function setupTerminal() {
   if (!document.getElementById("terminal")) {
     return;
   }
-  document.getElementById("tpEvents")?.addEventListener("click", (event) => {
+  // THE WELD: picking a release on the wire re-aims the whole desk at it.
+  // This was bound to #tpEvents, an id that has not existed since the board was
+  // rewritten, so optional chaining made it a silent no-op AND it never
+  // repainted. Both halves were dead. Delegated from the view so it survives
+  // every re-render.
+  document.getElementById("terminal")?.addEventListener("click", (event) => {
     const row = event.target.closest("[data-event-key]");
-    if (row) {
-      terminal.selectedKey = row.dataset.eventKey;
-        }
+    if (!row || row.dataset.eventKey === terminal.selectedKey) {
+      return;
+    }
+    terminal.selectedKey = row.dataset.eventKey;
+    renderEdgeBoard();
+    renderEdgeMini();
+  });
+
+  // The wall. Delegated once: renderWall rebuilds its tiles when the roster
+  // changes, so a direct listener would bind to a detached node.
+  const wall = document.getElementById("bbWallGrid");
+  wall?.addEventListener("click", (event) => {
+    const button = event.target.closest(".bb-mon-screen");
+    if (!button) {
+      return;
+    }
+    const tile = button.closest(".bb-mon");
+    const channel = tile?.dataset.channel;
+    if (!channel || tile.querySelector("iframe")) {
+      return;
+    }
+    const frame = document.createElement("iframe");
+    // By CHANNEL, so a nightly stream restart does not break the tile.
+    frame.src = `https://www.youtube.com/embed/live_stream?channel=${encodeURIComponent(channel)}&autoplay=1&mute=1`;
+    frame.title = tile.querySelector(".bb-mon-pick")?.selectedOptions?.[0]?.textContent || "Live news";
+    frame.loading = "lazy";
+    frame.allow = "autoplay; encrypted-media; picture-in-picture";
+    frame.referrerPolicy = "strict-origin-when-cross-origin";
+    frame.setAttribute("allowfullscreen", "");
+    button.replaceWith(frame);
+  });
+  wall?.addEventListener("change", (event) => {
+    const pick = event.target.closest(".bb-mon-pick");
+    const tile = pick?.closest(".bb-mon");
+    if (pick && tile) {
+      setWallSlot(Number(tile.dataset.slot), pick.value);
+    }
   });
   // One 1s tick drives every countdown. Cheap: it patches text, never markup.
   if (!terminal.timerId) {
@@ -12899,44 +12948,67 @@ function formatTapePrice(value) {
    then is the iframe created. */
 function renderWall() {
   const grid = document.getElementById("bbWallGrid");
-  if (!grid || grid.dataset.built === "1") {
+  if (!grid) {
     return;
   }
-  grid.dataset.built = "1";
-  grid.innerHTML = WALL_CHANNELS.map(
-    (channel, index) => `
-    <article class="bb-mon" data-channel="${escapeHtml(channel.id)}" style="--i:${index}">
-      <p class="bb-mon-h"><span class="bb-mon-dot" aria-hidden="true"></span>${escapeHtml(
-        channel.name
-      )}<em>${escapeHtml(channel.desk)}</em></p>
-      <button class="bb-mon-screen" type="button" aria-label="Play ${escapeHtml(channel.name)} live">
-        <span class="bb-mon-scan" aria-hidden="true"></span>
-        <span class="bb-mon-play" aria-hidden="true">&#9654;</span>
-        <span class="bb-mon-off">standby</span>
-      </button>
-    </article>`
-  ).join("");
+  const chosen = getWallChoice();
+  const sig = chosen.join(",");
+  if (grid.dataset.sig === sig) {
+    return;
+  }
+  grid.dataset.sig = sig;
 
-  grid.addEventListener("click", (event) => {
-    const button = event.target.closest(".bb-mon-screen");
-    if (!button) {
-      return;
-    }
-    const tile = button.closest(".bb-mon");
-    const channel = tile?.dataset.channel;
-    if (!channel || tile.querySelector("iframe")) {
-      return;
-    }
-    const frame = document.createElement("iframe");
-    // Embedded by CHANNEL, so a nightly stream restart does not break the tile.
-    frame.src = `https://www.youtube.com/embed/live_stream?channel=${encodeURIComponent(channel)}&autoplay=1&mute=1`;
-    frame.title = tile.querySelector(".bb-mon-h")?.textContent || "Live news";
-    frame.loading = "lazy";
-    frame.allow = "autoplay; encrypted-media; picture-in-picture";
-    frame.referrerPolicy = "strict-origin-when-cross-origin";
-    frame.setAttribute("allowfullscreen", "");
-    button.replaceWith(frame);
-  });
+  grid.innerHTML = chosen
+    .map((channelId, index) => {
+      const channel = WALL_CHANNELS.find((c) => c.id === channelId) || WALL_CHANNELS[index];
+      const options = WALL_CHANNELS.map(
+        (c) => `<option value="${escapeHtml(c.id)}"${c.id === channel.id ? " selected" : ""}>${escapeHtml(c.name)}</option>`
+      ).join("");
+      return `
+      <article class="bb-mon" data-slot="${index}" data-channel="${escapeHtml(channel.id)}" style="--i:${index}">
+        <p class="bb-mon-h">
+          <span class="bb-mon-dot" aria-hidden="true"></span>
+          <select class="bb-mon-pick" aria-label="Monitor ${index + 1} channel">${options}</select>
+          <em>${escapeHtml(channel.desk)}</em>
+        </p>
+        <button class="bb-mon-screen" type="button" aria-label="Play ${escapeHtml(channel.name)} live">
+          <span class="bb-mon-scan" aria-hidden="true"></span>
+          <span class="bb-mon-play" aria-hidden="true">&#9654;</span>
+          <span class="bb-mon-off">standby</span>
+        </button>
+      </article>`;
+    })
+    .join("");
+}
+
+/* Which four, and in which slots. Falls back to the first four, and drops any
+   stored id that is no longer on the roster rather than rendering a dead tile. */
+function getWallChoice() {
+  let stored = [];
+  try {
+    stored = JSON.parse(localStorage.getItem(WALL_STORAGE_KEY) || "[]");
+  } catch (error) {
+    stored = [];
+  }
+  const known = new Set(WALL_CHANNELS.map((c) => c.id));
+  const clean = (Array.isArray(stored) ? stored : []).filter((id) => known.has(id));
+  const fallback = WALL_CHANNELS.map((c) => c.id).filter((id) => !clean.includes(id));
+  return [...clean, ...fallback].slice(0, WALL_SLOTS);
+}
+
+function setWallSlot(slot, channelId) {
+  const next = getWallChoice().slice();
+  next[slot] = channelId;
+  try {
+    localStorage.setItem(WALL_STORAGE_KEY, JSON.stringify(next));
+  } catch (error) {
+    /* private mode: the choice still holds for this session */
+  }
+  const grid = document.getElementById("bbWallGrid");
+  if (grid) {
+    grid.dataset.sig = "";
+  }
+  renderWall();
 }
 
 /* RELEASE EDGE, DOCKED. The dashboard's right-hand instrument.

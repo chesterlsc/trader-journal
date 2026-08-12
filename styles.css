@@ -10136,3 +10136,24 @@ body.auth-locked {
 @media (prefers-reduced-motion: reduce) {
   .bb-tape-run, .bb-mon-dot { animation: none; }
 }
+
+/* The channel picker sits in the monitor's own masthead: choosing a feed is a
+   desk action, not a settings page. Styled as terminal chrome, not a form. */
+.bb-mon-pick {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--term-ink);
+  font: 600 11px/1.2 var(--font-mono);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  appearance: none;
+}
+.bb-mon-pick:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.bb-mon-pick option { background: var(--term-rail); color: var(--term-ink); }
+
+@media (max-width: 899px) {
+  .bb-mon-pick { min-height: 44px; }
+}
