@@ -61,21 +61,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260811-bb2" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260811-bb2" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260811-bb3" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260811-bb3" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260811-bb2" />
+    <link rel="stylesheet" href="styles.css?v=20260811-bb3" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260811-bb2" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260811-bb3" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260811-bb2" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260811-bb3" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -1228,20 +1228,24 @@
                dense rail. #dashboardMetricGrid stays the id JS toggles against
                the empty state; every [data-metric] node is preserved. -->
 
-          <!-- RELEASE EDGE, on the right of the dashboard.
-               A SUMMARY, not a second copy: the full board lives in the Edge
-               tab and owns the deep panes. This rail carries the two things
-               worth a glance mid-session (what is next, and the trader's record
-               against it) and links into the tab for the rest. Its own ids, so
-               nothing is rendered twice and no id collides. -->
+          <!-- RELEASE EDGE, DOCKED on the right of the dashboard.
+               The same instrument as the landing preview and the full desk, at
+               the smallest size that still says something. It borrows the
+               landing's grammar verbatim: a command bar with a prompt and the
+               feed's clock, pane heads keyed F1/F2, staggered rows of
+               time / source / line / value, and a verdict. Every figure is real
+               or the row does not exist. -->
           <aside class="dash-edge-mini" id="dashEdgeMini" hidden aria-labelledby="dashEdgeMiniHeading">
-            <p class="dash-edge-mini-head">
-              <span id="dashEdgeMiniHeading">Release edge</span>
-              <span class="dash-edge-mini-asof" id="dashEdgeMiniAsOf"></span>
-            </p>
-            <div id="dashEdgeMiniBody"></div>
-            <button class="nav-btn dash-edge-mini-link" type="button" data-target="terminal" data-terminal-nav hidden>
-              Open release edge &rarr;
+            <div class="dem-cmd">
+              <span class="dem-prompt" id="dashEdgeMiniHeading">&gt; edge --link journal<i class="dem-caret" aria-hidden="true"></i></span>
+              <span class="dem-clock" id="dashEdgeMiniAsOf"></span>
+            </div>
+            <div class="dem-screen">
+              <span class="dem-sweep" aria-hidden="true"></span>
+              <div id="dashEdgeMiniBody"></div>
+            </div>
+            <button class="nav-btn dem-key" type="button" data-target="terminal" data-terminal-nav hidden>
+              <b>F1</b> open the desk
             </button>
           </aside>
 
@@ -3201,7 +3205,7 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260811-bb2"></script>
+    <script type="module" src="app.js?v=20260811-bb3"></script>
     </div>
   </body>
 </html>

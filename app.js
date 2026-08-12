@@ -12368,7 +12368,14 @@ function renderTerminalClock() {
   document.querySelectorAll("[data-starts]").forEach((row) => {
     const phase = countdown({ startsAt: row.dataset.starts }, now);
     row.dataset.phase = phase.phase;
-    const cell = row.querySelector(".tm-event-cd") || row;
+    // NAMED cells only. The `|| row` fallback this replaces would write the
+    // countdown into the row's own textContent, wiping every child element the
+    // row is made of. That is fine for a bare <p> countdown and destructive for
+    // a composed row, so each surface names its cell instead.
+    const cell = row.querySelector(".bb-cd, .dem-cd, .tm-event-cd") || (row.children.length === 0 ? row : null);
+    if (!cell) {
+      return;
+    }
     if (cell.textContent !== phase.text) {
       cell.textContent = phase.text;
     }
@@ -12826,10 +12833,14 @@ function bbReckHtml(closed, file, baseline) {
     ${verdict}`;
 }
 
-/* The dashboard's right-hand summary of Release edge.
-   Deliberately NOT a second copy of the board: it answers the two questions
-   worth a glance mid-session, what is next and how the trader does on it, and
-   links into the tab for the panes. Its own ids so nothing renders twice. */
+/* RELEASE EDGE, DOCKED. The dashboard's right-hand instrument.
+
+   The same grammar as the landing preview and the desk, at 300px: a wire of
+   ranked releases, then the trader's own file on the aimed one, then a verdict.
+   The signature the landing sells is that the trader's OWN record prints in the
+   same stream as the schedule, so it does that here too, with real figures.
+
+   It is a SUMMARY, not a second desk: its own ids, so nothing renders twice. */
 function renderEdgeMini() {
   const host = document.getElementById("dashEdgeMini");
   if (!host) {
@@ -12843,40 +12854,72 @@ function renderEdgeMini() {
 
   const closed = getClosedTrades(state.trades);
   const currencies = tradedCurrencies(state.trades);
-  const next = rankEvents(terminal.events, { now: terminalNow(), currencies, minImpact: "Medium" })[0] || null;
+  const now = terminalNow();
+  const wire = rankEvents(terminal.events, { now, currencies, minImpact: "Medium" }).slice(0, 3);
 
   setText(
     document.getElementById("dashEdgeMiniAsOf"),
     terminal.asOf === null
-      ? "no link"
-      : `${new Date(terminal.asOf).toISOString().slice(11, 16)}Z${terminal.stale ? " stale" : ""}`
+      ? "link down"
+      : `${new Date(terminal.asOf).toISOString().slice(11, 19)} UTC${terminal.stale ? " stale" : ""}`
   );
 
-  const key = next?.key || mostStampedKey(closed);
+  const key = wire[0]?.key || mostStampedKey(closed);
   const file = key ? eventFile(closed, key, buildBaseline(closed)) : null;
 
-  const nextBlock = next
-    ? `<p class="dash-edge-mini-k">${escapeHtml(next.currency)} ${escapeHtml(next.impact)}</p>
-       <p class="dash-edge-mini-title">${escapeHtml(next.title)}</p>
-       <p class="dash-edge-mini-cd" data-starts="${escapeHtml(next.startsAt)}"></p>`
-    : `<p class="dash-edge-mini-empty">${
-        terminal.asOf === null
-          ? "No calendar link yet."
-          : "Nothing scheduled ahead for the pairs you trade."
+  // --- the wire: what is coming, ranked on the trader's own pairs ----------
+  let out = `<p class="dem-h"><b>F1</b>wire<em>${
+    currencies.length ? escapeHtml(currencies.slice(0, 3).join(" ")) : "all pairs"
+  }</em></p>`;
+
+  if (wire.length === 0) {
+    out += `<p class="dem-empty">${
+      terminal.asOf === null
+        ? "No calendar link yet. The desk runs on your record alone."
+        : "Nothing scheduled ahead for the pairs you trade."
+    }</p>`;
+  } else {
+    out += wire
+      .map((event, index) => {
+        const local = new Date(event.startsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        return `<div class="dem-row" style="--d:${(index * 0.28).toFixed(2)}s" data-starts="${escapeHtml(
+          event.startsAt
+        )}">
+          <span class="dem-t">${escapeHtml(local)}</span>
+          <span class="dem-s${event.impact === "High" ? " is-hot" : ""}">${escapeHtml(event.currency)}</span>
+          <span class="dem-l">${escapeHtml(event.title)}</span>
+          <span class="dem-x dem-cd"></span>
+        </div>`;
+      })
+      .join("");
+  }
+
+  // --- the trader's own record, printing in the same stream ---------------
+  if (file && file.samples > 0) {
+    const rate = file.winRate === null ? `under ${EDGE_MIN_LOG}` : `${Math.round(file.winRate * 100)}%`;
+    out +=
+      `<p class="dem-h"><b>F2</b>your file<em>${escapeHtml(file.title || key)}</em></p>` +
+      `<div class="dem-stat" style="--i:0"><span>record</span><b>${file.wins}W/${file.losses}L</b></div>` +
+      `<div class="dem-stat" style="--i:1"><span>win rate</span><b>${escapeHtml(rate)}</b></div>` +
+      `<div class="dem-stat" style="--i:2"><span>net</span><b class="${
+        file.netPnl >= 0 ? "is-pos" : "is-neg"
+      }">${escapeHtml(formatSignedCurrency(file.netPnl))}</b></div>` +
+      // The verdict is withheld under the floor rather than softened: eventFile
+      // returns "" below EDGE_MIN_VERDICT and that empty string is the signal.
+      `<p class="dem-verdict">${
+        file.verdict === ""
+          ? `verdict: needs ${EDGE_MIN_VERDICT} prints, has ${file.samples}`
+          : `verdict: ${escapeHtml(
+              file.verdict === "no-difference" ? "no measurable difference" : file.verdict + " than your average"
+            )}`
       }</p>`;
+  } else {
+    out +=
+      `<p class="dem-h"><b>F2</b>your file<em>nothing stamped</em></p>` +
+      `<p class="dem-empty">No prints on record yet. Your file starts with the next one.</p>`;
+  }
 
-  // Same honesty rails as the board: winRate is null under EDGE_MIN_LOG, so a
-  // thin sample shows the record rather than a rate.
-  const fileBlock =
-    file && file.samples > 0
-      ? `<p class="dash-edge-mini-file"><span>${file.wins}W/${file.losses}L</span><span>${
-          file.winRate === null ? `${EDGE_MIN_LOG} for a rate` : `${Math.round(file.winRate * 100)}%`
-        }</span><span class="${file.netPnl >= 0 ? "is-pos" : "is-neg"}">${escapeHtml(
-          formatSignedCurrency(file.netPnl)
-        )}</span></p>`
-      : `<p class="dash-edge-mini-empty">No prints on record yet.</p>`;
-
-  setHtml(document.getElementById("dashEdgeMiniBody"), nextBlock + fileBlock);
+  setHtml(document.getElementById("dashEdgeMiniBody"), out);
   renderTerminalClock();
 }
 

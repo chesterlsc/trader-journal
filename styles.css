@@ -8885,18 +8885,16 @@ body.auth-locked {
 }
 
 /* ==========================================================================
-   RELEASE EDGE, DOCKED. The dashboard's right-hand rail.
+   RELEASE EDGE, DOCKED. The dashboard's right-hand instrument.
 
-   It is the SAME INSTRUMENT as the landing preview and the full desk, at the
-   smallest size that still says something: masthead, one release, one record,
-   one way in. It speaks the shared --term-* ramp, so the three surfaces are one
-   product rather than three.
+   Deliberately the LANDING'S grammar, not a reduction of it: a command bar with
+   a prompt and a blinking caret, pane heads keyed F1/F2, staggered rows of
+   time / source / line / value, stat rows, a verdict, and a slow sweep. The
+   landing sells this instrument; the dashboard should be the same instrument,
+   which is what "relevant to the whole site" has to mean.
 
-   The earlier version of this rail was rejected as a "black slab bolted onto a
-   Clay dashboard". The difference is not that it is lighter: it is that it now
-   belongs to a language the rest of the site speaks, it is bordered and
-   radiused like a Clay board so it sits IN the grid rather than on top of it,
-   and it never pins a token of its own.
+   Everything reads the shared --term-* ramp, so this dock, the landing preview
+   and the full desk are one palette. No token is pinned here.
    ========================================================================== */
 .dash-edge-mini {
   display: grid;
@@ -8910,90 +8908,135 @@ body.auth-locked {
   font-variant-numeric: tabular-nums;
 }
 
-/* The masthead. Same grammar as the desk's command bar and the landing's
-   chrome: a live dot, the name, and the feed's own clock on the right. */
-.dash-edge-mini-head {
+/* --- the command bar ----------------------------------------------------- */
+.dem-cmd {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin: 0;
-  padding: 9px 12px;
+  padding: 8px 11px;
   border-bottom: 1px solid var(--term-line);
   background: var(--term-rail);
+  font: 600 11px/1.2 var(--font-mono);
+}
+.dem-prompt { color: var(--term-acc); letter-spacing: 0.02em; }
+.dem-caret {
+  display: inline-block;
+  width: 6px;
+  height: 11px;
+  margin-left: 3px;
+  translate: 0 1px;
+  background: var(--term-acc);
+  animation: demCaret 1.1s steps(1) infinite;
+}
+.dem-clock { margin-left: auto; color: var(--term-faint); letter-spacing: 0.04em; }
+
+/* --- the screen ---------------------------------------------------------- */
+.dem-screen { position: relative; padding: 10px 11px 11px; overflow: hidden; }
+/* One slow pass, not a strobe: this sits on a dashboard someone reads. */
+.dem-sweep {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 46%;
+  top: -46%;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgb(240 118 61 / 0.05), transparent);
+  animation: demSweep 11s linear infinite;
+}
+
+.dem-h {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 6px;
   color: var(--term-faint);
   font: 600 11px/1.2 var(--font-mono);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
-.dash-edge-mini-head::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--term-acc);
-  box-shadow: 0 0 6px var(--term-acc);
-  flex: none;
-}
-.dash-edge-mini-asof {
-  margin-left: auto;
-  color: var(--term-faint);
-  letter-spacing: 0.04em;
-  text-transform: none;
-}
-
-#dashEdgeMiniBody { display: grid; gap: var(--space-2); padding: 12px; }
-
-.dash-edge-mini-k {
-  margin: 0;
-  color: var(--term-acc);
-  font: 600 11px/1.2 var(--font-mono);
-  letter-spacing: 0.12em;
-}
-.dash-edge-mini-title {
-  margin: 0;
-  color: var(--term-ink);
-  font-size: 13px;
-  line-height: 1.35;
-}
-/* The countdown is the reason to glance at this rail, so it is the one large
-   figure, in a carved well exactly as the desk draws its axis. */
-.dash-edge-mini-cd {
-  margin: 2px 0 0;
-  padding: 8px 10px;
+.dem-h + .dem-h { margin-top: 12px; }
+.dem-h b {
+  padding: 1px 4px;
   border-radius: 2px;
-  background: var(--term-well);
-  color: var(--term-ink);
-  font: 700 24px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
+  background: var(--term-raise);
+  color: var(--term-acc);
+  font-weight: 700;
 }
-.dash-edge-mini-cd[data-phase="imminent"],
-.dash-edge-mini-cd[data-phase="live"] { color: var(--term-acc); }
+.dem-h em { margin-left: auto; font-style: normal; letter-spacing: 0.04em; text-transform: none; }
 
-.dash-edge-mini-file {
-  display: flex;
-  gap: var(--space-3);
-  margin: 0;
-  padding: 10px 12px;
+/* --- wire rows: time / source / line / value ----------------------------- */
+.dem-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: 2px 7px;
+  padding: 5px 0;
   border-top: 1px solid var(--term-line);
-  background: var(--term-rail);
-  color: var(--term-soft);
-  font: 500 12px/1.2 var(--font-mono);
+  font: 500 11px/1.35 var(--font-mono);
+  animation: demRowIn 420ms var(--ease-out) backwards;
+  animation-delay: var(--d, 0s);
 }
-.dash-edge-mini-file .is-pos { color: var(--term-pos); }
-.dash-edge-mini-file .is-neg { color: var(--term-neg); }
+.dem-row:first-of-type { border-top: 0; }
+.dem-t { color: var(--term-faint); }
+.dem-s {
+  padding: 0 4px;
+  border-radius: 2px;
+  background: var(--term-raise);
+  color: var(--term-soft);
+  letter-spacing: 0.06em;
+}
+.dem-s.is-hot { background: var(--term-wash); color: var(--term-acc); }
+.dem-l {
+  grid-column: 1 / -1;
+  color: var(--term-ink);
+  font-weight: 400;
+}
+.dem-x {
+  grid-column: 1 / -1;
+  color: var(--term-soft);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+/* The countdown goes oxide as the print approaches, and blinks once live. */
+.dem-row[data-phase="imminent"] .dem-x,
+.dem-row[data-phase="live"] .dem-x { color: var(--term-acc); }
+.dem-row[data-phase="live"] .dem-x { animation: demLive 1.15s ease-in-out infinite alternate; }
 
-.dash-edge-mini-empty {
+/* --- stat rows and the verdict ------------------------------------------- */
+.dem-stat {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 4px 0;
+  border-top: 1px solid var(--term-line);
+  font: 500 11.5px/1.3 var(--font-mono);
+  animation: demRowIn 420ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 90ms + 240ms);
+}
+.dem-stat span { color: var(--term-faint); }
+.dem-stat b { margin-left: auto; color: var(--term-ink); font-weight: 700; }
+.dem-stat b.is-pos { color: var(--term-pos); }
+.dem-stat b.is-neg { color: var(--term-neg); }
+
+.dem-verdict {
+  margin: 8px 0 0;
+  padding: 6px 8px;
+  border-left: 2px solid var(--term-acc);
+  background: var(--term-well);
+  color: var(--term-soft);
+  font: 500 11px/1.4 var(--font-mono);
+}
+.dem-empty {
   margin: 0;
   color: var(--term-faint);
   font-size: 11px;
   line-height: 1.5;
 }
 
-/* The way in, styled as the desk's F-key rather than a web link. */
-.dash-edge-mini-link {
+/* --- the way in, as an F-key -------------------------------------------- */
+.dem-key {
   display: block;
   width: 100%;
-  padding: 9px 12px;
+  padding: 9px 11px;
   border: 0;
   border-top: 1px solid var(--term-line);
   background: var(--term-rail);
@@ -9004,11 +9047,36 @@ body.auth-locked {
   text-align: left;
   cursor: pointer;
 }
-.dash-edge-mini-link:hover { background: var(--term-raise); }
-.dash-edge-mini-link:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.dem-key b {
+  padding: 1px 4px;
+  margin-right: 6px;
+  border-radius: 2px;
+  background: var(--term-raise);
+  font-weight: 700;
+}
+.dem-key:hover { background: var(--term-raise); }
+.dem-key:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+@media (min-width: 900px) {
+  .dem-h { font-size: 10.5px; }
+}
+
+@keyframes demCaret { 50% { opacity: 0; } }
+@keyframes demSweep { to { top: 100%; } }
+@keyframes demRowIn { from { opacity: 0; transform: translateY(4px); } }
+@keyframes demLive { from { opacity: 1; } to { opacity: 0.55; } }
 
 @media (max-width: 899px) {
-  .dash-edge-mini-link { min-height: 44px; }
+  .dem-key { min-height: 44px; }
+}
+
+/* The resting state is the finished instrument, so a frozen frame is a working
+   screen rather than a half-drawn one. */
+@media (prefers-reduced-motion: reduce) {
+  .dem-caret, .dem-sweep, .dem-row, .dem-stat, .dem-row[data-phase="live"] .dem-x {
+    animation: none;
+  }
+  .dem-sweep { display: none; }
 }
 
 /* THE RIGHT SIDE. A sticky column beside the dashboard, so the countdown sits
