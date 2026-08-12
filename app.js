@@ -12644,13 +12644,6 @@ function renderEdgeBoard() {
     }
   }
 
-  // The gate is a rollout flag, not a paywall: the board is public because the
-  // schedule is public and every statistic is the trader's own, computed here.
-  // Only the deeper workspace is gated.
-  document.querySelectorAll(".dash-edge-open").forEach((link) => {
-    link.hidden = !granted;
-  });
-
   renderTerminalClock();
 }
 

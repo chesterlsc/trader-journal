@@ -61,21 +61,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260811-e1" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260811-e1" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260811-e3" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260811-e3" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260811-e1" />
+    <link rel="stylesheet" href="styles.css?v=20260811-e3" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260811-e1" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260811-e3" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260811-e1" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260811-e3" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -2561,14 +2561,6 @@
                   <span class="dash-edge-asof" id="dashEdgeAsOf" data-stale="false"></span>
           
           
-                  <!-- .nav-btn is the existing router hook: ui.navButtons (app.js:261) is
-                       also a module-eval querySelectorAll, and [data-terminal-nav] is what
-                       syncTerminalAccess (app.js:12886) shows and hides. Zero new JS.
-                       Every .nav-btn rule lives in styles.css, which loads before
-                       clay-v2.css, so .dash-board-link wins on equal specificity; the three
-                       properties it does not set are reset in .dash-edge-open. -->
-                  <button class="nav-btn dash-board-link dash-edge-open" type="button"
-                          data-target="terminal" data-terminal-nav hidden>Open the desk &rarr;</button>
                 </div>
               </div>
           
@@ -3170,7 +3162,7 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260811-e1"></script>
+    <script type="module" src="app.js?v=20260811-e3"></script>
     </div>
   </body>
 </html>

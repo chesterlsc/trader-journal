@@ -9300,3 +9300,61 @@ body.auth-ready .lnd-tape-list .lnd-row {
 body.auth-locked {
   overflow-x: clip;
 }
+/* --- Release edge on a phone ---------------------------------------------
+   The head is a two-up row on desktop: title block left, freshness stamp
+   right. At 375 the stamp was squeezed to 110px while needing 128, so the
+   head overflowed its own box by 18px and the stamp's text collided. It
+   stacks instead, and the stamp reads as what it is, a caption under the
+   title, rather than a cramped column fighting the heading. */
+@media (max-width: 899px) {
+  .dash-edge .dash-board-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+  .dash-edge-stamp {
+    justify-content: flex-start;
+  }
+  /* One column of cards, and the hero figure earns more room than the label
+     because on a phone it is the only thing read at a glance. */
+  .dash-edge-row,
+  .dash-edge-split {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+}
+
+/* --- The showcase on an actual phone -------------------------------------
+   The sample is framed in a 230px device mockup. On desktop that bezel earns
+   its place: it says "this is what the app looks like on a phone". On a real
+   375px phone it is a phone drawn inside a phone, and it cost the sample 40%
+   of the screen: measured, the scene rendered 180px wide inside a 375px
+   viewport, so the account balance sat in a column narrower than the label
+   above it.
+
+   Below 620px the frame is dropped and the scene is the screen. Nothing is
+   hidden and no content moves; only the chrome that was describing the device
+   the user is already holding goes away. */
+@media (max-width: 620px) {
+  .lnd-phone {
+    width: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-clay-lg);
+    background: transparent;
+    box-shadow: none;
+  }
+  .lnd-phone-screen {
+    padding: var(--space-5) var(--space-4) var(--space-4);
+    border-radius: var(--radius-clay-lg);
+    box-shadow: var(--clay-raised);
+  }
+  /* The balance is the reason this section exists, so at full width it gets
+     the size it deserves instead of the size a 180px column allowed. */
+  .lnd-ph-balance {
+    font-size: 34px;
+  }
+  .lnd-ph-label {
+    letter-spacing: 0.16em;
+  }
+}
