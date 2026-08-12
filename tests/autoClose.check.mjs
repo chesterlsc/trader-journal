@@ -3,7 +3,12 @@
 // openTradeTriggerLevel is pure — every direction/level case is pinned here.
 // Run: node tests/autoClose.check.mjs
 import assert from "node:assert/strict";
-import { openTradeTriggerLevel, normalizeDirection, priceCanCloseTrade } from "../src/lib/core.js";
+import {
+  openTradeTriggerLevel,
+  normalizeDirection,
+  priceCanCloseTrade,
+  levelAlreadyPassed,
+} from "../src/lib/core.js";
 
 const buy = { status: "open", direction: "Buy", stopLoss: 4200, takeProfit: 4300 };
 const sell = { status: "open", direction: "Sell", stopLoss: 4244, takeProfit: 4214 };
@@ -173,4 +178,38 @@ assert.equal(normalizeDirection("buy stop"), "Buy");
   // must never read as now: it may be displayed, never used to close.
   assert.equal(priceCanCloseTrade(undefined, fetchedAt, MAX), false);
   assert.equal(priceCanCloseTrade(NaN, fetchedAt, MAX), false);
+}
+
+// --- A LEVEL ALREADY BEYOND THE MARKET WAS NEVER CROSSED -------------------
+// Reported three times, and the earlier fixes addressed the wrong thing. The
+// price was fresh and the direction was right; the trade was logged with a stop
+// the market had ALREADY passed. The next poll saw price through the level and
+// recorded a fill, which reads as "it closed and the market never hit it",
+// because the market never did: it was already there.
+//
+// A stop is an ORDER. It fills on a price that CROSSES it while the order is
+// live. So a level must be observed UNBREACHED at least once before it may
+// fire. app.js holds that state per trade in marketData.triggerArmed; the pure
+// half is here, so the condition itself is pinned.
+{
+  // Long gold at 4452.34, stop 4451.30, logged when gold is already 4410.
+  const late = { status: "open", direction: "Buy", entryPrice: 4452.34, stopLoss: 4451.3, takeProfit: 4470 };
+
+  // The raw trigger still reports the level as through, and that is correct:
+  // its job is to answer "is price beyond the level", not "should we fill".
+  assert.deepEqual(openTradeTriggerLevel(late, 4410), { level: "stop", fill: 4451.3 });
+  assert.equal(levelAlreadyPassed(late, 4410), "stop", "the level is reported as already passed");
+
+  // And when the market is genuinely between the levels there is nothing to
+  // report, which is the state that ARMS the trade in the caller.
+  assert.equal(levelAlreadyPassed(late, 4460), null);
+  assert.equal(openTradeTriggerLevel(late, 4460), null);
+
+  // A short logged under its stop is the mirror case.
+  const shortLate = { status: "open", direction: "Sell", entryPrice: 4400, stopLoss: 4410, takeProfit: 4380 };
+  assert.equal(levelAlreadyPassed(shortLate, 4455), "stop");
+  // 4375 is BELOW the 4380 target, so the target is already through.
+  assert.equal(levelAlreadyPassed(shortLate, 4375), "target", "already through the target counts too");
+  // 4395 sits between the 4380 target and the 4410 stop: nothing is passed.
+  assert.equal(levelAlreadyPassed(shortLate, 4395), null, "between the levels, nothing is passed");
 }

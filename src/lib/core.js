@@ -179,6 +179,19 @@ export function priceCanCloseTrade(confirmedAt, now, maxAgeMs) {
   return age >= 0 && age <= maxAgeMs;
 }
 
+/**
+ * Was this trade's level ALREADY beyond the market when it was logged?
+ *
+ * A stop or a target is an order: it fills on a price that CROSSES it while the
+ * order is live. A level the market had already passed was never crossed, so
+ * firing it invents a fill at a price the market left long ago. This reports
+ * that state so the UI can say so plainly instead of the trade going quiet.
+ */
+export function levelAlreadyPassed(trade, price) {
+  const hit = openTradeTriggerLevel(trade, price);
+  return hit === null ? null : hit.level;
+}
+
 export function openTradeTriggerLevel(trade, price) {
   if (!trade || trade.status !== "open" || !Number.isFinite(price) || price <= 0) {
     return null;

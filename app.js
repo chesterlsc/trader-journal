@@ -222,6 +222,14 @@ const state = {
     // level. A second, differently-timed quote must agree before the journal
     // records a fill. Cleared the moment the market comes back off the level.
     triggerSeen: {},
+    // tradeId -> true once the market has been observed with the price NOT
+    // through the trade's levels. A stop is an ORDER: it can only fill on a
+    // price that CROSSES it while the order is live. A level that was already
+    // beyond the market when the trade was logged was never crossed, so it must
+    // never fire. Without this, logging a trade whose stop is already breached
+    // closed it on the very next poll, which reads as "it closed and the market
+    // never hit it" because the market never did.
+    triggerArmed: {},
     currentPrices: {},
     timerId: null,
     inFlight: false
@@ -11757,6 +11765,16 @@ function autoCloseTriggeredTrades() {
       // The market came back off the level, so any earlier confirmation is
       // void. A stop is not "armed" by a tick that has since been contradicted.
       delete state.marketData.triggerSeen[trade.id];
+      // ...and seeing the price clear of every level is what ARMS the trade.
+      state.marketData.triggerArmed[trade.id] = true;
+      return trade;
+    }
+    // NEVER FIRE A LEVEL THAT WAS ALREADY BEYOND THE MARKET. A stop fills when
+    // price crosses it, and a level the market was already past when the trade
+    // was logged has not been crossed by anything. Such a trade simply rides
+    // until the trader closes it, which is the honest outcome: the alternative
+    // is a fabricated fill at a price the market left long ago.
+    if (!state.marketData.triggerArmed[trade.id]) {
       return trade;
     }
     // MARKET LOGIC: one reading may not close a position. These are free,
