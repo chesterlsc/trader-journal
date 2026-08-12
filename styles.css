@@ -9246,49 +9246,6 @@ body.auth-ready .lnd-tape-list .lnd-row {
     font-size: 14px;
   }
 }
-/* ==========================================================================
-   RELEASE EDGE AS THE RIGHT RAIL.
-
-   Same board, same DOM, same renderer. Only placement changes: at desktop
-   widths it becomes a sticky right column so the countdown and the record sit
-   in the periphery where a glanceable thing belongs, and the money the trader
-   opened the app for keeps the main column.
-
-   NO TOKEN PINS HERE EITHER. Everything below is layout only, so the board
-   stays Clay on Clay and terminal when armed, exactly as before.
-   ========================================================================== */
-@media (min-width: 1240px) {
-  #dashboard {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: var(--space-5);
-    align-items: start;
-  }
-  /* Load bearing: without an explicit column every other dashboard child would
-     flow into the 340px rail and the most-viewed screen in the app would break
-     at exactly the width most desktop users sit at. */
-  #dashboard > *:not(#dashEdge) { grid-column: 1; }
-  #dashEdge {
-    grid-column: 2;
-    grid-row: 1 / 30;
-    position: sticky;
-    top: 78px;
-    max-height: calc(100vh - 96px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-  /* In a 340px column the hero row and the split stack instead of sitting
-     across. One rule each, because the markup does not change. */
-  #dashEdge .dash-edge-row,
-  #dashEdge .dash-edge-split { grid-template-columns: minmax(0, 1fr); }
-}
-
-/* Below the rail breakpoint it is a full-width board again, in normal flow,
-   directly under the dashboard head and ABOVE the metric grid, because a
-   countdown below the fold is a countdown that does not exist. */
-@media (max-width: 1239px) {
-  #dashEdge { grid-column: 1 / -1; }
-}
 
 /* The hero's atmosphere is deliberately full bleed (width: 100vw), but 100vw
    counts the scrollbar while the layout box does not, so it runs a few px wider
@@ -9358,3 +9315,106 @@ body.auth-locked {
     letter-spacing: 0.16em;
   }
 }
+
+/* ==========================================================================
+   RELEASE EDGE, the dashboard's right-hand rail.
+
+   A summary that links into the Edge tab, not a second board. It declares no
+   custom property on any element, so it inherits the theme like every other
+   Clay surface. (An element-scoped token pin is invisible to
+   clayV3Contrast.check.mjs, which is how a previous rail shipped as a black
+   slab on a Clay dashboard and survived two fixes.)
+   ========================================================================== */
+.dash-edge-mini {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-clay-lg);
+  background: var(--surface-1);
+  box-shadow: var(--clay-raised);
+}
+.dash-edge-mini-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--text-faint);
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.dash-edge-mini-asof { margin-left: auto; letter-spacing: 0.04em; }
+.dash-edge-mini-k {
+  margin: 0;
+  color: var(--accent);
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+}
+.dash-edge-mini-title { margin: 2px 0 0; color: var(--text); font-size: var(--fs-body); }
+.dash-edge-mini-cd {
+  margin: var(--space-2) 0 0;
+  color: var(--text);
+  font: 700 24px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.dash-edge-mini-cd[data-phase="imminent"],
+.dash-edge-mini-cd[data-phase="live"] { color: var(--accent); }
+.dash-edge-mini-file {
+  display: flex;
+  gap: var(--space-4);
+  margin: var(--space-3) 0 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+  color: var(--text);
+  font: 500 var(--fs-body)/1.2 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.dash-edge-mini-empty {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+}
+.dash-edge-mini-link {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  cursor: pointer;
+}
+.dash-edge-mini-link:hover { text-decoration: underline; }
+
+/* THE RIGHT SIDE. A sticky column beside the dashboard, so the countdown sits
+   in the periphery and the money keeps the main column. */
+@media (min-width: 1240px) {
+  #dashboard {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: var(--space-5);
+    align-items: start;
+  }
+  /* Load bearing: without an explicit column every other dashboard child flows
+     into the 300px rail and the most-viewed screen breaks at exactly the width
+     most desktop users sit at. */
+  #dashboard > *:not(.dash-edge-mini) { grid-column: 1; }
+  .dash-edge-mini {
+    grid-column: 2;
+    grid-row: 1 / 30;
+    position: sticky;
+    top: 78px;
+  }
+}
+
+/* Below the rail breakpoint it is a normal block directly under the dashboard
+   head and ABOVE the metric grid, because a countdown below the fold is a
+   countdown that does not exist. */
+@media (max-width: 1239px) {
+  .dash-edge-mini { grid-column: 1 / -1; }
+}
+
+.dash-edge-mini[hidden] { display: none; }

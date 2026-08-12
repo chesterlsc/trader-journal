@@ -6874,6 +6874,7 @@ function renderAll() {
   renderDashLeonTape();
   syncTerminalAccess();
   renderEdgeBoard();
+  renderEdgeMini();
   renderProgressTradeSummary();
   renderDashboardMetrics(state.analytics);
   renderRiskStrip(state.analytics);
@@ -12284,6 +12285,11 @@ async function loadTerminalCalendar() {
   } catch (error) {
     terminal.stale = true;
   }
+  // The fetch is async and resolves AFTER the first render, so without this the
+  // board keeps whatever it painted before the calendar arrived, which is the
+  // "calendar unavailable" empty state. It looked like the feature was dead.
+  renderEdgeBoard();
+  renderEdgeMini();
 }
 
 // The event family the trader has the most closed trades against.
@@ -12644,6 +12650,60 @@ function renderEdgeBoard() {
     }
   }
 
+  renderTerminalClock();
+}
+
+/* The dashboard's right-hand summary of Release edge.
+   Deliberately NOT a second copy of the board: it answers the two questions
+   worth a glance mid-session, what is next and how the trader does on it, and
+   links into the tab for the panes. Its own ids so nothing renders twice. */
+function renderEdgeMini() {
+  const host = document.getElementById("dashEdgeMini");
+  if (!host) {
+    return;
+  }
+  const granted = Boolean(state.auth.terminalPro) || isLocalPreviewMode();
+  host.hidden = !canAccessApp() || !granted;
+  if (host.hidden) {
+    return;
+  }
+
+  const closed = getClosedTrades(state.trades);
+  const currencies = tradedCurrencies(state.trades);
+  const next = rankEvents(terminal.events, { now: terminalNow(), currencies, minImpact: "Medium" })[0] || null;
+
+  setText(
+    document.getElementById("dashEdgeMiniAsOf"),
+    terminal.asOf === null
+      ? "no link"
+      : `${new Date(terminal.asOf).toISOString().slice(11, 16)}Z${terminal.stale ? " stale" : ""}`
+  );
+
+  const key = next?.key || mostStampedKey(closed);
+  const file = key ? eventFile(closed, key, buildBaseline(closed)) : null;
+
+  const nextBlock = next
+    ? `<p class="dash-edge-mini-k">${escapeHtml(next.currency)} ${escapeHtml(next.impact)}</p>
+       <p class="dash-edge-mini-title">${escapeHtml(next.title)}</p>
+       <p class="dash-edge-mini-cd" data-starts="${escapeHtml(next.startsAt)}"></p>`
+    : `<p class="dash-edge-mini-empty">${
+        terminal.asOf === null
+          ? "No calendar link yet."
+          : "Nothing scheduled ahead for the pairs you trade."
+      }</p>`;
+
+  // Same honesty rails as the board: winRate is null under EDGE_MIN_LOG, so a
+  // thin sample shows the record rather than a rate.
+  const fileBlock =
+    file && file.samples > 0
+      ? `<p class="dash-edge-mini-file"><span>${file.wins}W/${file.losses}L</span><span>${
+          file.winRate === null ? `${EDGE_MIN_LOG} for a rate` : `${Math.round(file.winRate * 100)}%`
+        }</span><span class="${file.netPnl >= 0 ? "is-pos" : "is-neg"}">${escapeHtml(
+          formatSignedCurrency(file.netPnl)
+        )}</span></p>`
+      : `<p class="dash-edge-mini-empty">No prints on record yet.</p>`;
+
+  setHtml(document.getElementById("dashEdgeMiniBody"), nextBlock + fileBlock);
   renderTerminalClock();
 }
 
