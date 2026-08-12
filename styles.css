@@ -5807,9 +5807,22 @@ body.demo-signup::before {
 .lnd-hero {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 520px) minmax(0, 740px);
-  justify-content: center;
-  align-items: center;
+  /* RATIO, not fixed tracks. minmax(0, 520px) / minmax(0, 740px) needs 1300px;
+     below that both tracks shrank to the SAME width (measured: 497px / 497px at
+     a 1100px viewport), so the intended 520:740 asymmetry silently became 50/50
+     and the instrument column was squeezed. 0.7fr preserves 520:740 at every
+     width, and the pair is still centred as one unit by max-width plus auto
+     margins rather than by justify-content. */
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1fr);
+  max-width: 1300px;
+  margin-inline: auto;
+  /* NOT center. The instrument column is content-driven and runs ~390px taller
+     than the copy (measured: side 943px, copy 553px), so centring pushed the
+     headline to y=317 on a 900px-tall screen: a third of the way down, with the
+     hero itself overflowing the fold. Anchoring to the top puts the headline
+     where a hero headline belongs and costs the instrument nothing, because
+     .lnd-hero-side is already align-content: start. */
+  align-items: start;
   gap: var(--space-10);
   width: 100%;
   max-width: none;
@@ -10711,4 +10724,15 @@ so without this it covers the
    countdown below the fold is a countdown that does not exist. */
 @media (max-width: 1239px) {
   #dashEdge { grid-column: 1 / -1; }
+}
+
+/* The hero's atmosphere is deliberately full bleed (width: 100vw), but 100vw
+   counts the scrollbar while the layout box does not, so it runs a few px wider
+   than the page and the landing gained a horizontal scroll of exactly that
+   difference (measured: 7px against a 15px scrollbar). Clipped rather than
+   narrowed, because narrowing it would leave a seam at the edge of a bleed
+   whose whole job is to have no edge. Scoped to the landing: the app shell
+   below has sticky columns that must keep their scroll container. */
+body.auth-locked {
+  overflow-x: clip;
 }
