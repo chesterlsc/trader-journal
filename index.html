@@ -61,21 +61,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260811-mgc1" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260811-mgc1" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260811-mgc2" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260811-mgc2" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260811-mgc1" />
+    <link rel="stylesheet" href="styles.css?v=20260811-mgc2" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260811-mgc1" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260811-mgc2" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260811-mgc1" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260811-mgc2" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -329,6 +329,11 @@
               <span class="lnd-ticker-delta" data-ticker-delta="XAUUSD"></span>
             </span>
             <span class="lnd-ticker-item">
+              <span class="lnd-ticker-sym">MGC</span>
+              <span class="lnd-ticker-price" data-ticker-price="MGC">&mdash;</span>
+              <span class="lnd-ticker-delta" data-ticker-delta="MGC"></span>
+            </span>
+            <span class="lnd-ticker-item">
               <span class="lnd-ticker-sym">ETHUSDT</span>
               <span class="lnd-ticker-price" data-ticker-price="ETHUSDT">&mdash;</span>
               <span class="lnd-ticker-delta" data-ticker-delta="ETHUSDT"></span>
@@ -363,6 +368,11 @@
               <span class="lnd-ticker-sym">XAUUSD</span>
               <span class="lnd-ticker-price" data-ticker-price="XAUUSD">&mdash;</span>
               <span class="lnd-ticker-delta" data-ticker-delta="XAUUSD"></span>
+            </span>
+            <span class="lnd-ticker-item">
+              <span class="lnd-ticker-sym">MGC</span>
+              <span class="lnd-ticker-price" data-ticker-price="MGC">&mdash;</span>
+              <span class="lnd-ticker-delta" data-ticker-delta="MGC"></span>
             </span>
             <span class="lnd-ticker-item">
               <span class="lnd-ticker-sym">ETHUSDT</span>
@@ -1180,6 +1190,15 @@
                 <span class="dash-ticker-price" data-ticker-price="XAUUSD">&mdash;</span>
                 <span class="dash-ticker-delta" data-ticker-delta="XAUUSD"></span>
               </span>
+              <!-- Micro Gold futures, the instrument actually traded on a prop
+                   account. Spot XAU sits above it for reference: the basis
+                   between them is real and was worth 56 points when this
+                   shipped, which is why they are two rows and not one. -->
+              <span class="dash-ticker">
+                <span class="dash-ticker-sym">MGC</span>
+                <span class="dash-ticker-price" data-ticker-price="MGC">&mdash;</span>
+                <span class="dash-ticker-delta" data-ticker-delta="MGC"></span>
+              </span>
               <span class="dash-ticker-tag">live &middot; 5s</span>
               <span class="dash-ticker-tag lnd-ticker-stale">stale</span>
             </div>
@@ -1199,6 +1218,15 @@
                 <span class="dash-ticker-sym">XAU</span>
                 <span class="dash-ticker-price" data-ticker-price="XAUUSD">&mdash;</span>
                 <span class="dash-ticker-delta" data-ticker-delta="XAUUSD"></span>
+              </span>
+              <!-- Micro Gold futures, the instrument actually traded on a prop
+                   account. Spot XAU sits above it for reference: the basis
+                   between them is real and was worth 56 points when this
+                   shipped, which is why they are two rows and not one. -->
+              <span class="dash-ticker">
+                <span class="dash-ticker-sym">MGC</span>
+                <span class="dash-ticker-price" data-ticker-price="MGC">&mdash;</span>
+                <span class="dash-ticker-delta" data-ticker-delta="MGC"></span>
               </span>
               <span class="dash-ticker-tag">live &middot; 5s</span>
               <span class="dash-ticker-tag lnd-ticker-stale">stale</span>
@@ -3244,7 +3272,7 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260811-mgc1"></script>
+    <script type="module" src="app.js?v=20260811-mgc2"></script>
     </div>
   </body>
 </html>

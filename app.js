@@ -988,7 +988,11 @@ const terminal = { events: [], asOf: null, stale: true, skewMs: 0, selectedKey: 
 // when init() runs and throws on first render. That has shipped four times;
 // tests/bootOrder.check.mjs is what stops the fifth.
 
-const TICKER_SYMBOLS = ["BTCUSDT", "XAUUSD", "ETHUSDT", "SOLUSDT", "XAGUSD", "EURUSD"];
+// MGC rides here so the desk always shows the instrument actually traded on
+// a prop account, not only while a position is open. Spot XAUUSD stays
+// alongside it: the basis between futures and spot is real, and seeing both
+// is what makes it obvious which one a stop is being measured against.
+const TICKER_SYMBOLS = ["BTCUSDT", "XAUUSD", "MGC", "ETHUSDT", "SOLUSDT", "XAGUSD", "EURUSD"];
 
 /* THE WALL. Every channel here runs an OFFICIAL free 24/7 live stream and is
    embedded by CHANNEL id rather than video id, so a nightly stream restart does

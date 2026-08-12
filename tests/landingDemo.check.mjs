@@ -89,7 +89,11 @@ for (const symbol of symbols) {
   const deltas = html.split(`data-ticker-delta="${symbol}"`).length - 1;
   // Every polled symbol rides both marquee halves (2); the compact dashboard
   // pair and the sticky dock carry only the first two symbols (+2).
-  const expected = ["BTCUSDT", "XAUUSD"].includes(symbol) ? 4 : 2;
+  // BTC, spot gold and Micro Gold futures also ride the compact dashboard
+  // pair and the sticky dock, so they carry 4 nodes rather than 2. MGC is
+  // there because it is the instrument a prop trader is actually in, and
+  // spot sits beside it so the basis between them is visible.
+  const expected = ["BTCUSDT", "XAUUSD", "MGC"].includes(symbol) ? 4 : 2;
   assert.equal(prices, expected, `${symbol}: expected ${expected} price nodes, found ${prices}`);
   assert.equal(deltas, expected, `${symbol}: expected ${expected} delta nodes, found ${deltas}`);
 }
