@@ -37,6 +37,7 @@ import {
   windowBuckets,
   releaseClockEdge,
   tiltByEventType,
+  WINDOW_MIN,
   EDGE_MIN_LOG,
   EDGE_MIN_VERDICT
 } from "./src/lib/eventEdge.js";
@@ -963,7 +964,12 @@ const PROP_VISIBILITY_NOTE =
 // Terminal Pro state. Declared ABOVE init() like every other module binding —
 // anything below that call is in the temporal dead zone during the first
 // render (tests/bootOrder.check.mjs enforces this; it has bitten four times).
-const terminal = { events: [], asOf: null, stale: true, skewMs: 0, selectedKey: "", timerId: 0, requested: false };
+const terminal = { events: [], asOf: null, stale: true, skewMs: 0, selectedKey: "",
+  timerId: 0, requested: false,
+  // Last markup written per pane. The desk repaints once a second, so an
+  // unchanged pane must not be re-written: rebuilding it would restart every
+  // row entrance animation on every tick.
+  sigs: {} };
 
 // Terminal mode. Declared HERE, above the init() call at the bottom of this
 // block, because a module-level binding below it is in the temporal dead zone
@@ -12408,27 +12414,35 @@ function syncTerminalAccess() {
 
 
 
-/* --- Release edge: Terminal Pro living on the dashboard as a board ---------
-   ONE COMPONENT, TWO SKINS. This renderer emits nothing but app-wide classes
-   (.dash-board, .metric-card, .metric-label, .nav-btn), so the terminal skin
-   arrives from the app's own grammar rather than from a second stylesheet, and
-   the Clay skin is simply what those classes already are.
+/* --- RELEASE EDGE, THE DESK ------------------------------------------------
+   #terminal is its own full screen, so this renders an instrument rather than
+   a card: five panes, all fed by src/lib/eventEdge.js and src/lib/eventClock.js.
 
-   The rail this replaces pinned --surface-* on its own subtree, which
-   out-specified its own repair and kept it black on a Clay dashboard. Nothing
-   here declares a custom property on an element, which is the whole fix.
+   THE APPROACH is the signature. The calendar knows the instant of the print to
+   the second (rankEvents + countdown). windowBuckets knows what THIS trader has
+   actually done in each window around that instant. Both go on ONE axis, with a
+   playhead at where the clock really is. At T-0 the playhead crosses into the
+   0-15m column and that column lights, so the trader watches themselves walk
+   into the window their own record has an opinion about.
 
-   Honesty is enforced upstream, not here: eventFile returns winRate === null
-   below EDGE_MIN_LOG, so THE NULL IS THE RENDER SIGNAL and this function
-   carries no threshold branch of its own. */
+   Honesty is enforced upstream, not here: eventFile() returns winRate === null
+   below EDGE_MIN_LOG and verdict "" below EDGE_MIN_VERDICT, so THE NULL IS THE
+   RENDER SIGNAL and this function carries no threshold branch of its own.
+
+   Countdown text is deliberately left EMPTY in the markup and filled by the
+   shipped renderTerminalClock() tick. That keeps each pane's markup signature
+   stable between renders, which is what lets paint() skip the rebuild, which is
+   what keeps THE FUSE's seeded animation-delay alive for its whole 60 seconds.
+
+   renderEdgeMini() and the Clay dashboard rail are not touched by any line
+   below. */
 function renderEdgeBoard() {
-  const board = document.getElementById("dashEdge");
-  if (!board) {
+  const desk = document.getElementById("bbDesk");
+  if (!desk) {
     return;
   }
-  const granted = Boolean(state.auth.terminalPro) || isLocalPreviewMode();
-  board.hidden = !canAccessApp();
-  if (board.hidden) {
+  desk.hidden = !canAccessApp();
+  if (desk.hidden) {
     return;
   }
 
@@ -12436,221 +12450,380 @@ function renderEdgeBoard() {
   const baseline = buildBaseline(closed);
   const currencies = tradedCurrencies(state.trades);
   const now = terminalNow();
+  const stale = terminal.stale || terminal.asOf === null;
+  const feedAt = terminal.asOf === null ? "" : new Date(terminal.asOf).toISOString().slice(11, 16);
 
-  // ---- freshness, the pattern every product in the category ships ---------
-  const asOf = document.getElementById("dashEdgeAsOf");
-  if (asOf) {
-    const stale = terminal.stale || terminal.asOf === null;
-    asOf.dataset.stale = stale ? "true" : "false";
-    asOf.textContent =
-      terminal.asOf === null
-        ? "calendar unavailable"
-        : `calendar ${new Date(terminal.asOf).toISOString().slice(11, 16)} UTC${stale ? " (stale)" : ""}`;
-  }
+  // ---- command bar: the feed, and THE STALL that reports it --------------
+  desk.dataset.feed = stale ? "stale" : "live";
+  setText(
+    document.getElementById("bbFeedText"),
+    terminal.asOf === null ? "no link" : stale ? `feed ${feedAt}z stale` : `feed ${feedAt}z live`
+  );
 
-  // ---- card 1: what is coming --------------------------------------------
-  const next = rankEvents(terminal.events, { now, currencies, minImpact: "Medium" })[0] || null;
-  const nextCard = document.getElementById("dashEdgeNext");
-  if (nextCard) {
-    if (next) {
-      nextCard.dataset.starts = next.startsAt;
-      const phase = countdown(next, now);
-      setHtml(
-        nextCard,
-        `<p class="metric-label">Next release</p>
-         <p class="dash-edge-fig tm-event-cd">${escapeHtml(phase.text)}</p>
-         <span class="dash-edge-phase" aria-hidden="true"><i></i></span>
-         <p class="dash-edge-n">${escapeHtml(next.currency)} ${escapeHtml(next.title)}, ${escapeHtml(
-          next.impact
-        )} impact.</p>`
-      );
-    } else {
-      delete nextCard.dataset.starts;
-      setHtml(
-        nextCard,
-        `<p class="metric-label">Next release</p>
-         <p class="dash-edge-fig">--</p>
-         <p class="dash-edge-n">${
-           terminal.asOf === null
-             ? "No calendar link. The board runs on your record alone."
-             : "Nothing scheduled ahead for the pairs you trade."
-         }</p>`
-      );
-    }
-  }
-
-  // ---- card 2: the trader's own record against it ------------------------
+  // ---- F1 THE WIRE -------------------------------------------------------
+  // Every row carries the trader's own file on that release. That is the column
+  // no calendar can print and no journal can print, and it is on row one.
+  const wire = rankEvents(terminal.events, { now, currencies, minImpact: "Medium" }).slice(0, 12);
   if (!terminal.selectedKey) {
-    terminal.selectedKey = next?.key || mostStampedKey(closed);
+    terminal.selectedKey = wire[0]?.key || mostStampedKey(closed);
   }
-  const file = terminal.selectedKey ? eventFile(closed, terminal.selectedKey, baseline) : null;
-  const fileCard = document.getElementById("dashEdgeFile");
-  if (fileCard) {
-    if (file && file.samples > 0) {
-      // winRate is null under EDGE_MIN_LOG, so a thin sample prints the record
-      // rather than a rate. No percentage can appear under five prints.
-      const fig = file.winRate === null ? `${file.wins}W/${file.losses}L` : `${Math.round(file.winRate * 100)}%`;
-      const marks = closed
-        .filter((trade) => (trade.eventContext || []).some((stamp) => stamp?.k === terminal.selectedKey))
-        .slice(-12)
-        .map((trade) => `<i class="${trade.netPnl > 0 ? "is-pos" : trade.netPnl < 0 ? "is-neg" : ""}"></i>`)
-        .join("");
-      setHtml(
-        fileCard,
-        `<p class="metric-label">Your file on it</p>
-         <p class="dash-edge-fig">${escapeHtml(fig)}</p>
-         <span class="dash-edge-marks" role="img" aria-label="${file.wins} wins, ${file.losses} losses">${marks}</span>
-         <p class="dash-edge-n">${file.samples} print${file.samples === 1 ? "" : "s"} on record. ${
-          file.winRate === null ? `${EDGE_MIN_LOG} needed for a rate.` : `${EDGE_MIN_VERDICT} for a verdict.`
+  setText(document.getElementById("bbWireCount"), wire.length === 0 ? "" : `${wire.length} ahead`);
+
+  paint(
+    document.getElementById("bbWire"),
+    "wire",
+    wire.length === 0
+      ? `<p class="bb-note">${
+          terminal.asOf === null
+            ? "No calendar link. The desk runs on your own record alone."
+            : "Nothing medium impact or above ahead for the pairs you trade."
         }</p>`
-      );
+      : wire
+          .map((event, index) => {
+            const file = eventFile(closed, event.key, baseline);
+            // The REL glyph exists only at EDGE_MIN_VERDICT or above, because
+            // that is the only place eventFile hands one over. Under ten prints
+            // the cell is blank, not neutral.
+            const rel =
+              file.verdict === "worse"
+                ? `<u class="is-worse" title="Measurably worse than your own average">&lt;</u>`
+                : file.verdict === "better"
+                ? `<u class="is-better" title="Measurably better than your own average">&gt;</u>`
+                : file.verdict === "no-difference"
+                ? `<u title="No measurable difference">=</u>`
+                : "";
+            const you =
+              file.samples === 0
+                ? `no file`
+                : `<b>${file.samples}</b> ${file.wins}W/${file.losses}L ${rel}`;
+            return `<button class="bb-row" type="button" style="--i:${index}"
+                data-event-key="${escapeHtml(event.key)}"
+                data-starts="${escapeHtml(event.startsAt)}"
+                aria-pressed="${event.key === terminal.selectedKey ? "true" : "false"}">
+                <span class="bb-cd tm-event-cd"></span>
+                <span class="bb-ccy">${escapeHtml(event.currency)}</span>
+                ${bbLadder(event.impact)}
+                <span class="bb-ttl">${escapeHtml(event.title)}</span>
+                <span class="bb-you">${you}</span>
+              </button>`;
+          })
+          .join("")
+  );
+
+  // ---- what the desk is aimed at -----------------------------------------
+  // NOT wire.find(): rankEvents drops an event the instant it starts, so at T-0
+  // the signature moment would delete its own subject. The aimed instance is
+  // the one nearest NOW in either direction, which is what keeps a release on
+  // the axis through its whole live phase after it has left the wire.
+  const aimed = nearestInstance(terminal.selectedKey, now);
+  const file = terminal.selectedKey ? eventFile(closed, terminal.selectedKey, baseline) : null;
+  const name = file?.title || aimed?.title || terminal.selectedKey || "";
+
+  // ---- F2 THE APPROACH: the calendar and the record on ONE axis ----------
+  setText(document.getElementById("bbApprTag"), name ? `aimed at ${name}` : "nothing aimed");
+  paint(document.getElementById("bbAppr"), "appr", bbApproachHtml(closed, aimed, name));
+
+  const appr = document.getElementById("bbAppr");
+  if (appr) {
+    // data-starts lands on the PANE BODY, so the shipped tick drives the
+    // countdown text, the phase, the playhead and the fuse from one node.
+    if (aimed) {
+      appr.dataset.starts = aimed.startsAt;
+      appr.dataset.approach = "";
     } else {
-      setHtml(
-        fileCard,
-        `<p class="metric-label">Your file on it</p>
-         <p class="dash-edge-fig">--</p>
-         <p class="dash-edge-n">No prints on record yet. Your file starts with the next one.</p>`
-      );
+      delete appr.dataset.starts;
+      delete appr.dataset.approach;
+      delete appr.dataset.fuse;
+      appr.dataset.phase = "far";
     }
   }
 
-  // ---- card 3: day one. Needs no stamps and no archive. -------------------
-  const slots = releaseClockEdge(closed);
-  const live = slots.filter((slot) => slot.n > 0);
-  const best = live.slice().sort((a, b) => b.netPnl - a.netPnl)[0] || null;
-  const peak = Math.max(1, ...slots.map((slot) => Math.abs(slot.netPnl)));
-  const clockCard = document.getElementById("dashEdgeClock");
-  if (clockCard) {
-    if (best) {
-      const bars = slots
-        .map(
-          (slot) =>
-            `<i class="${slot.n === 0 ? "" : slot.netPnl >= 0 ? "is-pos" : "is-neg"}" style="height:${Math.max(
-              6,
-              Math.round((Math.abs(slot.netPnl) / peak) * 100)
-            )}%"></i>`
-        )
-        .join("");
-      setHtml(
-        clockCard,
-        `<p class="metric-label">Your clock</p>
-         <p class="dash-edge-fig ${best.netPnl >= 0 ? "is-pos" : "is-neg"}">${escapeHtml(
-          formatSignedCurrency(best.netPnl)
-        )}</p>
-         <span class="dash-edge-bars" aria-hidden="true">${bars}</span>
-         <p class="dash-edge-n">${escapeHtml(best.label)}, ${best.n} live trade${
-          best.n === 1 ? "" : "s"
-        }. Your best.</p>`
-      );
-    } else {
-      setHtml(
-        clockCard,
-        `<p class="metric-label">Your clock</p>
-         <p class="dash-edge-fig">--</p>
-         <p class="dash-edge-n">No live-logged trades yet. Imported rows are excluded, because their timestamps are the paste time.</p>`
-      );
-    }
-  }
-
-  // ---- the ONE insight line, never a list --------------------------------
-  const say = document.getElementById("dashEdgeSay");
+  // ---- F3 THE RECKONING --------------------------------------------------
+  setText(document.getElementById("bbReckTag"), name || "no release selected");
+  const say = document.getElementById("bbSay");
   if (say) {
+    // The one honest sentence, built in the library so a renderer cannot
+    // soften it. The only element on this desk permitted to collapse.
     const show = Boolean(file && file.samples > 0);
     say.hidden = !show;
     if (show) {
       setText(say, file.sentence);
     }
   }
+  paint(document.getElementById("bbReck"), "reck", bbReckHtml(closed, file, baseline));
 
-  // ---- pane 1: the clock as a LIST, not a chart --------------------------
-  setHtml(
-    document.getElementById("dashEdgeSlots"),
-    slots
-      .map(
-        (slot) => `
-      <div class="dash-edge-slot">
-        <div class="dash-edge-slot-top">
-          <span class="dash-edge-slot-name">${escapeHtml(slot.label)}</span>
-          <span class="dash-edge-slot-n">${slot.n}</span>
-          <span class="dash-edge-slot-val ${
-            slot.n === 0 ? "" : slot.netPnl >= 0 ? "is-pos" : "is-neg"
-          }">${slot.n === 0 ? "no trades" : escapeHtml(formatSignedCurrency(slot.netPnl))}</span>
-        </div>
-        ${
-          slot.n === 0
-            ? ""
-            : `<span class="dash-edge-bar" aria-hidden="true"><i class="${
-                slot.netPnl >= 0 ? "is-pos" : "is-neg"
-              }" style="width:${Math.round((Math.abs(slot.netPnl) / peak) * 100)}%"></i></span>`
-        }
-      </div>`
-      )
-      .join("")
+  // ---- F4 THE SESSION CLOCK: day one, needs no stamps --------------------
+  const slots = releaseClockEdge(closed);
+  const slotPeak = Math.max(1, ...slots.map((slot) => Math.abs(slot.netPnl)));
+  paint(
+    document.getElementById("bbClock"),
+    "clock",
+    slots.some((slot) => slot.n > 0)
+      ? `<div class="bb-clock">${slots
+          .map(
+            (slot, index) => `
+        <div class="bb-slot">
+          <span class="bb-slot-t">${escapeHtml(slot.slot.slice(0, 2))}-${escapeHtml(slot.slot.slice(6, 8))}</span>
+          <span class="bb-slot-l">${escapeHtml(slot.label)}</span>
+          ${bbWell(slot.netPnl, slotPeak, slot.n, index)}
+          <span class="bb-slot-n">${slot.n} live</span>
+          <span class="bb-slot-v ${
+            slot.n === 0 ? "is-none" : slot.netPnl >= 0 ? "is-pos" : "is-neg"
+          }">${slot.n === 0 ? "--" : escapeHtml(formatSignedCurrency(slot.netPnl))}</span>
+        </div>`
+          )
+          .join("")}</div>`
+      : `<p class="bb-note">No live logged trades yet. Imported rows are excluded, because their timestamps are the paste time rather than the entry time.</p>`
   );
 
-  // ---- pane 2: the evaluation table --------------------------------------
-  setText(
-    document.getElementById("dashEdgeTag"),
-    file && file.title ? file.title : terminal.selectedKey ? terminal.selectedKey : ""
+  // ---- F5 TILT -----------------------------------------------------------
+  const tilt = tiltByEventType(closed, baseline);
+  const pct = (value) => (value === null ? "--" : `${Math.round(value * 100)}%`);
+  paint(
+    document.getElementById("bbTilt"),
+    "tilt",
+    `<p class="bb-tilt-fig ${tilt.ratio !== null && tilt.ratio > 1.5 ? "is-hot" : ""}">${
+      tilt.ratio === null ? "--" : `x${tilt.ratio.toFixed(2)}`
+    }</p>
+     <div class="bb-line"><span>ON EVENT</span><b>${pct(tilt.onEventTiltRate)}</b></div>
+     <div class="bb-line"><span>OFF EVENT</span><b>${pct(tilt.offEventTiltRate)}</b></div>
+     <div class="bb-line"><span>STAMPED</span><b>${tilt.onEventN}</b></div>
+     <div class="bb-line"><span>UNSTAMPED</span><b>${tilt.offEventN}</b></div>
+     <p class="bb-note">${
+       tilt.ratio === null
+         ? `${EDGE_MIN_LOG} stamped and ${EDGE_MIN_LOG} unstamped closed trades are needed before a ratio means anything.`
+         : "Emotional, revenge and cooldown override trades, on event against off event."
+     }</p>`
   );
-  const evalHost = document.getElementById("dashEdgeEval");
-  if (evalHost) {
-    if (!file || file.samples === 0) {
-      setHtml(
-        evalHost,
-        `<p class="dash-edge-note">Nothing stamped against this release yet. Every trade you log from now carries what was on the calendar when you clicked buy, and this fills in on its own.</p>`
-      );
-    } else {
-      const rows = [
-        ["Prints on record", String(file.samples), ""],
-        ["Wins / losses", `${file.wins} / ${file.losses}`, ""],
-        ["Net", formatSignedCurrency(file.netPnl), file.netPnl >= 0 ? "is-pos" : "is-neg"],
-        ["Average R", file.avgR.toFixed(2), ""],
-      ];
-      // No percentage of any kind below the log floor, so the whole rate block
-      // is withheld rather than softened.
-      if (file.samples >= EDGE_MIN_LOG && baseline.winRate !== null) {
-        rows.push(["Your own baseline", `${Math.round(baseline.winRate * 100)}%`, ""]);
-        rows.push(["On this release", `${Math.round(file.winRate * 100)}%`, ""]);
-        rows.push([
-          "Rate range (95%)",
-          `${Math.round(file.winRateCI.lo * 100)}% to ${Math.round(file.winRateCI.hi * 100)}%`,
-          "",
-        ]);
-      }
-      rows.push(["Confidence", `${file.samples} of ${EDGE_MIN_VERDICT}`, "is-soft"]);
-      if (file.verdict !== "") {
-        rows.push([
-          "Verdict",
-          file.verdict === "no-difference"
-            ? "No measurable difference"
-            : `${file.verdict === "better" ? "Better" : "Worse"} than your own average`,
-          "",
-        ]);
-      }
 
-      // THE ONE DECORATED ROW: the oxide bar is the 95% interval and the tick
-      // is the trader's OWN baseline, so the comparison is never against 50%.
-      // If the band clears the tick, that is the verdict before you read a word.
-      const band =
-        file.samples >= EDGE_MIN_LOG && baseline.winRate !== null
-          ? `<div class="dash-edge-ci" aria-hidden="true" style="--lo:${(file.winRateCI.lo * 100).toFixed(
-              1
-            )}%; --span:${((file.winRateCI.hi - file.winRateCI.lo) * 100).toFixed(1)}%; --base:${(
-              baseline.winRate * 100
-            ).toFixed(1)}%"><i></i><b></b></div>`
-          : "";
-
-      setHtml(
-        evalHost,
-        rows
-          .map(([k, v, tone]) => `<dt>${escapeHtml(k)}</dt><dd class="${tone}">${escapeHtml(v)}</dd>`)
-          .join("") + band
-      );
-    }
-  }
+  // ---- STATUS BAR: every threshold on screen, always ---------------------
+  const stamped = closed.filter((trade) => (trade.eventContext || []).length > 0).length;
+  paint(
+    document.getElementById("bbStat"),
+    "stat",
+    `<span>feed <b>${terminal.asOf === null ? "no link" : `${escapeHtml(feedAt)}z`}</b></span>
+     <span>skew <b>${terminal.skewMs >= 0 ? "+" : ""}${Math.round(terminal.skewMs)}ms</b></span>
+     <span>ccy <b>${escapeHtml(currencies.join(" ") || "none")}</b></span>
+     <span>closed <b>${closed.length}</b></span>
+     <span>stamped <b>${stamped}</b></span>
+     <span>baseline <b>${
+       baseline.winRate === null ? "--" : `${Math.round(baseline.winRate * 100)}%`
+     }</b> over <b>${baseline.n}</b></span>
+     <span>rate floor <b>${EDGE_MIN_LOG}</b></span>
+     <span>verdict floor <b>${EDGE_MIN_VERDICT}</b></span>
+     <span>thin window under <b>${WINDOW_MIN}</b></span>`
+  );
 
   renderTerminalClock();
+}
+
+/* renderAll() runs on every state change. Rebuilding a pane's markup restarts
+   every entrance animation and throws away THE FUSE's seeded animation-delay,
+   so a pane is only rewritten when its markup ACTUALLY changed. Six lines, and
+   they are the difference between a live instrument and a screen that twitches
+   every time a trade is saved. */
+function paint(node, slot, html) {
+  if (!node || terminal.sigs[slot] === html) {
+    return;
+  }
+  terminal.sigs[slot] = html;
+  setHtml(node, html);
+}
+
+/* The instance of an event family nearest to now, in either direction.
+   rankEvents drops an event the moment it starts; THE APPROACH must keep it
+   for the fifteen minutes countdown() calls live, or the signature moment
+   erases its own subject at exactly T-0. */
+function nearestInstance(key, now) {
+  const at = now.getTime();
+  let best = null;
+  let bestGap = Infinity;
+  (Array.isArray(terminal.events) ? terminal.events : []).forEach((event) => {
+    if (event?.allDay || event?.key !== key) {
+      return;
+    }
+    const startsAt = Date.parse(event.startsAt ?? "");
+    if (Number.isNaN(startsAt)) {
+      return;
+    }
+    const gap = Math.abs(startsAt - at);
+    if (gap < bestGap) {
+      bestGap = gap;
+      best = event;
+    }
+  });
+  return best;
+}
+
+/* Where the clock stands on THE APPROACH's axis, as 0..1. Mirrors the CSS grid
+   weights EXACTLY: 34% of the track is the run-up to the print, the remaining
+   66% is windowBuckets' three post-print windows at 20 / 20 / 26. `ms` is
+   (start - now), so POSITIVE means the print has not happened yet. */
+function approachHead(ms) {
+  const HORIZON_MS = 4 * 60 * 60 * 1000;
+  if (ms > 0) {
+    return 0.34 * (1 - Math.min(1, ms / HORIZON_MS));
+  }
+  const mins = -ms / 60000;
+  if (mins < 15) return 0.34 + 0.2 * (mins / 15);
+  if (mins < 60) return 0.54 + 0.2 * ((mins - 15) / 45);
+  if (mins < 180) return 0.74 + 0.26 * ((mins - 60) / 120);
+  return 1;
+}
+
+/* Three rungs lit to IMPACT_RANK. The lit COUNT carries the rank as well as
+   the hue, so it is never colour alone. */
+function bbLadder(impact) {
+  const rank = IMPACT_RANK[impact] ?? 1;
+  const rungs = [1, 2, 3]
+    .map((step) => `<i class="${step <= rank ? "is-on" : ""}${step === 3 && rank === 3 ? " is-top" : ""}"></i>`)
+    .join("");
+  return `<span class="bb-imp" role="img" aria-label="${escapeHtml(impact)} impact">${rungs}</span>`;
+}
+
+/* A signed bar growing out of a zero rule, so the sign is carried by position
+   as well as by colour. --h is a percentage of the well: half its height is
+   the full scale, hence the 46 cap. */
+function bbWell(value, peak, n, index) {
+  if (n === 0) {
+    return `<span class="bb-well" aria-hidden="true"></span>`;
+  }
+  const h = Math.max(4, Math.round((Math.abs(value) / peak) * 46));
+  return `<span class="bb-well" aria-hidden="true"><i class="${
+    value >= 0 ? "is-pos" : "is-neg"
+  }" style="--h:${h}%; --i:${index}"></i></span>`;
+}
+
+/* THE APPROACH's body. The axis is drawn from the trader's own buckets whether
+   or not a calendar event is aimed at, because the buckets are their record and
+   that exists offline. Only the countdown, the ladder, the fuse and the
+   playhead need an event; without one they are withheld rather than faked. */
+function bbApproachHtml(closed, event, name) {
+  const buckets = terminal.selectedKey ? windowBuckets(closed, terminal.selectedKey) : [];
+  const total = buckets.reduce((sum, bucket) => sum + bucket.n, 0);
+  const peak = Math.max(1, ...buckets.map((bucket) => Math.abs(bucket.avgPnl)));
+
+  const bands = buckets
+    .map(
+      (bucket, index) => `
+      <div class="bb-band" data-band="${escapeHtml(bucket.label)}" data-thin="${
+        bucket.n > 0 && bucket.n < WINDOW_MIN
+      }">
+        ${bbWell(bucket.avgPnl, peak, bucket.n, index)}
+        <span class="bb-band-l">${escapeHtml(bucket.label)}</span>
+        <span class="bb-band-n">${bucket.n === 0 ? "0 prints" : `${bucket.n} print${bucket.n === 1 ? "" : "s"}`}</span>
+        <span class="bb-band-v ${
+          bucket.n === 0 ? "" : bucket.avgPnl >= 0 ? "is-pos" : "is-neg"
+        }">${bucket.n === 0 ? "no record" : escapeHtml(formatSignedCurrency(bucket.avgPnl))}</span>
+      </div>`
+    )
+    .join("");
+
+  const readout = event
+    ? `<p class="bb-tminus tm-event-cd"></p>
+       <p class="bb-read-id"><b>${escapeHtml(event.currency)}</b> ${escapeHtml(event.title)}
+         ${bbLadder(event.impact)} ${escapeHtml(event.impact)} impact
+         <span class="bb-live">live</span></p>`
+    : `<p class="bb-tminus">--</p>
+       <p class="bb-read-id">${
+         name
+           ? `<b>${escapeHtml(name)}</b> is not on the calendar ahead. The axis is your own record on it.`
+           : "Nothing aimed. Pick a release from the wire."
+       }</p>`;
+
+  const legend =
+    total === 0
+      ? "The axis fills in on its own. Every trade you log from now carries what was on the calendar when you clicked buy."
+      : `T-0 is the print. The playhead is where the clock is now. Columns are your average result on trades opened in each window, ${total} print${
+          total === 1 ? "" : "s"
+        } on record. Under ${WINDOW_MIN} prints in a window is drawn hollow.`;
+
+  return `<div class="bb-appr">
+      <div class="bb-read">${readout}</div>
+      <div class="bb-ladder" aria-hidden="true"><span>far</span><span>near</span><span>t-60</span><span>live</span></div>
+      <div class="bb-fuse" aria-hidden="true"><i></i></div>
+      <div class="bb-axis">
+        ${bands}
+        <span class="bb-zero" aria-hidden="true"></span>
+        ${event ? `<b class="bb-head" aria-hidden="true"></b>` : ""}
+      </div>
+      <p class="bb-note">${escapeHtml(legend)}</p>
+    </div>`;
+}
+
+/* THE RECKONING: eventFile() in full. The whole rate block is withheld under
+   EDGE_MIN_LOG rather than softened, so no percentage of any kind can appear
+   under five prints. */
+function bbReckHtml(closed, file, baseline) {
+  if (!file || file.samples === 0) {
+    return `<p class="bb-note">Nothing stamped against this release yet. Every trade you log from now
+      carries what was on the calendar when you clicked buy, and this fills in on its own.
+      ${EDGE_MIN_LOG} prints for a rate, ${EDGE_MIN_VERDICT} for a verdict.</p>`;
+  }
+
+  const rows = [
+    ["Prints on record", String(file.samples), ""],
+    ["Wins / losses / flat", `${file.wins} / ${file.losses} / ${file.flat}`, ""],
+    ["Net", formatSignedCurrency(file.netPnl), file.netPnl >= 0 ? "is-pos" : "is-neg"],
+    ["Average per print", formatSignedCurrency(file.avgPnl), file.avgPnl >= 0 ? "is-pos" : "is-neg"],
+    ["Average R", file.avgR.toFixed(2), ""],
+  ];
+  const rated = file.winRate !== null && baseline.winRate !== null;
+  if (rated) {
+    rows.push(["Your own baseline", `${Math.round(baseline.winRate * 100)}%`, ""]);
+    rows.push(["On this release", `${Math.round(file.winRate * 100)}%`, ""]);
+    rows.push([
+      "Rate range (95%)",
+      `${Math.round(file.winRateCI.lo * 100)}% to ${Math.round(file.winRateCI.hi * 100)}%`,
+      "",
+    ]);
+  } else {
+    rows.push(["Rate", `${EDGE_MIN_LOG} prints needed`, "is-held"]);
+  }
+  rows.push(["Confidence", `${file.samples} of ${EDGE_MIN_VERDICT}`, "is-held"]);
+
+  const marks = closed
+    .filter((trade) => (trade.eventContext || []).some((stamp) => stamp?.k === file.key))
+    .slice(-12)
+    .map(
+      (trade, index) =>
+        `<i class="${trade.netPnl > 0 ? "is-pos" : trade.netPnl < 0 ? "is-neg" : ""}" style="--i:${index}"></i>`
+    )
+    .join("");
+
+  // THE BAND: the bar is the 95% Wilson interval, the tick is the trader's OWN
+  // baseline. Never 50%. Drawn only when both exist.
+  const band = rated
+    ? `<div>
+         <div class="bb-band-scale"><span>0%</span><span>50%</span><span>100%</span></div>
+         <div class="bb-ci" role="img" aria-label="Your 95 percent rate range on this release is ${Math.round(
+           file.winRateCI.lo * 100
+         )} to ${Math.round(file.winRateCI.hi * 100)} percent, against your own baseline of ${Math.round(
+        baseline.winRate * 100
+      )} percent" style="--lo:${(file.winRateCI.lo * 100).toFixed(1)}%; --span:${(
+        (file.winRateCI.hi - file.winRateCI.lo) *
+        100
+      ).toFixed(1)}%; --base:${(baseline.winRate * 100).toFixed(1)}%"><u></u><i></i><b></b></div>
+       </div>`
+    : "";
+
+  const verdict =
+    file.verdict === "worse"
+      ? `<p class="bb-verdict is-worse">Measurably worse than your own average</p>`
+      : file.verdict === "better"
+      ? `<p class="bb-verdict is-better">Measurably better than your own average</p>`
+      : file.verdict === "no-difference"
+      ? `<p class="bb-verdict">No measurable difference</p>`
+      : `<p class="bb-verdict">${EDGE_MIN_VERDICT - file.samples} more print${
+          EDGE_MIN_VERDICT - file.samples === 1 ? "" : "s"
+        } for a verdict</p>`;
+
+  return `<dl class="bb-kv">${rows
+    .map(([key, value, tone]) => `<dt>${escapeHtml(key)}</dt><dd class="${tone}">${escapeHtml(value)}</dd>`)
+    .join("")}</dl>
+    ${band}
+    <div class="bb-marks" role="img" aria-label="${file.wins} wins, ${file.losses} losses">${marks}<span>last 12</span></div>
+    ${verdict}`;
 }
 
 /* The dashboard's right-hand summary of Release edge.

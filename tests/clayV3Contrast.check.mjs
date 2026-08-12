@@ -384,6 +384,30 @@ for (const file of [
 
 /* ----------------------------------------------------------------- report */
 
+// --- THE RELEASE EDGE DESK -------------------------------------------------
+// The desk pins a private --bb-* ramp and stays dark under BOTH themes on
+// purpose (a screen keeps its own light). Its tokens live at :root so they are
+// loaded above, but LOADING a token is not MEASURING it: this harness only
+// checks the pairings it names. Without this block the entire screen shipped
+// unverified while the suite reported green, which is the same blind spot that
+// let an element-scoped token pin survive two fixes.
+const BB_GROUNDS = ["--bb-void", "--bb-pane", "--bb-rail", "--bb-well"];
+for (const fg of ["--bb-ink", "--bb-soft", "--bb-faint"]) {
+  for (const bg of BB_GROUNDS) check("dark", fg, bg, 4.5);
+}
+for (const fg of ["--bb-oxide", "--bb-amber", "--bb-pos", "--bb-neg"]) {
+  for (const bg of BB_GROUNDS) check("dark", fg, bg, 4.5);
+}
+// Faint text lands on the oxide wash that backs a live row.
+check(
+  "dark", "--bb-faint", "--bb-wash over --bb-rail", 4.5,
+  over(token("dark", "--bb-wash"), token("dark", "--bb-rail"))
+);
+// --bb-edge is the ONE meaningful non-text mark (the T-0 marker, the scale
+// ticks), so it takes the 3:1 non-text floor. --bb-grid is decorative hairline
+// and carries no information, so it is deliberately not checked.
+for (const bg of BB_GROUNDS) check("dark", "--bb-edge", bg, 3);
+
 if (failures.length) {
   console.error("clayV3Contrast: FAILURES\n  " + failures.join("\n  "));
   process.exit(1);

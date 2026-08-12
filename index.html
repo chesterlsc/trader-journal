@@ -61,21 +61,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260811-e5" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260811-e5" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260811-bb1" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260811-bb1" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260811-e5" />
+    <link rel="stylesheet" href="styles.css?v=20260811-bb1" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260811-e5" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260811-bb1" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260811-e5" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260811-bb1" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -2534,84 +2534,106 @@
           </section>
         </section>
 
-        <!-- ══ TERMINAL PRO ═══════════════════════════════════════════════
-             The journal-fused desk. Everything on this screen is REAL: the
-             calendar comes from the public feed (action=market_calendar), and
-             every statistic is computed in this browser from the trader's own
-             closed trades by src/lib/eventEdge.js — which refuses to emit a
-             rate under 5 samples or a verdict under 10, so the markup below
-             physically cannot print a number the maths did not earn.
-             Gated by state.auth.terminalPro (a rollout flag, not a paywall —
-             there is no premium DATA here to protect). -->
-        <!-- ══ TERMINAL — THE DAILY DESK ══════════════════════════════════════
-             One column of syntax-highlighted lines. Every checkbox on this screen
-             is a boolean the app already owned; every figure is read from state at
-             render time or the line does not exist. Colour is carried by GRAMMAR
-             ROLE (punctuation / comment / key / value / highlight / faint), never
-             by importance, so a theme is one hue at six steps and the structure
-             never moves. Money is the one exception and it never enters the hue
-             system: P&L stays green and red in all four themes, always in the
-             right-hand value column, always carrying an ASCII sign or glyph.
-             Gated by state.auth.terminalPro (rollout flag, not a paywall). -->
-        <section class="view" id="terminal" aria-labelledby="dashEdgeHeading">
-  <!-- ============================================================================
-                 RELEASE EDGE — Terminal Pro living on the dashboard as a BOARD.
-          
-                 TWO SKINS, ONE DOM. This markup lands on nothing but app-wide tokens and on
-                 classes the app's own terminal grammar (styles.css:9615..9800) already
-                 re-skins. It declares no custom property on any element: the rail this
-                 replaces pinned --surface-* locally at styles.css:9490, which out-specified
-                 its own repair and is why the rail is still black on a Clay dashboard.
-          
-                 Static shell, JS-filled containers, exactly like #dashPlaybook.
-                 ============================================================================ -->
-            <section class="dash-board dash-edge" id="dashEdge" aria-labelledby="dashEdgeHeading">
-              <div class="dash-board-head">
-                <div>
-                  <h3 id="dashEdgeHeading">Release edge</h3>
-                  <p>What the calendar does to your record. Ranked on the pairs you trade, not the clock.</p>
-                </div>
-          
-                <div class="dash-edge-stamp">
-                  <!-- Freshness near the title: the one pattern every product in the
-                       category ships. terminal.asOf / terminal.stale, nothing invented. -->
-                  <span class="dash-edge-asof" id="dashEdgeAsOf" data-stale="false"></span>
-          
-          
-                </div>
-              </div>
-          
-              <!-- ONE insight line, never a list. eventFile().sentence is built inside
-                   src/lib/eventEdge.js:145 precisely so a renderer cannot soften it.
-                   THE ONLY ELEMENT IN THIS BOARD PERMITTED TO COLLAPSE. -->
-              <p class="dash-edge-say" id="dashEdgeSay" hidden></p>
-          
-              <!-- Hero row. .metric-card carries the anatomy and, in terminal mode, is
-                   already box-stripped by styles.css:9717. No two cards share a visual
-                   form: a phase meter, a row of win/loss marks, five session bars. -->
-              <div class="dash-edge-row">
-                <article class="metric-card dash-edge-card" id="dashEdgeNext"></article>
-                <article class="metric-card dash-edge-card" id="dashEdgeFile"></article>
-                <article class="metric-card dash-edge-card" id="dashEdgeClock"></article>
-              </div>
-          
-              <div class="dash-edge-split">
-                <!-- Tradervue's "Hourly" widget: a LIST, not a chart. Being a list is
-                     exactly why it survives the terminal re-skin with no second rule. -->
-                <section class="dash-edge-pane">
-                  <h4>Your clock</h4>
-                  <div id="dashEdgeSlots"></div>
-                  <p class="dash-edge-note">Live logged trades only. Imported rows carry the import time, not the entry time.</p>
-                </section>
-          
-                <!-- Edgewonk's "Evaluation" verbatim in structure: label left, value right,
-                     no chrome, related figures paired into one row, exactly ONE decorated. -->
-                <section class="dash-edge-pane">
-                  <h4>Your file <span class="dash-edge-tag" id="dashEdgeTag"></span></h4>
-                  <dl class="dash-edge-kv" id="dashEdgeEval"></dl>
-                </section>
+        <!-- ══ RELEASE EDGE, THE DESK ═══════════════════════════════════════
+             The Edge tab is its own full screen, so it is allowed to be an
+             instrument: five panes, 1px splitters, tabular mono, a command bar,
+             a pane-key row and a status bar. Nothing Clay is on screen beside
+             it, so it cannot read as bolted onto anything.
+
+             THE APPROACH is the signature. The calendar knows the instant of
+             the print to the second; windowBuckets() knows what this trader has
+             actually done in each window around that instant. Both go on ONE
+             axis, with a playhead at where the clock really is.
+
+             The desk's ramp (--bb-*) is declared in ONE top-level :root block
+             in styles.css, never on this subtree, because
+             tests/clayV3Contrast.check.mjs walks :root-level token blocks only.
+             An element-scoped pin is invisible to it, which is how a rail
+             shipped black on a Clay dashboard and survived two fixes.
+
+             Static shell, JS-filled containers, exactly the #dashPlaybook
+             pattern. Every figure is returned by src/lib/eventEdge.js or
+             src/lib/eventClock.js at render time, or the element is empty.
+             eventFile() returns winRate === null under 5 prints and verdict ""
+             under 10, so this markup physically cannot print a rate or a
+             verdict the maths did not earn.
+             ══════════════════════════════════════════════════════════════ -->
+        <section class="view" id="terminal" aria-labelledby="bbDeskName">
+          <section class="bb-desk" id="bbDesk" data-feed="stale">
+
+            <!-- COMMAND BAR -->
+            <header class="bb-cmd">
+              <h2 id="bbDeskName">RELEASE EDGE</h2>
+              <p>The calendar, welded to your own record.</p>
+              <!-- THE STALL: the lamp breathes while the feed is live and stops
+                   when it is not, so the desk's only always-on motion carries
+                   information. See .bb-feed i in styles.css. -->
+              <span class="bb-feed"><i aria-hidden="true"></i><span id="bbFeedText">linking</span></span>
+              <!-- id="tpClock" is deliberate: ui.tpClock (app.js:293) already
+                   binds it and renderTerminalClock() already patches it once a
+                   second. No second timer is added anywhere on this screen. -->
+              <span class="bb-utc"><span class="visually-hidden">Desk clock </span><b id="tpClock">--:--:--</b> UTC</span>
+            </header>
+
+            <!-- PANE KEYS. Not tabs: every pane is on screen at every width, so
+                 these scroll a pane into view and mark themselves pressed.
+                 aria-pressed, never role="tab", because nothing is hidden. -->
+            <div class="bb-keys" id="bbKeys" role="group" aria-label="Desk panes">
+              <button class="bb-key" type="button" data-pane-key="appr" aria-pressed="true"><b>F1</b>APPROACH</button>
+              <button class="bb-key" type="button" data-pane-key="wire" aria-pressed="false"><b>F2</b>WIRE</button>
+              <button class="bb-key" type="button" data-pane-key="reck" aria-pressed="false"><b>F3</b>RECKONING</button>
+              <button class="bb-key" type="button" data-pane-key="tilt" aria-pressed="false"><b>F4</b>TILT</button>
+              <button class="bb-key" type="button" data-pane-key="clock" aria-pressed="false"><b>F5</b>CLOCK</button>
+            </div>
+
+            <!-- F1 THE APPROACH. The pane BODY carries data-starts and
+                 data-approach, so the one shipped 1s tick drives the countdown
+                 text, the phase, the playhead and the fuse from a single node. -->
+            <section class="bb-pane bb-p-appr" aria-labelledby="bbApprH">
+              <h3 class="bb-pane-h" id="bbApprH"><b>F1</b>THE APPROACH<em id="bbApprTag"></em></h3>
+              <div class="bb-pane-b" id="bbAppr" data-phase="far"></div>
+            </section>
+
+            <!-- F2 THE WIRE. rankEvents(), soonest first, medium impact and up,
+                 filtered to the currencies the trader actually touches. The YOU
+                 column is the weld: this trader's own count against that
+                 release, from eventFile(). -->
+            <section class="bb-pane bb-p-wire" aria-labelledby="bbWireH">
+              <h3 class="bb-pane-h" id="bbWireH"><b>F2</b>THE WIRE<em id="bbWireCount"></em></h3>
+              <div class="bb-pane-b" id="bbWire"></div>
+            </section>
+
+            <!-- F3 THE RECKONING. eventFile() in full against the aimed
+                 release. The band is the 95% Wilson interval and the tick is
+                 the trader's OWN baseline, never 50%. -->
+            <section class="bb-pane bb-p-reck" aria-labelledby="bbReckH">
+              <h3 class="bb-pane-h" id="bbReckH"><b>F3</b>THE RECKONING<em id="bbReckTag"></em></h3>
+              <div class="bb-pane-b">
+                <!-- eventEdge.js builds this sentence so a renderer cannot
+                     soften it. The ONE element on this desk allowed to collapse. -->
+                <p class="bb-say" id="bbSay" hidden></p>
+                <div class="bb-reck" id="bbReck"></div>
               </div>
             </section>
+
+            <!-- F4 TILT. tiltByEventType(): the shipped psychology vocabulary,
+                 on event against off event. Null under the floor. -->
+            <section class="bb-pane bb-p-tilt" aria-labelledby="bbTiltH">
+              <h3 class="bb-pane-h" id="bbTiltH"><b>F4</b>TILT</h3>
+              <div class="bb-pane-b" id="bbTilt"></div>
+            </section>
+
+            <!-- F5 THE SESSION CLOCK. releaseClockEdge(): day one, needs no
+                 stamps and no archive. Imported rows are excluded because their
+                 timestamps are the paste time. -->
+            <section class="bb-pane bb-p-clock" aria-labelledby="bbClockH">
+              <h3 class="bb-pane-h" id="bbClockH"><b>F5</b>THE SESSION CLOCK<em>day one, needs no stamps</em></h3>
+              <div class="bb-pane-b bb-clock-scroll" id="bbClock"></div>
+            </section>
+
+            <!-- STATUS BAR. Every threshold on screen, always. -->
+            <footer class="bb-stat" id="bbStat"></footer>
+          </section>
         </section>
       </main>
     </div>
@@ -3179,7 +3201,7 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260811-e5"></script>
+    <script type="module" src="app.js?v=20260811-bb1"></script>
     </div>
   </body>
 </html>

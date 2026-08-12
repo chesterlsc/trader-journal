@@ -8832,420 +8832,6 @@ body.auth-ready .lnd-tape-list .lnd-row {
       --tm-keycol: 18ch;
     }
 }
-/* ==========================================================================
-   RELEASE EDGE — Terminal Pro as a dashboard board.
-
-   ONE COMPONENT, TWO SKINS, AND ONE LINE OF SKIN CODE.
-
-   Nothing below declares a custom property on an element, and nothing below
-   reads a --tm-* token. The rail this replaces did both: it pinned
-   --surface-0..3 under :root:not([data-term="on"]) #deskRail (styles.css:9490,
-   specificity 1,2,0), which out-specified its own "interim repair" at
-   #deskRail (1,0,0) and kept the rail black on a Clay dashboard in both themes.
-   tests/clayV3Contrast.check.mjs walks :root-level token blocks only, so it
-   could not see it. Element-scoped token pins are the bug class. Not one here.
-
-   The terminal skin arrives from three places that already ship:
-     clay-v3.css:502   surfaces, text, lines, shadows, radii, --font-ui -> mono
-     styles.css:9717   .dash-board and .metric-card lose their boxes
-     styles.css:9684   .metric-label becomes `key:` in the mode's key colour
-   ========================================================================== */
-
-/* The lead board, spanning both columns of .dash-boards. Shell, padding,
-   radius and shadow all come from .dash-board. Nothing is restated. */
-.dash-edge {
-  grid-column: 1 / -1;
-}
-
-.dash-edge-stamp {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
-}
-
-/* Freshness near the title. --text-faint on --surface-1 measures 6.34 / 5.90 / 6.26. */
-.dash-edge-asof {
-  color: var(--text-faint);
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-/* --warn on --surface-1: 8.68 / 6.07 / 10.07. Stale is a status, not an
-   interaction, so it never takes the accent. */
-.dash-edge-asof[data-stale="true"] {
-  color: var(--warn);
-}
-
-/* The ARM key. Base rule sits ON the 44px touch floor, so there is no phone
-   branch to forget. Oxide fill: --text-inverse on --accent = 6.35 / 6.61 / 7.82. */
-.dash-edge-arm {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  min-height: 44px;
-  padding: 0 var(--space-4);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-md);
-  background: var(--accent);
-  color: var(--text-inverse);
-  font: 700 var(--fs-micro)/1 var(--font-ui);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: filter 90ms var(--ease-out), transform 60ms var(--ease-out);
-}
-
-.dash-edge-arm:hover { filter: brightness(1.06); }
-.dash-edge-arm.is-pressed { transform: translateY(1px); }
-.dash-edge-arm:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-
-/* Armed: the key inverts, so the state is a fill change and not only a word.
-   --text on --surface-2 = 12.62 / 16.10 / 14.51. */
-.dash-edge-arm[aria-pressed="true"] {
-  background: var(--surface-2);
-  color: var(--text);
-}
-
-/* .nav-btn sets three properties .dash-board-link does not; reset them here
-   rather than fight the cascade from a shared selector. */
-.dash-edge-open {
-  display: inline-flex;
-  align-items: center;
-  width: auto;
-  gap: 0;
-  border-radius: 0;
-}
-
-.dash-edge-open[hidden] { display: none; }
-
-/* The single insight line, carved into the board. The ONLY element here that
-   is allowed to collapse: a banner with nothing to say is noise, but a stat
-   card with nothing to say is still obliged to name its threshold.
-   --text-soft on --surface-inset = 8.00 / 4.85 / 9.48. 4.85 is the tightest
-   text pairing in the whole board and it clears 4.5. */
-.dash-edge-say {
-  margin: 0 0 var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-clay-sm);
-  background: var(--surface-inset);
-  color: var(--text-soft);
-  font: 400 var(--fs-body)/1.5 var(--font-ui);
-}
-
-/* An author display beats the UA [hidden] rule. This repo's own comment at
-   styles.css:10292 says it has bitten twice. */
-.dash-edge-say[hidden] { display: none; }
-
-/* 3-up -> 2-up -> 1-up with no second media query. */
-.dash-edge-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(184px, 1fr));
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
-}
-
-/* .metric-card already owns the anatomy. This lifts the ground one step and
-   softens the corner, because a card nested in a board that shares the board's
-   ground reads flat. In terminal mode styles.css:9717 wins on specificity
-   (0,3,0 vs 0,1,0) and this becomes a plain block: correct, and free. */
-.dash-edge-card {
-  align-content: start;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  border: 0;
-  border-radius: var(--radius-clay-sm);
-  background: var(--surface-2);
-  box-shadow: var(--clay-soft), var(--edge-highlight);
-}
-
-/* THE figure. Not .metric-value: styles.css:9764 shrinks .metric-value to
-   --tm-fs-body inside a quad card, and the countdown is the one number on this
-   board that has to stay big. --text on --surface-2 = 12.62 / 16.10 / 14.51. */
-.dash-edge-fig {
-  margin: 0;
-  color: var(--text);
-  font: 700 var(--fs-metric)/1.1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-}
-
-.dash-edge-fig.is-pos { color: var(--pnl-pos); }   /* 7.44 / 6.12 / 8.48 */
-.dash-edge-fig.is-neg { color: var(--pnl-neg); }   /* 5.57 / 5.86 / 6.36 */
-
-/* An empty card keeps its slot and says what is missing in words. */
-.dash-edge-fig.is-empty {
-  color: var(--text-soft);
-  font: 600 var(--fs-md)/1.3 var(--font-ui);
-  letter-spacing: 0;
-}
-
-/* Sample size sits under the figure and is the smallest, faintest thing in the
-   card. Never a tooltip. --text-faint on --surface-2 = 5.81 / 6.23 / 5.65. */
-.dash-edge-n {
-  margin: 0;
-  color: var(--text-faint);
-  font: 400 var(--fs-micro)/1.45 var(--font-mono);
-}
-
-/* --- the three hero visuals, no two alike ------------------------------- */
-
-/* PHASE METER. Four discrete states, driven entirely by the [data-phase] the
-   shipped tick already stamps (app.js:12873, phases far/near/imminent/live/past
-   from eventClock.js:83). No JS, no --fuse property, no second timer. It is a
-   PHASE indicator, not a progress bar, and the line beneath it says the phase
-   in words, so the bar carries no meaning of its own and is aria-hidden.
-   --accent on --surface-inset = 6.53 / 4.99 / 7.77, non-text floor 3. */
-.dash-edge-phase {
-  display: block;
-  height: 4px;
-  border-radius: var(--radius-pill);
-  background: var(--surface-inset);
-  overflow: hidden;
-}
-
-.dash-edge-phase i {
-  display: block;
-  width: 0;
-  height: 100%;
-  background: var(--accent);
-  transition: width 400ms var(--ease-out);
-}
-
-[data-phase="far"]      .dash-edge-phase i { width: 8%; }
-[data-phase="near"]     .dash-edge-phase i { width: 55%; }
-[data-phase="imminent"] .dash-edge-phase i { width: 92%; }
-[data-phase="live"]     .dash-edge-phase i { width: 100%; background: var(--warn); }
-
-/* WIN/LOSS MARKS. --radius-sm is 10px on Clay (a circle on a 10px box) and 0 in
-   terminal, so the marks become hard blocks in the mode for free.
-   MEASURED AND REJECTED: --pnl-pos-line / --pnl-neg-line are 38% alpha and land
-   at 2.33 / 1.71 / 2.27 on --surface-inset. They FAIL the 3:1 non-text floor,
-   so every mark and every bar uses the FULL money token. --line-strong measures
-   1.67 / 1.65 / 1.33 and can never carry meaning at all. */
-.dash-edge-marks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.dash-edge-marks i {
-  width: 10px;
-  height: 10px;
-  border-radius: var(--radius-sm);
-  background: var(--text-faint);   /* flat: 5.81 / 6.23 / 5.65 on --surface-2 */
-}
-
-.dash-edge-marks i.is-pos { background: var(--pnl-pos); }
-.dash-edge-marks i.is-neg { background: var(--pnl-neg); }
-
-/* FIVE SESSION BARS. */
-.dash-edge-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  height: 30px;
-}
-
-.dash-edge-bars i {
-  flex: 1;
-  min-height: 2px;
-  border-radius: var(--radius-sm);
-  background: var(--text-faint);
-}
-
-.dash-edge-bars i.is-pos { background: var(--pnl-pos); }
-.dash-edge-bars i.is-neg { background: var(--pnl-neg); }
-
-/* --- the two panes ------------------------------------------------------- */
-
-.dash-edge-split {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-3);
-}
-
-.dash-edge-pane {
-  padding: var(--space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-clay-sm);
-  background: var(--surface-1);
-}
-
-.dash-edge-pane h4 {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-3);
-  color: var(--text-faint);
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.dash-edge-tag {
-  margin-left: auto;
-  letter-spacing: 0.04em;
-  text-transform: none;
-}
-
-.dash-edge-note {
-  margin: var(--space-3) 0 0;
-  color: var(--text-faint);
-  font: 400 var(--fs-micro)/1.5 var(--font-ui);
-}
-
-/* Tradervue's Hourly widget: a LIST, not a chart, which is precisely why it
-   survives the terminal re-skin with no second rule. */
-.dash-edge-slot {
-  padding: var(--space-2) 0;
-  border-top: 1px solid var(--line);
-}
-
-.dash-edge-slot:first-child { border-top: 0; }
-
-.dash-edge-slot-top {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
-}
-
-.dash-edge-slot-name {
-  flex: 1 1 auto;
-  color: var(--text);
-  font: 400 var(--fs-body)/1.4 var(--font-ui);
-}
-
-.dash-edge-slot-n {
-  color: var(--text-faint);
-  font: 400 var(--fs-micro)/1.4 var(--font-mono);
-}
-
-/* Money on the right, category on the left: the same split the terminal view
-   already keeps. Default tone is --text-faint, which is what an empty slot
-   prints ("no trades"). */
-.dash-edge-slot-val {
-  min-width: 9ch;
-  color: var(--text-faint);
-  font: 600 var(--fs-body)/1.4 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.dash-edge-slot-val.is-pos { color: var(--pnl-pos); }   /* 8.11 / 5.80 / 9.41 */
-.dash-edge-slot-val.is-neg { color: var(--pnl-neg); }   /* 6.07 / 5.54 / 7.05 */
-
-.dash-edge-bar {
-  display: block;
-  height: 3px;
-  margin-top: 6px;
-  border-radius: var(--radius-pill);
-  background: var(--surface-inset);
-  overflow: hidden;
-}
-
-.dash-edge-bar i {
-  display: block;
-  height: 100%;
-  background: var(--text-faint);   /* 7.29 / 5.00 / 6.65 on --surface-inset */
-  transition: width 220ms var(--ease-out);
-}
-
-.dash-edge-bar i.is-pos { background: var(--pnl-pos); }   /* 9.32 / 4.91 / 9.98 */
-.dash-edge-bar i.is-neg { background: var(--pnl-neg); }   /* 6.99 / 4.70 / 7.48 */
-
-/* Edgewonk's "Evaluation": label left, value right, no chrome. */
-.dash-edge-kv {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-2) var(--space-3);
-  align-items: baseline;
-  margin: 0;
-}
-
-.dash-edge-kv dt {
-  color: var(--text-soft);              /* 6.96 / 5.72 / 8.94 on --surface-1 */
-  font: 400 var(--fs-body)/1.4 var(--font-ui);
-}
-
-.dash-edge-kv dd {
-  margin: 0;
-  color: var(--text);
-  font: 600 var(--fs-body)/1.4 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.dash-edge-kv dd.is-pos  { color: var(--pnl-pos); }
-.dash-edge-kv dd.is-neg  { color: var(--pnl-neg); }
-.dash-edge-kv dd.is-soft { color: var(--text-faint); font-weight: 400; }
-
-/* THE one decorated row. The oxide band is the Wilson interval, the light tick
-   is the trader's OWN baseline, so the comparison is never against 50%. Drawn
-   only at samples >= EDGE_MIN_LOG, so no percentage appears under 5.
-   --accent on --surface-inset 6.53 / 4.99 / 7.77; --text on --surface-inset
-   15.82 / 12.92 / 17.07. Both clear the 3:1 non-text floor. */
-.dash-edge-ci {
-  position: relative;
-  grid-column: 1 / -1;
-  height: 4px;
-  margin-top: -2px;
-  border-radius: var(--radius-pill);
-  background: var(--surface-inset);
-}
-
-.dash-edge-ci i {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: var(--lo, 0%);
-  width: var(--span, 0%);
-  border-radius: inherit;
-  background: var(--accent);
-}
-
-.dash-edge-ci b {
-  position: absolute;
-  top: -3px;
-  bottom: -3px;
-  left: var(--base, 50%);
-  width: 2px;
-  background: var(--text);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dash-edge-phase i,
-  .dash-edge-bar i,
-  .dash-edge-arm {
-    transition: none;
-  }
-}
-
-/* --------------------------------------------------------------------------
-   THE SINGLE DESKTOP BUMP. Separate and top-level, per
-   tests/mobileFloors.check.mjs, which resolves the last phone-applicable rule
-   per exact selector string and reads literal px. Every base rule above is
-   already at or over the 11px type floor and the 44px touch floor.
-   -------------------------------------------------------------------------- */
-@media (min-width: 900px) {
-  .dash-edge-split {
-    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-    align-items: start;
-  }
-
-  .dash-edge-card { padding: var(--space-5); }
-  .dash-edge-pane { padding: var(--space-5); }
-  .dash-edge-bars { height: 38px; }
-
-  .dash-edge-slot-name,
-  .dash-edge-slot-val,
-  .dash-edge-kv dt,
-  .dash-edge-kv dd {
-    font-size: 14px;
-  }
-}
 
 /* The hero's atmosphere is deliberately full bleed (width: 100vw), but 100vw
    counts the scrollbar while the layout box does not, so it runs a few px wider
@@ -9256,29 +8842,6 @@ body.auth-ready .lnd-tape-list .lnd-row {
    below has sticky columns that must keep their scroll container. */
 body.auth-locked {
   overflow-x: clip;
-}
-/* --- Release edge on a phone ---------------------------------------------
-   The head is a two-up row on desktop: title block left, freshness stamp
-   right. At 375 the stamp was squeezed to 110px while needing 128, so the
-   head overflowed its own box by 18px and the stamp's text collided. It
-   stacks instead, and the stamp reads as what it is, a caption under the
-   title, rather than a cramped column fighting the heading. */
-@media (max-width: 899px) {
-  .dash-edge .dash-board-head {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-2);
-  }
-  .dash-edge-stamp {
-    justify-content: flex-start;
-  }
-  /* One column of cards, and the hero figure earns more room than the label
-     because on a phone it is the only thing read at a glance. */
-  .dash-edge-row,
-  .dash-edge-split {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-3);
-  }
 }
 
 /* --- The showcase on an actual phone -------------------------------------
@@ -9418,3 +8981,846 @@ body.auth-locked {
 }
 
 .dash-edge-mini[hidden] { display: none; }
+
+/* ==========================================================================
+   RELEASE EDGE, THE DESK. #terminal and nothing else.
+
+   The Edge tab is its own full screen, so it is allowed to be an instrument:
+   five panes, 1px splitters, tabular mono, a command bar, a pane-key row and a
+   status bar. Nothing below names .dash-edge-mini. The Clay dashboard rail is
+   untouched.
+
+   TOKENS AT :ROOT, IN ONE BLOCK, DELIBERATELY. The desk has its own ramp and
+   it is declared in a single top-level :root block, never on .bb-desk, because
+   tests/clayV3Contrast.check.mjs walks :root-level token blocks only. An
+   element-scoped pin is invisible to it, and that is the bug class that kept a
+   rail black through two fixes. One block also means the desk keeps its own
+   light: the values do not fork per theme, so the instrument is the same
+   instrument on a light page, which is what a screenshot in light mode has to
+   show.
+
+   Nothing below declares a custom property on an element except --w, --h,
+   --lo, --span, --base and --head, which the renderer writes inline. Those are
+   lengths and ratios. Never colours.
+   ========================================================================== */
+:root {
+  --bb-void:  #0a0d11;   /* the ground, and every 1px splitter */
+  --bb-pane:  #0f1318;   /* pane fill */
+  --bb-rail:  #151a20;   /* command bar, pane heads, status bar */
+  --bb-well:  #07090c;   /* carved wells: the axis, the band, the bars */
+  --bb-grid:  #2a313a;   /* hairline, non-informational. See the audit note. */
+  --bb-edge:  #6b7684;   /* the one meaningful edge: T-0 marker, scale ticks */
+  --bb-ink:   #e9edf1;
+  --bb-soft:  #a6b0ba;
+  --bb-faint: #8e99a4;
+  --bb-oxide: #f0763d;
+  --bb-amber: #f0b34e;
+  --bb-wash:  rgba(240, 118, 61, 0.14);
+  --bb-pos:   #3ecf8e;   /* the shipped dark --pnl-pos, verbatim */
+  --bb-neg:   #f7758d;   /* the shipped dark --pnl-neg, verbatim */
+}
+
+/* --- the frame ---------------------------------------------------------- */
+/* The splitters are the container's own background showing through a 1px grid
+   gap. No border is declared anywhere below: one paint, no seams, nothing to
+   keep in sync when a pane moves. */
+.bb-desk {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
+  padding: 1px;
+  overflow: hidden;
+  border-radius: var(--radius-clay-sm);
+  background: var(--bb-void);
+  color: var(--bb-soft);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.bb-desk[hidden] { display: none; }
+
+/* --- command bar -------------------------------------------------------- */
+.bb-cmd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+  background: var(--bb-rail);
+}
+
+.bb-cmd h2 {
+  margin: 0;
+  color: var(--bb-ink);
+  font: 700 13px/1.2 var(--font-mono);
+  letter-spacing: 0.2em;
+}
+
+.bb-cmd p {
+  margin: 0;
+  color: var(--bb-faint);
+  font: 400 var(--fs-micro)/1.4 var(--font-ui);
+}
+
+/* THE STALL. The lamp breathes while the feed is live and stops when it is
+   not, so the only always-on motion on the desk carries information. */
+.bb-feed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--bb-faint);
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.bb-feed i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--bb-amber);
+}
+
+.bb-desk[data-feed="live"] .bb-feed { color: var(--bb-pos); }
+
+.bb-desk[data-feed="live"] .bb-feed i {
+  background: var(--bb-pos);
+  animation: bbBreath 2600ms var(--ease-in-out) infinite alternate;
+}
+
+.bb-utc {
+  margin-left: auto;
+  color: var(--bb-faint);
+  font: 400 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.08em;
+}
+
+.bb-utc b {
+  color: var(--bb-ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- pane keys ---------------------------------------------------------- */
+/* Not tabs: every pane is on screen at every width, so these scroll one into
+   view and mark themselves pressed. aria-pressed, never role="tab", because
+   nothing is hidden. */
+.bb-keys {
+  display: flex;
+  gap: 1px;
+  overflow-x: auto;
+  background: var(--bb-void);
+  scrollbar-width: none;
+}
+
+.bb-key {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 0;
+  background: var(--bb-rail);
+  color: var(--bb-faint);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  cursor: pointer;
+}
+
+.bb-key b {
+  margin-right: 6px;
+  color: var(--bb-soft);
+  font-weight: 700;
+}
+
+.bb-key[aria-pressed="true"] {
+  background: var(--bb-wash);
+  color: var(--bb-oxide);
+  box-shadow: inset 0 -2px 0 var(--bb-oxide);
+}
+
+.bb-key[aria-pressed="true"] b { color: var(--bb-oxide); }
+
+.bb-key:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--bb-oxide);
+}
+
+/* --- panes -------------------------------------------------------------- */
+.bb-pane {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  background: var(--bb-pane);
+}
+
+.bb-pane-h {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 7px var(--space-3);
+  overflow: hidden;
+  background: var(--bb-rail);
+  color: var(--bb-ink);
+  font: 700 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.14em;
+}
+
+.bb-pane-h b {
+  padding: 1px 5px;
+  background: var(--bb-wash);
+  color: var(--bb-oxide);
+  font-weight: 700;
+}
+
+.bb-pane-h em {
+  margin-left: auto;
+  color: var(--bb-faint);
+  font: 400 var(--fs-micro)/1.2 var(--font-mono);
+  font-style: normal;
+  letter-spacing: 0.04em;
+  text-align: right;
+}
+
+/* THE SWEEP. A filament crossing the wire's header: the feed's own heartbeat.
+   Gated on a live feed, so a stale desk shows a dead header. Resting state is
+   opacity 0, which is also the reduced-motion state, so a frozen frame is a
+   finished header rather than a half-lit one. */
+.bb-pane-h::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 84px;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--bb-wash), transparent);
+}
+
+.bb-desk[data-feed="live"] .bb-p-wire .bb-pane-h::after {
+  animation: bbSweep 9s linear infinite;
+}
+
+.bb-pane-b {
+  min-width: 0;
+  padding: var(--space-3);
+  overflow: auto;
+}
+
+.bb-p-wire .bb-pane-b { max-height: 320px; padding: 0; }
+
+.bb-note {
+  margin: var(--space-2) 0 0;
+  color: var(--bb-faint);
+  font: 400 var(--fs-micro)/1.55 var(--font-ui);
+}
+
+.bb-note:first-child { margin-top: 0; }
+
+/* --- F1 THE WIRE -------------------------------------------------------- */
+/* Two lines at phone width, which is what carries the row to the 44px touch
+   floor without inventing padding, and one line from 900 up. */
+.bb-row {
+  display: grid;
+  grid-template-columns: 76px 32px 22px minmax(0, 1fr);
+  grid-template-areas:
+    "cd  ccy imp you"
+    "ttl ttl ttl ttl";
+  align-items: center;
+  gap: 2px var(--space-2);
+  width: 100%;
+  min-height: 44px;
+  padding: 6px var(--space-3);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: 500 var(--fs-micro)/1.4 var(--font-mono);
+  text-align: left;
+  cursor: pointer;
+  animation: bbRowIn 240ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 26ms);
+}
+
+.bb-row + .bb-row { box-shadow: inset 0 1px 0 var(--bb-grid); }
+.bb-row:hover { background: var(--bb-rail); }
+
+.bb-row:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--bb-oxide);
+}
+
+.bb-row[aria-pressed="true"] {
+  background: var(--bb-wash);
+  box-shadow: inset 3px 0 0 var(--bb-oxide);
+}
+
+.bb-cd  { grid-area: cd; color: var(--bb-ink); font-weight: 700; }
+.bb-ccy { grid-area: ccy; color: var(--bb-soft); font-weight: 700; letter-spacing: 0.06em; }
+.bb-imp { grid-area: imp; display: flex; gap: 2px; align-items: flex-end; }
+.bb-ttl { grid-area: ttl; overflow: hidden; color: var(--bb-soft); text-overflow: ellipsis; white-space: nowrap; }
+.bb-you { grid-area: you; color: var(--bb-faint); text-align: right; white-space: nowrap; }
+
+.bb-you b { color: var(--bb-ink); font-weight: 700; }
+.bb-you u { text-decoration: none; }
+.bb-you u.is-worse  { color: var(--bb-neg); }
+.bb-you u.is-better { color: var(--bb-pos); }
+
+/* The impact ladder: three rungs, lit to IMPACT_RANK. Never colour alone, the
+   lit COUNT carries the same rank. */
+.bb-imp i {
+  width: 4px;
+  height: 11px;
+  background: var(--bb-grid);
+  transform: scaleY(0.42);
+  transform-origin: bottom;
+}
+
+.bb-imp i.is-on { background: var(--bb-amber); transform: scaleY(1); }
+.bb-imp i.is-on.is-top { background: var(--bb-oxide); }
+
+/* Countdown phases from countdown() in src/lib/eventClock.js, written onto the
+   row by the shipped tick once a second. */
+.bb-row[data-phase="near"] .bb-cd { color: var(--bb-amber); }
+.bb-row[data-phase="imminent"] .bb-cd { color: var(--bb-oxide); animation: bbUrgent 1s steps(2, end) infinite; }
+.bb-row[data-phase="live"] .bb-cd { color: var(--bb-oxide); }
+
+/* --- F2 THE APPROACH, the signature ------------------------------------- */
+.bb-appr { display: grid; gap: var(--space-3); }
+
+.bb-read {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3);
+  background: var(--bb-well);
+  box-shadow: inset 3px 0 0 var(--bb-grid);
+  transition: box-shadow 200ms var(--ease-out);
+}
+
+[data-phase="near"] .bb-read     { box-shadow: inset 3px 0 0 var(--bb-amber); }
+[data-phase="imminent"] .bb-read { box-shadow: inset 3px 0 0 var(--bb-oxide); }
+[data-phase="live"] .bb-read     { box-shadow: inset 3px 0 0 var(--bb-oxide); }
+
+/* The one big number on the desk. */
+.bb-tminus {
+  margin: 0;
+  min-width: 7ch;
+  color: var(--bb-ink);
+  font: 700 26px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+[data-phase="imminent"] .bb-tminus { color: var(--bb-oxide); }
+[data-phase="live"] .bb-tminus { color: var(--bb-oxide); }
+
+/* THREE DISTINCT NAMES on purpose: CSS restarts an animation only when the
+   animation-name list changes, so one shared name would fire on far to near
+   and then stay silent for every crossing after it. */
+[data-phase="near"] .bb-tminus     { animation: bbCrossA 220ms var(--ease-out) both; }
+[data-phase="imminent"] .bb-tminus { animation: bbCrossB 220ms var(--ease-out) both; }
+[data-phase="live"] .bb-tminus     { animation: bbCrossC 220ms var(--ease-out) both; }
+
+.bb-read-id {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--bb-soft);
+  font: 400 var(--fs-body)/1.35 var(--font-mono);
+}
+
+.bb-read-id b { color: var(--bb-ink); font-weight: 700; letter-spacing: 0.06em; }
+
+/* LIVE. The amber fill carries the state without motion, so killing the pulse
+   loses nothing. --bb-void on --bb-amber measures 10.44. */
+.bb-live {
+  display: none;
+  padding: 3px 7px;
+  border-radius: var(--radius-sm);
+  background: var(--bb-amber);
+  color: var(--bb-void);
+  font: 700 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.16em;
+}
+
+[data-phase="live"] .bb-live { display: inline-block; animation: bbLive 1150ms var(--ease-in-out) infinite alternate; }
+
+/* THE FOUR STOP LADDER. Discrete, never animated, and therefore also the
+   reduced-motion fallback for the fuse. */
+.bb-ladder {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.bb-ladder span {
+  padding-top: 5px;
+  border-top: 2px solid var(--bb-grid);
+  color: var(--bb-faint);
+  font: 600 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: color 200ms var(--ease-out), border-top-color 200ms var(--ease-out);
+}
+
+[data-phase="far"] .bb-ladder span:nth-child(1),
+[data-phase="near"] .bb-ladder span:nth-child(-n + 2),
+[data-phase="imminent"] .bb-ladder span:nth-child(-n + 3),
+[data-phase="live"] .bb-ladder span {
+  border-top-color: var(--bb-amber);
+  color: var(--bb-ink);
+}
+
+/* THE FUSE. Sixty seconds of continuous motion from ONE property write: the
+   shipped tick seeds a negative animation-delay from the real remaining ms the
+   first second it sees ms <= 60000, then does nothing for a minute. scaleX
+   from a left origin is compositor only; a width animation here would relayout
+   the pane sixty times a second. */
+.bb-fuse {
+  display: none;
+  height: 3px;
+  overflow: hidden;
+  background: var(--bb-rail);
+}
+
+.bb-fuse i {
+  display: block;
+  height: 100%;
+  background: var(--bb-oxide);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+[data-fuse="1"] .bb-fuse { display: block; }
+
+[data-fuse="1"] .bb-fuse i {
+  will-change: transform;
+  animation: bbFuse 60s linear forwards;
+}
+
+/* THE AXIS. Four bands whose widths ARE the mapping in approachHead(): the
+   run-up is 34, then windowBuckets' three post-print windows at 20 / 20 / 26.
+   T-0 lands on the 34% seam and the playhead walks across it. */
+.bb-axis {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34fr 20fr 20fr 26fr;
+  gap: 1px;
+  padding: 1px;
+  overflow: hidden;
+  background: var(--bb-void);
+}
+
+.bb-band {
+  display: grid;
+  align-content: end;
+  gap: 3px;
+  padding: var(--space-2) 6px;
+  background: var(--bb-well);
+  transition: background 240ms var(--ease-out);
+}
+
+/* THE MOMENT: the band the clock is actually standing in. The phase is
+   stamped by the shipped tick, so this needs no JavaScript of its own. */
+[data-phase="far"] .bb-band[data-band="before"],
+[data-phase="near"] .bb-band[data-band="before"],
+[data-phase="imminent"] .bb-band[data-band="before"],
+[data-phase="live"] .bb-band[data-band="0-15m"] {
+  background: var(--bb-wash);
+}
+
+.bb-band-l { color: var(--bb-ink); font: 700 var(--fs-micro)/1.2 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; }
+.bb-band-n { color: var(--bb-faint); font: 400 var(--fs-micro)/1.3 var(--font-mono); }
+.bb-band-v { color: var(--bb-soft); font: 700 var(--fs-micro)/1.3 var(--font-mono); font-variant-numeric: tabular-nums; }
+.bb-band-v.is-pos { color: var(--bb-pos); }
+.bb-band-v.is-neg { color: var(--bb-neg); }
+
+/* Thin: a window under WINDOW_MIN prints is drawn hollow, so a bar built on
+   one trade cannot be read as a finding. */
+.bb-band[data-thin="true"] .bb-well i { opacity: 0.45; }
+
+/* A signed well: the bar grows out of a zero rule in the direction of its
+   sign, so the sign is carried by position as well as by colour. */
+.bb-well {
+  position: relative;
+  height: 56px;
+  background: var(--bb-void);
+}
+
+.bb-well::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: var(--bb-grid);
+}
+
+.bb-well i {
+  position: absolute;
+  left: 50%;
+  width: 14px;
+  height: var(--h, 0%);
+  margin-left: -7px;
+  animation: bbGrow 460ms 120ms var(--ease-clay) backwards;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+.bb-well i.is-pos { bottom: 50%; background: var(--bb-pos); transform-origin: bottom center; }
+.bb-well i.is-neg { top: 50%; background: var(--bb-neg); transform-origin: top center; }
+
+/* THE PLAYHEAD. --head is a 0..1 ratio written by the shipped 1s tick. It is
+   data, not decoration, which is why reduced motion keeps it moving. */
+.bb-head {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--head, 0) * 100%);
+  width: 2px;
+  margin-left: -1px;
+  background: var(--bb-oxide);
+  box-shadow: 0 0 0 1px var(--bb-well);
+}
+
+.bb-head::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bb-oxide);
+}
+
+[data-phase="imminent"] .bb-head { animation: bbHead 1100ms var(--ease-out) infinite; }
+[data-phase="live"] .bb-head { animation: bbHead 1100ms var(--ease-out) infinite; }
+
+/* T-0, on the 34% seam. */
+.bb-zero {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 34%;
+  width: 1px;
+  background: var(--bb-edge);
+}
+
+/* --- F3 THE RECKONING --------------------------------------------------- */
+.bb-reck { display: grid; gap: var(--space-3); }
+
+.bb-kv {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 var(--space-3);
+  margin: 0;
+}
+
+.bb-kv dt {
+  padding: 3px 0;
+  color: var(--bb-faint);
+  font: 400 var(--fs-micro)/1.5 var(--font-ui);
+  letter-spacing: 0.04em;
+}
+
+.bb-kv dd {
+  margin: 0;
+  padding: 3px 0;
+  color: var(--bb-ink);
+  font: 700 var(--fs-micro)/1.5 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.bb-kv dd.is-pos  { color: var(--bb-pos); }
+.bb-kv dd.is-neg  { color: var(--bb-neg); }
+.bb-kv dd.is-held { color: var(--bb-faint); font-weight: 400; }
+
+/* THE BAND. The bar is the 95% Wilson interval and the tick is the trader's
+   OWN baseline, never 50%. Band clear of the tick IS the verdict, read before
+   a word. --lo / --span / --base are percentages written inline: geometry. */
+.bb-band-scale {
+  display: flex;
+  justify-content: space-between;
+  color: var(--bb-faint);
+  font: 400 var(--fs-micro)/1.4 var(--font-mono);
+}
+
+.bb-ci {
+  position: relative;
+  height: 26px;
+  margin-top: 4px;
+  background: var(--bb-well);
+}
+
+.bb-ci i {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: var(--lo, 0%);
+  width: var(--span, 100%);
+  background: var(--bb-oxide);
+  animation: bbOpen 520ms 160ms var(--ease-clay) backwards;
+}
+
+.bb-ci b {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: var(--base, 50%);
+  width: 2px;
+  background: var(--bb-ink);
+  animation: bbTick 420ms 260ms var(--ease-out) backwards;
+}
+
+.bb-ci u {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-top: 1px solid var(--bb-grid);
+  border-bottom: 1px solid var(--bb-grid);
+}
+
+.bb-marks { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
+
+.bb-marks i {
+  width: 8px;
+  height: 14px;
+  background: var(--bb-grid);
+  animation: bbMark 240ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 22ms);
+}
+
+.bb-marks i.is-pos { background: var(--bb-pos); }
+.bb-marks i.is-neg { background: var(--bb-neg); }
+
+.bb-marks span {
+  margin-left: var(--space-2);
+  color: var(--bb-faint);
+  font: 400 var(--fs-micro)/1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+}
+
+.bb-verdict {
+  margin: 0;
+  padding: 6px var(--space-2);
+  background: var(--bb-well);
+  color: var(--bb-soft);
+  font: 700 var(--fs-micro)/1.45 var(--font-mono);
+  letter-spacing: 0.08em;
+  box-shadow: inset 3px 0 0 var(--bb-grid);
+}
+
+.bb-verdict.is-worse  { color: var(--bb-neg); box-shadow: inset 3px 0 0 var(--bb-neg); }
+.bb-verdict.is-better { color: var(--bb-pos); box-shadow: inset 3px 0 0 var(--bb-pos); }
+
+/* The one honest sentence, built in src/lib/eventEdge.js so a renderer cannot
+   soften it. The ONLY element on this desk permitted to collapse. */
+.bb-say {
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--bb-well);
+  box-shadow: inset 2px 0 0 var(--bb-oxide);
+  color: var(--bb-ink);
+  font: 400 var(--fs-body)/1.5 var(--font-ui);
+}
+
+.bb-say[hidden] { display: none; }
+
+/* --- F4 THE SESSION CLOCK ----------------------------------------------- */
+.bb-clock-scroll { overflow-x: auto; }
+
+.bb-clock {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(76px, 1fr);
+  gap: 1px;
+  min-width: 380px;
+  background: var(--bb-void);
+}
+
+.bb-slot {
+  display: grid;
+  gap: 3px;
+  padding: var(--space-2) 6px;
+  background: var(--bb-pane);
+  font: 500 var(--fs-micro)/1.4 var(--font-mono);
+  text-align: center;
+}
+
+.bb-slot-t { color: var(--bb-ink); font-weight: 700; letter-spacing: 0.04em; }
+.bb-slot-l { overflow: hidden; color: var(--bb-faint); text-overflow: ellipsis; white-space: nowrap; }
+.bb-slot-n { color: var(--bb-soft); }
+.bb-slot-v { font-weight: 700; font-variant-numeric: tabular-nums; }
+.bb-slot-v.is-pos  { color: var(--bb-pos); }
+.bb-slot-v.is-neg  { color: var(--bb-neg); }
+.bb-slot-v.is-none { color: var(--bb-faint); font-weight: 400; }
+
+/* --- F5 TILT ------------------------------------------------------------ */
+.bb-tilt-fig {
+  margin: 0;
+  color: var(--bb-ink);
+  font: 700 30px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.bb-tilt-fig.is-hot { color: var(--bb-neg); }
+
+.bb-line {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 3px 0;
+  font: 500 var(--fs-micro)/1.5 var(--font-mono);
+}
+
+.bb-line span { color: var(--bb-faint); letter-spacing: 0.04em; }
+.bb-line b { color: var(--bb-ink); font-variant-numeric: tabular-nums; }
+
+/* --- status bar --------------------------------------------------------- */
+.bb-stat {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px var(--space-3);
+  padding: 6px var(--space-3);
+  background: var(--bb-rail);
+  color: var(--bb-faint);
+  font: 500 var(--fs-micro)/1.6 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.bb-stat b { color: var(--bb-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* --- keyframes ----------------------------------------------------------- */
+@keyframes bbRowIn { from { opacity: 0; transform: translateY(6px); } }
+@keyframes bbGrow { from { transform: scaleY(0); } }
+@keyframes bbOpen { from { clip-path: inset(0 50% 0 50%); } }
+@keyframes bbTick { from { opacity: 0; transform: translateX(-14px); } }
+@keyframes bbMark { from { opacity: 0; transform: scaleY(0.2); } }
+@keyframes bbFuse { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes bbBreath { from { opacity: 0.42; } to { opacity: 1; } }
+@keyframes bbLive { from { opacity: 1; } to { opacity: 0.6; } }
+@keyframes bbUrgent { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes bbCrossA { from { opacity: 0.3; transform: translateY(-3px); } }
+@keyframes bbCrossB { from { opacity: 0.3; transform: translateY(-3px); } }
+@keyframes bbCrossC { from { opacity: 0.3; transform: translateY(-3px); } }
+
+@keyframes bbHead {
+  0%, 100% { box-shadow: 0 0 0 1px var(--bb-well); }
+  50% { box-shadow: 0 0 0 1px var(--bb-well), 0 0 14px 3px var(--bb-wash); }
+}
+
+@keyframes bbSweep {
+  0% { opacity: 0; transform: translateX(-84px); }
+  8% { opacity: 1; }
+  46% { opacity: 1; }
+  60% { opacity: 0; transform: translateX(1200px); }
+  100% { opacity: 0; transform: translateX(1200px); }
+}
+
+/* Every entrance above is a from-only keyframe with a backwards fill, so the
+   resting state is already the finished screen: bars carry --h, the band
+   carries --lo and --span, rows and marks are opaque and untransformed, the
+   sweep and the fuse rest invisible. A frozen frame is a working instrument.
+   The playhead is NOT frozen: its position is data, and the tick keeps writing
+   it once a second. */
+@media (prefers-reduced-motion: reduce) {
+  .bb-row,
+  .bb-well i,
+  .bb-marks i,
+  .bb-ci i,
+  .bb-ci b,
+  .bb-tminus,
+  .bb-live,
+  .bb-feed i,
+  .bb-head,
+  .bb-pane-h::after,
+  .bb-row[data-phase="imminent"] .bb-cd {
+    animation: none;
+    opacity: 1;
+  }
+
+  .bb-pane-h::after { opacity: 0; }
+  .bb-band[data-thin="true"] .bb-well i { opacity: 0.45; }
+
+  .bb-read,
+  .bb-band,
+  .bb-ladder span {
+    transition: none;
+  }
+
+  /* The fuse is the ONE effect with no static equivalent, so it is removed
+     rather than frozen: a bar stopped at 30% would read as T-42s forever. The
+     four stop ladder above it carries the same information discretely and is
+     never animated. Equal specificity, later in source, so it wins without an
+     !important. */
+  [data-fuse="1"] .bb-fuse { display: none; }
+}
+
+/* --------------------------------------------------------------------------
+   THE SINGLE DESKTOP BUMP. Separate and top-level, per
+   tests/mobileFloors.check.mjs, which resolves the last phone-applicable rule
+   per exact selector string and reads literal px. Every base rule above is
+   already at or over the 11px type floor and the 44px touch floor; this only
+   densifies from 900 up.
+   -------------------------------------------------------------------------- */
+@media (min-width: 900px) {
+  .bb-desk {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr) minmax(0, 0.8fr);
+    grid-template-areas:
+      "cmd   cmd   cmd"
+      "keys  keys  keys"
+      "appr  appr  appr"
+      "wire  reck  tilt"
+      "clock clock clock"
+      "stat  stat  stat";
+  }
+
+  .bb-cmd     { grid-area: cmd; }
+  .bb-keys    { grid-area: keys; }
+  .bb-p-appr  { grid-area: appr; }
+  .bb-p-wire  { grid-area: wire; }
+  .bb-p-reck  { grid-area: reck; }
+  .bb-p-tilt  { grid-area: tilt; }
+  .bb-p-clock { grid-area: clock; }
+  .bb-stat    { grid-area: stat; }
+
+  .bb-p-wire .bb-pane-b { max-height: none; }
+
+  .bb-key { min-height: 28px; }
+  .bb-cmd h2 { font-size: 15px; letter-spacing: 0.24em; }
+  .bb-tminus { font-size: 40px; }
+  .bb-well { height: 84px; }
+  .bb-clock { min-width: 0; }
+
+  /* One line per release, five columns, and the countdown gets the size an
+     instrument gives the number people are actually waiting on. */
+  .bb-row {
+    grid-template-columns: 92px 34px 24px minmax(0, 1fr) auto;
+    grid-template-areas: "cd ccy imp ttl you";
+    min-height: 26px;
+    padding: 3px var(--space-3);
+    font-size: 12.5px;
+  }
+
+  .bb-cd { font-size: 13.5px; }
+
+  .bb-kv dt,
+  .bb-kv dd,
+  .bb-line,
+  .bb-band-l,
+  .bb-band-n,
+  .bb-band-v,
+  .bb-slot {
+    font-size: 12.5px;
+  }
+}
