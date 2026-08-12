@@ -33,17 +33,25 @@ export async function fetchLivePricesFromBackend(symbols) {
     }
 
     const updates = {};
+    // Per symbol, when the UPSTREAM says the quote was taken. Carried through
+    // untouched: a quote's age is the source's to report, and a symbol whose
+    // source does not stamp its quotes is simply absent here.
+    const asOf = {};
     Object.entries(body.prices).forEach(([symbol, price]) => {
       const normalized = normalizeMarketSymbol(symbol);
       const nextPrice = Number(price);
       if (normalized && Number.isFinite(nextPrice) && nextPrice > 0) {
         updates[normalized] = nextPrice;
+        const stamp = body.asOf?.[symbol];
+        if (stamp) {
+          asOf[normalized] = stamp;
+        }
       }
     });
 
-    return updates;
+    return { prices: updates, asOf };
   } catch (error) {
-    return {};
+    return { prices: {}, asOf: {} };
   }
 }
 

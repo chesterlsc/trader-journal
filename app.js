@@ -214,10 +214,14 @@ const state = {
     inFlight: false
   },
   marketData: {
-    // symbol -> Date.now() when a poll last CONFIRMED this price. Prices seeded
-    // from sessionStorage for the ticker deliberately never appear here, so
+    // symbol -> the UPSTREAM's quote time for the last price we accepted.
+    // Prices seeded from sessionStorage for the ticker never appear here, so
     // they can display but can never close a trade.
     priceAsOf: {},
+    // tradeId -> the quote time at which this trade was FIRST seen through its
+    // level. A second, differently-timed quote must agree before the journal
+    // records a fill. Cleared the moment the market comes back off the level.
+    triggerSeen: {},
     currentPrices: {},
     timerId: null,
     inFlight: false
@@ -11679,7 +11683,9 @@ async function refreshLivePrices(options = {}) {
 
   state.marketData.inFlight = true;
   try {
-    const updates = await fetchLivePricesFromBackend(symbols);
+    const feed = await fetchLivePricesFromBackend(symbols);
+    const updates = feed.prices || {};
+    const quoteTimes = feed.asOf || {};
     if (Object.keys(updates).length === 0) {
       // Failed or empty poll: the ticker keeps its last known prices on
       // screen and marks them stale — the strip never blanks.
@@ -11695,9 +11701,17 @@ async function refreshLivePrices(options = {}) {
     // that drops out of the response keeps its last displayed value but stops
     // being trigger-eligible, because currentPrices is merge-only and would
     // otherwise let a value linger forever and be re-evaluated every 5s.
-    const confirmedAt = Date.now();
+    // THE UPSTREAM'S CLOCK, not ours. Stamping receipt time made a repeated
+    // 30s-old quote look like a fresh tick on every 5s poll, and a frozen
+    // upstream look live forever. A source that does not stamp its quotes gets
+    // no stamp here, so it can be displayed but can never close a trade.
     Object.keys(updates).forEach((symbol) => {
-      state.marketData.priceAsOf[symbol] = confirmedAt;
+      const upstream = Date.parse(quoteTimes[symbol] ?? "");
+      if (Number.isFinite(upstream)) {
+        state.marketData.priceAsOf[symbol] = upstream;
+      } else {
+        delete state.marketData.priceAsOf[symbol];
+      }
     });
 
     // Poll path: patch tagged nodes in place. No innerHTML rebuild here, so
@@ -11740,8 +11754,25 @@ function autoCloseTriggeredTrades() {
     const price = getOpenTradeLiveSnapshot(trade)?.currentPrice;
     const hit = openTradeTriggerLevel(trade, price);
     if (!hit) {
+      // The market came back off the level, so any earlier confirmation is
+      // void. A stop is not "armed" by a tick that has since been contradicted.
+      delete state.marketData.triggerSeen[trade.id];
       return trade;
     }
+    // MARKET LOGIC: one reading may not close a position. These are free,
+    // unauthenticated feeds that repeat a stale quote, occasionally print an
+    // outlier, and fall back to a cache. A level has to be confirmed by TWO
+    // readings carrying DIFFERENT upstream quote times before the journal will
+    // record a fill, so a single bad or repeated tick cannot close a trade.
+    const seenAt = state.marketData.triggerSeen[trade.id];
+    const quoteAt = state.marketData.priceAsOf?.[symbol];
+    if (seenAt === undefined || seenAt === quoteAt) {
+      if (seenAt === undefined) {
+        state.marketData.triggerSeen[trade.id] = quoteAt;
+      }
+      return trade;
+    }
+    delete state.marketData.triggerSeen[trade.id];
     const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, closedAt: _closedAt, ...tradeInput } = trade;
     const record = buildTradeRecord(
       { ...tradeInput, exitPrice: hit.fill, status: "closed" },

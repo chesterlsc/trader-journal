@@ -84,6 +84,12 @@ export function resolveLivePriceSource(symbol) {
       key: `metal:${metal}`,
       url: `https://api.gold-api.com/price/${encodeURIComponent(metal)}`,
       readPrice: (body) => positivePrice(body?.price),
+      // THE UPSTREAM'S OWN CLOCK. This feed refreshes roughly every 30s and
+      // stamps each quote, and we used to throw that away: polling it every 5s
+      // made the same 30s-old quote look like six fresh ticks, and a frozen
+      // upstream looked live forever. A quote's age is the upstream's to
+      // report, never ours to assume from when we happened to ask.
+      readAsOf: (body) => Date.parse(body?.updatedAt ?? '') || null,
     };
   }
 
@@ -160,12 +166,20 @@ export async function fetchLivePrices(db, symbols, fetchImpl = fetch) {
   const requests = buildLivePriceRequests(normalizedSymbols);
   const bodies = await Promise.all(requests.map((request) => fetchRemoteJson(request.url, fetchImpl)));
 
+  // Per symbol: when the UPSTREAM says the quote was taken. Null where a source
+  // does not stamp its quotes, which the client then treats as unknown rather
+  // than as now.
+  const asOf = {};
   requests.forEach((request, index) => {
     const body = bodies[index];
     if (body === null) return;
     const price = request.readPrice(body);
     if (price === null) return;
-    for (const alias of request.aliases) updates[alias] = price;
+    const stamp = typeof request.readAsOf === 'function' ? request.readAsOf(body) : null;
+    for (const alias of request.aliases) {
+      updates[alias] = price;
+      if (stamp !== null) asOf[alias] = new Date(stamp).toISOString();
+    }
   });
 
   const missing = normalizedSymbols.filter((symbol) => !(symbol in updates));
@@ -181,7 +195,9 @@ export async function fetchLivePrices(db, symbols, fetchImpl = fetch) {
 
   for (const [symbol, price] of Object.entries(await db.loadCachedSymbolPrices(normalizedSymbols))) {
     if (!(symbol in updates)) updates[symbol] = price;
+    // Deliberately no asOf for a cache hit: the row's age is bounded but its
+    // quote time is unknown, and unknown must never read as now.
   }
 
-  return updates;
+  return { prices: updates, asOf };
 }

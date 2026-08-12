@@ -145,3 +145,32 @@ assert.equal(normalizeDirection("buy stop"), "Buy");
   assert.equal(priceCanCloseTrade(now, NaN, MAX), false);
   assert.equal(priceCanCloseTrade(now, now, NaN), false);
 }
+
+// --- THE PRICE MUST BE THE MARKET'S, NOT A PAST ONE ------------------------
+// Reported twice: "auto close is hitting even if the market didnt hit at the
+// first place... use the market logic not the past price."
+//
+// The cause was measured, not guessed. api.gold-api.com refreshes roughly every
+// 30 seconds and STAMPS each quote with updatedAt; the source adapter read
+// body.price and discarded that stamp. Polling every 5s therefore turned one
+// 30-second-old quote into six "fresh" ticks, and a frozen upstream read as
+// live indefinitely. The client then stamped freshness with its own receipt
+// time, which measures when we asked rather than when the market traded.
+//
+// priceCanCloseTrade is unchanged; what changed is the clock handed to it.
+{
+  const MAX = 60_000;
+  const quoteTime = Date.parse("2026-08-12T23:20:39Z");   // the upstream's stamp
+  const fetchedAt = Date.parse("2026-08-12T23:21:30Z");   // when we asked, 51s later
+
+  // Judged on the upstream's clock the quote is still usable at 51s...
+  assert.equal(priceCanCloseTrade(quoteTime, fetchedAt, MAX), true);
+  // ...and stops being usable once IT ages out, regardless of how recently we
+  // fetched it. Receipt time would have said "fresh" forever.
+  assert.equal(priceCanCloseTrade(quoteTime, quoteTime + MAX + 1, MAX), false);
+
+  // A source that does not stamp its quotes yields no time at all, and unknown
+  // must never read as now: it may be displayed, never used to close.
+  assert.equal(priceCanCloseTrade(undefined, fetchedAt, MAX), false);
+  assert.equal(priceCanCloseTrade(NaN, fetchedAt, MAX), false);
+}

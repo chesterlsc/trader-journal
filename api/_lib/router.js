@@ -738,7 +738,11 @@ const actions = {
   async live_prices(ctx) {
     const raw = ctx.query.symbols ?? '';
     const symbols = Array.isArray(raw) ? raw : String(raw).split(',');
-    respond(200, { ok: true, prices: await fetchLivePrices(ctx.db, symbols, ctx.fetch) });
+    // asOf is per symbol and comes from the UPSTREAM's own stamp, so the client
+    // can tell a fresh quote from a repeated one. A symbol with no stamp is
+    // absent here, which the client treats as unknown, never as now.
+    const live = await fetchLivePrices(ctx.db, symbols, ctx.fetch);
+    respond(200, { ok: true, prices: live.prices, asOf: live.asOf });
   },
 
   async update_prices(ctx) {
