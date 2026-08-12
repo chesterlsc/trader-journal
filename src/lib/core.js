@@ -142,11 +142,38 @@ export function debounce(fn, delay) {
 // the price a resting order would fill at, not whatever the 5s poll happened
 // to see on the far side of it. If one poll gaps past both levels at once,
 // the stop wins: the honest assumption is the pessimistic one.
+/**
+ * The ONE reading of a trade's side. "Buy" | "Sell" | "" when it cannot be told.
+ *
+ * This exists because `direction === "Sell"` was compared literally in the
+ * auto-close path while NOTHING enforced the value: app.js normalizeTrades did
+ * `String(item.direction || "Buy")` and the server sanitizer did
+ * `str(item.direction ?? 'Buy')`, both straight passthroughs. So "SELL",
+ * "short", " Sell" or "" all read as a LONG, and a short's stop sits ABOVE its
+ * entry, which means `price <= stop` was true on the very first poll and the
+ * position stopped out instantly at a price that had never moved.
+ */
+export function normalizeDirection(value) {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (raw === "") return "";
+  if (raw.includes("sell") || raw.includes("short") || raw === "s") return "Sell";
+  if (raw.includes("buy") || raw.includes("long") || raw === "b" || raw === "l") return "Buy";
+  return "";
+}
+
 export function openTradeTriggerLevel(trade, price) {
   if (!trade || trade.status !== "open" || !Number.isFinite(price) || price <= 0) {
     return null;
   }
-  const isSell = trade.direction === "Sell";
+  // FAIL CLOSED. A side we cannot read is not assumed to be long: guessing here
+  // closes a real position at a price that never traded, and a journal that
+  // invents a fill is worse than one that misses one. An unreadable direction
+  // rides until the trader closes it themselves.
+  const side = normalizeDirection(trade.direction);
+  if (side === "") {
+    return null;
+  }
+  const isSell = side === "Sell";
   const stop = Number(trade.stopLoss);
   const target = Number(trade.takeProfit);
   if (stop > 0 && (isSell ? price >= stop : price <= stop)) {

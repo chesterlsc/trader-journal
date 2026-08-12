@@ -15,6 +15,7 @@
   round,
   clamp,
   escapeHtml,
+  normalizeDirection,
   getWeekKey,
   debounce,
   openTradeTriggerLevel
@@ -3994,20 +3995,11 @@ function parseImportNumber(rawValue) {
 }
 
 function normalizeImportedDirection(rawValue) {
-  const value = String(rawValue || "").trim().toLowerCase();
-  if (!value) {
-    return "";
-  }
-
-  if (value.includes("buy") || value.includes("long")) {
-    return "Buy";
-  }
-
-  if (value.includes("sell") || value.includes("short")) {
-    return "Sell";
-  }
-
-  return "";
+  // One reading of a side for the whole app: see normalizeDirection in
+  // src/lib/core.js. Kept as a named wrapper because the bulk importer treats
+  // "" as "column not understood" and asks the user, which is the right
+  // behaviour there and must not become a silent default.
+  return normalizeDirection(rawValue);
 }
 
 function normalizeImportedResult(rawValue) {
@@ -11556,7 +11548,13 @@ function normalizeTrades(input) {
         session: String(item.session || "Custom"),
         market: String(item.market || "Forex"),
         asset: String(item.asset || "UNKNOWN"),
-        direction: String(item.direction || "Buy"),
+        // Canonicalise what is readable; leave the rest untouched. "SELL",
+        // "short" and " Sell" used to survive verbatim and then read as LONG
+        // in the auto-close path, which stopped shorts out instantly. An
+        // unreadable value is deliberately NOT forced to "Buy": kept as-is it
+        // still reaches openTradeTriggerLevel as unreadable, and that path now
+        // refuses to close rather than guessing a side.
+        direction: normalizeDirection(item.direction) || String(item.direction || "Buy"),
         entryPrice: ensurePositiveNumber(item.entryPrice, 0),
         stopLoss: ensurePositiveNumber(item.stopLoss, 0),
         takeProfit: ensurePositiveNumber(item.takeProfit, 0),

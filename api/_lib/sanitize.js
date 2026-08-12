@@ -180,7 +180,18 @@ export function sanitizeTradesPayload(value) {
     item.id = str(item.id ?? '');
     item.date = resolveTradeDateValue(entry);
     item.asset = str(coalesce(item.asset, item.symbol) ?? '');
-    item.direction = str(item.direction ?? 'Buy');
+    // Canonicalise what is READABLE ("SELL", "short", " Sell" -> "Sell") and
+    // leave anything else exactly as it came. Forcing an unreadable value to
+    // 'Buy' here would be the same silent flip this is meant to stop, and it
+    // would break byte parity with the PHP payload for legacy rows.
+    const rawDirection = str(item.direction ?? '');
+    const readable = rawDirection.trim().toLowerCase();
+    item.direction =
+      readable.includes('sell') || readable.includes('short')
+        ? 'Sell'
+        : readable.includes('buy') || readable.includes('long')
+          ? 'Buy'
+          : rawDirection || 'Buy';
     item.entryPrice = toFloat(coalesce(item.entryPrice, item.entry_price));
     item.stopLoss = toFloat(coalesce(item.stopLoss, item.stop_loss));
     item.takeProfit = toFloat(coalesce(item.takeProfit, item.take_profit));
