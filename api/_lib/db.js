@@ -513,10 +513,30 @@ export function createDb(pgPool) {
       return updated;
     },
 
-    async loadCachedSymbolPrices(symbols) {
+    /**
+     * AGE BOUNDED, and that bound is load bearing. This read backfills any
+     * symbol the upstreams could not answer for, and the response carries no
+     * timestamp, so an unbounded row was served to the client as if it were
+     * live. The client then closed open trades against it: a price from hours
+     * or months ago would trip a stop that the market had never reached.
+     * Binance answers 451 from this deploy region (see prices.js), so crypto
+     * falls through to this path constantly. It is the normal case, not an
+     * exotic one.
+     *
+     * A symbol with no fresh row simply drops out of the result. The client
+     * then has no price for it, and openTradeTriggerLevel returns null, so the
+     * trade rides instead of closing on a lie. idx_symbol_prices_updated_at
+     * already exists for this and was previously read by nothing.
+     */
+    async loadCachedSymbolPrices(symbols, maxAgeSeconds = 120) {
       if (symbols.length === 0) return {};
 
-      const { rows } = await query('SELECT symbol, price FROM symbol_prices WHERE symbol = ANY($1::text[])', [symbols]);
+      const { rows } = await query(
+        `SELECT symbol, price FROM symbol_prices
+          WHERE symbol = ANY($1::text[])
+            AND updated_at > NOW() - ($2 || ' seconds')::interval`,
+        [symbols, String(Math.max(1, Number(maxAgeSeconds) || 120))]
+      );
       const result = {};
       for (const row of rows) {
         const symbol = str(row.symbol ?? '').trim().toUpperCase();

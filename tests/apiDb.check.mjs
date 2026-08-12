@@ -138,3 +138,25 @@ assert.deepStrictEqual(resolveSslOption('postgres://u:p@h/d?sslmode=verify-full'
 assert.strictEqual(resolveSslOption('postgres://u:p@h/d', { PGSSLMODE: 'disable' }), false);
 
 console.log('apiDb.check.mjs: all assertions passed');
+
+// --- THE CACHED PRICE READ MUST BE AGE BOUNDED -----------------------------
+// This read backfills any symbol the upstreams could not answer, and the
+// live_prices response carries no timestamp, so an unbounded row reaches the
+// client looking live and can close an open trade at a level the market never
+// reached. The bound is the only thing standing between a months-old row and a
+// fabricated fill. idx_symbol_prices_updated_at exists for exactly this.
+{
+  const sql = fs.readFileSync(new URL("../api/_lib/db.js", import.meta.url), "utf8");
+  const fn = sql.slice(sql.indexOf("async loadCachedSymbolPrices"));
+  const body = fn.slice(0, fn.indexOf("return result;"));
+  assert.match(body, /FROM symbol_prices/, "sanity: found the right function");
+  assert.match(
+    body,
+    /updated_at\s*>\s*NOW\(\)\s*-/i,
+    "loadCachedSymbolPrices must exclude rows older than the freshness window"
+  );
+  assert.ok(
+    /maxAgeSeconds/.test(body),
+    "the window must be a parameter, not a magic literal buried in the SQL"
+  );
+}

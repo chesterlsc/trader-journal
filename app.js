@@ -16,6 +16,7 @@
   clamp,
   escapeHtml,
   normalizeDirection,
+  priceCanCloseTrade,
   getWeekKey,
   debounce,
   openTradeTriggerLevel
@@ -143,6 +144,12 @@ const DEMO_EXECUTION = ["A+", "A", "B", "A", "C"];
 
 const SERVER_AUTOSAVE_DEBOUNCE_MS = 900;
 const LIVE_PRICE_REFRESH_MS = 5000;
+// How fresh a price must be before it is allowed to CLOSE a trade. Generous
+// against the 5s poll so an ordinary hiccup does not stop the feature working,
+// tight enough that a price nobody has confirmed recently can never trip a
+// stop. Display is unaffected: the ticker still shows the last known number
+// and marks it stale, which is honest. Only the money path demands proof.
+const LIVE_PRICE_TRIGGER_MAX_AGE_MS = 60000;
 const LOCAL_PREVIEW_STORAGE_KEY = "axiom_local_preview";
 const THEME_STORAGE_KEY = "axiom_journal_theme_v1";
 const THEME_CROSSFADE_MS = 300;
@@ -207,6 +214,10 @@ const state = {
     inFlight: false
   },
   marketData: {
+    // symbol -> Date.now() when a poll last CONFIRMED this price. Prices seeded
+    // from sessionStorage for the ticker deliberately never appear here, so
+    // they can display but can never close a trade.
+    priceAsOf: {},
     currentPrices: {},
     timerId: null,
     inFlight: false
@@ -2223,6 +2234,7 @@ function exitGuestMode() {
   state.auth.mobileAuthVisible = false;
   state.recentTrades = [];
   state.marketData.currentPrices = {};
+  state.marketData.priceAsOf = {};
   hydrateRiskForm();
   hydrateReviewMonth();
   clearFilters();
@@ -11825,6 +11837,14 @@ async function refreshLivePrices(options = {}) {
       ...state.marketData.currentPrices,
       ...updates
     };
+    // Only the symbols this poll actually answered for are re-stamped. A symbol
+    // that drops out of the response keeps its last displayed value but stops
+    // being trigger-eligible, because currentPrices is merge-only and would
+    // otherwise let a value linger forever and be re-evaluated every 5s.
+    const confirmedAt = Date.now();
+    Object.keys(updates).forEach((symbol) => {
+      state.marketData.priceAsOf[symbol] = confirmedAt;
+    });
 
     // Poll path: patch tagged nodes in place. No innerHTML rebuild here, so
     // scroll position, focus, and text selection survive every tick.
@@ -11851,6 +11871,16 @@ function autoCloseTriggeredTrades() {
   const closed = [];
   state.trades = state.trades.map((trade) => {
     if (trade.status !== "open") {
+      return trade;
+    }
+    // A price may only CLOSE a trade if a poll confirmed it recently. The
+    // server backfills any symbol its upstreams could not answer from a cache
+    // and the response carries no timestamp, so without this a frozen price
+    // reads as live and trips a stop the market never reached. Display keeps
+    // using the last known value; only the money path demands proof.
+    const symbol = normalizeMarketSymbol(trade.asset);
+    const confirmedAt = state.marketData.priceAsOf?.[symbol];
+    if (!priceCanCloseTrade(confirmedAt, Date.now(), LIVE_PRICE_TRIGGER_MAX_AGE_MS)) {
       return trade;
     }
     const price = getOpenTradeLiveSnapshot(trade)?.currentPrice;

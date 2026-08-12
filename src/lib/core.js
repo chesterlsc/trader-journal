@@ -161,6 +161,24 @@ export function normalizeDirection(value) {
   return "";
 }
 
+/**
+ * May a price be used to CLOSE a trade?
+ *
+ * Only if a poll confirmed it within maxAgeMs. The server backfills any symbol
+ * its upstreams could not answer out of a database cache, and the live_prices
+ * response carries no timestamp, so a frozen price is indistinguishable from a
+ * live one on the wire. Displaying the last known number is honest; closing a
+ * real position against it is not.
+ */
+export function priceCanCloseTrade(confirmedAt, now, maxAgeMs) {
+  if (!Number.isFinite(confirmedAt) || !Number.isFinite(now) || !Number.isFinite(maxAgeMs)) {
+    return false;
+  }
+  const age = now - confirmedAt;
+  // A negative age means a clock moved under us. Refuse rather than trust it.
+  return age >= 0 && age <= maxAgeMs;
+}
+
 export function openTradeTriggerLevel(trade, price) {
   if (!trade || trade.status !== "open" || !Number.isFinite(price) || price <= 0) {
     return null;

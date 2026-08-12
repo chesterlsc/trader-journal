@@ -3,7 +3,7 @@
 // openTradeTriggerLevel is pure — every direction/level case is pinned here.
 // Run: node tests/autoClose.check.mjs
 import assert from "node:assert/strict";
-import { openTradeTriggerLevel, normalizeDirection } from "../src/lib/core.js";
+import { openTradeTriggerLevel, normalizeDirection, priceCanCloseTrade } from "../src/lib/core.js";
 
 const buy = { status: "open", direction: "Buy", stopLoss: 4200, takeProfit: 4300 };
 const sell = { status: "open", direction: "Sell", stopLoss: 4244, takeProfit: 4214 };
@@ -113,3 +113,35 @@ assert.equal(normalizeDirection(undefined), "");
 // "sell" must win inside a compound value: SELL_LIMIT is still a short.
 assert.equal(normalizeDirection("SELL_LIMIT"), "Sell");
 assert.equal(normalizeDirection("buy stop"), "Buy");
+
+// --- A STALE PRICE MUST NEVER CLOSE A TRADE --------------------------------
+// api/_lib/prices.js backfills any symbol its upstreams could not answer from
+// the symbol_prices table, and live_prices returns { ok, prices } with NO
+// timestamp, so a frozen price is indistinguishable from a live one on the
+// wire. Binance answers 451 from the deploy region, so crypto takes that
+// fallback constantly. Meanwhile state.marketData.currentPrices is merge-only
+// and never expires, and the landing ticker seeds it from sessionStorage at
+// arbitrary age. Net effect before this gate: open the tab after a night, the
+// one immediate poll gets rate-limited, an hours-old price arrives looking
+// live, and the open trade stops out against a level the market never reached.
+{
+  const now = 1_700_000_000_000;
+  const MAX = 60_000;
+
+  assert.equal(priceCanCloseTrade(now, now, MAX), true, "a price confirmed this instant may close");
+  assert.equal(priceCanCloseTrade(now - 5_000, now, MAX), true, "one poll ago is fine");
+  assert.equal(priceCanCloseTrade(now - MAX, now, MAX), true, "exactly at the bound still counts");
+  assert.equal(priceCanCloseTrade(now - MAX - 1, now, MAX), false, "one ms past the bound does not");
+  assert.equal(priceCanCloseTrade(now - 3_600_000, now, MAX), false, "an hour old must never close a trade");
+
+  // Never confirmed at all: a price seeded from sessionStorage for the ticker,
+  // or a symbol that dropped out of the response and is merely lingering.
+  for (const missing of [undefined, null, NaN, "", "1700000000000"]) {
+    assert.equal(priceCanCloseTrade(missing, now, MAX), false, `unconfirmed (${JSON.stringify(missing)}) must not close`);
+  }
+
+  // A clock that moved under us is refused rather than trusted.
+  assert.equal(priceCanCloseTrade(now + 10_000, now, MAX), false, "a future stamp is not freshness");
+  assert.equal(priceCanCloseTrade(now, NaN, MAX), false);
+  assert.equal(priceCanCloseTrade(now, now, NaN), false);
+}
