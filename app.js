@@ -6920,6 +6920,7 @@ function renderAll() {
   renderEdgeMini();
   renderTape();
   renderWall();
+  renderLiveEquity();
   renderProgressTradeSummary();
   renderDashboardMetrics(state.analytics);
   renderRiskStrip(state.analytics);
@@ -11726,6 +11727,7 @@ async function refreshLivePrices(options = {}) {
     // scroll position, focus, and text selection survive every tick.
     // renderAll still owns real state mutations.
     patchLiveNodes();
+    renderLiveEquity();
     renderTickerPair();
     autoCloseTriggeredTrades();
   } finally {
@@ -11858,6 +11860,90 @@ const LIVE_FIELD_SPECS = {
     toneGroup: "pnl"
   },
 };
+
+/* LIVE EQUITY. Balance is closed P&L and does not move while a trade is open.
+   Equity is balance plus what is currently floating, and it moves with the
+   market. Every platform ships both because they are different facts, and one
+   number labelled "balance" that silently includes floating P&L is a lie about
+   someone's account.
+
+   Floating is only counted for a symbol whose price a poll actually confirmed.
+   An unconfirmed price may be DISPLAYED on the tape, but it must not move the
+   number the trader reads as their account, for the same reason it may not
+   close a trade. */
+function openFloatingPnl() {
+  const open = state.trades.filter((trade) => trade.status === "open");
+  let floating = 0;
+  let counted = 0;
+  let unpriced = 0;
+
+  open.forEach((trade) => {
+    const symbol = normalizeMarketSymbol(trade.asset);
+    const confirmed = priceCanCloseTrade(
+      state.marketData.priceAsOf?.[symbol],
+      Date.now(),
+      LIVE_PRICE_TRIGGER_MAX_AGE_MS
+    );
+    const snapshot = confirmed ? getOpenTradeLiveSnapshot(trade) : null;
+    if (snapshot && Number.isFinite(snapshot.dollarPnl)) {
+      floating += snapshot.dollarPnl;
+      counted += 1;
+    } else {
+      unpriced += 1;
+    }
+  });
+
+  return { open: open.length, counted, unpriced, floating: round(floating) };
+}
+
+/* Writes the hero. Called from the render pass AND from the price poll, so the
+   number moves with the market rather than only when state changes. */
+function renderLiveEquity() {
+  const node = document.querySelector('[data-metric="accountBalance"]');
+  if (!node || !state.analytics) {
+    return;
+  }
+  const balance = Number(state.analytics.accountBalance) || 0;
+  const float = openFloatingPnl();
+  const equity = round(balance + float.floating);
+  const label = document.getElementById("dashBalanceLabel");
+  const chip = document.getElementById("dashFloatChip");
+
+  // Nothing open: the hero IS the balance, and the floating chip does not exist
+  // rather than sitting there reading zero.
+  if (float.open === 0) {
+    if (label) {
+      setText(label, "Account balance");
+    }
+    if (chip) {
+      chip.hidden = true;
+    }
+    countUpTo(node, equity);
+    return;
+  }
+
+  if (label) {
+    setText(label, "Account equity");
+  }
+  if (chip) {
+    chip.hidden = false;
+    chip.className = `dash-float ${float.floating >= 0 ? "is-pos" : "is-neg"}`;
+    const priced = float.unpriced === 0
+      ? `${float.counted} open`
+      : `${float.counted} of ${float.open} priced`;
+    setText(chip, `${formatSignedCurrency(float.floating)} floating, ${priced}`);
+  }
+  countUpTo(node, equity);
+}
+
+/* Reuses the SHIPPED count-up (setCountUpValue, app.js): same cubic easing, the
+   same reduced-motion branch, and the same countHash guard, so an unchanged
+   value costs nothing and a poll mid-tween cancels the old frame instead of
+   fighting it. Writing a second animator here would have been a second thing
+   to keep in step with the first. */
+function countUpTo(node, value) {
+  setCountUpValue(node, formatCurrency(value), { value, format: formatCurrency });
+}
 
 function patchLiveNodes() {
   const nodes = document.querySelectorAll("[data-live-field]");

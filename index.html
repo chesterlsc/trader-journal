@@ -61,21 +61,21 @@
         }
       })();
     </script>
-    <link rel="icon" href="favicon.svg?v=20260811-mk4" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260811-mk4" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260811-eq3" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260811-eq3" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260811-mk4" />
+    <link rel="stylesheet" href="styles.css?v=20260811-eq3" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260811-mk4" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260811-eq3" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260811-mk4" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260811-eq3" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -1253,7 +1253,7 @@
             <section class="dash-deck">
               <article class="metric-card metric-card-balance dash-hero dash-reveal" data-tilt style="--i: 0">
                 <div class="dash-hero-top">
-                  <p class="metric-label">Account balance</p>
+                  <p class="metric-label" id="dashBalanceLabel">Account balance</p>
                   <div class="dash-range" role="group" aria-label="Balance range">
                     <button class="dash-range-btn is-active" type="button" data-balance-range="1m" aria-pressed="true">1M</button>
                     <button class="dash-range-btn" type="button" data-balance-range="3m" aria-pressed="false">3M</button>
@@ -1268,6 +1268,10 @@
                   >Manual override</span
                 >
                 <p class="metric-value dash-hero-value" data-metric="accountBalance">$0.00</p>
+                <!-- Floating P&L. Present ONLY while something is open, so it
+                     never sits there reading zero, and it says how many of the
+                     open trades actually have a confirmed price behind them. -->
+                <p class="dash-float" id="dashFloatChip" hidden></p>
                 <div class="dash-hero-meta">
                   <span class="dash-hero-today" id="dashHeroToday" hidden></span>
                   <span class="dash-hero-week" id="dashHeroWeek" hidden></span>
@@ -3227,7 +3231,7 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260811-mk4"></script>
+    <script type="module" src="app.js?v=20260811-eq3"></script>
     </div>
   </body>
 </html>

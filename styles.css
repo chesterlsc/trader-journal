@@ -10182,3 +10182,35 @@ body.auth-locked {
 /* A played tile keeps the same box as its standby poster, so starting a stream
    never reflows the wall or shoves the desk. */
 .bb-mon iframe { height: auto; }
+
+/* Floating P&L under the balance hero. Present only while something is open, so
+   the hero reads "Account balance" when nothing is, and "Account equity" with a
+   floating line when something is: two different facts, never one number
+   quietly containing the other. */
+.dash-float {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: var(--space-2) 0 0;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font: 600 var(--fs-label)/1.2 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.dash-float.is-pos { background: var(--pnl-pos-soft); color: var(--pnl-pos); }
+.dash-float.is-neg { background: var(--pnl-neg-soft); color: var(--pnl-neg); }
+.dash-float[hidden] { display: none; }
+
+/* --- Mid-desktop density --------------------------------------------------
+   A 15 inch external monitor lands around 1440 to 1680 CSS px, which is where
+   this layout was loosest: spacing tuned for a 1920 canvas leaves the metric
+   grid sitting at the fold. This band tightens the deck without touching the
+   phone or the large-desktop cases, so nothing that already reads well moves. */
+@media (min-width: 1240px) and (max-width: 1699px) {
+  .dash-deck { gap: var(--space-4); }
+  .dash-hero { padding: var(--space-5); }
+  .dash-hero-meta { gap: var(--space-2) var(--space-3); }
+  .dash-quad,
+  .dash-stats { gap: var(--space-3); }
+  .dash-board { padding: var(--space-4) var(--space-5); }
+}
