@@ -90,32 +90,11 @@ function merged(selectors) {
 // Cascade per theme. Dark: :root plus the dark-only guard. Light: :root plus
 // the light attribute block ([data-theme="light"] out-specifies :root and the
 // sheets keep source order, so a straight merge in sheet order is the cascade).
-// Terminal mode is a THIRD cascade, not a variant of the other two: it pins
-// its own screen values and wins over both themes, so a pairing that is safe
-// on gunmetal and on concrete can still fail here. Merged last because
-// :root[data-term="on"] ties :root:not([data-theme="light"]) on specificity
-// and only source order separates them, which is exactly why the block had to
-// go in clay-v3.css. Without this entry the whole mode ships unverified.
 const THEMES = {
   dark: merged([":root", ':root:not([data-theme="light"])']),
   light: merged([":root", '[data-theme="light"]']),
-  terminal: merged([":root", ':root:not([data-theme="light"])', ':root[data-term="on"]']),
-  terminalOnLight: merged([":root", '[data-theme="light"]', ':root[data-term="on"]']),
 };
 
-// The three monochrome themes are separate selector blocks, and merged()
-// matches selector strings EXACTLY, so without this loop three of the four
-// terminal themes would ship completely unmeasured. Each is checked over both
-// underlying themes, because the mode has to hold on concrete as well.
-for (const name of ["oxide", "ansi", "magenta"]) {
-  const scoped = `:root[data-term="on"][data-term-theme="${name}"]`;
-  THEMES[`term-${name}`] = merged([
-    ":root", ':root:not([data-theme="light"])', ':root[data-term="on"]', scoped,
-  ]);
-  THEMES[`term-${name}-light`] = merged([
-    ":root", '[data-theme="light"]', ':root[data-term="on"]', scoped,
-  ]);
-}
 
 /* ----------------------------------------------------------------- colour */
 
@@ -254,7 +233,7 @@ function check(theme, fgName, bgName, floor, bgColor, fgColor) {
   }
 }
 
-for (const theme of Object.keys(THEMES)) {
+for (const theme of ["dark", "light"]) {
   const surface = (n) => token(theme, n);
 
   // Body text (4.5:1) — every text tone on every surface it can land on.
@@ -410,6 +389,6 @@ if (failures.length) {
   process.exit(1);
 }
 console.log(
-  `clayV3Contrast: ${checked} pairings green across dark, light and ${Object.keys(THEMES).length - 2} terminal themes. ` +
+  `clayV3Contrast: ${checked} pairings green in both themes. ` +
     `Worst body-text pairing: ${worst.theme} ${worst.fg} on ${worst.bg} = ${worst.ratio.toFixed(2)}:1`
 );

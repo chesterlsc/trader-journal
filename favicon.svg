@@ -1,26 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Trader Journal favicon">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Trader Journal">
+  <!-- THE APP'S OWN LOGO, not a second mark.
+       .lnd-mark (styles.css) and .topnav-mark (clay-v2.css) both render a
+       rounded tile filled with the burnt-oxide accent carrying a white "TJ".
+       The previous favicon was a metal tile with a BLUE #3b82f6 monogram, a
+       leftover from the V2 palette, so the browser tab did not match the
+       product it opened. Values below are the shipped ones:
+         --accent-strong #f68d5c -> --accent #f0763d   (the .lnd-mark gradient)
+         --radius-clay-sm, scaled to this canvas
+       Weight and letter-spacing follow the mark's `font: 700 15px/1` at 38px,
+       scaled to 64. -->
   <defs>
-    <linearGradient id="metal" x1="0%" x2="100%" y1="0%" y2="0%">
-      <stop offset="0%" stop-color="#d7dbe0"/>
-      <stop offset="18%" stop-color="#b8bec5"/>
-      <stop offset="32%" stop-color="#e8ecef"/>
-      <stop offset="52%" stop-color="#9ea7af"/>
-      <stop offset="72%" stop-color="#d5d9de"/>
-      <stop offset="100%" stop-color="#9aa1a8"/>
-    </linearGradient>
-    <linearGradient id="shine" x1="0%" x2="0%" y1="0%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity=".55"/>
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    <linearGradient id="oxide" x1="0%" x2="0%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#f68d5c"/>
+      <stop offset="100%" stop-color="#f0763d"/>
     </linearGradient>
   </defs>
 
-  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#metal)" stroke="#7f8790" stroke-width="1.25"/>
-  <path d="M14 12h36c4.4 0 8 3.6 8 8v4c-7.8-7.4-21.2-11.6-44-12z" fill="url(#shine)" opacity=".55"/>
+  <rect width="64" height="64" rx="20" fill="url(#oxide)"/>
+  <!-- The inset highlight the mark gets from --clay-accent. -->
+  <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="19.25"
+        fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1.5"/>
 
-  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M18 20h18M27 20v24" stroke="#3b82f6" stroke-width="6.5"/>
-    <path d="M47 20v18c0 7.2-4.8 11-12 11" stroke="#101828" stroke-width="6.5"/>
-  </g>
-
-  <circle cx="46.5" cy="46.5" r="2.2" fill="#3b82f6"/>
+  <text x="32" y="33" fill="#ffffff"
+        font-family="'Space Grotesk','Sora',system-ui,-apple-system,sans-serif"
+        font-size="26" font-weight="700" letter-spacing="0.26"
+        text-anchor="middle" dominant-baseline="central">TJ</text>
 </svg>

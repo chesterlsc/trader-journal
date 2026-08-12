@@ -30,7 +30,6 @@ import {
 import { createTradeDisplayHelpers, liveCellAttrs } from "./src/modules/tradeDisplay.js";
 import { createRecentTradesView } from "./src/modules/recentTradesView.js";
 import { rankEvents, countdown, tradedCurrencies, IMPACT_RANK } from "./src/lib/eventClock.js";
-import { buildBootLog as buildBootLines, meterText } from "./src/lib/bootLog.js";
 import {
   stampFromEvents,
   buildBaseline,
@@ -322,19 +321,7 @@ const ui = {
   desktopLogoutBtn: document.getElementById("desktopLogoutBtn"),
   mobileLogoutBtn: document.getElementById("mobileLogoutBtn"),
   themeToggles: Array.from(document.querySelectorAll("[data-theme-toggle]")),
-  termArms: Array.from(document.querySelectorAll("[data-term-arm]")),
-  tmPrompt: document.getElementById("tmPrompt"),
-  tmDate: document.getElementById("tmDate"),
-  tmStreak: document.getElementById("tmStreak"),
-  tmWeek: document.getElementById("tmWeek"),
-  tmFeed: document.getElementById("tmFeed"),
-  tmSections: document.getElementById("tmSections"),
-  tmFoot: document.getElementById("tmFoot"),
   tpClock: document.getElementById("tpClock"),
-  termStatus: document.getElementById("termStatus"),
-  termStatusText: document.getElementById("termStatusText"),
-  termBoot: document.getElementById("termBoot"),
-  termBootLog: document.getElementById("termBootLog"),
   metricNodes: Array.from(document.querySelectorAll("[data-metric]")),
   metricDeltaNodes: Array.from(document.querySelectorAll("[data-metric-delta]")),
   metricGrid: document.getElementById("dashboardMetricGrid"),
@@ -982,11 +969,6 @@ const terminal = { events: [], asOf: null, stale: true, skewMs: 0, selectedKey: 
 // block, because a module-level binding below it is in the temporal dead zone
 // when init() runs and throws on first render. That has shipped four times;
 // tests/bootOrder.check.mjs is what stops the fifth.
-const TERM_STORAGE_KEY = "axiom_journal_term_v1";
-const TERM_BOOTS_KEY = "axiom_journal_term_boots_v1";
-const TERM_THEME_KEY = "axiom_journal_term_theme_v1";
-const TERM_THEMES = ["syntax", "oxide", "ansi", "magenta"];
-const term = { armed: false, booting: false, t0: 0, timers: [], holdTimer: 0, skipped: false, theme: "syntax" };
 
 const TICKER_SYMBOLS = ["BTCUSDT", "XAUUSD", "ETHUSDT", "SOLUSDT", "XAGUSD", "EURUSD"];
 const TICKER_CACHE_KEY = "axiom_journal_ticker_v1";
@@ -1041,7 +1023,6 @@ function init() {
     state.auth.mobileAuthVisible = false;
   }
   applyTheme(getStoredTheme());
-  restoreTermMode();
   loadState();
   // Reload inside a demo tab: sessionStorage still holds the journal. If it
   // somehow does not, re-seed rather than dropping the visitor into an empty app.
@@ -1153,63 +1134,11 @@ function toggleTheme() {
   }, THEME_CROSSFADE_MS);
 }
 
-/* --- Terminal mode -------------------------------------------------------
-   A second attribute on <html>, orthogonal to data-theme and winning over it,
-   because a screen emits its own light rather than reflecting the room. Same
-   storage shape and the same try/catch as the theme pair above. */
-function getStoredTerm() {
-  try {
-    return localStorage.getItem(TERM_STORAGE_KEY) === "on";
-  } catch (error) {
-    return false;
-  }
-}
 
-function applyTerm(on) {
-  const root = document.documentElement;
-  if (on) {
-    root.setAttribute("data-term", "on");
-    root.setAttribute("data-term-theme", term.theme);
-  } else {
-    root.removeAttribute("data-term");
-    root.removeAttribute("data-term-theme");
-  }
-  term.armed = Boolean(on);
-  if (ui.termStatus) {
-    ui.termStatus.hidden = !on;
-  }
-  ui.termArms.forEach((button) => {
-    button.setAttribute("aria-pressed", on ? "true" : "false");
-    button.setAttribute("aria-label", on ? "Disarm terminal mode" : "Arm terminal mode");
-    const label = button.querySelector("[data-term-arm-label]");
-    if (label) {
-      label.textContent = on ? "TERM" : "ARM";
-    }
-  });
-  // LOAD BEARING. Every canvas in the app (charts.js, renderDashSparkline)
-  // reads its palette from getComputedStyle(documentElement) and only repaints
-  // on this event. Without it they keep painting Clay oxide on a black ground
-  // and the mode looks broken rather than themed.
-  window.dispatchEvent(new CustomEvent("themechange", { detail: { theme: on ? "terminal" : getStoredTheme() } }));
-}
 
-/* A reload restores the skin SILENTLY: no overlay, no counter increment. A
-   boot animation the user did not ask for is a tax, not a feature. */
-function restoreTermMode() {
-  try {
-    const stored = localStorage.getItem(TERM_THEME_KEY);
-    if (TERM_THEMES.includes(stored)) {
-      term.theme = stored;
-    }
-  } catch (error) {
-    /* storage blocked: the default theme still applies */
-  }
-  if (!getStoredTerm()) {
-    return;
-  }
-  applyTerm(true);
-  setText(ui.termStatusText, "DESK ONLINE · restored");
-}
+
+
+
 
 function bindEvents() {
   if (ui.loginBtn) {
@@ -1228,114 +1157,7 @@ function bindEvents() {
     button.addEventListener("click", toggleTheme);
   });
 
-  // The ARM key answers the finger, not the click: pressed on pointerdown,
-  // fired on pointerup. Holding past 600ms forces a cold boot. Delegated
-  // because renderDeskRail rebuilds its key on every render.
-  document.addEventListener("pointerdown", (event) => {
-    const key = event.target.closest("[data-term-arm]");
-    if (!key) {
-      return;
-    }
-    key.classList.add("is-pressed", "is-holding");
-    term.holdTimer = window.setTimeout(() => {
-      term.holdTimer = -1;
-    }, 600);
-  });
-  document.addEventListener("pointerup", (event) => {
-    const key = event.target.closest("[data-term-arm]");
-    document.querySelectorAll("[data-term-arm]").forEach((node) => {
-      node.classList.remove("is-pressed", "is-holding");
-    });
-    if (!key) {
-      window.clearTimeout(term.holdTimer);
-      return;
-    }
-    const cold = term.holdTimer === -1 || event.shiftKey;
-    window.clearTimeout(term.holdTimer);
-    term.holdTimer = 0;
-    if (term.armed) {
-      disarmTerminal();
-    } else {
-      armTerminal({ cold });
-    }
-  });
 
-  // Theme tokens and section collapse. Delegated: renderTerminal rebuilds both
-  // on every render, so a direct listener would bind to a detached node.
-  document.addEventListener("click", (event) => {
-    const tok = event.target.closest("[data-term-theme]");
-    if (tok) {
-      const next = tok.dataset.termTheme;
-      if (TERM_THEMES.includes(next)) {
-        term.theme = next;
-        try {
-          localStorage.setItem(TERM_THEME_KEY, next);
-        } catch (error) {
-          /* private mode: the theme still holds for this session */
-        }
-        document.documentElement.setAttribute("data-term-theme", next);
-        document.querySelectorAll("[data-term-theme]").forEach((node) => {
-          const on = node.dataset.termTheme === next;
-          node.classList.toggle("is-on", on);
-          node.setAttribute("aria-pressed", on ? "true" : "false");
-        });
-        // Canvases read their palette from getComputedStyle and only repaint
-        // on this event, so a theme swap without it leaves every chart on the
-        // previous hue.
-        window.dispatchEvent(new CustomEvent("themechange", { detail: { theme: next } }));
-      }
-      return;
-    }
-    const head = event.target.closest(".tm-sec-head");
-    if (head) {
-      const open = head.getAttribute("aria-expanded") !== "false";
-      head.setAttribute("aria-expanded", open ? "false" : "true");
-    }
-  });
-
-  document.addEventListener("keydown", (event) => {
-    const typing =
-      /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "") ||
-      document.activeElement?.isContentEditable === true;
-    if (event.key === "`" && (event.ctrlKey || event.metaKey) && !typing) {
-      event.preventDefault();
-      if (term.armed) {
-        disarmTerminal();
-      } else {
-        armTerminal({ cold: event.shiftKey });
-      }
-      return;
-    }
-    // A boot is skippable from t=310ms. The information was never in the
-    // typing, so skipping jumps every pending line straight to printed.
-    if (term.booting && (event.key === "Escape" || event.key === "Enter" || event.key === " ")) {
-      event.preventDefault();
-      skipBoot();
-      return;
-    }
-    // Escape has two owners already: a native <dialog> eats it first, and the
-    // mobile drawer binds it below. Guarding on both keeps all three working;
-    // stealing it outright would make the drawer unclosable on a phone.
-    if (
-      event.key === "Escape" &&
-      term.armed &&
-      !document.querySelector("dialog[open]") &&
-      !ui.sidebar?.classList.contains("nav-open")
-    ) {
-      disarmTerminal();
-      return;
-    }
-    // Alt+1..5 route through the existing switchView by data-target. No router
-    // change: the strip prints ALT+1..5, which is what the keys actually are.
-    if (event.altKey && !typing && /^[1-5]$/.test(event.key)) {
-      const targets = ["dashboard", "journal", "calendar", "reflections", "terminal"];
-      const target = targets[Number(event.key) - 1];
-      if (target) {
-        event.preventDefault();
-        switchView(target);
-      }
-    }
-  });
 
   // The sparkline is canvas: it must be repainted when the palette flips and
   // resized when the hero's width changes (charts.js handles its own).
@@ -7051,8 +6873,6 @@ function renderAll() {
   renderHeroRecentTrades();
   renderDashLeonTape();
   syncTerminalAccess();
-  renderTerminal();
-  syncTermChrome();
   renderEdgeBoard();
   renderProgressTradeSummary();
   renderDashboardMetrics(state.analytics);
@@ -12427,14 +12247,13 @@ function setupTerminal() {
     const row = event.target.closest("[data-event-key]");
     if (row) {
       terminal.selectedKey = row.dataset.eventKey;
-      renderTerminal();
-    }
+        }
   });
   // One 1s tick drives every countdown. Cheap: it patches text, never markup.
   if (!terminal.timerId) {
     terminal.timerId = window.setInterval(() => {
       if (
-        (isViewActive("terminal") || term.armed || isViewActive("dashboard")) &&
+        (isViewActive("terminal") || isViewActive("dashboard")) &&
         document.visibilityState === "visible"
       ) {
         renderTerminalClock();
@@ -12465,7 +12284,6 @@ async function loadTerminalCalendar() {
   } catch (error) {
     terminal.stale = true;
   }
-  renderTerminal();
 }
 
 // The event family the trader has the most closed trades against.
@@ -12508,386 +12326,26 @@ function terminalNow() {
 
 // Per-day P&L for the week strip. Same derivation buildCalendarDayStats uses
 // (app.js:10289), scoped to a date range rather than a month.
-function termDayStats(fromIso, toIso) {
-  const map = new Map();
-  getClosedTrades().forEach((trade) => {
-    if (trade.date < fromIso || trade.date > toIso) {
-      return;
-    }
-    const day = map.get(trade.date) || { pnl: 0, trades: 0 };
-    day.pnl = round(day.pnl + trade.netPnl);
-    day.trades += 1;
-    map.set(trade.date, day);
-  });
-  return map;
-}
 
-function termIsoDay(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
-    date.getDate()
-  ).padStart(2, "0")}`;
-}
+
+
 
 // Consecutive days back from today that closed green. A day with no trades
 // ends the streak rather than extending it: a streak you did not trade is not
 // a streak, and inflating it would be the first lie on the screen.
-function termGreenStreak(days) {
-  let streak = 0;
-  const cursor = new Date();
-  for (let i = 0; i < 400; i += 1) {
-    const day = days.get(termIsoDay(cursor));
-    if (i === 0 && day === undefined) {
-      cursor.setDate(cursor.getDate() - 1);
-      continue;
-    }
-    if (day === undefined || day.pnl <= 0) {
-      break;
-    }
-    streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return streak;
-}
 
-function termBox() {
-  return '<span class="tm-box" aria-hidden="true"></span>';
-}
 
-function termItem({ done, emoji, name, meta, metaTone = "", starts = "", sub = "" }) {
-  const metaAttr = starts ? ` data-starts="${escapeHtml(starts)}"` : "";
-  const metaCell =
-    meta === undefined || meta === ""
-      ? starts
-        ? `<span class="tm-meta"${metaAttr}></span>`
-        : ""
-      : `<span class="tm-meta ${metaTone}"${metaAttr}>${escapeHtml(String(meta))}</span>`;
-  return `
-    <li class="tm-item">
-      <div class="tm-item-main"${done === null ? "" : ` aria-pressed="${done ? "true" : "false"}"`}>
-        ${termBox()}
-        <span class="tm-emoji" aria-hidden="true">${emoji}</span>
-        <span class="tm-name">${escapeHtml(name)}</span>
-        ${metaCell}
-      </div>
-      ${sub ? `<p class="tm-sub">${escapeHtml(sub)}</p>` : ""}
-    </li>`;
-}
 
-function termSection({ hue, key, emoji, name, count, sub, body }) {
-  return `
-    <section class="tm-sec" data-hue="${hue}">
-      <button class="tm-sec-head" type="button" aria-expanded="true" data-sec="${escapeHtml(key)}">
-        <span class="tm-emoji" aria-hidden="true">${emoji}</span>
-        <span class="tm-sec-name">${escapeHtml(name)}</span>
-        ${count === "" ? "" : `<span class="tm-count">${escapeHtml(count)}</span>`}
-        <span class="tm-caret" aria-hidden="true">v</span>
-      </button>
-      <div class="tm-sec-body">
-        ${sub ? `<p class="tm-sub is-flush">${escapeHtml(sub)}</p>` : ""}
-        ${body}
-      </div>
-    </section>`;
-}
 
-function termKv(rows, indent = true) {
-  return `<dl class="tm-kv${indent ? " is-indent" : ""}">${rows
-    .map(
-      ([k, v, tone]) =>
-        `<div class="tm-kv-row"><dt>${escapeHtml(k)}</dt><dd class="${tone || ""}">${escapeHtml(
-          String(v)
-        )}</dd></div>`
-    )
-    .join("")}</dl>`;
-}
 
-/* The segmented block bar. Filled left to right, with the raw fraction beside
-   it, so the number is readable when the colour is not. */
-function termBar(done, total, cells = 7) {
-  const lit = total > 0 ? Math.round((done / total) * cells) : 0;
-  const seg = Array.from(
-    { length: cells },
-    (_, i) => `<i class="${i < lit ? "is-on" : ""}"></i>`
-  ).join("");
-  return `<p class="tm-bar"><span class="tm-bar-track">${seg}</span><span class="tm-bar-frac">${done}/${total}</span></p>`;
-}
 
-function renderTerminal() {
-  if (!document.getElementById("terminal")) {
-    return;
-  }
 
-  const closed = getClosedTrades(state.trades);
-  const baseline = buildBaseline(closed);
-  const currencies = tradedCurrencies(state.trades);
-  const now = terminalNow();
-  const todayIso = termIsoDay(new Date());
 
-  // ---- prompt, epigraph, date, streak ------------------------------------
-  const account = getActiveAccount();
-  const host = (account?.label || "journal").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  const pro = state.auth.terminalPro || isLocalPreviewMode();
-  setHtml(
-    ui.tmPrompt,
-    `<span class="tm-user">${escapeHtml(state.auth.username || "trader")}</span>${
-      pro ? `<span class="tm-punc">[</span><span class="tm-tier">pro</span><span class="tm-punc">]</span>` : ""
-    }<span class="tm-punc">@</span><span class="tm-host">${escapeHtml(host)}</span> <span class="tm-punc">$</span> <span class="tm-cmd">daily</span>`
-  );
-  setText(
-    ui.tmDate,
-    new Date().toLocaleDateString([], { weekday: "long", day: "numeric", month: "long", year: "numeric" })
-  );
 
-  // ---- the week strip, from real per-day P&L ------------------------------
-  const monday = new Date();
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-  const weekFrom = termIsoDay(monday);
-  const weekEnd = new Date(monday);
-  weekEnd.setDate(weekEnd.getDate() + 6);
-  const days = termDayStats(weekFrom, termIsoDay(weekEnd));
-  const allDays = termDayStats("0000-01-01", "9999-12-31");
 
-  const cells = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(monday);
-    date.setDate(date.getDate() + i);
-    const iso = termIsoDay(date);
-    const day = days.get(iso);
-    // The GLYPH differs by shape, not only by colour, so the strip still reads
-    // in greyscale and to a colour-blind trader.
-    const glyph = day === undefined ? ".." : day.pnl > 0 ? "##" : day.pnl < 0 ? "\\\\" : "==";
-    const tone = day === undefined ? "" : day.pnl > 0 ? "is-pos" : day.pnl < 0 ? "is-neg" : "";
-    return `
-      <span class="tm-week-day">${date.toLocaleDateString([], { weekday: "short" }).toLowerCase()}</span>
-      <span class="tm-week-num${iso === todayIso ? " is-today" : ""}">${date.getDate()}</span>
-      <span class="tm-week-bar ${tone}">${glyph}</span>`;
-  });
-  setHtml(
-    ui.tmWeek,
-    `<span class="tm-week-nav" aria-hidden="true">&lt;</span>${cells.join("")}<span class="tm-week-nav" aria-hidden="true">&gt;</span>`
-  );
 
-  const stamped = closed.filter((t) => Array.isArray(t.eventContext) && t.eventContext.length > 0).length;
-  setHtml(
-    ui.tmStreak,
-    `<span class="tm-emoji" aria-hidden="true">🔥</span><span class="tm-name">${termGreenStreak(
-      allDays
-    )} green days</span>  <span class="tm-emoji" aria-hidden="true">💎</span><span class="tm-name">${stamped} stamped</span>`
-  );
 
-  setText(
-    ui.tmFeed,
-    terminal.asOf === null
-      ? "calendar link down. the desk runs on your record alone"
-      : `calendar as of ${new Date(terminal.asOf).toISOString().slice(11, 16)} UTC, ${
-          terminal.stale ? "stale" : "link up"
-        }`
-  );
 
-  // ---- sections ----------------------------------------------------------
-  const upcoming = rankEvents(terminal.events, { now, currencies, minImpact: "Medium" }).slice(0, 6);
-  const next = upcoming[0] || null;
-  const minutesToNext = next ? (Date.parse(next.startsAt) - now.getTime()) / 60000 : Infinity;
-
-  const rules = Array.isArray(state.settings.preTradeRules) ? state.settings.preTradeRules : [];
-  const budgetLeft = getDailyBudgetLeft();
-  const debt = getUnjournalledTrades();
-  const olderDebt = debt.filter((trade) => trade.date < todayIso).length;
-
-  const pre = [
-    { done: rules.length > 0, emoji: "📋", name: "checklist written", meta: `${rules.length} rules` },
-    {
-      done: state.settings.dailyMaxLoss > 0,
-      emoji: "🛡",
-      name: "daily loss cap set",
-      meta: state.settings.dailyMaxLoss > 0 ? formatCurrency(state.settings.dailyMaxLoss) : "not set",
-    },
-    {
-      done: budgetLeft === null ? false : budgetLeft > 0,
-      emoji: "💰",
-      name: "budget still open",
-      meta: budgetLeft === null ? "no cap" : formatCurrency(budgetLeft),
-    },
-    {
-      done: olderDebt === 0,
-      emoji: "📓",
-      name: "yesterday closed out",
-      meta: olderDebt === 0 ? "clear" : String(olderDebt),
-      sub: olderDebt === 0 ? "" : `${olderDebt} closed trade${olderDebt === 1 ? "" : "s"} from before today have no note`,
-    },
-    {
-      done: minutesToNext > 15,
-      emoji: "🗞",
-      name: "clear of the next print",
-      starts: next ? next.startsAt : "",
-      meta: next ? undefined : "nothing scheduled",
-    },
-  ];
-  const preDone = pre.filter((item) => item.done).length;
-
-  // ---- the tape ----------------------------------------------------------
-  if (!terminal.selectedKey) {
-    terminal.selectedKey = next?.key || mostStampedKey(closed);
-  }
-  const file = terminal.selectedKey ? eventFile(closed, terminal.selectedKey, baseline) : null;
-  const tilt = tiltByEventType(closed, baseline);
-
-  let tapeBody = upcoming.length
-    ? `<ul class="tm-list">${upcoming
-        .map((event) =>
-          termItem({
-            done: null,
-            emoji: "🗞",
-            name: `${event.currency} ${event.title}`,
-            starts: event.startsAt,
-          })
-        )
-        .join("")}</ul>`
-    : `<p class="tm-sub">no scheduled releases ahead for the pairs you trade.</p>`;
-
-  if (file && file.samples > 0) {
-    const rate = file.winRate === null ? "--" : `${Math.round(file.winRate * 100)}%`;
-    tapeBody +=
-      `<p class="tm-sub">your file on ${file.title || terminal.selectedKey}</p>` +
-      termKv([
-        ["prints", file.samples],
-        ["record", `${file.wins}W/${file.losses}L`],
-        ["win rate", rate],
-        ["net", formatSignedCurrency(file.netPnl), file.netPnl >= 0 ? "is-pos" : "is-neg"],
-        [
-          "verdict",
-          file.verdict === "" ? `needs ${EDGE_MIN_VERDICT} prints` : `${file.verdict.replace("-", " ")} than your own average`,
-        ],
-      ]) +
-      `<p class="tm-sub">${escapeHtml(file.sentence)}</p>`;
-  } else {
-    tapeBody += `<p class="tm-sub">no prints on record yet. your file starts with the next one.</p>`;
-  }
-
-  if (tilt.ratio !== null) {
-    tapeBody +=
-      `<p class="tm-sub">tilt inside event windows</p><p class="tm-big">${tilt.ratio.toFixed(1)}x</p>` +
-      `<p class="tm-sub">you log emotional, revenge or cooldown-override trades ${tilt.ratio.toFixed(
-        1
-      )}x more often inside event windows than outside them</p>`;
-  }
-
-  // ---- open positions ----------------------------------------------------
-  const open = state.trades.filter((trade) => trade.status === "open");
-  const openBody = open.length
-    ? `<ul class="tm-list">${open
-        .map((trade) => {
-          const stopPips = pipsBetween(trade.asset, trade.market, trade.entryPrice, trade.stopLoss);
-          const targetPips = pipsBetween(trade.asset, trade.market, trade.entryPrice, trade.takeProfit);
-          const rows = [["entry", trade.entryPrice]];
-          if (Number(trade.stopLoss) > 0) {
-            rows.push(["stop", `${trade.stopLoss}   ${formatPips(Math.abs(stopPips))}`]);
-          }
-          if (Number(trade.takeProfit) > 0) {
-            rows.push(["target", `${trade.takeProfit}   ${formatPips(Math.abs(targetPips))}`]);
-          }
-          return (
-            termItem({
-              done: null,
-              emoji: "📈",
-              name: `${trade.asset} ${String(trade.direction || "").toLowerCase()}`,
-              meta: trade.lotSize ? `${trade.lotSize} lots` : "",
-            }) + `<li class="tm-item is-bare">${termKv(rows)}</li>`
-          );
-        })
-        .join("")}</ul>`
-    : `<p class="tm-sub">nothing open. the desk is flat.</p>`;
-
-  // ---- today -------------------------------------------------------------
-  const todayTrades = closed.filter((trade) => trade.date === todayIso);
-  const todayDone = todayTrades.filter((trade) => isTradeJournalled(trade)).length;
-  const todayNet = todayTrades.reduce((sum, trade) => sum + (Number(trade.netPnl) || 0), 0);
-  let todayBody = todayTrades.length
-    ? `<ul class="tm-list">${todayTrades
-        .map((trade) =>
-          termItem({
-            done: isTradeJournalled(trade),
-            emoji: "📓",
-            name: `${trade.asset} ${trade.result || ""}`.trim(),
-            meta: formatSignedCurrency(trade.netPnl),
-            metaTone: trade.netPnl >= 0 ? "is-pos" : "is-neg",
-          })
-        )
-        .join("")}</ul>` + termBar(todayDone, todayTrades.length)
-    : `<p class="tm-sub">nothing closed today yet.</p>`;
-  todayBody += termKv([
-    ["net today", formatSignedCurrency(todayNet), todayNet >= 0 ? "is-pos" : "is-neg"],
-    ["budget left", budgetLeft === null ? "no cap" : `${formatCurrency(budgetLeft)} of ${formatCurrency(state.settings.dailyMaxLoss)}`],
-    ["trades", todayTrades.length],
-  ]);
-
-  // ---- the wind down -----------------------------------------------------
-  const reflectedToday = (state.reflections || []).some((entry) => entry.date === todayIso);
-  const wind = [
-    { done: reflectedToday, emoji: "📝", name: "reflection written today", meta: reflectedToday ? "done" : "" },
-    { done: debt.length === 0, emoji: "📓", name: "journal debt clear", meta: debt.length === 0 ? "clear" : String(debt.length) },
-    {
-      done: budgetLeft === null ? true : todayNet > -state.settings.dailyMaxLoss,
-      emoji: "🛡",
-      name: "inside the loss cap",
-      meta: formatSignedCurrency(todayNet),
-      metaTone: todayNet >= 0 ? "is-pos" : "is-neg",
-    },
-  ];
-  const windDone = wind.filter((item) => item.done).length;
-
-  setHtml(
-    ui.tmSections,
-    [
-      termSection({
-        hue: 1,
-        key: "premarket",
-        emoji: "📋",
-        name: "pre-market",
-        count: `${preDone}/${pre.length}`,
-        sub: "what the desk knows before you click buy",
-        body: `<ul class="tm-list">${pre.map(termItem).join("")}</ul>`,
-      }),
-      termSection({
-        hue: 2,
-        key: "tape",
-        emoji: "🗞",
-        name: "the tape",
-        count: upcoming.length ? String(upcoming.length) : "",
-        sub: "ranked on the currencies behind the assets you trade",
-        body: tapeBody,
-      }),
-      termSection({
-        hue: 3,
-        key: "open",
-        emoji: "📈",
-        name: "open positions",
-        count: open.length ? String(open.length) : "",
-        sub: "",
-        body: openBody,
-      }),
-      termSection({
-        hue: 4,
-        key: "today",
-        emoji: "📓",
-        name: "today",
-        count: todayTrades.length ? `${todayDone}/${todayTrades.length}` : "",
-        sub: "a tick means the trade has a note",
-        body: todayBody,
-      }),
-      termSection({
-        hue: 5,
-        key: "wind",
-        emoji: "🌙",
-        name: "the wind down",
-        count: `${windDone}/${wind.length}`,
-        sub: "",
-        body: `<ul class="tm-list">${wind.map(termItem).join("")}</ul>`,
-      }),
-    ].join("")
-  );
-
-  setText(ui.tmFoot, `${closed.length} closed, ${stamped} stamped`);
-  renderTerminalClock();
-}
 
 /* The only per-second work: patch countdown text in place. No markup is
    rebuilt, so a row's entrance never restarts. One selector drives the desk,
@@ -12922,283 +12380,27 @@ function syncTerminalAccess() {
   }
 }
 
-/* ==========================================================================
-   TERMINAL MODE — the power on self test.
 
-   Every line below is read from live state at the instant of arming, or the
-   line does not exist. There is no placeholder, no "unknown", and no zero
-   dressed up as a figure. A brand new account boots to four lines and says so,
-   which is more persuasive than thirteen lines that invented nine numbers.
 
-   buildBootLog is deliberately a PURE read with no DOM in it, so the honesty
-   rule is enforced by tests/termBoot.check.mjs rather than remembered in the
-   markup. Same shape src/lib/eventEdge.js already uses when it refuses to
-   report a win rate under five samples.
-   ========================================================================== */
-function buildBootLog() {
-  const buster = document.querySelector('link[href*="clay-v3"]')?.getAttribute("href") || "";
-  const closed = getClosedTrades(state.trades);
-  const accounts = getVisibleAccounts();
-  const activeId = getActiveAccount()?.id;
-  const allRows = [...state.trades, ...state.otherTrades];
 
-  let lastWrite = "";
-  try {
-    const raw = journalStore().getItem(journalKey(STORAGE_KEYS.lastSaved));
-    lastWrite = raw ? new Date(raw).toLocaleTimeString([], { hour12: false }) : "";
-  } catch (error) {
-    lastWrite = "";
-  }
 
-  // The worst slot the trader actually has, or nothing. releaseClockEdge needs
-  // no stamps and no archive, so this is real on the very first visit.
-  const worstWindow =
-    releaseClockEdge(closed)
-      .filter((slot) => slot.n >= 3 && slot.netPnl < 0)
-      .sort((a, b) => a.netPnl - b.netPnl)[0] || null;
 
-  return buildBootLines({
-    build: buster.split("?v=")[1] || "",
-    session: {
-      username: state.auth.username,
-      authenticated: state.auth.isAuthenticated,
-      guest: state.auth.guestMode,
-      preview: state.auth.previewMode
-    },
-    storage: { lastWrite },
-    accounts: accounts.map((account) => ({
-      // The LABEL, not the uuid: "/acct/c438db45-7b1b-4fc4..." is noise on a
-      // screen whose whole claim is that it read your record. makeAccount
-      // guarantees a non-empty label, so there is no fallback to write.
-      // Slugged only for shape: it is still the name the trader chose.
-      id: account.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
-      rows: allRows.filter((trade) => trade.accountId === account.id).length,
-      active: account.id === activeId
-    })),
-    closed: closed.length,
-    stamped: closed.filter((trade) => Array.isArray(trade.eventContext) && trade.eventContext.length > 0).length,
-    events: terminal.events.length,
-    asOf: terminal.asOf,
-    stale: terminal.stale,
-    skewMs: terminal.skewMs,
-    edgeMinLog: EDGE_MIN_LOG,
-    edgeMinVerdict: EDGE_MIN_VERDICT,
-    budgetLeft: getDailyBudgetLeft(),
-    dailyMax: state.settings.dailyMaxLoss,
-    debt: getUnjournalledTrades().length,
-    worstWindow,
-    money: formatCurrency,
-    signedMoney: formatSignedCurrency
-  });
-}
 
-function bootMeter(meter) {
-  const cells = window.matchMedia("(min-width: 900px)").matches ? 20 : 12;
-  const m = meterText(meter, cells, EDGE_MIN_LOG);
-  const lit = m.bar.slice(0, m.lit);
-  const dark = m.bar.slice(m.lit);
-  return `<span class="term-log-meter">${lit}<i>${dark}</i> ${escapeHtml(m.label)}</span>`;
-}
 
-/* The decay ladder. Boot 1 is a ceremony, boot 4 is a switch that still prints
-   its receipt. EVERY line prints at every scale: the lines are the honesty,
-   the pacing is not. If the record moved since the last boot the pace resets
-   to readable, because the mount line is new information. */
-function bootScale(closedCount, accountCount) {
-  let saved = { n: 0, closed: -1, accounts: -1 };
-  try {
-    saved = { ...saved, ...JSON.parse(localStorage.getItem(TERM_BOOTS_KEY) || "{}") };
-  } catch (error) {
-    /* storage blocked: every boot is a first boot, which is correct */
-  }
-  const n = Number(saved.n) || 0;
-  let scale = n === 0 ? 1 : n === 1 ? 0.45 : n === 2 ? 0.28 : 0.18;
-  if (saved.closed !== closedCount || saved.accounts !== accountCount) {
-    scale = Math.max(scale, 0.45);
-  }
-  try {
-    localStorage.setItem(TERM_BOOTS_KEY, JSON.stringify({ n: n + 1, closed: closedCount, accounts: accountCount }));
-  } catch (error) {
-    /* nothing to do: the boot still runs */
-  }
-  return scale;
-}
 
-function clearBootTimers() {
-  term.timers.forEach((id) => window.clearTimeout(id));
-  term.timers = [];
-}
 
-function armTerminal({ cold = false } = {}) {
-  if (term.booting || term.armed) {
-    return;
-  }
-  const lines = buildBootLog();
-  const closed = getClosedTrades(state.trades).length;
-  const scale = cold ? 1 : bootScale(closed, getVisibleAccounts().length);
 
-  try {
-    localStorage.setItem(TERM_STORAGE_KEY, "on");
-  } catch (error) {
-    /* private mode: the mode still holds for this session */
-  }
 
-  // Reduced motion gets the mode with no ceremony at all. The skin is the
-  // feature; the boot is the introduction to it.
-  if (prefersReducedMotion()) {
-    applyTerm(true);
-    setText(ui.termStatusText, bootStatusText(lines));
-    renderAll();
-    return;
-  }
-  runBoot(lines, scale, cold);
-}
 
-function bootStatusText(lines) {
-  const mount = lines.find((line) => line.mount);
-  return mount ? `DESK ONLINE · ${mount.v.toUpperCase()}` : "DESK ONLINE";
-}
 
-function runBoot(lines, scale, cold) {
-  const overlay = ui.termBoot;
-  const log = ui.termBootLog;
-  if (!overlay || !log) {
-    applyTerm(true);
-    renderAll();
-    return;
-  }
-  // Any open <dialog> would paint on top of a fixed overlay and survive the
-  // whole boot, so they are closed first.
-  document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
 
-  term.booting = true;
-  term.skipped = false;
-  term.t0 = performance.now();
-  clearBootTimers();
 
-  log.innerHTML = (cold ? [{ k: "COLD BOOT REQUESTED", v: "", head: true }] : [])
-    .concat(lines)
-    .map((line, index) => {
-      const stamp = line.head || line.payload ? "" : `<span class="term-log-k">[ 0.00 ]</span>  `;
-      const dots = line.k && !line.head && !line.sub ? " " + ".".repeat(Math.max(2, 16 - line.k.length)) : "";
-      return `<span class="term-log-line${line.payload ? " is-payload" : ""}" data-i="${index}">${stamp}<span class="term-log-k">${escapeHtml(
-        line.k
-      )}${dots}</span> <span class="term-log-v">${escapeHtml(line.v)}</span>${line.meter ? "<br>          " + bootMeter(line.meter) : ""}</span>`;
-    })
-    .join("");
 
-  overlay.hidden = false;
-  overlay.classList.add("is-open");
-  overlay.classList.remove("is-closing");
 
-  const rows = Array.from(log.querySelectorAll(".term-log-line"));
-  const mountIndex = (cold ? 1 : 0) + lines.findIndex((line) => line.mount);
 
-  // Gaps in ms at scale 1: an accelerating rhythm, then 320ms of nothing
-  // before the mount line and 340ms after it. That silence is the moment.
-  let t = 260 * scale;
-  rows.forEach((row, index) => {
-    if (index === mountIndex) {
-      t += 320 * scale;
-    }
-    const at = t;
-    term.timers.push(
-      window.setTimeout(() => {
-        row.classList.add("is-printed", "is-strike");
-        const stampCell = row.querySelector(".term-log-k");
-        if (stampCell && stampCell.textContent.startsWith("[ ")) {
-          stampCell.textContent = `[ ${((performance.now() - term.t0) / 1000).toFixed(2)} ]`;
-        }
-        window.setTimeout(() => row.classList.remove("is-strike"), 160);
-      }, at)
-    );
-    const base = index < 5 ? [170, 145, 120, 100, 88][index] : 66;
-    t += (index === mountIndex ? 340 + base : base) * scale;
-  });
 
-  // Stamp the mode in early, under the overlay, so the app behind is already
-  // the terminal when the aperture collapses to reveal it. applyTerm ONLY:
-  // measured at 23ms for the whole document. renderAll() is deliberately NOT
-  // called here, because it re-renders every chart, table and calendar cell
-  // and the app is not visible during the log anyway. It runs in finishBoot,
-  // behind the curtain, where a long frame costs nothing.
-  term.timers.push(window.setTimeout(() => applyTerm(true), 90 * scale));
 
-  term.timers.push(window.setTimeout(() => finishBoot(lines), t + 140 * scale));
-}
 
-/* The dock: the mount line does not fade out, it becomes the chrome. Same DOM
-   node from full screen to header row, one FLIP. The line that proved the
-   machine had read your journal turns into the machine's status strip. */
-function finishBoot(lines) {
-  const overlay = ui.termBoot;
-  const log = ui.termBootLog;
-  // Behind the curtain: the expensive full re-render happens while the log is
-  // still covering the screen, so its long frame is invisible.
-  renderAll();
-  setText(ui.termStatusText, bootStatusText(lines));
-  if (ui.termStatus) {
-    ui.termStatus.hidden = false;
-  }
-  if (!overlay || !log) {
-    term.booting = false;
-    return;
-  }
-  log.querySelectorAll(".term-log-line").forEach((row) => {
-    row.style.transition = "transform 180ms var(--ease-clay), opacity 180ms var(--ease-clay)";
-    row.style.transform = "translateY(-14px)";
-    row.style.opacity = "0";
-  });
-  overlay.classList.remove("is-open");
-  overlay.classList.add("is-closing");
-  term.timers.push(
-    window.setTimeout(() => {
-      overlay.hidden = true;
-      overlay.classList.remove("is-closing");
-      term.booting = false;
-      // renderAll ran while booting was still true, so the key is showing
-      // BOOT. Nothing else will re-render it until the next state change.
-      syncTermChrome();
-      document.getElementById("termArmTop")?.focus({ preventScroll: true });
-    }, 240)
-  );
-}
-
-function disarmTerminal() {
-  clearBootTimers();
-  term.booting = false;
-  if (ui.termBoot) {
-    ui.termBoot.hidden = true;
-    ui.termBoot.classList.remove("is-open", "is-closing");
-  }
-  try {
-    localStorage.removeItem(TERM_STORAGE_KEY);
-  } catch (error) {
-    /* nothing to do */
-  }
-  applyTerm(false);
-  renderAll();
-}
-
-function toggleTerm() {
-  if (term.armed) {
-    disarmTerminal();
-  } else {
-    armTerminal();
-  }
-}
-
-/* The status strip and the ARM keys. Called from renderAll so it stays true
-   after any state change, not just at arming. */
-function syncTermChrome() {
-  ui.termArms.forEach((button) => {
-    button.classList.toggle("is-booting", term.booting);
-    const label = button.querySelector("[data-term-arm-label]");
-    if (label) {
-      label.textContent = term.booting ? "BOOT" : term.armed ? "TERM" : "ARM";
-    }
-  });
-}
 
 /* --- Release edge: Terminal Pro living on the dashboard as a board ---------
    ONE COMPONENT, TWO SKINS. This renderer emits nothing but app-wide classes
@@ -13452,17 +12654,4 @@ function renderEdgeBoard() {
   renderTerminalClock();
 }
 
-/* Skip: every pending line jumps straight to printed and the dock runs. The
-   information was never in the typing, so a skip must never cost a line. */
-function skipBoot() {
-  if (!term.booting) {
-    return;
-  }
-  clearBootTimers();
-  ui.termBoot?.querySelectorAll(".term-log-line").forEach((row) => {
-    row.classList.add("is-printed");
-    row.classList.remove("is-strike");
-  });
-  applyTerm(true);
-  finishBoot(buildBootLog());
-}
+
