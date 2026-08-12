@@ -1490,20 +1490,25 @@ body.is-guest:not(.demo-signup) .auth-shell {
    dark-surface derivations. */
 .lnd-tp-frame,
 .lnd-lens {
-  --tp-s0: #101318;
-  --tp-s1: #14161a;
-  --tp-s2: #1d2126;
-  --tp-s3: #23282e;
-  --tp-line: #2b313a;
-  --tp-line2: #3d4552;
-  --tp-text: #e9edf1;
-  --tp-soft: #a2abb5;
-  --tp-faint: #9aa3ae;
-  --tp-acc: #f0763d;
-  --tp-acc-soft: rgba(240, 118, 61, 0.16);
-  --tp-pos: #3ecf8e;
-  --tp-neg: #f7758d;
-  --tp-warn: #f0b34e;
+  /* ALIASES onto the one terminal ramp (clay-v3.css). The names stay because
+     200-odd landing rules read them; the values are now shared with the Release
+     edge desk, so the preview on the landing and the real desk are literally
+     the same instrument. This block used to hard-code its own hexes, which is
+     why the two drifted and why none of them were ever measured. */
+  --tp-s0: var(--term-pane);
+  --tp-s1: var(--term-rail);
+  --tp-s2: var(--term-raise);
+  --tp-s3: var(--term-raise);
+  --tp-line: var(--term-line);
+  --tp-line2: var(--term-edge);
+  --tp-text: var(--term-ink);
+  --tp-soft: var(--term-soft);
+  --tp-faint: var(--term-faint);
+  --tp-acc: var(--term-acc);
+  --tp-acc-soft: var(--term-wash);
+  --tp-pos: var(--term-pos);
+  --tp-neg: var(--term-neg);
+  --tp-warn: var(--term-warn);
   --tp-warn-soft: rgba(240, 179, 78, 0.16);
   margin: 0;
   border: 1px solid var(--line-strong);
@@ -8880,77 +8885,131 @@ body.auth-locked {
 }
 
 /* ==========================================================================
-   RELEASE EDGE, the dashboard's right-hand rail.
+   RELEASE EDGE, DOCKED. The dashboard's right-hand rail.
 
-   A summary that links into the Edge tab, not a second board. It declares no
-   custom property on any element, so it inherits the theme like every other
-   Clay surface. (An element-scoped token pin is invisible to
-   clayV3Contrast.check.mjs, which is how a previous rail shipped as a black
-   slab on a Clay dashboard and survived two fixes.)
+   It is the SAME INSTRUMENT as the landing preview and the full desk, at the
+   smallest size that still says something: masthead, one release, one record,
+   one way in. It speaks the shared --term-* ramp, so the three surfaces are one
+   product rather than three.
+
+   The earlier version of this rail was rejected as a "black slab bolted onto a
+   Clay dashboard". The difference is not that it is lighter: it is that it now
+   belongs to a language the rest of the site speaks, it is bordered and
+   radiused like a Clay board so it sits IN the grid rather than on top of it,
+   and it never pins a token of its own.
    ========================================================================== */
 .dash-edge-mini {
   display: grid;
-  gap: var(--space-3);
+  gap: 0;
   align-content: start;
-  padding: var(--space-4) var(--space-5);
-  border: 1px solid var(--line);
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-clay-lg);
-  background: var(--surface-1);
+  background: var(--term-pane);
   box-shadow: var(--clay-raised);
+  font-variant-numeric: tabular-nums;
 }
+
+/* The masthead. Same grammar as the desk's command bar and the landing's
+   chrome: a live dot, the name, and the feed's own clock on the right. */
 .dash-edge-mini-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2);
   margin: 0;
-  color: var(--text-faint);
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-  letter-spacing: 0.12em;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--term-line);
+  background: var(--term-rail);
+  color: var(--term-faint);
+  font: 600 11px/1.2 var(--font-mono);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
-.dash-edge-mini-asof { margin-left: auto; letter-spacing: 0.04em; }
+.dash-edge-mini-head::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--term-acc);
+  box-shadow: 0 0 6px var(--term-acc);
+  flex: none;
+}
+.dash-edge-mini-asof {
+  margin-left: auto;
+  color: var(--term-faint);
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+#dashEdgeMiniBody { display: grid; gap: var(--space-2); padding: 12px; }
+
 .dash-edge-mini-k {
   margin: 0;
-  color: var(--accent);
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-  letter-spacing: 0.1em;
+  color: var(--term-acc);
+  font: 600 11px/1.2 var(--font-mono);
+  letter-spacing: 0.12em;
 }
-.dash-edge-mini-title { margin: 2px 0 0; color: var(--text); font-size: var(--fs-body); }
+.dash-edge-mini-title {
+  margin: 0;
+  color: var(--term-ink);
+  font-size: 13px;
+  line-height: 1.35;
+}
+/* The countdown is the reason to glance at this rail, so it is the one large
+   figure, in a carved well exactly as the desk draws its axis. */
 .dash-edge-mini-cd {
-  margin: var(--space-2) 0 0;
-  color: var(--text);
+  margin: 2px 0 0;
+  padding: 8px 10px;
+  border-radius: 2px;
+  background: var(--term-well);
+  color: var(--term-ink);
   font: 700 24px/1 var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 .dash-edge-mini-cd[data-phase="imminent"],
-.dash-edge-mini-cd[data-phase="live"] { color: var(--accent); }
+.dash-edge-mini-cd[data-phase="live"] { color: var(--term-acc); }
+
 .dash-edge-mini-file {
   display: flex;
-  gap: var(--space-4);
-  margin: var(--space-3) 0 0;
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--line);
-  color: var(--text);
-  font: 500 var(--fs-body)/1.2 var(--font-mono);
-  font-variant-numeric: tabular-nums;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 10px 12px;
+  border-top: 1px solid var(--term-line);
+  background: var(--term-rail);
+  color: var(--term-soft);
+  font: 500 12px/1.2 var(--font-mono);
 }
+.dash-edge-mini-file .is-pos { color: var(--term-pos); }
+.dash-edge-mini-file .is-neg { color: var(--term-neg); }
+
 .dash-edge-mini-empty {
   margin: 0;
-  color: var(--text-faint);
-  font-size: var(--fs-micro);
+  color: var(--term-faint);
+  font-size: 11px;
   line-height: 1.5;
 }
+
+/* The way in, styled as the desk's F-key rather than a web link. */
 .dash-edge-mini-link {
-  justify-self: start;
-  padding: 0;
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
   border: 0;
-  background: none;
-  color: var(--accent);
-  font-size: var(--fs-micro);
-  font-weight: 600;
+  border-top: 1px solid var(--term-line);
+  background: var(--term-rail);
+  color: var(--term-acc);
+  font: 600 11px/1.2 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: left;
   cursor: pointer;
 }
-.dash-edge-mini-link:hover { text-decoration: underline; }
+.dash-edge-mini-link:hover { background: var(--term-raise); }
+.dash-edge-mini-link:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+@media (max-width: 899px) {
+  .dash-edge-mini-link { min-height: 44px; }
+}
 
 /* THE RIGHT SIDE. A sticky column beside the dashboard, so the countdown sits
    in the periphery and the money keeps the main column. */
@@ -8973,9 +9032,6 @@ body.auth-locked {
   }
 }
 
-/* Below the rail breakpoint it is a normal block directly under the dashboard
-   head and ABOVE the metric grid, because a countdown below the fold is a
-   countdown that does not exist. */
 @media (max-width: 1239px) {
   .dash-edge-mini { grid-column: 1 / -1; }
 }
@@ -9004,20 +9060,22 @@ body.auth-locked {
    lengths and ratios. Never colours.
    ========================================================================== */
 :root {
-  --bb-void:  #0a0d11;   /* the ground, and every 1px splitter */
-  --bb-pane:  #0f1318;   /* pane fill */
-  --bb-rail:  #151a20;   /* command bar, pane heads, status bar */
-  --bb-well:  #07090c;   /* carved wells: the axis, the band, the bars */
-  --bb-grid:  #2a313a;   /* hairline, non-informational. See the audit note. */
-  --bb-edge:  #6b7684;   /* the one meaningful edge: T-0 marker, scale ticks */
-  --bb-ink:   #e9edf1;
-  --bb-soft:  #a6b0ba;
-  --bb-faint: #8e99a4;
-  --bb-oxide: #f0763d;
-  --bb-amber: #f0b34e;
-  --bb-wash:  rgba(240, 118, 61, 0.14);
-  --bb-pos:   #3ecf8e;   /* the shipped dark --pnl-pos, verbatim */
-  --bb-neg:   #f7758d;   /* the shipped dark --pnl-neg, verbatim */
+  /* ALIASES onto the one terminal ramp (clay-v3.css), shared with the landing
+     preview and the dashboard dock. */
+  --bb-void:  var(--term-void);
+  --bb-pane:  var(--term-pane);
+  --bb-rail:  var(--term-rail);
+  --bb-well:  var(--term-well);
+  --bb-grid:  var(--term-line);
+  --bb-edge:  var(--term-edge);
+  --bb-ink:   var(--term-ink);
+  --bb-soft:  var(--term-soft);
+  --bb-faint: var(--term-faint);
+  --bb-oxide: var(--term-acc);
+  --bb-amber: var(--term-warn);
+  --bb-wash:  var(--term-wash);
+  --bb-pos:   var(--term-pos);
+  --bb-neg:   var(--term-neg);
 }
 
 /* --- the frame ---------------------------------------------------------- */

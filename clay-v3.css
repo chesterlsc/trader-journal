@@ -461,3 +461,39 @@
   outline: none;
   box-shadow: var(--focus-ring);
 }
+
+/* ==========================================================================
+   THE TERMINAL RAMP — one instrument language for the whole site.
+
+   Three surfaces render the same idea and each used to carry its OWN dark
+   ramp under its own names: the landing's Terminal Pro (--tp-*), the Release
+   edge desk (--bb-*), and the dashboard rail (plain Clay). The values were
+   within a few RGB points of each other but never identical, which is why the
+   site read as three products.
+
+   Declared HERE, at :root, for a second reason that matters more than tidiness:
+   the landing's ramp was pinned element-scoped on `.lnd-tp-frame, .lnd-lens`,
+   and tests/clayV3Contrast.check.mjs walks :root-level blocks only. The page
+   that sells this product shipped with ZERO of its colours measured. At :root
+   the harness sees them, and one measurement now covers all three surfaces.
+
+   A screen keeps its own light: these do not follow [data-theme="light"], so an
+   instrument stays an instrument on concrete.
+   ========================================================================== */
+:root {
+  --term-void:  #0a0d11;   /* ground, and every 1px splitter */
+  --term-pane:  #0f1318;   /* pane fill */
+  --term-rail:  #151a20;   /* command bars, pane heads, status bars */
+  --term-raise: #1d2126;   /* raised cell, hover */
+  --term-well:  #07090c;   /* carved wells: axes, bands, bars */
+  --term-line:  #2a313a;   /* hairline, carries no information */
+  --term-edge:  #6b7684;   /* the meaningful edge: markers and scale ticks */
+  --term-ink:   #e9edf1;
+  --term-soft:  #a6b0ba;
+  --term-faint: #8e99a4;
+  --term-acc:   #f0763d;   /* the shipped burnt oxide */
+  --term-wash:  rgba(240, 118, 61, 0.14);
+  --term-warn:  #f0b34e;
+  --term-pos:   #3ecf8e;   /* the shipped dark --pnl-pos, verbatim */
+  --term-neg:   #f7758d;   /* the shipped dark --pnl-neg, verbatim */
+}

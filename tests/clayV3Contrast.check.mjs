@@ -384,29 +384,33 @@ for (const file of [
 
 /* ----------------------------------------------------------------- report */
 
-// --- THE RELEASE EDGE DESK -------------------------------------------------
-// The desk pins a private --bb-* ramp and stays dark under BOTH themes on
-// purpose (a screen keeps its own light). Its tokens live at :root so they are
-// loaded above, but LOADING a token is not MEASURING it: this harness only
-// checks the pairings it names. Without this block the entire screen shipped
-// unverified while the suite reported green, which is the same blind spot that
-// let an element-scoped token pin survive two fixes.
-const BB_GROUNDS = ["--bb-void", "--bb-pane", "--bb-rail", "--bb-well"];
-for (const fg of ["--bb-ink", "--bb-soft", "--bb-faint"]) {
-  for (const bg of BB_GROUNDS) check("dark", fg, bg, 4.5);
+// --- THE TERMINAL RAMP: landing preview, dashboard dock, and the desk -----
+// One ramp at :root now backs all three surfaces (--tp-* and --bb-* alias it),
+// so measuring it once covers the whole instrument language. Before this, the
+// landing's ramp was pinned element-scoped on .lnd-tp-frame and this harness
+// walks :root-level blocks only: the page that sells the product shipped with
+// none of its colours measured.
+//
+// The ramp does NOT follow [data-theme="light"] on purpose (a screen keeps its
+// own light), so it is measured once rather than per theme.
+const TERM_GROUNDS = ["--term-void", "--term-pane", "--term-rail", "--term-raise", "--term-well"];
+
+for (const fg of ["--term-ink", "--term-soft", "--term-faint"]) {
+  for (const bg of TERM_GROUNDS) check("dark", fg, bg, 4.5);
 }
-for (const fg of ["--bb-oxide", "--bb-amber", "--bb-pos", "--bb-neg"]) {
-  for (const bg of BB_GROUNDS) check("dark", fg, bg, 4.5);
+// Accent, warning and money as text on every ground they can land on.
+for (const fg of ["--term-acc", "--term-warn", "--term-pos", "--term-neg"]) {
+  for (const bg of TERM_GROUNDS) check("dark", fg, bg, 4.5);
 }
-// Faint text lands on the oxide wash that backs a live row.
+// Faint text over the oxide wash that backs a live row.
 check(
-  "dark", "--bb-faint", "--bb-wash over --bb-rail", 4.5,
-  over(token("dark", "--bb-wash"), token("dark", "--bb-rail"))
+  "dark", "--term-faint", "--term-wash over --term-rail", 4.5,
+  over(token("dark", "--term-wash"), token("dark", "--term-rail"))
 );
-// --bb-edge is the ONE meaningful non-text mark (the T-0 marker, the scale
-// ticks), so it takes the 3:1 non-text floor. --bb-grid is decorative hairline
-// and carries no information, so it is deliberately not checked.
-for (const bg of BB_GROUNDS) check("dark", "--bb-edge", bg, 3);
+// --term-edge is the one meaningful non-text mark (T-0 markers, scale ticks),
+// so it takes the 3:1 non-text floor. --term-line is decorative hairline that
+// carries no information and is deliberately not checked.
+for (const bg of TERM_GROUNDS) check("dark", "--term-edge", bg, 3);
 
 if (failures.length) {
   console.error("clayV3Contrast: FAILURES\n  " + failures.join("\n  "));
