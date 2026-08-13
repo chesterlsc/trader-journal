@@ -4539,7 +4539,14 @@ body.auth-locked .topnav {
 /* --- Account editor dialog ------------------------------------------------ */
 .account-dialog {
   width: min(680px, calc(100vw - 32px));
-  max-height: calc(100vh - 48px);
+  /* dvh, not vh, and every sibling dialog body already knew: .sheet-body and
+     .cooldown-body both size on 100dvh. On a mobile browser 100vh is the LARGE
+     viewport, measured as if the collapsing URL bar were gone, so a dialog cut
+     to 100vh - 48px can run past the bottom of what is actually on screen and
+     take its Save button with it. 100dvh is the viewport as it currently is.
+     Not reproducible in a desktop emulator, where the two are equal, so this
+     rests on the documented behaviour and on matching its own siblings. */
+  max-height: calc(100dvh - 48px);
   padding: 0;
   border: 0;
   border-radius: var(--radius-clay-lg);
