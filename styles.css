@@ -9851,6 +9851,81 @@ body.auth-locked {
 .bb-line span { color: var(--bb-faint); letter-spacing: 0.04em; }
 .bb-line b { color: var(--bb-ink); font-variant-numeric: tabular-nums; }
 
+/* --- F6 THE NEWS EDGE ---------------------------------------------------
+   Two rows, one per asset, always both, so the pane never reorders under a
+   feed that answers for one and not the other. Every colour is a --bb-* alias
+   onto the one terminal ramp, so nothing here pins its own token: an
+   element-scoped ramp is invisible to tests/clayV3Contrast.check.mjs, which
+   walks :root blocks only.
+   The RATIO is the loud thing and the DENOMINATOR sits right beside it, never
+   in a tooltip: a ratio without its sample count is the shape of number this
+   pane exists not to print. */
+.bb-news { display: grid; }
+
+.bb-news-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 2px var(--space-3);
+  padding: var(--space-3) 0;
+}
+.bb-news-row + .bb-news-row { border-top: 1px solid var(--bb-grid); }
+.bb-news-row:first-child { padding-top: 0; }
+
+.bb-news-sym {
+  color: var(--bb-ink);
+  font: 700 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.14em;
+}
+
+.bb-news-x {
+  color: var(--bb-ink);
+  font: 700 var(--fs-body)/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+/* No reading yet is an em dash standing in for a number, never a 0.00 that
+   would read as a measurement. */
+.bb-news-x[data-empty="1"] { color: var(--bb-faint); }
+
+/* The band is the word, not a colour alone: a trader reading this on a phone in
+   sunlight gets the same information as one on a calibrated monitor. There is
+   no separate denominator element because newsLine() already carries "over N
+   buckets" in its sentence, and one source for that number is the point. */
+.bb-news-band {
+  justify-self: start;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bb-wash);
+  color: var(--bb-soft);
+  font: 700 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.bb-news-band[data-band="elevated"] { background: var(--bb-amber); color: var(--bb-void); }
+.bb-news-band[data-band="heavy"] { background: var(--bb-oxide); color: var(--bb-void); }
+.bb-news-band[data-band="unknown"] { color: var(--bb-faint); }
+
+.bb-news-line {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--bb-soft);
+  font: 400 var(--fs-micro)/1.5 var(--font-mono);
+}
+
+/* The stance is the only place this pane says anything directional, and it can
+   only appear when coverage is up AND the trader's own file clears its sample
+   floor. newsVerdict() owns that gate; this is just its paint. */
+.bb-news-stance {
+  grid-column: 1 / -1;
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--bb-oxide);
+  background: var(--bb-well);
+  color: var(--bb-ink);
+  font: 700 var(--fs-micro)/1.45 var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
 /* --- status bar --------------------------------------------------------- */
 .bb-stat {
   display: flex;
@@ -9948,6 +10023,7 @@ body.auth-locked {
       "appr  appr  appr"
       "wire  reck  tilt"
       "clock clock clock"
+      "news  news  news"
       "stat  stat  stat";
   }
 
@@ -9957,6 +10033,7 @@ body.auth-locked {
   .bb-p-wire  { grid-area: wire; }
   .bb-p-reck  { grid-area: reck; }
   .bb-p-tilt  { grid-area: tilt; }
+  .bb-p-news  { grid-area: news; }
   .bb-p-clock { grid-area: clock; }
   .bb-stat    { grid-area: stat; }
 
@@ -10587,6 +10664,7 @@ body.auth-locked {
       "reck"
       "tilt"
       "clock"
+      "news"
       "stat";
   }
 }
@@ -10650,6 +10728,21 @@ body.auth-locked {
   #terminal.is-active {
     padding: 0 var(--space-4) var(--space-4);
     z-index: 30;
+    /* LOAD BEARING, and block rather than the grid .view.is-active gives it.
+       .bb-desk carries overflow:hidden for its rounded corners, and an overflow
+       other than visible CANCELS a grid item's automatic minimum size, so as a
+       grid item the desk reported a smaller contribution than its content, got
+       squashed to the track, and silently CLIPPED its own panes rather than
+       overflowing and letting #terminal scroll.
+       Measured at 1283x608 with the wall at half, where the desk is one tall
+       column: the desk box was 388px while its own rows summed to 855, so F3
+       through F6 were cut off and unreachable, and #terminal reported
+       scrollHeight === clientHeight because nothing had ever overflowed it.
+       align-content:start does NOT fix it, the row still came out 388.
+       These three children stack, which is what block flow does natively and
+       without the intrinsic-sizing interaction. gap was already 0 here, so the
+       grid was buying nothing. */
+    display: block;
   }
 
   /* THE SITE FOOTER IS FURNITURE FOR A PAGE THAT SCROLLS, and the app screens

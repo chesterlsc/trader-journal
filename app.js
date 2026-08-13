@@ -41,6 +41,7 @@ import {
   EDGE_MIN_LOG,
   EDGE_MIN_VERDICT
 } from "./src/lib/eventEdge.js";
+import { newsVerdict } from "./src/lib/newsEdge.js";
 import { createChartsModule, traceSmoothPath } from "./src/modules/charts.js";
 import { parseQuickTrade, resolveSymbol, inferMarket } from "./src/lib/tradeParse.js";
 import {
@@ -978,6 +979,10 @@ const PROP_VISIBILITY_NOTE =
 // render (tests/bootOrder.check.mjs enforces this; it has bitten four times).
 const terminal = { events: [], asOf: null, stale: true, skewMs: 0, selectedKey: "",
   timerId: 0, requested: false,
+  // The news edge reading, or null until the first answer. A field on this
+  // object rather than a new module-level const, which below init() would be in
+  // the temporal dead zone on first render.
+  news: null,
   // Last markup written per pane. The desk repaints once a second, so an
   // unchanged pane must not be re-written: rebuilding it would restart every
   // row entrance animation on every tick.
@@ -12457,6 +12462,17 @@ function setupTerminal() {
   // repainted. Both halves were dead. Delegated from the view so it survives
   // every re-render.
   document.getElementById("terminal")?.addEventListener("click", (event) => {
+    // The F-key row. It shipped as markup with no handler and no CSS, so six
+    // buttons looked like the desk's navigation and did nothing when pressed.
+    // They are jump links: the desk is one tall column once the wall takes the
+    // right half, and F1 to F6 is how you get down it without a scrollbar.
+    const key = event.target.closest("[data-pane-key]");
+    if (key) {
+      document
+        .querySelector(`.bb-p-${key.dataset.paneKey}`)
+        ?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+      return;
+    }
     const row = event.target.closest("[data-event-key]");
     if (!row || row.dataset.eventKey === terminal.selectedKey) {
       return;
@@ -12559,6 +12575,34 @@ async function loadTerminalCalendar() {
   renderEdgeMini();
 }
 
+/* The coverage reading. Separate from the calendar on purpose: the calendar is
+   an ARCHIVE and its failure is serious, while this is a live gauge whose
+   upstream refuses roughly as often as it answers. A failure here leaves
+   terminal.news null, the pane says it has no reading, and nothing else on the
+   desk notices. */
+async function loadNewsEdge() {
+  if (!canAccessApp() || state.auth.guestMode || state.auth.previewMode) {
+    return;
+  }
+  try {
+    const response = await fetch("trade_handler.php?action=news_edge", {
+      method: "GET",
+      credentials: "same-origin"
+    });
+    const body = await response.json();
+    if (!response.ok || !body.ok || !Array.isArray(body.assets)) {
+      throw new Error(body.error || "news edge load failed");
+    }
+    terminal.news = { assets: body.assets, asOf: body.asOf || null, stale: Boolean(body.stale) };
+  } catch (error) {
+    terminal.news = null;
+  }
+  // Same reason loadTerminalCalendar repaints: this resolves after the first
+  // render, so without it the pane keeps the empty state it painted before the
+  // answer arrived and the feature looks dead.
+  renderEdgeBoard();
+}
+
 // The event family the trader has the most closed trades against.
 function mostStampedKey(closed) {
   const counts = new Map();
@@ -12657,6 +12701,7 @@ function syncTerminalAccess() {
   if (granted && !terminal.requested) {
     terminal.requested = true;
     loadTerminalCalendar();
+    loadNewsEdge();
   }
 }
 
@@ -12862,6 +12907,55 @@ function renderEdgeBoard() {
          ? `${EDGE_MIN_LOG} stamped and ${EDGE_MIN_LOG} unstamped closed trades are needed before a ratio means anything.`
          : "Emotional, revenge and cooldown override trades, on event against off event."
      }</p>`
+  );
+
+  // ---- F6 THE NEWS EDGE --------------------------------------------------
+  // Every sentence comes from newsLine() inside newsVerdict(), never from here.
+  // That is the same rule F3 follows and it exists for the same reason: copy
+  // assembled in a renderer is where "gold is about to move" gets written over
+  // a headline count. This function picks no words at all, it only paints.
+  //
+  // `file` and `aimed` are the ones the desk is already aimed at, so the fusion
+  // is against the release the trader selected rather than a second, silently
+  // different one. The stance gate lives in newsVerdict and cannot be bypassed
+  // from here: it returns "" unless coverage is up AND the file clears its own
+  // sample floor, which is the common case.
+  const news = terminal.news;
+  setText(
+    document.getElementById("bbNewsTag"),
+    news === null || news.asOf === null
+      ? "no link"
+      : news.stale
+      ? `${new Date(news.asOf).toISOString().slice(11, 16)}z stale`
+      : `${new Date(news.asOf).toISOString().slice(11, 16)}z`
+  );
+  paint(
+    document.getElementById("bbNews"),
+    "news",
+    news === null
+      ? `<p class="bb-note">No coverage link. The desk runs on the calendar and your own record alone.</p>`
+      : `<div class="bb-news">${news.assets
+          .map((asset) => {
+            const call = newsVerdict({ label: asset.label, coverage: asset, file, event: aimed });
+            return `<div class="bb-news-row">
+              <span class="bb-news-sym">${escapeHtml(asset.label)}</span>
+              <span class="bb-news-x"${asset.ratio === null ? ' data-empty="1"' : ""}>${
+                asset.ratio === null ? "--" : `x${asset.ratio.toFixed(2)}`
+              }</span>
+              <span class="bb-news-band" data-band="${escapeHtml(asset.band)}">${escapeHtml(
+                asset.band
+              )}</span>
+              <p class="bb-news-line">${escapeHtml(call.line)}</p>
+              ${
+                call.stance === ""
+                  ? ""
+                  : `<p class="bb-news-stance">${escapeHtml(
+                      call.stance === "stand-down" ? "STAND DOWN" : "YOUR WINDOW"
+                    )}</p>`
+              }
+            </div>`;
+          })
+          .join("")}</div>`
   );
 
   // ---- STATUS BAR: every threshold on screen, always ---------------------
@@ -13215,7 +13309,7 @@ function syncChromeHeight() {
     // calc(env(safe-area-inset-bottom) + 12px) with height 64, so it owns
     // env + 76 of the bottom edge, and the Edge page reserved a flat 64.
     // Measured at 375x812: the bar's top edge is at 736 while #terminal ran to
-    // 748, so 12px of the desk, the F6 status row, sat under it permanently,
+    // 748, so 12px of the desk, its status row, sat under it permanently,
     // and more than that on a notched phone where env() is not zero. Measuring
     // picks the safe area up for free instead of restating the sum.
     document.querySelector(".tabbar"),

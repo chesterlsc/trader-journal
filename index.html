@@ -2630,11 +2630,12 @@
                  these scroll a pane into view and mark themselves pressed.
                  aria-pressed, never role="tab", because nothing is hidden. -->
             <div class="bb-keys" id="bbKeys" role="group" aria-label="Desk panes">
-              <button class="bb-key" type="button" data-pane-key="appr" aria-pressed="true"><b>F1</b>APPROACH</button>
-              <button class="bb-key" type="button" data-pane-key="wire" aria-pressed="false"><b>F2</b>WIRE</button>
-              <button class="bb-key" type="button" data-pane-key="reck" aria-pressed="false"><b>F3</b>RECKONING</button>
-              <button class="bb-key" type="button" data-pane-key="tilt" aria-pressed="false"><b>F4</b>TILT</button>
-              <button class="bb-key" type="button" data-pane-key="clock" aria-pressed="false"><b>F5</b>CLOCK</button>
+              <button class="bb-key" type="button" data-pane-key="appr"><b>F1</b>APPROACH</button>
+              <button class="bb-key" type="button" data-pane-key="wire"><b>F2</b>WIRE</button>
+              <button class="bb-key" type="button" data-pane-key="reck"><b>F3</b>RECKONING</button>
+              <button class="bb-key" type="button" data-pane-key="tilt"><b>F4</b>TILT</button>
+              <button class="bb-key" type="button" data-pane-key="clock"><b>F5</b>CLOCK</button>
+              <button class="bb-key" type="button" data-pane-key="news"><b>F6</b>NEWS</button>
             </div>
 
             <!-- F1 THE APPROACH. The pane BODY carries data-starts and
@@ -2682,6 +2683,20 @@
               <div class="bb-pane-b bb-clock-scroll" id="bbClock"></div>
             </section>
 
+            <!-- F6 THE NEWS EDGE. How much of the monitored English press is
+                 publishing on this asset right now, against its own seven day
+                 hourly median. A COVERAGE VOLUME RATIO: not price, not
+                 sentiment, not causation. It is deliberately NOT a broadcast
+                 transcript, which is impossible here anyway: the wall's
+                 monitors are cross-origin iframes and no browser API grants a
+                 parent page their audio or captions. The rows are written by
+                 renderEdgeBoard from the news_edge action; both assets always
+                 render, so the pane never reorders. -->
+            <section class="bb-pane bb-p-news" aria-labelledby="bbNewsH">
+              <h3 class="bb-pane-h" id="bbNewsH"><b>F6</b>THE NEWS EDGE<em id="bbNewsTag"></em></h3>
+              <div class="bb-pane-b" id="bbNews"></div>
+            </section>
+
             <!-- STATUS BAR. Every threshold on screen, always. -->
             <footer class="bb-stat" id="bbStat"></footer>
           </section>
@@ -2694,7 +2709,7 @@
                legitimate to embed. -->
           <section class="bb-wall" id="bbWall" aria-labelledby="bbWallH">
             <p class="bb-wall-h" id="bbWallH">
-              <b>F6</b>the wall
+              <b>F7</b>the wall
               <span class="bb-wall-size" id="bbWallSize" role="group" aria-label="Wall size">
                 <button class="bb-wall-tok" type="button" data-wall-size="band" aria-pressed="true">band</button>
                 <button class="bb-wall-tok" type="button" data-wall-size="half" aria-pressed="false">half</button>
