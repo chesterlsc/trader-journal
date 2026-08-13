@@ -1268,6 +1268,20 @@
               <span class="dem-prompt" id="dashEdgeMiniHeading">&gt; edge --link journal<i class="dem-caret" aria-hidden="true"></i></span>
               <span class="dem-clock" id="dashEdgeMiniAsOf"></span>
             </div>
+            <!-- ONE live monitor, on the dashboard for the same reason the desk
+                 has four: the tape and the record are numbers, and a newsroom
+                 is the thing that tells you the numbers are about to move. It
+                 is slot 0 of the wall's own roster, built by the same
+                 monitorTile() the desk uses, so the picker here changes the
+                 wall's first monitor and persists with it. Nothing autoplays:
+                 the tile is a standby button until it is asked for, so an open
+                 dashboard costs no bandwidth. -->
+            <div class="dem-tv" id="dashEdgeMiniTv"></div>
+
+            <!-- The news edge, under the news. Same reading as F6 on the desk,
+                 written by the same newsVerdict(), just narrower. -->
+            <div class="dem-news" id="dashEdgeMiniNews"></div>
+
             <div class="dem-screen">
               <span class="dem-sweep" aria-hidden="true"></span>
               <div id="dashEdgeMiniBody"></div>

@@ -8932,6 +8932,106 @@ body.auth-locked {
   font-variant-numeric: tabular-nums;
 }
 
+/* --- THE RAIL'S MONITOR AND ITS NEWS EDGE --------------------------------
+   One live tile and the coverage reading under it, both on the dashboard so
+   the desk is not the only place either exists.
+
+   The tile is 16:9 and full bleed. It reuses .bb-mon wholesale, so everything
+   below is a size and a frame override, never a second monitor implementation:
+   the standby state, the picker and the click-to-play path are the desk's. */
+.dem-tv {
+  border-bottom: 1px solid var(--term-line);
+  background: #000;
+}
+.dem-tv .bb-mon {
+  padding: 0;
+  border: 0;
+  background: #000;
+  overflow: hidden;
+  grid-template-rows: minmax(0, 1fr);
+}
+/* Frameless, like the wall at half and max: in a 300px rail a named row is
+   most of the tile, so the label floats on the picture carrying its own scrim
+   rather than relying on the video being dark. */
+.dem-tv .bb-mon-h {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 4px 7px;
+  border: 0;
+  background: linear-gradient(180deg, rgb(6 8 11 / 0.72), transparent);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  opacity: 0.5;
+  transition: opacity 140ms var(--ease-out);
+}
+.dem-tv .bb-mon { position: relative; }
+.dem-tv .bb-mon:hover .bb-mon-h,
+.dem-tv .bb-mon:focus-within .bb-mon-h { opacity: 1; }
+.dem-tv .bb-mon-h em { display: none; }
+/* THE TILE holds the ratio, not its child. With the ratio on the child, the
+   standby button sized the 1fr row fine and the iframe that replaces it on
+   click did not: a replaced element with height:auto inside an indefinite 1fr
+   row collapsed the whole tile to 0, so the stream played invisibly. Measured
+   after the click: iframe 0x0 inside a .bb-mon of 0. Sizing the tile and
+   filling it works for both, which is what the wall already does at half and
+   max. */
+.dem-tv .bb-mon { aspect-ratio: 16 / 9; }
+.dem-tv .bb-mon-screen,
+.dem-tv .bb-mon iframe {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  display: block;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dem-tv .bb-mon-h { transition: none; }
+}
+
+/* The reading, under the news. Narrower than F6, so the sentence wraps under
+   the figure instead of beside it, and the band chip is the desk's own
+   element rather than a second set of colours to keep in sync. */
+.dem-news {
+  padding: 10px 11px 11px;
+  border-bottom: 1px solid var(--term-line);
+}
+
+.dem-news-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 2px var(--space-2);
+}
+.dem-news-row + .dem-news-row {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--term-line);
+}
+
+.dem-news-sym {
+  color: var(--term-ink);
+  font: 700 11px/1.2 var(--font-mono);
+  letter-spacing: 0.12em;
+}
+
+.dem-news-x {
+  color: var(--term-ink);
+  font: 700 13px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.dem-news-x[data-empty="1"] { color: var(--term-faint); }
+
+.dem-news-line {
+  grid-column: 1 / -1;
+  margin: 3px 0 0;
+  color: var(--term-soft);
+  font: 400 11px/1.45 var(--font-mono);
+}
+
 /* --- the command bar ----------------------------------------------------- */
 .dem-cmd {
   display: flex;

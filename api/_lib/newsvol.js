@@ -16,28 +16,36 @@ const STALE_AFTER_MS = 3 * 60 * 60 * 1000;
 // 104 were not, including Congressional Award Gold Medals and a Karnataka
 // cycling championship. That is gold-equity and gold-jewellery news, not the
 // XAUUSD driver, and a ratio built on it measures the wrong world.
-// BOTH queries are verified HTTP 200 and both captures are committed under
-// tests/fixtures. They did not end up equal, though, and the bitcoin one is
-// why src/lib/newsEdge.js grew a sparsity gate: 65 of its 165 complete hourly
-// buckets are ZERO, 39.4% against gold's 7.2%, which drags the median to
-// 0.0165 and turns one article in a quiet hour into a huge multiple. It
-// therefore gets no ratio at all rather than a confident wrong one, and the
-// pane says so in as many words.
-// THE FIX FOR BITCOIN IS A WIDER QUERY, not a second set of constants tuned to
-// a degenerate distribution. Requiring a macro term ALONGSIDE bitcoin is what
-// makes it this thin; dropping the conjunction, or widening it to include the
-// terms crypto coverage actually uses, is the thing to measure next. Recapture
-// and recompute the percentiles before changing it.
+// BITCOIN IS NOT CONJUNCTIVE, AND THAT IS THE POINT. The conjunction above is a
+// relevance filter for GOLD's polysemy and nothing else. Bitcoin has none:
+// sampled 100 live articles on the bare query and 75 were market or policy
+// relevant, 2 promotional, the rest genuine bitcoin coverage, against 26% for a
+// bare gold query.
 //
-// DO NOT "improve" these without re-measuring: the reading is relative to this
-// query's own seven day history, so changing the query silently rebases the
-// ratio, every stored reading becomes incomparable, AND the bands in
-// src/lib/newsEdge.js are percentiles of this exact query's distribution.
+// The conjunctive bitcoin query that shipped first was starved by it. 65 of its
+// 165 hourly buckets were ZERO, 39.4% against gold's 7.2%, which tripped the
+// sparsity gate in src/lib/newsEdge.js and produced no reading at all. Dropping
+// the conjunction cut the holes to 12.7% and the p99 from 24.53 to 7.50. Both
+// captures are committed, the rejected one as gdelt-bitcoin-conjunctive.json,
+// because it is the evidence for the gate.
+//
+// EVERY ASSET CARRIES ITS OWN BANDS, measured on its own capture, because a
+// percentile only means anything against the distribution it came from.
+// Lending bitcoin gold's numbers fires "heavy" on 7% of its hours, not 1%.
+//
+// DO NOT "improve" a query without recapturing and recomputing its bands: the
+// reading is relative to that query's own seven day history, so a change
+// silently rebases the ratio, makes every stored reading incomparable, AND
+// invalidates the three numbers sitting next to it.
 export const NEWS_ASSETS = [
+  // p25 0.74, p90 2.30, p99 3.44 over 166 complete buckets, 7.2% zero.
   { id: 'gold', label: 'GOLD', symbol: 'XAUUSD',
-    query: '(gold OR bullion) (fed OR inflation OR "interest rate" OR dollar OR "safe haven") sourcelang:eng' },
+    query: '(gold OR bullion) (fed OR inflation OR "interest rate" OR dollar OR "safe haven") sourcelang:eng',
+    bands: { quiet: 0.75, elevated: 2.3, heavy: 3.45 } },
+  // p25 0.63, p90 2.75, p99 7.50 over 165 complete buckets, 12.7% zero.
   { id: 'btc', label: 'BITCOIN', symbol: 'BTCUSDT',
-    query: '(bitcoin OR BTC) (fed OR inflation OR "interest rate" OR ETF OR dollar) sourcelang:eng' },
+    query: 'bitcoin sourcelang:eng',
+    bands: { quiet: 0.63, elevated: 2.75, heavy: 7.5 } },
 ];
 
 /** Whichever asset's stored reading is oldest. Absent beats stale. */
@@ -121,7 +129,7 @@ async function pullVolume(fetchImpl, asset) {
     // spacing, because the egress IP is shared. Never refactor this into a
     // status check.
     if (!response.ok || !text.trimStart().startsWith('{')) return null;
-    const read = coverageRead(parseTimeline(JSON.parse(text)));
+    const read = coverageRead(parseTimeline(JSON.parse(text)), asset.bands);
     // STORE THE READING, NOT THE FEED: ~200 bytes instead of 8KB.
     //
     // A null ratio is NOT the same as no data, and discarding both alike was a

@@ -8,6 +8,11 @@ import {
   NEWS_MIN_POINTS, ELEVATED_AT, HEAVY_AT, MAX_ZERO_SHARE
 } from "../src/lib/newsEdge.js";
 
+// Read from the shipped roster, never retyped here: a test that hard codes the
+// bands it is checking cannot catch them drifting from what the ingest sends.
+const { NEWS_ASSETS: ROSTER } = await import("../api/_lib/newsvol.js");
+const BTC_BANDS = ROSTER.find((a) => a.id === "btc").bands;
+
 assert.equal(median([]), 0);
 assert.equal(median([3, 1, 2]), 2);
 assert.equal(median([4, 1, 3, 2]), 2.5);
@@ -62,33 +67,68 @@ assert.ok(
 );
 assert.ok(shareAtOrAbove(1.6) > 0.2, "1.6 on this query is a quarter of all hours, not a spike");
 
-// 3c. THE SPARSITY GATE, and the reason it exists is a real capture, not a
-//     hypothetical. Bitcoin's live conjunctive query has 65 of 165 complete
-//     hourly buckets at ZERO, 39.4% against gold's 7.2%. That drags its median
-//     to 0.0165, so one article in a quiet hour reads as a huge multiple: its
-//     p90 is 4.96 and its p99 24.53, against gold's 2.30 and 3.44. Lending it
-//     gold's bands would fire "heavy" on 17% of its hours. It gets no ratio.
+// 3c. THE SPARSITY GATE, and the reason it exists is a real capture that was
+//     REJECTED because of it. Bitcoin's first, conjunctive query had 65 of 165
+//     complete hourly buckets at ZERO, 39.4% against gold's 7.2%. That drags
+//     its median to 0.0165, so one article in a quiet hour reads as a huge
+//     multiple: p90 4.96 and p99 24.53, against gold's 2.30 and 3.44. Lending
+//     it gold's bands fires "heavy" on 17% of its hours. It gets no ratio, and
+//     that refusal is what sent the query back to be replaced. The capture
+//     stays committed because it is the evidence for this gate.
+const rejected = coverageRead(
+  parseTimeline(
+    JSON.parse(readFileSync(new URL("./fixtures/gdelt-bitcoin-conjunctive.json", import.meta.url)))
+  )
+);
+assert.ok(rejected.zeroShare > MAX_ZERO_SHARE, `rejected zeroShare ${rejected.zeroShare}`);
+assert.equal(rejected.ratio, null, "a hole-punched window must not produce a ratio");
+assert.equal(rejected.band, "unknown");
+
+// 3d. THE REPLACEMENT PASSES. Dropping the macro conjunction, which was only
+//     ever a relevance filter for GOLD's polysemy, cut the holes to 12.7% and
+//     the p99 from 24.53 to 7.50. This is the query that ships.
 const btcRaw = parseTimeline(
   JSON.parse(readFileSync(new URL("./fixtures/gdelt-bitcoin.json", import.meta.url)))
 );
-const btc = coverageRead(btcRaw);
-assert.ok(btc.zeroShare > MAX_ZERO_SHARE, `bitcoin zeroShare ${btc.zeroShare}`);
-assert.equal(btc.ratio, null, "a hole-punched window must not produce a ratio");
-assert.equal(btc.band, "unknown");
-// Gold passes the same gate comfortably, so this is a gate and not a ban.
+const btc = coverageRead(btcRaw, BTC_BANDS);
+assert.ok(btc.zeroShare < MAX_ZERO_SHARE, `shipped bitcoin zeroShare ${btc.zeroShare}`);
+assert.ok(btc.zeroShare < rejected.zeroShare, "the replacement must be denser than what it replaced");
+assert.ok(btc.ratio !== null, "the shipped bitcoin query must produce a reading");
 assert.ok(gold.zeroShare <= MAX_ZERO_SHARE, `gold zeroShare ${gold.zeroShare}`);
-assert.ok(gold.ratio !== null);
+
+// 3e. BANDS ARE PER ASSET, because a percentile only means anything against the
+//     distribution it came from. Bitcoin's p99 is 7.50 against gold's 3.44, so
+//     gold's numbers would call 7% of bitcoin's hours "heavy" instead of 1%.
+const btcComplete = btcRaw.slice(0, -1).map((p) => p.value);
+const btcBase = median(btcComplete);
+const btcRolling = [];
+for (let i = 2; i < btcComplete.length; i += 1) {
+  btcRolling.push((btcComplete[i - 2] + btcComplete[i - 1] + btcComplete[i]) / 3 / btcBase);
+}
+const btcShareAbove = (t) => btcRolling.filter((r) => r >= t).length / btcRolling.length;
+assert.ok(
+  Math.abs(btcShareAbove(BTC_BANDS.elevated) - 0.1) < 0.02,
+  `bitcoin elevated must be its OWN p90, fires on ${(btcShareAbove(BTC_BANDS.elevated) * 100).toFixed(0)}%`
+);
+assert.ok(
+  btcShareAbove(BTC_BANDS.heavy) <= 0.02,
+  `bitcoin heavy must be its OWN p99, fires on ${(btcShareAbove(BTC_BANDS.heavy) * 100).toFixed(0)}%`
+);
+assert.ok(
+  btcShareAbove(HEAVY_AT) > 0.04,
+  "gold's heavy threshold on bitcoin fires far too often, which is why bands are per asset"
+);
 
 // The two refusals must not be interchangeable: "not enough window yet" and
 // "the window is full of holes" send a reader to different places.
-assert.match(newsLine({ label: "BITCOIN", coverage: btc }), /too sparse to read/);
-assert.match(newsLine({ label: "BITCOIN", coverage: btc }), /39% of the last 165 hours/);
-assert.doesNotMatch(newsLine({ label: "BITCOIN", coverage: btc }), /complete hourly buckets/);
+assert.match(newsLine({ label: "BITCOIN", coverage: rejected }), /too sparse to read/);
+assert.match(newsLine({ label: "BITCOIN", coverage: rejected }), /39% of the last 165 hours/);
+assert.doesNotMatch(newsLine({ label: "BITCOIN", coverage: rejected }), /complete hourly buckets/);
 
 // And a sparse window can never issue a stance, whatever the trader's record.
 assert.equal(
   newsVerdict({
-    label: "BITCOIN", coverage: btc, event: { key: "78-us-cpi-mm", title: "CPI m/m" },
+    label: "BITCOIN", coverage: rejected, event: { key: "78-us-cpi-mm", title: "CPI m/m" },
     file: { samples: 40, wins: 5, losses: 35, verdict: "worse" },
   }).stance,
   "",
@@ -163,7 +203,7 @@ for (const line of [none.line, call.line, gold.band]) {
 //     limit with plain prose and HTTP 200, which is why the body is sniffed
 //     rather than the status, and I hit that response on most attempts to
 //     capture the bitcoin query.
-const { fetchNewsVolume, oldestAsset } = await import("../api/_lib/newsvol.js");
+const { fetchNewsVolume, oldestAsset, NEWS_ASSETS } = await import("../api/_lib/newsvol.js");
 const capture = readFileSync(new URL("./fixtures/gdelt-gold.json", import.meta.url), "utf8");
 const fakeDb = (store) => ({
   reads: store,
@@ -214,17 +254,35 @@ assert.equal(dead2.assets.length, 2);
 //     0" over a query that had 165 of them. Measured through both real
 //     captures, end to end, because a unit test on either side alone passed
 //     while the pair was wrong.
+//     Run twice: once with the SHIPPED bitcoin capture, which reads normally,
+//     and once with the REJECTED one, which must still come back as the sparse
+//     refusal rather than the wrong one.
 const db2 = fakeDb(null);
 const btcCapture = readFileSync(new URL("./fixtures/gdelt-bitcoin.json", import.meta.url), "utf8");
 await fetchNewsVolume(db2, async () => ({ ok: true, text: async () => capture }));
 const both = await fetchNewsVolume(db2, async () => ({ ok: true, text: async () => btcCapture }));
 const goldOut = both.assets.find((a) => a.id === "gold");
 const btcOut = both.assets.find((a) => a.id === "btc");
-assert.equal(btcOut.n, 165, "a sparse window is still a measured window and must be stored");
-assert.equal(btcOut.ratio, null);
-assert.ok(btcOut.zeroShare > MAX_ZERO_SHARE, "zeroShare must survive the round trip");
-assert.match(newsLine({ label: btcOut.label, coverage: btcOut }), /too sparse to read/);
-assert.doesNotMatch(newsLine({ label: btcOut.label, coverage: btcOut }), /complete hourly buckets/);
+assert.equal(btcOut.n, 165);
+assert.ok(btcOut.ratio !== null, "the shipped bitcoin query reads end to end");
+assert.ok(Math.abs(btcOut.ratio - 1.039) < 0.005, `bitcoin ratio ${btcOut.ratio}`);
+assert.ok(btcOut.zeroShare < MAX_ZERO_SHARE, "zeroShare must survive the round trip");
+// Banded by ITS OWN thresholds through the ingest, not gold's.
+assert.equal(btcOut.band, "normal");
 assert.match(newsLine({ label: goldOut.label, coverage: goldOut }), /1\.29x its 7 day hourly median over 166 buckets/);
+assert.match(newsLine({ label: btcOut.label, coverage: btcOut }), /1\.04x its 7 day hourly median over 165 buckets/);
+
+// The rejected capture, same path: stored because the window is complete, and
+// still refused with the sentence that names the real reason.
+const db3 = fakeDb({ gold: { ratio: 1, band: "normal", n: 166, at: 1 } });
+const rejectedCapture = readFileSync(
+  new URL("./fixtures/gdelt-bitcoin-conjunctive.json", import.meta.url), "utf8"
+);
+const sparseOut = (await fetchNewsVolume(db3, async () => ({ ok: true, text: async () => rejectedCapture })))
+  .assets.find((a) => a.id === "btc");
+assert.equal(sparseOut.n, 165, "a sparse window is still a measured window and must be stored");
+assert.equal(sparseOut.ratio, null);
+assert.match(newsLine({ label: sparseOut.label, coverage: sparseOut }), /too sparse to read/);
+assert.doesNotMatch(newsLine({ label: sparseOut.label, coverage: sparseOut }), /complete hourly buckets/);
 
 console.log("newsEdge.check.mjs: OK — trailing bucket dropped, bands measured, stance gated, ingest soft-fails");

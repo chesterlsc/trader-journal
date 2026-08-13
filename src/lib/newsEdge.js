@@ -36,31 +36,40 @@ export const NEWS_MIN_POINTS = 48;
 // of hours respectively. QUIET_BELOW stays where it was, now with backing it
 // did not have before: p25 measures 0.74.
 //
-// THESE ARE GOLD'S NUMBERS and no other asset is banded by them by accident.
-// The bitcoin capture eventually landed, on the sixth attempt at 150s spacing,
-// and it disqualified itself: see MAX_ZERO_SHARE below, which is the gate that
-// now refuses it rather than lending it gold's thresholds. Any asset added here
-// needs its own capture and its own percentiles before it can be banded.
+// THESE ARE GOLD'S NUMBERS. They are the DEFAULT, not a universal: every asset
+// carries its own measured percentiles in api/_lib/newsvol.js, because a band
+// is only meaningful against the distribution it was measured on. Bitcoin's
+// p99 is 7.50 against gold's 3.44, so banding it with these would fire "heavy"
+// on 7% of its hours.
 export const QUIET_BELOW = 0.75;
 export const ELEVATED_AT = 2.3;
 export const HEAVY_AT = 3.45;
 
+export const GOLD_BANDS = { quiet: QUIET_BELOW, elevated: ELEVATED_AT, heavy: HEAVY_AT };
+
 // A WINDOW FULL OF HOLES IS NOT A BASELINE, and this is the gate that says so.
-// Measured on the two live captures, both committed under tests/fixtures:
+// It was written because bitcoin's FIRST query tripped it, and it is what sent
+// that query back to be replaced rather than shipped with a wrong band.
+// Measured, all three captures committed under tests/fixtures:
 //
-//   gold     166 complete buckets,  12 zero (7.2%),  sd/mean 0.752, median 0.0917
-//   bitcoin  165 complete buckets,  65 zero (39.4%), sd/mean 1.970, median 0.0165
+//   gold                    166 complete,  12 zero ( 7.2%), sd/mean 0.752, p90 2.30, p99  3.44
+//   bitcoin, conjunctive    165 complete,  65 zero (39.4%), sd/mean 1.970, p90 4.96, p99 24.53
+//   bitcoin, bare (shipped) 165 complete,  21 zero (12.7%), sd/mean 1.123, p90 2.75, p99  7.50
 //
-// Two hours in five with no coverage at all drags the median down to almost
-// nothing, and a single article in a quiet hour then reads as a huge multiple:
-// bitcoin's p90 is 4.96 and its p99 is 24.53 against gold's 2.30 and 3.44. Ship
-// gold's bands over that and "heavy" fires on 17% of bitcoin hours, which is the
-// same crying-wolf failure the recalibration above exists to fix, worse.
+// Two hours in five with no coverage at all drags the median to almost nothing,
+// and one article in a quiet hour then reads as a huge multiple. Gold's bands
+// over that conjunctive series fire "heavy" on 17% of hours, which is the same
+// crying-wolf failure the recalibration above exists to prevent, worse.
 //
-// So a series this sparse gets NO ratio rather than a confident wrong one. The
-// honest fix for bitcoin is a wider query, not a second set of constants
-// tuned to a degenerate distribution. 20% sits clear of gold's 7.2% and well
-// under bitcoin's 39.4%.
+// The fix was the query, not a second set of constants tuned to a degenerate
+// distribution: dropping the macro conjunction cut the holes from 39.4% to
+// 12.7% and the p99 from 24.53 to 7.50. The conjunction was only ever a
+// relevance filter for GOLD's polysemy — gold medals, gold loans, the Gold
+// Coast — and bitcoin has no such problem. Sampled 100 live articles on the
+// bare query: 75 market or policy relevant, 2 promotional, and the rest genuine
+// bitcoin coverage, against 26% relevance for a bare GOLD query.
+//
+// 20% sits clear of both shipped queries and well under the one it rejects.
 export const MAX_ZERO_SHARE = 0.2;
 
 /** "20260812T210000Z" -> epoch ms. Null for anything else. */
@@ -114,7 +123,7 @@ export function median(values) {
  * 0.752, and on a distribution that skewed the mean is dragged upward by the
  * very spikes it is supposed to be a baseline for.
  */
-export function coverageRead(points) {
+export function coverageRead(points, bands = GOLD_BANDS) {
   const complete = (Array.isArray(points) ? points : []).slice(0, -1);
   if (complete.length < NEWS_MIN_POINTS) {
     return {
@@ -137,16 +146,16 @@ export function coverageRead(points) {
     now,
     zeroShare,
     ratio: usable ? now / base : null,
-    band: usable ? bandFor(now / base) : "unknown",
+    band: usable ? bandFor(now / base, bands) : "unknown",
     through: new Date(complete[complete.length - 1].at).toISOString(),
   };
 }
 
-export function bandFor(ratio) {
+export function bandFor(ratio, bands = GOLD_BANDS) {
   if (ratio === null || !Number.isFinite(ratio)) return "unknown";
-  if (ratio >= HEAVY_AT) return "heavy";
-  if (ratio >= ELEVATED_AT) return "elevated";
-  if (ratio < QUIET_BELOW) return "quiet";
+  if (ratio >= bands.heavy) return "heavy";
+  if (ratio >= bands.elevated) return "elevated";
+  if (ratio < bands.quiet) return "quiet";
   return "normal";
 }
 

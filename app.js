@@ -12482,10 +12482,11 @@ function setupTerminal() {
     renderEdgeMini();
   });
 
-  // The wall. Delegated once: renderWall rebuilds its tiles when the roster
-  // changes, so a direct listener would bind to a detached node.
-  const wall = document.getElementById("bbWallGrid");
-  wall?.addEventListener("click", (event) => {
+  // The monitors. Delegated from the document, not from the wall grid: the
+  // tiles are rebuilt when the roster changes, so a direct listener would bind
+  // to a detached node, AND there is now a second tile on the dashboard rail.
+  // One binding for both, because a monitor is a monitor.
+  document.addEventListener("click", (event) => {
     const button = event.target.closest(".bb-mon-screen");
     if (!button) {
       return;
@@ -12526,7 +12527,10 @@ function setupTerminal() {
     }
   });
 
-  wall?.addEventListener("change", (event) => {
+  // The picker, same reasoning. The dashboard tile carries slot 0, so changing
+  // the channel there changes the wall's first monitor and persists with it:
+  // one roster, two places to look at it, no second stored preference.
+  document.addEventListener("change", (event) => {
     const pick = event.target.closest(".bb-mon-pick");
     const tile = pick?.closest(".bb-mon");
     if (pick && tile) {
@@ -12599,8 +12603,11 @@ async function loadNewsEdge() {
   }
   // Same reason loadTerminalCalendar repaints: this resolves after the first
   // render, so without it the pane keeps the empty state it painted before the
-  // answer arrived and the feature looks dead.
+  // answer arrived and the feature looks dead. BOTH surfaces, because the
+  // dashboard rail shows the same reading and the desk is not the one a trader
+  // is looking at when the answer lands.
   renderEdgeBoard();
+  renderEdgeMini();
 }
 
 // The event family the trader has the most closed trades against.
@@ -13248,13 +13255,18 @@ function renderWall() {
   grid.dataset.sig = sig;
   applyWallSize(getWallSize());
 
-  grid.innerHTML = chosen
-    .map((channelId, index) => {
-      const channel = WALL_CHANNELS.find((c) => c.id === channelId) || WALL_CHANNELS[index];
-      const options = WALL_CHANNELS.map(
-        (c) => `<option value="${escapeHtml(c.id)}"${c.id === channel.id ? " selected" : ""}>${escapeHtml(c.name)}</option>`
-      ).join("");
-      return `
+  grid.innerHTML = chosen.map((channelId, index) => monitorTile(channelId, index)).join("");
+}
+
+/* One monitor, built in one place. The dashboard rail renders a single tile
+   from this too, so the picker, the standby state and the click-to-play path
+   are the same code in both and cannot drift apart. */
+function monitorTile(channelId, index) {
+  const channel = WALL_CHANNELS.find((c) => c.id === channelId) || WALL_CHANNELS[index] || WALL_CHANNELS[0];
+  const options = WALL_CHANNELS.map(
+    (c) => `<option value="${escapeHtml(c.id)}"${c.id === channel.id ? " selected" : ""}>${escapeHtml(c.name)}</option>`
+  ).join("");
+  return `
       <article class="bb-mon" data-slot="${index}" data-channel="${escapeHtml(channel.id)}" style="--i:${index}">
         <p class="bb-mon-h">
           <span class="bb-mon-dot" aria-hidden="true"></span>
@@ -13267,8 +13279,6 @@ function renderWall() {
           <span class="bb-mon-off">standby</span>
         </button>
       </article>`;
-    })
-    .join("");
 }
 
 /* Which four, and in which slots. Falls back to the first four, and drops any
@@ -13466,6 +13476,51 @@ function renderEdgeMini() {
 
   const key = wire[0]?.key || mostStampedKey(closed);
   const file = key ? eventFile(closed, key, buildBaseline(closed)) : null;
+
+  // --- the monitor ---------------------------------------------------------
+  // Rebuilt ONLY when the chosen channel changes. renderEdgeMini runs on every
+  // state change and once a second behind the clock, and re-writing this
+  // element would replace a playing iframe with a standby button every tick.
+  const tv = document.getElementById("dashEdgeMiniTv");
+  const slot0 = getWallChoice()[0] || WALL_CHANNELS[0].id;
+  if (tv && tv.dataset.channel !== slot0) {
+    tv.dataset.channel = slot0;
+    setHtml(tv, monitorTile(slot0, 0));
+  }
+
+  // --- the news edge, under the news --------------------------------------
+  // The same reading and the same sentences as F6, from the same newsVerdict.
+  // The rail is narrower, so the ratio and the band lead and the sentence wraps
+  // under them, but no branch here decides what any of it says.
+  const news = terminal.news;
+  setHtml(
+    document.getElementById("dashEdgeMiniNews"),
+    `<p class="dem-h"><b>F6</b>news edge<em>${
+      news === null || news.asOf === null ? "no link" : news.stale ? "stale" : "live"
+    }</em></p>` +
+      (news === null
+        ? `<p class="dem-note">No coverage link.</p>`
+        : news.assets
+            .map((asset) => {
+              const call = newsVerdict({ label: asset.label, coverage: asset, file, event: wire[0] || null });
+              return `<div class="dem-news-row">
+                <span class="dem-news-sym">${escapeHtml(asset.label)}</span>
+                <span class="dem-news-x"${asset.ratio === null ? ' data-empty="1"' : ""}>${
+                  asset.ratio === null ? "--" : `x${asset.ratio.toFixed(2)}`
+                }</span>
+                <span class="bb-news-band" data-band="${escapeHtml(asset.band)}">${escapeHtml(asset.band)}</span>
+                <p class="dem-news-line">${escapeHtml(call.line)}</p>
+                ${
+                  call.stance === ""
+                    ? ""
+                    : `<p class="bb-news-stance">${escapeHtml(
+                        call.stance === "stand-down" ? "STAND DOWN" : "YOUR WINDOW"
+                      )}</p>`
+                }
+              </div>`;
+            })
+            .join(""))
+  );
 
   // --- the wire: what is coming, ranked on the trader's own pairs ----------
   let out = `<p class="dem-h"><b>F1</b>wire<em>${
