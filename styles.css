@@ -10026,6 +10026,45 @@ body.auth-locked {
   letter-spacing: 0.04em;
 }
 
+/* Headlines under the reading. Deliberately quiet: the ratio is the
+   measurement and these are the context for it, so they sit at the type floor
+   in the soft ink and only the source is emphasised. Whole row is the link, so
+   the target is a line rather than a word. */
+.bb-news-hl {
+  grid-column: 1 / -1;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+
+.bb-news-hl a {
+  display: block;
+  color: var(--bb-soft);
+  font: 400 var(--fs-micro)/1.45 var(--font-mono);
+  text-decoration: none;
+  border-left: 1px solid var(--bb-grid);
+  padding-left: var(--space-2);
+}
+.bb-news-hl a:hover,
+.bb-news-hl a:focus-visible {
+  color: var(--bb-ink);
+  border-left-color: var(--bb-oxide);
+  text-decoration: underline;
+}
+.bb-news-hl a:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* The source carries the trust, so it leads and it is the brightest thing in
+   the row. A headline with no attribution is a rumour. */
+.bb-news-src {
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--bb-faint);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
 /* --- status bar --------------------------------------------------------- */
 .bb-stat {
   display: flex;

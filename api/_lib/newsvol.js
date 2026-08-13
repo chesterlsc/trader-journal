@@ -75,12 +75,27 @@ export async function fetchNewsVolume(db, fetchImpl = fetch, now = new Date()) {
     // ONE upstream call per claimed run, round-robin. Two assets at a 1800s TTL
     // refreshes each hourly, which is exactly GDELT's own resolution.
     const target = oldestAsset(snapshot);
+    // Both pulls inside ONE claim, so the limiter sees a single burst every
+    // 1800s rather than two independent callers. Sequential, not concurrent,
+    // for the same reason: two simultaneous requests is exactly the shape that
+    // gets an egress IP throttled.
     const reading = await pullVolume(fetchImpl, target);
+    const headlines = await pullHeadlines(fetchImpl, target);
     try {
       if (reading !== null) {
-        snapshot = { ...snapshot, [target.id]: { ...reading, at: now.getTime() } };
+        snapshot = {
+          ...snapshot,
+          // Headlines are kept from the PREVIOUS cycle when this one's artlist
+          // call was refused, because a stale headline is worth more than a
+          // blank space and it carries its own timestamp to be judged by.
+          [target.id]: {
+            ...reading,
+            headlines: headlines ?? snapshot[target.id]?.headlines ?? [],
+            at: now.getTime(),
+          },
+        };
         await db.writeFeedPayload(FEED_SOURCE, snapshot);
-        await db.markFeedSuccess(FEED_SOURCE, `ok:${target.id}`);
+        await db.markFeedSuccess(FEED_SOURCE, `ok:${target.id}${headlines === null ? ':nohl' : ''}`);
       } else {
         await db.markFeedFailure(FEED_SOURCE, `empty:${target.id}`, FAILURE_TTL_SECONDS);
       }
@@ -101,6 +116,7 @@ export async function fetchNewsVolume(db, fetchImpl = fetch, now = new Date()) {
         // apart from "the window is not there yet". Without it the renderer
         // would have to guess, and it would guess wrong for bitcoin.
         zeroShare: row?.zeroShare ?? null,
+        headlines: Array.isArray(row?.headlines) ? row.headlines : [],
         through: row?.through ?? null,
         stale: !row || now.getTime() - Number(row.at ?? 0) > STALE_AFTER_MS,
       };
@@ -108,6 +124,65 @@ export async function fetchNewsVolume(db, fetchImpl = fetch, now = new Date()) {
     asOf: newest > 0 ? new Date(newest).toISOString() : null,
     stale: newest === 0 || now.getTime() - newest > STALE_AFTER_MS,
   };
+}
+
+// HEADLINES: the honest stand-in for a broadcast transcript.
+//
+// The wall shows live TV and the obvious next question is "what are they
+// SAYING". A cross-origin iframe cannot answer it: no browser API exposes an
+// embedded player's audio, caption track or DOM to the parent page, and doing
+// it server-side would mean re-encoding someone's broadcast, which contradicts
+// the wall's own "nothing is stored or rebroadcast" promise.
+//
+// So: what the PRESS is publishing on the same query, right now. It is not the
+// anchor's words, and the pane never pretends it is. It is better in three ways
+// that matter here: it is attributable, it is linkable, and it is the same
+// corpus the ratio above is computed from, so the headline and the number are
+// measuring one thing rather than two.
+//
+// Titles and sources only, never article bodies.
+const HEADLINE_COUNT = 3;
+
+async function pullHeadlines(fetchImpl, asset) {
+  try {
+    const url = `${GDELT_URL}?query=${encodeURIComponent(asset.query)}` +
+      // NO sort param, deliberately. GDELT's default for artlist is its own
+      // relevance ordering, which is the one I verified returns usable
+      // headlines; sort=datedesc on the same query returned an Amex Gold Card
+      // ad and a coin auction, because most-recent is not most-relevant. An
+      // explicit sort value is also one more thing the API can reject, and a
+      // rejection here is silent: it soft-fails to no headlines at all.
+      '&mode=artlist&maxrecords=8&timespan=12h&format=json';
+    const response = await fetchImpl(url, {
+      headers: { 'User-Agent': 'TraderJournal/1.0 (+https://www.traderjournal.space)' },
+      signal: AbortSignal.timeout(8000),
+    });
+    const text = await response.text();
+    // artlist is rate limited too, just more permissively than timelinevol, and
+    // it refuses the same way: HTTP 200 carrying prose. Same sniff, and headline
+    // failure must never cost the reading, which is why this is a separate
+    // soft-fail rather than part of pullVolume.
+    if (!response.ok || !text.trimStart().startsWith('{')) return null;
+    const rows = JSON.parse(text)?.articles;
+    if (!Array.isArray(rows)) return null;
+    const headlines = rows
+      .map((row) => ({
+        // GDELT pads punctuation, so a title arrives as "Fed path ." and
+        // "50 %". Collapse the runs, then close the gap before punctuation.
+        title: String(row?.title ?? '')
+          .replace(/\s+/g, ' ')
+          .replace(/\s+([.,;:!?%'’)\]])/g, '$1')
+          .replace(/([(\[‘])\s+/g, '$1')
+          .trim()
+          .slice(0, 160),
+        domain: String(row?.domain ?? '').trim().slice(0, 60),
+        url: String(row?.url ?? '').trim().slice(0, 400),
+        at: String(row?.seendate ?? '').trim().slice(0, 20),
+      }))
+      .filter((h) => h.title !== '' && /^https?:\/\//.test(h.url))
+      .slice(0, HEADLINE_COUNT);
+    return headlines.length === 0 ? null : headlines;
+  } catch { return null; }
 }
 
 async function pullVolume(fetchImpl, asset) {

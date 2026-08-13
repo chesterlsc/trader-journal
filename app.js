@@ -12953,6 +12953,7 @@ function renderEdgeBoard() {
                 asset.band
               )}</span>
               <p class="bb-news-line">${escapeHtml(call.line)}</p>
+              ${newsHeadlines(asset)}
               ${
                 call.stance === ""
                   ? ""
@@ -13118,6 +13119,29 @@ function bbApproachHtml(closed, event, name) {
       </div>
       <p class="bb-note">${escapeHtml(legend)}</p>
     </div>`;
+}
+
+/* WHAT THE COVERAGE IS ABOUT, which is the closest honest thing to a
+   transcript of the wall's monitors. A cross-origin iframe cannot be read: no
+   browser API hands a parent page an embedded player's audio, captions or DOM,
+   and doing it server-side would mean re-encoding someone's broadcast, which
+   the wall's own note promises not to do.
+   These are titles and sources from the SAME query the ratio is computed on,
+   so the number and the headline are measuring one thing. Titles only, never
+   article bodies, always attributed, always linked out. The ingest already
+   rejected anything without an http(s) url, so a javascript: title cannot
+   arrive here, and rel="noopener noreferrer" covers the rest. */
+function newsHeadlines(asset, limit = 3) {
+  const rows = Array.isArray(asset?.headlines) ? asset.headlines.slice(0, limit) : [];
+  if (rows.length === 0) {
+    return "";
+  }
+  return `<ul class="bb-news-hl">${rows
+    .map(
+      (h) => `<li><a href="${escapeHtml(h.url)}" target="_blank" rel="noopener noreferrer">
+        <span class="bb-news-src">${escapeHtml(h.domain)}</span>${escapeHtml(h.title)}</a></li>`
+    )
+    .join("")}</ul>`;
 }
 
 /* THE RECKONING: eventFile() in full. The whole rate block is withheld under
@@ -13510,6 +13534,7 @@ function renderEdgeMini() {
                 }</span>
                 <span class="bb-news-band" data-band="${escapeHtml(asset.band)}">${escapeHtml(asset.band)}</span>
                 <p class="dem-news-line">${escapeHtml(call.line)}</p>
+                ${newsHeadlines(asset, 2)}
                 ${
                   call.stance === ""
                     ? ""

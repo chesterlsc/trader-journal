@@ -223,7 +223,10 @@ const fed = await fetchNewsVolume(db1, async () => ({ ok: true, text: async () =
 const goldRow = fed.assets.find((a) => a.id === "gold");
 assert.ok(Math.abs(goldRow.ratio - 1.287) < 0.005, `ingest ratio ${goldRow.ratio}`);
 assert.equal(goldRow.n, 166);
-assert.deepEqual(db1.successes, ["ok:gold"]);
+// The status carries whether the headline pull landed, so a cron log can tell
+// "no reading" from "reading, no headlines". Here the stub answers the artlist
+// call with the timeline capture, which is not an article list, so: nohl.
+assert.deepEqual(db1.successes, ["ok:gold:nohl"]);
 // The feed row is asserted before the claim, because the claim is an UPDATE and
 // with no row it matches nothing: the feature would be dead and silent.
 assert.deepEqual(db1.ensured, ["mw_headlines"]);
@@ -284,5 +287,54 @@ assert.equal(sparseOut.n, 165, "a sparse window is still a measured window and m
 assert.equal(sparseOut.ratio, null);
 assert.match(newsLine({ label: sparseOut.label, coverage: sparseOut }), /too sparse to read/);
 assert.doesNotMatch(newsLine({ label: sparseOut.label, coverage: sparseOut }), /complete hourly buckets/);
+
+// 15. HEADLINES. These render as links, so the url filter is a security
+//     boundary, not tidiness: anything that is not http(s) must never reach the
+//     renderer. Also covers the title cleanup and the keep-the-old-ones rule.
+const db4 = fakeDb(null);
+const artlist = JSON.stringify({
+  articles: [
+    { title: "Gold  steadies  as traders weigh Fed path .", domain: "reuters.com",
+      url: "https://reuters.com/a", seendate: "20260813T020000Z" },
+    { title: "javascript smuggled in", domain: "evil.test",
+      url: "javascript:alert(1)", seendate: "20260813T010000Z" },
+    { title: "data uri smuggled in", domain: "evil.test",
+      url: "data:text/html;base64,PHNjcmlwdD4=", seendate: "20260813T010000Z" },
+    { title: "no url at all", domain: "x.test", url: "", seendate: "" },
+    { title: "Bullion holds gains before CPI", domain: "ft.com",
+      url: "https://ft.com/b", seendate: "20260813T010000Z" },
+    { title: "Dollar softens , gold bid", domain: "bloomberg.com",
+      url: "https://bloomberg.com/c", seendate: "20260813T000000Z" },
+    { title: "fourth is dropped", domain: "d.test", url: "https://d.test/d", seendate: "" },
+  ],
+});
+let call4 = 0;
+const withHeadlines = await fetchNewsVolume(db4, async () => ({
+  ok: true, text: async () => (call4++ === 0 ? capture : artlist),
+}));
+const hl = withHeadlines.assets.find((a) => a.id === "gold").headlines;
+assert.equal(hl.length, 3, "capped at three");
+assert.ok(hl.every((h) => /^https:\/\//.test(h.url)), "only http(s) urls survive");
+assert.ok(
+  !hl.some((h) => /javascript:|data:/i.test(h.url)),
+  "a javascript: or data: url must never reach the renderer"
+);
+assert.equal(hl[0].title, "Gold steadies as traders weigh Fed path.", "runs collapsed, punctuation closed up");
+assert.equal(hl[2].title, "Dollar softens, gold bid");
+assert.ok(hl.every((h) => h.domain !== ""), "every headline is attributed");
+
+// A refused artlist keeps the previous cycle's headlines rather than blanking
+// them: a stale headline carries its own timestamp and beats an empty space.
+let call5 = 0;
+const kept = await fetchNewsVolume(db4, async () => ({
+  ok: true,
+  text: async () => (call5++ === 0 ? capture : "Please limit requests to one every 5 seconds"),
+}));
+// db4 round-robins to btc, so gold must still be holding its three.
+assert.equal(kept.assets.find((a) => a.id === "gold").headlines.length, 3);
+
+// And an asset never read has an empty array, never undefined, so the renderer
+// can map over it without a guard.
+assert.deepEqual(fed.assets.find((a) => a.id === "btc").headlines, []);
 
 console.log("newsEdge.check.mjs: OK — trailing bucket dropped, bands measured, stance gated, ingest soft-fails");
