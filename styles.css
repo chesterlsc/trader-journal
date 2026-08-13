@@ -9984,7 +9984,10 @@ body.auth-locked {
   #terminal.is-active {
     /* The dock owns the bottom; the top is the sticky sidebar header, which
        measures 52px on a phone against the 64px that was assumed here. */
-    inset: var(--chrome-h, 64px) 0 64px 0;
+    /* --dock-h is the phone bar's real band, measured by app.js: it floats
+       12px off the bottom edge and is 64px tall, so it owns 76 plus whatever
+       env(safe-area-inset-bottom) adds, not the flat 64 assumed here. */
+    inset: var(--chrome-h, 64px) 0 var(--dock-h, 76px) 0;
     padding: 0 var(--space-3) var(--space-3);
   }
 }
@@ -10342,7 +10345,10 @@ body.auth-locked {
   inset: calc(var(--chrome-h, 86px) + var(--tape-h, 34px)) 0 0 0;
 }
 @media (max-width: 899px) {
-  .bb-wall[data-size="max"] { inset: calc(var(--chrome-h, 64px) + var(--tape-h, 34px)) 0 64px 0; }
+  /* Same band at the bottom: fixing #terminal alone would leave the maximised
+     wall clipping its last monitor under the dock, since the wall is its own
+     fixed box and does not inherit the page's inset. */
+  .bb-wall[data-size="max"] { inset: calc(var(--chrome-h, 64px) + var(--tape-h, 34px)) 0 var(--dock-h, 76px) 0; }
 }
 
 /* 2. THE TAPE RIDES ABOVE THE NEWS. While the wall is maximised the price

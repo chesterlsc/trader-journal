@@ -13211,13 +13211,23 @@ function syncChromeHeight() {
     document.querySelector(".topnav"),
     document.getElementById("sidebar"),
     document.getElementById("demoBanner"),
+    // The phone dock, for the other end. .tabbar is bottom:
+    // calc(env(safe-area-inset-bottom) + 12px) with height 64, so it owns
+    // env + 76 of the bottom edge, and the Edge page reserved a flat 64.
+    // Measured at 375x812: the bar's top edge is at 736 while #terminal ran to
+    // 748, so 12px of the desk, the F6 status row, sat under it permanently,
+    // and more than that on a notched phone where env() is not zero. Measuring
+    // picks the safe area up for free instead of restating the sum.
+    document.querySelector(".tabbar"),
   ].filter(Boolean);
   if (!bars.length) return;
   const publish = () => {
     const root = document.documentElement;
+    const dock = document.querySelector(".tabbar");
     // bottom, not height: .topnav is sticky at top:18px, so its bottom edge is
     // the first free pixel and already carries that offset.
     const bottom = bars.reduce((low, bar) => {
+      if (bar === dock) return low;
       const rect = bar.getBoundingClientRect();
       return rect.height > 0 ? Math.max(low, Math.round(rect.bottom)) : low;
     }, 0);
@@ -13228,6 +13238,15 @@ function syncChromeHeight() {
       // Clearing lets the stylesheet fall back to its own number rather than
       // pinning every view to the top of the window.
       root.style.removeProperty("--chrome-h");
+    }
+    const dockRect = dock ? dock.getBoundingClientRect() : null;
+    if (dockRect && dockRect.height > 0) {
+      // The band from the window's bottom edge up to the bar's top edge, which
+      // is exactly what a page has to keep clear. No invented breathing gap:
+      // the bar already floats 12px off the edge.
+      root.style.setProperty("--dock-h", `${Math.round(window.innerHeight - dockRect.top)}px`);
+    } else {
+      root.style.removeProperty("--dock-h");
     }
   };
   publish();
