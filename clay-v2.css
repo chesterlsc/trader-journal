@@ -3451,9 +3451,14 @@ body.auth-locked .topnav {
     font-size: 12px;
   }
 
-  /* Agenda mode hides untraded days, so the tiles are full-width rows. */
+  /* Agenda mode is gone and the phone shows a real month grid. The height has
+     to be SET here rather than in styles.css: clay-v2 loads after it, so the
+     desktop .calendar-cell min-height of 92px wins there and a phone cell came
+     out 40 wide by 92 tall, a column of slivers six rows deep.
+     52px clears the 44px touch floor with room for the day number over a
+     compact figure, and keeps the whole month on one screen. */
   .calendar-cell {
-    min-height: 0;
+    min-height: 52px;
   }
 }
 

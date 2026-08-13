@@ -21,7 +21,7 @@
   debounce,
   openTradeTriggerLevel
 } from "./src/lib/core.js";
-import { formatCurrency } from "./src/lib/format.js";
+import { formatCurrency, formatCompactCurrency } from "./src/lib/format.js";
 import { getNextSessionOpen, formatCountdown } from "./src/lib/sessions.js";
 import {
   normalizeMarketSymbol,
@@ -10249,9 +10249,20 @@ function renderCalendarView() {
     // 1e tile: day number, P&L, one meta line. The signed money value carries
     // the win/loss state in text as well as colour, so the raise/sink is never
     // the only signal (WCAG 1.4.1).
+    // Two figures, one shown at a time. A phone cell is about 46px wide, where
+    // "+$260.00" does not fit, and money must never be TRUNCATED: "+$26…" is a
+    // wrong number, not a clipped word. So the compact form is rendered
+    // alongside and CSS picks per width. Both carry the sign, which is what
+    // keeps the win/loss state readable without colour (WCAG 1.4.1).
+    const compact = hasTrades && stats.pnl !== 0
+      ? `${stats.pnl > 0 ? "+" : ""}${formatCompactCurrency(stats.pnl)}`
+      : hasTrades
+      ? formatCompactCurrency(0)
+      : "";
     const cellBody = `
         <span class="calendar-cell-day">${day}</span>
         <span class="calendar-cell-pnl ${pnlClass}">${hasTrades ? escapeHtml(stats.pnl === 0 ? formatCurrency(0) : formatSignedCurrency(stats.pnl)) : "—"}</span>
+        <span class="calendar-cell-pnl-compact ${pnlClass}" aria-hidden="true">${escapeHtml(compact)}</span>
         <span class="calendar-cell-meta">${hasTrades ? `${stats.trades} trade${stats.trades === 1 ? "" : "s"} · ${escapeHtml(stats.topAsset)}` : "no trades"}</span>
     `;
 
@@ -13566,7 +13577,7 @@ function renderEdgeMini() {
       news === null || news.asOf === null ? "no link" : news.stale ? "stale" : "live"
     }</em></p>` +
       (news === null
-        ? `<p class="dem-note">No coverage link.</p>`
+        ? `<p class="dem-empty">No coverage link.</p>`
         : news.assets
             .map((asset) => {
               const call = newsVerdict({ label: asset.label, coverage: asset, file, event: wire[0] || null });

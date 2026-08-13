@@ -4130,18 +4130,61 @@ body.is-guest:not(.demo-signup) .trust-row {
     font-size: var(--fs-lg);
   }
 
-  /* Agenda mode (§4): vertical list of traded days only. */
+  /* A CALENDAR IS A MONTH GRID. It used to collapse to a one column agenda of
+     traded days only, which answers "what did I make" but not the question a
+     calendar is FOR: where in the month am I, and what shape was the month.
+     Days 1, 5, 6, 7 stacked as cards is a list wearing a calendar's name.
+
+     Seven columns at 375px, measured: the view gutter and a 3px grid gap leave
+     about 46px a cell, which takes a 44px touch target and a compact figure.
+     Empty leading cells STAY, blank but present, because without them the 1st
+     lands under the wrong weekday and every date after it is wrong. */
   .calendar-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 3px;
+    padding: 6px;
   }
 
-  .calendar-cell-empty,
-  .calendar-cell:not(.calendar-cell-has-trades) {
+  .calendar-cell {
+    min-height: 46px;
+    padding: 4px 2px;
+    align-content: start;
+    justify-items: center;
+    text-align: center;
+    gap: 1px;
+  }
+
+  /* The full figure and the meta line do not fit and must not be truncated: a
+     clipped price is a wrong number. The compact twin takes over. */
+  .calendar-cell-pnl,
+  .calendar-cell-meta {
     display: none;
+  }
+  .calendar-cell-compact-on .calendar-cell-pnl { display: none; }
+  .calendar-cell-pnl-compact {
+    display: block;
+    font: 700 var(--fs-micro)/1.15 var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .calendar-cell-day {
+    font: 500 var(--fs-micro)/1.2 var(--font-mono);
+  }
+
+  /* An untraded day is context, not content: present so the grid is a real
+     month, dimmed so the traded days are what the eye lands on. */
+  .calendar-cell:not(.calendar-cell-has-trades) .calendar-cell-day {
+    opacity: 0.45;
+  }
+  .calendar-cell-empty {
+    background: transparent;
+    box-shadow: none;
+    min-height: 0;
   }
 
   .calendar-agenda-note {
     display: block;
+    grid-column: 1 / -1;
   }
 
   .setup-inline-controls {
@@ -4199,13 +4242,15 @@ body.is-guest:not(.demo-signup) .trust-row {
     flex: 1 1 100%;
   }
 
+  /* The weekday headers STAY. Agenda mode hid them because a one column list
+     has no columns to name; a month grid without them is seven anonymous
+     stripes and you cannot tell Monday from Saturday, which is most of what a
+     calendar is for. */
   .calendar-weekday {
-    display: none;
-  }
-
-  .calendar-cell {
-    min-height: 0;
-    padding: 8px 10px;
+    display: block;
+    padding: 2px 0;
+    font-size: var(--fs-micro);
+    letter-spacing: 0.04em;
   }
 
   .calendar-cell-meta {
