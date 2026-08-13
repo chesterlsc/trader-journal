@@ -1,28 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Trader Journal">
-  <!-- THE APP'S OWN LOGO, not a second mark.
-       .lnd-mark (styles.css) and .topnav-mark (clay-v2.css) both render a
-       rounded tile filled with the burnt-oxide accent carrying a white "TJ".
-       The previous favicon was a metal tile with a BLUE #3b82f6 monogram, a
-       leftover from the V2 palette, so the browser tab did not match the
-       product it opened. Values below are the shipped ones:
-         --accent-strong #f68d5c -> --accent #f0763d   (the .lnd-mark gradient)
-         --radius-clay-sm, scaled to this canvas
-       Weight and letter-spacing follow the mark's `font: 700 15px/1` at 38px,
-       scaled to 64. -->
-  <defs>
-    <linearGradient id="oxide" x1="0%" x2="0%" y1="0%" y2="100%">
-      <stop offset="0%" stop-color="#f68d5c"/>
-      <stop offset="100%" stop-color="#f0763d"/>
-    </linearGradient>
-  </defs>
+  <!-- THE APP'S OWN MARK, measured from the running app rather than guessed.
+       .topnav-mark and .lnd-mark both render an off-white tile carrying a
+       gunmetal "TJ":
 
-  <rect width="64" height="64" rx="20" fill="url(#oxide)"/>
-  <!-- The inset highlight the mark gets from --clay-accent. -->
-  <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="19.25"
-        fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1.5"/>
+         background   #e9edf1   (the app's text token)
+         colour       #14161a   (gunmetal)
+         radius       10px on a 46px tile, so 14 on this 64 canvas
+         type         700 18px Space Grotesk, so 25 on this canvas
+         ring         rgba(218,224,231,0.12) hairline
 
-  <text x="32" y="33" fill="#ffffff"
+       An earlier version of this file was a burnt-oxide gradient with white
+       type, which matched the accent but not the logo, so the tab did not look
+       like the app it opened. Before that it was a blue V2 leftover. The mark
+       is light on purpose: it reads on a dark browser chrome and on a light
+       one, which an oxide tile does not. -->
+  <rect width="64" height="64" rx="14" fill="#e9edf1"/>
+  <rect x="0.5" y="0.5" width="63" height="63" rx="13.5"
+        fill="none" stroke="#dae0e7" stroke-opacity="0.5" stroke-width="1"/>
+  <text x="32" y="33.5" fill="#14161a"
         font-family="'Space Grotesk','Sora',system-ui,-apple-system,sans-serif"
-        font-size="26" font-weight="700" letter-spacing="0.26"
+        font-size="25" font-weight="700" letter-spacing="0.25"
         text-anchor="middle" dominant-baseline="central">TJ</text>
 </svg>

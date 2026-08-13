@@ -10170,7 +10170,10 @@ body.auth-locked {
 .bb-wall-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-@media (min-width: 1100px) {
+@media (min-width: 900px) {
+  /* Four across from 900px, not 1100. Between those two widths the wall fell
+     back to 2x2 at full tile height, which is the tall band the whole fix was
+     meant to remove, on exactly the laptop widths most people use. */
   .bb-wall-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 .bb-mon-screen,
@@ -10293,8 +10296,11 @@ body.auth-locked {
 }
 
 @media (max-width: 899px) {
-  /* One column on a phone at every size: two 16:9 tiles side by side on a
-     375px screen is 84px tall each, which is not a monitor. */
+  /* One column on a phone. MEASURED at 375x812, because the number in the
+     first version of this comment was invented: a tile is 139px tall either
+     way, and one column stacks to 556px so all four are still on screen at
+     once, while 2x2 would halve the width to 187px for no height saved.
+     Full width wins on legibility, not on fitting. */
   .bb-wall .bb-wall-grid,
   .bb-wall[data-size="half"] .bb-wall-grid { grid-template-columns: minmax(0, 1fr); }
   .bb-wall[data-size="max"] .bb-wall-grid {
@@ -10302,4 +10308,144 @@ body.auth-locked {
     grid-template-rows: repeat(4, minmax(0, 1fr));
   }
   .bb-wall-tok { min-height: 44px; }
+}
+
+/* ==========================================================================
+   THE WALL AT MAX: under the nav, frameless labels, prices on top.
+
+   Three faults, all visible at once in max: the fixed wall started at inset 0
+   so the top bar sat ON the wall and clipped its own masthead; each monitor
+   spent a whole 35px row on a name; and the price tape was underneath the
+   wall, so the one thing a trader needs while watching news was hidden by it.
+   ========================================================================== */
+
+/* 1. UNDER THE CHROME. The wall starts below the top bar and below the tape,
+      so nothing overlaps at any desktop ratio. The offsets are the same ones
+      #terminal.is-active already uses, not new magic numbers. */
+.bb-wall[data-size="max"] {
+  inset: calc(86px + var(--tape-h, 34px)) 0 0 0;
+}
+@media (max-width: 899px) {
+  .bb-wall[data-size="max"] { inset: calc(64px + var(--tape-h, 34px)) 0 64px 0; }
+}
+
+/* 2. THE TAPE RIDES ABOVE THE NEWS. While the wall is maximised the price
+      strip is pinned across the top of it, so the pairs are the thing between
+      the nav and the monitors. :has() scopes this to the maximised state only,
+      leaving the normal page untouched. */
+#terminal:has(.bb-wall[data-size="max"]) .bb-tape {
+  position: fixed;
+  top: 86px;
+  left: 0;
+  right: 0;
+  z-index: 61;
+  margin: 0;
+  border-bottom: 1px solid var(--term-line);
+}
+@media (max-width: 899px) {
+  #terminal:has(.bb-wall[data-size="max"]) .bb-tape { top: 64px; }
+}
+
+/* 3. FRAMELESS LABELS. At max the name stops being a row and becomes a mark on
+      the picture: no bar, no border, no reserved height, so the monitor is the
+      monitor. It stays legible on any frame because it carries its own scrim
+      rather than relying on the video being dark. */
+.bb-wall[data-size="max"] .bb-mon { position: relative; grid-template-rows: minmax(0, 1fr); }
+.bb-wall[data-size="max"] .bb-mon-h {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 5px 8px;
+  border: 0;
+  background: linear-gradient(180deg, rgb(6 8 11 / 0.72), transparent);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  opacity: 0.5;
+  transition: opacity 140ms var(--ease-out);
+}
+/* It brightens when the trader goes for it, and otherwise stays out of the way. */
+.bb-wall[data-size="max"] .bb-mon:hover .bb-mon-h,
+.bb-wall[data-size="max"] .bb-mon:focus-within .bb-mon-h { opacity: 1; }
+.bb-wall[data-size="max"] .bb-mon-pick { pointer-events: auto; }
+.bb-wall[data-size="max"] .bb-mon-h em { display: none; }
+.bb-wall[data-size="max"] .bb-wall-note { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bb-wall[data-size="max"] .bb-mon-h { transition: none; }
+}
+
+/* --- HALF IS A SPLIT, NOT A STACK ----------------------------------------
+   "i want to see the release edge or f1 when i choose half". Stacked below the
+   desk, half meant scrolling to reach the monitors and losing the desk to do
+   it, which defeats the point of a half size existing at all.
+
+   Half now pins the wall to the bottom of the viewport and gives the desk the
+   space above it, so F1 THE APPROACH and the monitors are on screen together.
+   The page reserves the same height it takes, so nothing is ever hidden behind
+   it and the last pane can still be scrolled to. */
+.bb-wall[data-size="half"] {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 46vh;
+  z-index: 55;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border-top: 1px solid var(--term-line);
+  background: var(--term-void);
+}
+#terminal:has(.bb-wall[data-size="half"]) { padding-bottom: 46vh; }
+
+.bb-wall[data-size="half"] .bb-wall-h {
+  margin: 0;
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--term-line);
+  background: var(--term-rail);
+}
+.bb-wall[data-size="half"] .bb-wall-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
+  height: 100%;
+  border: 0;
+}
+/* Four across in a half-height band: the cell decides the size, so a 16:9
+   stream letterboxes inside it rather than forcing the band taller. */
+.bb-wall[data-size="half"] .bb-mon-screen,
+.bb-wall[data-size="half"] .bb-mon iframe {
+  aspect-ratio: auto;
+  max-height: none;
+  height: 100%;
+}
+.bb-wall[data-size="half"] .bb-mon { position: relative; grid-template-rows: minmax(0, 1fr); }
+/* Frameless here too: in a short band a 35px name row is most of the tile. */
+.bb-wall[data-size="half"] .bb-mon-h {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 4px 7px;
+  border: 0;
+  background: linear-gradient(180deg, rgb(6 8 11 / 0.72), transparent);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  opacity: 0.5;
+}
+.bb-wall[data-size="half"] .bb-mon:hover .bb-mon-h,
+.bb-wall[data-size="half"] .bb-mon:focus-within .bb-mon-h { opacity: 1; }
+.bb-wall[data-size="half"] .bb-mon-pick { pointer-events: auto; }
+.bb-wall[data-size="half"] .bb-mon-h em { display: none; }
+.bb-wall[data-size="half"] .bb-wall-note { display: none; }
+
+@media (max-width: 899px) {
+  .bb-wall[data-size="half"] { height: 38vh; }
+  #terminal:has(.bb-wall[data-size="half"]) { padding-bottom: 38vh; }
+  .bb-wall[data-size="half"] .bb-wall-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
 }

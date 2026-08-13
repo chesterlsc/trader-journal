@@ -13177,6 +13177,16 @@ function applyWallSize(size) {
   if (wall) {
     wall.dataset.size = next;
   }
+  // Publish the tape's MEASURED height so the maximised wall starts below it.
+  // A hard-coded offset would overlap the moment the strip wraps on a narrow
+  // window, which is exactly the class of bug this is fixing.
+  const tape = document.querySelector("#terminal .bb-tape");
+  if (tape) {
+    const height = Math.round(tape.getBoundingClientRect().height);
+    if (height > 0) {
+      document.documentElement.style.setProperty("--tape-h", `${height}px`);
+    }
+  }
   document.querySelectorAll("[data-wall-size]").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.wallSize === next));
   });
