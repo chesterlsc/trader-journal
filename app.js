@@ -13417,7 +13417,11 @@ function markChannelDark(channelId) {
 function darkNote(channelId, seen = readDarkChannels()) {
   const at = Number(seen[channelId] ?? 0);
   if (!at || Date.now() - at > DARK_NOTE_MAX_MS) return "";
-  return ` · was dark ${new Date(at).toISOString().slice(11, 16)}z`;
+  // Short on purpose. This string rides inside a <select> that is 187px wide on
+  // a phone tile, where "Topstep · session · was dark 05:22z" truncated to
+  // "Topstep · session · wa". The dropdown is where it is read; the collapsed
+  // control just needs the channel to stay legible.
+  return ` · dark ${new Date(at).toISOString().slice(11, 16)}`;
 }
 
 /* One monitor, built in one place. The dashboard rail renders a single tile

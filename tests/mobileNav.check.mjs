@@ -37,9 +37,13 @@ const views = [...html.matchAll(/<section class="view[^"]*" id="([^"]+)"/g)].map
 assert.ok(views.length >= 7, `expected the full view set, found ${views.join(", ")}`);
 
 const dockTargets = new Set(targets(tabbar));
+// The dock carries FIVE targets and shows four. The last slot is shared: the
+// Edge takes it when the account is entitled, Reflect takes it otherwise, and
+// styles.css hides whichever one loses off the [hidden] app.js already sets on
+// [data-terminal-nav]. Both are listed here because both are in the markup.
 assert.deepEqual(
   [...dockTargets].sort(),
-  ["calendar", "dashboard", "journal", "reflections"],
+  ["calendar", "dashboard", "journal", "reflections", "terminal"],
   "the tab bar's destinations changed — this check and the .sheet-tile-dock class must follow"
 );
 

@@ -7854,6 +7854,22 @@ summary:focus-visible {
 /* --- 3. Tabs -------------------------------------------------------------- */
 /* These are .nav-btn, so they inherit the app-wide nav rules and then undo
    the ones written for a horizontal desktop rail / full-width sidebar list. */
+/* display:grid beats the UA's [hidden] { display: none }, the same trap that
+   left a paid destination showing in the phone menu, so the dock states its
+   own guard. */
+.tabbar .nav-btn[hidden] { display: none; }
+
+/* ONE OF THE TWO, NEVER BOTH. The Edge takes the last dock slot when the
+   account is entitled to it; Reflect takes it otherwise and moves to the MENU
+   sheet when it does not. Driven off the [hidden] app.js already sets on
+   [data-terminal-nav], so there is no second piece of state to keep in sync. */
+.tabbar:has(.nav-btn[data-target="terminal"]:not([hidden])) .nav-btn[data-target="reflections"] {
+  display: none;
+}
+body:has(.tabbar .nav-btn[data-target="terminal"]:not([hidden])) .main-nav .sheet-tile-dock[data-target="reflections"] {
+  display: grid;
+}
+
 .tabbar .nav-btn {
   position: relative;
   display: grid;
