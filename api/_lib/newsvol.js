@@ -1,4 +1,4 @@
-import { coverageRead, parseTimeline } from '../../src/lib/newsEdge.js';
+import { coverageRead, parseTimeline, NEWS_MIN_POINTS } from '../../src/lib/newsEdge.js';
 
 const GDELT_URL = 'https://api.gdeltproject.org/api/v2/doc/doc';
 // ponytail: reuses the seeded, unread 'mw_headlines' feed_state row rather than
@@ -16,14 +16,18 @@ const STALE_AFTER_MS = 3 * 60 * 60 * 1000;
 // 104 were not, including Congressional Award Gold Medals and a Karnataka
 // cycling championship. That is gold-equity and gold-jewellery news, not the
 // XAUUSD driver, and a ratio built on it measures the wrong world.
-// THE GOLD QUERY is verified HTTP 200, 167 hourly points, and its capture is
-// committed at tests/fixtures/gdelt-gold.json. THE BITCOIN QUERY IS NOT: every
-// attempt to capture it returned GDELT's throttle prose instead of JSON, so it
-// is unverified in shape and uncalibrated in thresholds. It is shipped anyway
-// because the ingest soft-fails to null on exactly that response and the pane
-// already has an empty state for a null ratio, so the cost of it being wrong is
-// a row that says it has no reading. Verify it from the cron log, which prints
-// ok:btc on a successful pull.
+// BOTH queries are verified HTTP 200 and both captures are committed under
+// tests/fixtures. They did not end up equal, though, and the bitcoin one is
+// why src/lib/newsEdge.js grew a sparsity gate: 65 of its 165 complete hourly
+// buckets are ZERO, 39.4% against gold's 7.2%, which drags the median to
+// 0.0165 and turns one article in a quiet hour into a huge multiple. It
+// therefore gets no ratio at all rather than a confident wrong one, and the
+// pane says so in as many words.
+// THE FIX FOR BITCOIN IS A WIDER QUERY, not a second set of constants tuned to
+// a degenerate distribution. Requiring a macro term ALONGSIDE bitcoin is what
+// makes it this thin; dropping the conjunction, or widening it to include the
+// terms crypto coverage actually uses, is the thing to measure next. Recapture
+// and recompute the percentiles before changing it.
 //
 // DO NOT "improve" these without re-measuring: the reading is relative to this
 // query's own seven day history, so changing the query silently rebases the
@@ -85,6 +89,10 @@ export async function fetchNewsVolume(db, fetchImpl = fetch, now = new Date()) {
       return {
         id: asset.id, label: asset.label, symbol: asset.symbol,
         ratio: row?.ratio ?? null, band: row?.band ?? 'unknown', n: row?.n ?? 0,
+        // Carried through so newsLine can tell "the window is full of holes"
+        // apart from "the window is not there yet". Without it the renderer
+        // would have to guess, and it would guess wrong for bitcoin.
+        zeroShare: row?.zeroShare ?? null,
         through: row?.through ?? null,
         stale: !row || now.getTime() - Number(row.at ?? 0) > STALE_AFTER_MS,
       };
@@ -115,6 +123,14 @@ async function pullVolume(fetchImpl, asset) {
     if (!response.ok || !text.trimStart().startsWith('{')) return null;
     const read = coverageRead(parseTimeline(JSON.parse(text)));
     // STORE THE READING, NOT THE FEED: ~200 bytes instead of 8KB.
-    return read.ratio === null ? null : read;
+    //
+    // A null ratio is NOT the same as no data, and discarding both alike was a
+    // bug: bitcoin's window is complete and measured, it is simply too sparse
+    // to band, and throwing it away made the pane print "needs 48 complete
+    // hourly buckets, has 0" over a query that had 165 of them. That sends
+    // someone away waiting for a reading that is never coming. Anything with a
+    // full enough window is stored, ratio or no ratio, so the sentence can say
+    // which refusal it is. Only a genuinely short window is nothing to keep.
+    return read.n < NEWS_MIN_POINTS ? null : read;
   } catch { return null; }
 }

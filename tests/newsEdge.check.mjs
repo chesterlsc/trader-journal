@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   parseTimeline, coverageRead, bandFor, median, newsVerdict, newsLine,
-  NEWS_MIN_POINTS, ELEVATED_AT, HEAVY_AT
+  NEWS_MIN_POINTS, ELEVATED_AT, HEAVY_AT, MAX_ZERO_SHARE
 } from "../src/lib/newsEdge.js";
 
 assert.equal(median([]), 0);
@@ -61,6 +61,39 @@ assert.ok(
   `HEAVY_AT must sit at the 99th, fires on ${(shareAtOrAbove(HEAVY_AT) * 100).toFixed(0)}%`
 );
 assert.ok(shareAtOrAbove(1.6) > 0.2, "1.6 on this query is a quarter of all hours, not a spike");
+
+// 3c. THE SPARSITY GATE, and the reason it exists is a real capture, not a
+//     hypothetical. Bitcoin's live conjunctive query has 65 of 165 complete
+//     hourly buckets at ZERO, 39.4% against gold's 7.2%. That drags its median
+//     to 0.0165, so one article in a quiet hour reads as a huge multiple: its
+//     p90 is 4.96 and its p99 24.53, against gold's 2.30 and 3.44. Lending it
+//     gold's bands would fire "heavy" on 17% of its hours. It gets no ratio.
+const btcRaw = parseTimeline(
+  JSON.parse(readFileSync(new URL("./fixtures/gdelt-bitcoin.json", import.meta.url)))
+);
+const btc = coverageRead(btcRaw);
+assert.ok(btc.zeroShare > MAX_ZERO_SHARE, `bitcoin zeroShare ${btc.zeroShare}`);
+assert.equal(btc.ratio, null, "a hole-punched window must not produce a ratio");
+assert.equal(btc.band, "unknown");
+// Gold passes the same gate comfortably, so this is a gate and not a ban.
+assert.ok(gold.zeroShare <= MAX_ZERO_SHARE, `gold zeroShare ${gold.zeroShare}`);
+assert.ok(gold.ratio !== null);
+
+// The two refusals must not be interchangeable: "not enough window yet" and
+// "the window is full of holes" send a reader to different places.
+assert.match(newsLine({ label: "BITCOIN", coverage: btc }), /too sparse to read/);
+assert.match(newsLine({ label: "BITCOIN", coverage: btc }), /39% of the last 165 hours/);
+assert.doesNotMatch(newsLine({ label: "BITCOIN", coverage: btc }), /complete hourly buckets/);
+
+// And a sparse window can never issue a stance, whatever the trader's record.
+assert.equal(
+  newsVerdict({
+    label: "BITCOIN", coverage: btc, event: { key: "78-us-cpi-mm", title: "CPI m/m" },
+    file: { samples: 40, wins: 5, losses: 35, verdict: "worse" },
+  }).stance,
+  "",
+  "no ratio means no band means no stance"
+);
 
 // 4. Under the floor there is no ratio, and the empty state names the number.
 assert.equal(coverageRead(raw.slice(0, 10)).ratio, null);
@@ -173,5 +206,25 @@ assert.equal(throttled.assets.length, 2);
 // A hard network error is the same story: soft-fail, never throw.
 const dead2 = await fetchNewsVolume(db1, async () => { throw new Error("ECONNRESET"); });
 assert.equal(dead2.assets.length, 2);
+
+// 14. THE SEAM BETWEEN THE INGEST AND THE SENTENCE. The library refuses a
+//     sparse window with its own wording, but the ingest used to discard any
+//     reading whose ratio was null, so bitcoin's complete-but-sparse window was
+//     thrown away and the pane printed "needs 48 complete hourly buckets, has
+//     0" over a query that had 165 of them. Measured through both real
+//     captures, end to end, because a unit test on either side alone passed
+//     while the pair was wrong.
+const db2 = fakeDb(null);
+const btcCapture = readFileSync(new URL("./fixtures/gdelt-bitcoin.json", import.meta.url), "utf8");
+await fetchNewsVolume(db2, async () => ({ ok: true, text: async () => capture }));
+const both = await fetchNewsVolume(db2, async () => ({ ok: true, text: async () => btcCapture }));
+const goldOut = both.assets.find((a) => a.id === "gold");
+const btcOut = both.assets.find((a) => a.id === "btc");
+assert.equal(btcOut.n, 165, "a sparse window is still a measured window and must be stored");
+assert.equal(btcOut.ratio, null);
+assert.ok(btcOut.zeroShare > MAX_ZERO_SHARE, "zeroShare must survive the round trip");
+assert.match(newsLine({ label: btcOut.label, coverage: btcOut }), /too sparse to read/);
+assert.doesNotMatch(newsLine({ label: btcOut.label, coverage: btcOut }), /complete hourly buckets/);
+assert.match(newsLine({ label: goldOut.label, coverage: goldOut }), /1\.29x its 7 day hourly median over 166 buckets/);
 
 console.log("newsEdge.check.mjs: OK — trailing bucket dropped, bands measured, stance gated, ingest soft-fails");

@@ -36,15 +36,32 @@ export const NEWS_MIN_POINTS = 48;
 // of hours respectively. QUIET_BELOW stays where it was, now with backing it
 // did not have before: p25 measures 0.74.
 //
-// GOLD ONLY. Every capture of the bitcoin conjunctive query returned GDELT's
-// throttle message rather than JSON, so bitcoin runs on gold's numbers and is
-// UNCALIBRATED. Its own distribution will differ; a sibling capture of a
-// different gold query measured p90=2.54 against gold's 2.30, so the gap is
-// real and not negligible. Recalibrate per asset once the cron has banked a
-// week of its own readings.
+// THESE ARE GOLD'S NUMBERS and no other asset is banded by them by accident.
+// The bitcoin capture eventually landed, on the sixth attempt at 150s spacing,
+// and it disqualified itself: see MAX_ZERO_SHARE below, which is the gate that
+// now refuses it rather than lending it gold's thresholds. Any asset added here
+// needs its own capture and its own percentiles before it can be banded.
 export const QUIET_BELOW = 0.75;
 export const ELEVATED_AT = 2.3;
 export const HEAVY_AT = 3.45;
+
+// A WINDOW FULL OF HOLES IS NOT A BASELINE, and this is the gate that says so.
+// Measured on the two live captures, both committed under tests/fixtures:
+//
+//   gold     166 complete buckets,  12 zero (7.2%),  sd/mean 0.752, median 0.0917
+//   bitcoin  165 complete buckets,  65 zero (39.4%), sd/mean 1.970, median 0.0165
+//
+// Two hours in five with no coverage at all drags the median down to almost
+// nothing, and a single article in a quiet hour then reads as a huge multiple:
+// bitcoin's p90 is 4.96 and its p99 is 24.53 against gold's 2.30 and 3.44. Ship
+// gold's bands over that and "heavy" fires on 17% of bitcoin hours, which is the
+// same crying-wolf failure the recalibration above exists to fix, worse.
+//
+// So a series this sparse gets NO ratio rather than a confident wrong one. The
+// honest fix for bitcoin is a wider query, not a second set of constants
+// tuned to a degenerate distribution. 20% sits clear of gold's 7.2% and well
+// under bitcoin's 39.4%.
+export const MAX_ZERO_SHARE = 0.2;
 
 /** "20260812T210000Z" -> epoch ms. Null for anything else. */
 export function parseGdeltStamp(stamp) {
@@ -100,18 +117,27 @@ export function median(values) {
 export function coverageRead(points) {
   const complete = (Array.isArray(points) ? points : []).slice(0, -1);
   if (complete.length < NEWS_MIN_POINTS) {
-    return { n: complete.length, base: 0, now: 0, ratio: null, band: "unknown", through: null };
+    return {
+      n: complete.length, base: 0, now: 0, ratio: null, band: "unknown",
+      through: null, zeroShare: null,
+    };
   }
   const values = complete.map((p) => p.value);
   const base = median(values);
   const now = values.slice(-3).reduce((sum, v) => sum + v, 0) / 3;
+  // Reported whether or not it trips the gate, so the sentence can name it.
+  const zeroShare = values.filter((v) => v === 0).length / values.length;
+  // A query nobody covers is a divide by nothing, not an infinite spike; a
+  // query covered in only three hours out of five is a hole-punched baseline,
+  // and a ratio against it is arithmetic rather than a measurement.
+  const usable = base > 0 && zeroShare <= MAX_ZERO_SHARE;
   return {
     n: complete.length,
     base,
     now,
-    // A query nobody covers is a divide by nothing, not an infinite spike.
-    ratio: base > 0 ? now / base : null,
-    band: bandFor(base > 0 ? now / base : null),
+    zeroShare,
+    ratio: usable ? now / base : null,
+    band: usable ? bandFor(now / base) : "unknown",
     through: new Date(complete[complete.length - 1].at).toISOString(),
   };
 }
@@ -160,6 +186,15 @@ export function newsVerdict({ label, coverage, file, event }) {
 export function newsLine({ label, coverage, file, event, stance }) {
   const name = label || "This asset";
   if (!coverage || coverage.ratio === null) {
+    // Two different refusals, and they are not interchangeable: one is "not
+    // enough of the window yet", the other is "the window is there and full of
+    // holes". Saying the first when it is the second sends someone away waiting
+    // for a reading that is never going to arrive.
+    if (Number.isFinite(coverage?.zeroShare) && coverage.zeroShare > MAX_ZERO_SHARE) {
+      return `${name}: coverage too sparse to read. ${Math.round(
+        coverage.zeroShare * 100
+      )}% of the last ${coverage.n} hours had no coverage at all, so there is no baseline to measure against.`;
+    }
     return `${name}: no coverage reading. Needs ${NEWS_MIN_POINTS} complete hourly buckets, has ${coverage?.n ?? 0}.`;
   }
   const x = `${coverage.ratio.toFixed(2)}x its 7 day hourly median over ${coverage.n} buckets`;
