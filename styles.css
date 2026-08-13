@@ -10597,6 +10597,25 @@ body.auth-locked {
     padding: 0 var(--space-4) var(--space-4);
     z-index: 30;
   }
+
+  /* THE SITE FOOTER IS FURNITURE FOR A PAGE THAT SCROLLS, and the app screens
+     stopped being one. It is a body child that used to follow a tall .content;
+     with every view pinned out of flow, .content is only as tall as the bar, so
+     the footer collapsed up to y=92 and printed straight across the dashboard
+     greeting and the live ticker. Seven of the eight views paint no background
+     of their own, deliberately, so the body's dot grid shows through them, and
+     that is exactly why it was legible rather than hidden.
+
+     Hidden on the app screens only. The landing page still scrolls and still
+     ends with it, so the support note and the address keep the audience they
+     were written for. The selector triple is the one .auth-shell already uses
+     for "the app is showing". Below 900 the views are still in flow and the
+     footer sits after them correctly, so this is desktop only. */
+  body.is-authenticated .site-footer,
+  body.is-preview .site-footer,
+  body.is-guest:not(.demo-signup) .site-footer {
+    display: none;
+  }
 }
 
 /* FRAME MINIMISED so the picture is the panel. No padding, no border, no
