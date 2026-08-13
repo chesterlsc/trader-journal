@@ -2196,6 +2196,22 @@ body.is-guest:not(.demo-signup) .auth-shell {
 /* Phone: single-column panes (declared above), tighter gutters. Everything
    holds the 11px floor and the head column ellipsizes, so no h-scroll. */
 @media (max-width: 700px) {
+  /* THE NOWRAP PLATE WAS DRAGGING THE WHOLE SECTION OFF SCREEN. .lnd-tp-inner
+     is a grid with no column template, so its single implicit column sizes to
+     the widest item's min-content, and this plate is white-space: nowrap
+     carrying the "Release edge" stamp plus "In development · journal-fusion
+     tier" as one unbreakable 435px line. Measured at 375: the track resolved
+     to 435.367px inside a 352.5px box, so the lede, the plate's own second
+     span and 72px of the terminal mock were all clipped by .lnd-tp's
+     overflow: hidden, with no scrollbar and no way to reach them.
+     Verified causally before fixing: hiding the plate, or letting it wrap,
+     dropped the track to 352.5px; hiding the headline, the lede, the frame or
+     the legend changed nothing. The plate is the sole driver.
+     It is a two-part label, not a figure, so it may wrap. */
+  .lnd-tp-plate {
+    white-space: normal;
+  }
+
   .lnd-tp-fkeys {
     display: none;
   }
