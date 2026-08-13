@@ -9516,11 +9516,43 @@ body.auth-locked {
 .bb-cmd {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2) var(--space-3);
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   background: var(--bb-rail);
 }
+
+/* The feed state as the landing chrome's outlined pill, pushed to the right.
+   The lamp inside keeps its meaning: it breathes only while the link is live. */
+.bb-cmd .bb-feed {
+  margin-left: auto;
+  padding: 4px 12px;
+  border: 1px solid var(--bb-grid);
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* The command row: prompt, keys, clock, one line. */
+.bb-prompt {
+  align-self: center;
+  padding-left: var(--space-3);
+  color: var(--bb-oxide);
+  font: 700 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.bb-keys .bb-utc {
+  margin-left: auto;
+  align-self: center;
+  padding-right: var(--space-3);
+  color: var(--bb-faint);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.bb-keys .bb-utc b { color: var(--bb-ink); font-variant-numeric: tabular-nums; }
 
 .bb-cmd h2 {
   margin: 0;
@@ -9591,7 +9623,7 @@ body.auth-locked {
   display: flex;
   gap: 2px;
   overflow-x: auto;
-  background: var(--bb-void);
+  background: var(--bb-rail);
   scrollbar-width: none;
   scroll-padding-inline-end: 26px;
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
@@ -9613,10 +9645,10 @@ body.auth-locked {
 .bb-key {
   flex: 0 0 auto;
   min-height: 44px;
-  padding: 0 var(--space-3);
+  padding: 0 var(--space-2);
   border: 0;
-  background: var(--bb-rail);
-  color: var(--bb-faint);
+  background: transparent;
+  color: var(--bb-soft);
   font: 600 var(--fs-micro)/1 var(--font-mono);
   letter-spacing: 0.12em;
   cursor: pointer;
@@ -9626,6 +9658,13 @@ body.auth-locked {
   margin-right: 6px;
   color: var(--bb-soft);
   font-weight: 700;
+}
+
+/* Dot separators between keys, the landing command row's rhythm. */
+.bb-key + .bb-key::before {
+  content: "\00b7";
+  margin-right: var(--space-2);
+  color: var(--bb-faint);
 }
 
 .bb-key[aria-pressed="true"] {
@@ -9664,13 +9703,17 @@ body.auth-locked {
 }
 
 .bb-pane-h b {
-  padding: 1px 5px;
-  background: var(--bb-wash);
+  padding: 2px 7px;
+  border: 1px solid var(--bb-oxide);
+  border-radius: 6px;
+  background: transparent;
   color: var(--bb-oxide);
   font-weight: 700;
 }
 
 .bb-pane-h em {
+  margin-left: auto;
+  text-transform: uppercase;
   margin-left: auto;
   color: var(--bb-faint);
   font: 400 var(--fs-micro)/1.2 var(--font-mono);
@@ -9720,15 +9763,15 @@ body.auth-locked {
    floor without inventing padding, and one line from 900 up. */
 .bb-row {
   display: grid;
-  grid-template-columns: 76px 32px 22px minmax(0, 1fr);
+  grid-template-columns: 76px auto minmax(0, 1fr);
   grid-template-areas:
-    "cd  ccy imp you"
-    "ttl ttl ttl ttl";
+    "cd  ccy you"
+    "ttl ttl ttl";
   align-items: center;
   gap: 2px var(--space-2);
   width: 100%;
   min-height: 44px;
-  padding: 6px var(--space-3);
+  padding: 10px var(--space-3);
   border: 0;
   background: transparent;
   color: inherit;
@@ -9753,8 +9796,23 @@ body.auth-locked {
 }
 
 .bb-cd  { grid-area: cd; color: var(--bb-ink); font-weight: 700; }
-.bb-ccy { grid-area: ccy; color: var(--bb-soft); font-weight: 700; letter-spacing: 0.06em; }
-.bb-imp { grid-area: imp; display: flex; gap: 2px; align-items: flex-end; }
+.bb-ccy {
+  grid-area: ccy;
+  justify-self: start;
+  padding: 2px 8px;
+  border: 1px solid var(--bb-grid);
+  border-radius: 6px;
+  color: var(--bb-soft);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+/* Impact rides the chip: the outline goes oxide for a High print. The rank is
+   still spoken, a visually hidden "High impact" sits beside every chip. */
+.bb-ccy.is-high { border-color: var(--bb-oxide); color: var(--bb-oxide); }
+
+/* .bb-imp kept for the landing legend row, which still renders a ladder. */
+.bb-imp { display: flex; gap: 2px; align-items: flex-end; }
 .bb-ttl { grid-area: ttl; overflow: hidden; color: var(--bb-soft); text-overflow: ellipsis; white-space: nowrap; }
 .bb-you { grid-area: you; color: var(--bb-faint); text-align: right; white-space: nowrap; }
 
@@ -9855,21 +9913,23 @@ body.auth-locked {
 }
 
 .bb-ladder span {
-  padding-top: 5px;
-  border-top: 2px solid var(--bb-grid);
+  padding: 4px 0;
+  border: 1px solid var(--bb-grid);
+  border-radius: 999px;
   color: var(--bb-faint);
   font: 600 var(--fs-micro)/1.2 var(--font-mono);
   letter-spacing: 0.12em;
+  text-align: center;
   text-transform: uppercase;
-  transition: color 200ms var(--ease-out), border-top-color 200ms var(--ease-out);
+  transition: color 200ms var(--ease-out), border-color 200ms var(--ease-out);
 }
 
 [data-phase="far"] .bb-ladder span:nth-child(1),
 [data-phase="near"] .bb-ladder span:nth-child(-n + 2),
 [data-phase="imminent"] .bb-ladder span:nth-child(-n + 3),
 [data-phase="live"] .bb-ladder span {
-  border-top-color: var(--bb-amber);
-  color: var(--bb-ink);
+  border-color: var(--bb-amber);
+  color: var(--bb-amber);
 }
 
 /* THE FUSE. Sixty seconds of continuous motion from ONE property write: the
@@ -10208,9 +10268,9 @@ body.auth-locked {
 
 .bb-news-row {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: baseline;
-  gap: 2px var(--space-3);
+  gap: 2px var(--space-2);
   padding: var(--space-3) 0;
 }
 .bb-news-row + .bb-news-row { border-top: 1px solid var(--bb-grid); }
@@ -10223,10 +10283,16 @@ body.auth-locked {
 }
 
 .bb-news-x {
+  grid-column: 3;
+  justify-self: end;
   color: var(--bb-ink);
   font: 700 var(--fs-body)/1 var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
+/* The figure takes the band's colour, so "2.41x · elevated" reads as one
+   statement the way the landing frame writes it. */
+.bb-news-row:has(.bb-news-band[data-band="elevated"]) .bb-news-x,
+.bb-news-row:has(.bb-news-band[data-band="heavy"]) .bb-news-x { color: var(--bb-oxide); }
 /* No reading yet is an em dash standing in for a number, never a 0.00 that
    would read as a measurement. */
 .bb-news-x[data-empty="1"] { color: var(--bb-faint); }
@@ -10235,18 +10301,19 @@ body.auth-locked {
    sunlight gets the same information as one on a calibrated monitor. There is
    no separate denominator element because newsLine() already carries "over N
    buckets" in its sentence, and one source for that number is the point. */
+/* The band is a word beside the figure, dot-joined, coloured with it. Plain
+   text rather than a filled chip: the landing ledger writes "2.41x · elevated"
+   as one phrase. The word itself still carries the state without colour. */
 .bb-news-band {
-  justify-self: start;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  background: var(--bb-wash);
+  grid-column: 4;
   color: var(--bb-soft);
   font: 700 var(--fs-micro)/1.2 var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-.bb-news-band[data-band="elevated"] { background: var(--bb-amber); color: var(--bb-void); }
-.bb-news-band[data-band="heavy"] { background: var(--bb-oxide); color: var(--bb-void); }
+.bb-news-band::before { content: "\00b7\00a0"; color: var(--bb-faint); }
+.bb-news-band[data-band="elevated"],
+.bb-news-band[data-band="heavy"] { color: var(--bb-oxide); }
 .bb-news-band[data-band="unknown"] { color: var(--bb-faint); }
 
 .bb-news-line {
@@ -10259,15 +10326,19 @@ body.auth-locked {
 /* The stance is the only place this pane says anything directional, and it can
    only appear when coverage is up AND the trader's own file clears its sample
    floor. newsVerdict() owns that gate; this is just its paint. */
-.bb-news-stance {
+.bb-news-stance,
+.bb-news-nocall {
   grid-column: 1 / -1;
   margin: var(--space-2) 0 0;
   padding: var(--space-2) var(--space-3);
-  border-left: 2px solid var(--bb-oxide);
-  background: var(--bb-well);
-  color: var(--bb-ink);
+  border: 1px dashed var(--bb-oxide);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--bb-oxide);
   font: 700 var(--fs-micro)/1.45 var(--font-mono);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 /* Headlines under the reading. Deliberately quiet: the ratio is the
@@ -10398,16 +10469,18 @@ body.auth-locked {
    densifies from 900 up.
    -------------------------------------------------------------------------- */
 @media (min-width: 900px) {
+  /* The landing frame's composition: the wire owns the left, the right is a
+     stack of news then approach, with the smaller panes below. */
   .bb-desk {
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr) minmax(0, 0.8fr);
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
     grid-template-areas:
-      "cmd   cmd   cmd"
-      "keys  keys  keys"
-      "appr  appr  appr"
-      "wire  reck  tilt"
-      "clock clock clock"
-      "news  news  news"
-      "stat  stat  stat";
+      "cmd   cmd"
+      "keys  keys"
+      "wire  news"
+      "wire  appr"
+      "reck  tilt"
+      "clock clock"
+      "stat  stat";
   }
 
   .bb-cmd     { grid-area: cmd; }
@@ -10431,8 +10504,8 @@ body.auth-locked {
   /* One line per release, five columns, and the countdown gets the size an
      instrument gives the number people are actually waiting on. */
   .bb-row {
-    grid-template-columns: 92px 34px 24px minmax(0, 1fr) auto;
-    grid-template-areas: "cd ccy imp ttl you";
+    grid-template-columns: 92px auto minmax(0, 1fr) auto;
+    grid-template-areas: "cd ccy ttl you";
     min-height: 26px;
     padding: 3px var(--space-3);
     font-size: 12.5px;

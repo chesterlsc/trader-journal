@@ -13033,8 +13033,8 @@ function renderEdgeBoard() {
                 data-starts="${escapeHtml(event.startsAt)}"
                 aria-pressed="${event.key === terminal.selectedKey ? "true" : "false"}">
                 <span class="bb-cd tm-event-cd"></span>
-                <span class="bb-ccy">${escapeHtml(event.currency)}</span>
-                ${bbLadder(event.impact)}
+                <span class="bb-ccy${event.impact === "High" ? " is-high" : ""}">${escapeHtml(event.currency)}</span>
+                <span class="visually-hidden">${escapeHtml(event.impact)} impact</span>
                 <span class="bb-ttl">${escapeHtml(event.title)}</span>
                 <span class="bb-you">${you}</span>
               </button>`;
@@ -13155,9 +13155,19 @@ function renderEdgeBoard() {
     "news",
     news === null
       ? `<p class="bb-note">No coverage link. The desk runs on the calendar and your own record alone.</p>`
-      : `<div class="bb-news">${news.assets
-          .map((asset) => {
-            const call = newsVerdict({ label: asset.label, coverage: asset, file, event: aimed });
+      : `<div class="bb-news">${(() => {
+          const calls = news.assets.map((asset) => ({
+            asset,
+            call: newsVerdict({ label: asset.label, coverage: asset, file, event: aimed }),
+          }));
+          // The dashed banner: the desk's actual output state when no stance
+          // cleared the gate. States a fact about what was issued, not a
+          // prediction about anything.
+          const noCall = calls.length > 0 && calls.every(({ call }) => call.stance === "")
+            ? `<p class="bb-news-nocall">no call issued</p>`
+            : "";
+          return calls
+          .map(({ asset, call }) => {
             return `<div class="bb-news-row">
               <span class="bb-news-sym">${escapeHtml(asset.label)}</span>
               <span class="bb-news-x"${asset.ratio === null ? ' data-empty="1"' : ""}>${
@@ -13177,7 +13187,8 @@ function renderEdgeBoard() {
               }
             </div>`;
           })
-          .join("")}</div>`
+          .join("") + noCall;
+        })()}</div>`
   );
 
   // ---- STATUS BAR: every threshold on screen, always ---------------------

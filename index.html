@@ -2643,30 +2643,35 @@
                  motion is the feed lamp, which breathes only while the link is
                  live. A second pulsing dot would be decoration wearing the
                  lamp's meaning. -->
+            <!-- Two rows now, matching the landing frame exactly: the chrome
+                 row is dot + name + the feed pill, and the clock rides in the
+                 command row below with the prompt and the keys. The strap
+                 sentence is gone: the landing frame has no strap, and the
+                 desk explains itself. -->
             <header class="bb-cmd">
               <i class="bb-dot" aria-hidden="true"></i>
               <h2 id="bbDeskName">RELEASE EDGE</h2>
-              <p>The calendar, welded to your own record.</p>
               <!-- THE STALL: the lamp breathes while the feed is live and stops
                    when it is not, so the desk's only always-on motion carries
                    information. See .bb-feed i in styles.css. -->
               <span class="bb-feed"><i aria-hidden="true"></i><span id="bbFeedText">linking</span></span>
-              <!-- id="tpClock" is deliberate: ui.tpClock (app.js:293) already
-                   binds it and renderTerminalClock() already patches it once a
-                   second. No second timer is added anywhere on this screen. -->
-              <span class="bb-utc"><span class="visually-hidden">Desk clock </span><b id="tpClock">--:--:--</b> UTC</span>
             </header>
 
             <!-- PANE KEYS. Not tabs: every pane is on screen at every width, so
                  these scroll a pane into view and mark themselves pressed.
                  aria-pressed, never role="tab", because nothing is hidden. -->
             <div class="bb-keys" id="bbKeys" role="group" aria-label="Desk panes">
+              <span class="bb-prompt" aria-hidden="true">&gt; edge --link journal</span>
               <button class="bb-key" type="button" data-pane-key="appr"><b>F1</b>APPROACH</button>
               <button class="bb-key" type="button" data-pane-key="wire"><b>F2</b>WIRE</button>
               <button class="bb-key" type="button" data-pane-key="reck"><b>F3</b>RECKONING</button>
               <button class="bb-key" type="button" data-pane-key="tilt"><b>F4</b>TILT</button>
               <button class="bb-key" type="button" data-pane-key="clock"><b>F5</b>CLOCK</button>
               <button class="bb-key" type="button" data-pane-key="news"><b>F6</b>NEWS</button>
+              <!-- id="tpClock" is deliberate: ui.tpClock already binds it and
+                   renderTerminalClock() patches it once a second. No second
+                   timer anywhere on this screen. -->
+              <span class="bb-utc"><span class="visually-hidden">Desk clock </span><b id="tpClock">--:--:--</b> UTC</span>
             </div>
 
             <!-- F1 THE APPROACH. The pane BODY carries data-starts and
