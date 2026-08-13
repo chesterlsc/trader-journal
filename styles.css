@@ -3766,6 +3766,9 @@ body.is-guest:not(.demo-signup) .trust-row {
 
 .footer-support summary {
   cursor: pointer;
+  /* The donation disclosure is on every screen and was a 32px target. */
+  min-height: 44px;
+  align-items: center;
   color: var(--text-soft);
   list-style: none;
   display: inline-flex;

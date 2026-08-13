@@ -906,7 +906,10 @@ body.auth-locked .topnav {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-height: 38px;
+  /* 44, not 38. This is a disclosure BUTTON on the dashboard's live position
+     pill, so it is held to the same touch floor as every other control rather
+     than to the height the pill happened to be. */
+  min-height: 44px;
   padding: 0;
   border: 0;
   background: none;
@@ -1807,6 +1810,7 @@ body.auth-locked .topnav {
   box-shadow: var(--clay-float);
   max-height: calc(100dvh - 48px);
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .sheet-head {
@@ -2206,7 +2210,11 @@ body.auth-locked .topnav {
   .sheet-step + .sheet-step::before { width: 18px; }
   .sheet-step { font-size: 13.5px; }
 
-  .cmdk { width: 100vw; margin-top: 24px; }
+  /* No width here. The base rule is already min(760px, 100vw - 32px), and
+     overriding it to 100vw made the command bar the only floating surface in
+     the app with zero side gutter, clipping its own accent focus ring against
+     both screen edges. */
+  .cmdk { margin-top: 24px; }
 }
 
 @keyframes sheetExpand {
@@ -3510,6 +3518,16 @@ body.auth-locked .topnav {
   .calendar-cell {
     min-height: 52px;
   }
+
+  /* The gap and padding have to move here too, for the reason the height did:
+     clay-v2 loads after styles.css, so its base .calendar-grid (10px gap, 14px
+     padding) beat the phone rule and cells came out 40.4px wide rather than the
+     46 that rule was written for. Seven columns at 375: 363 - 12 padding - 18
+     of gaps leaves 47.5 a cell. */
+  .calendar-grid {
+    gap: 3px;
+    padding: 6px;
+  }
 }
 
 /* --- 13h. Focus rings ----------------------------------------------------
@@ -3778,6 +3796,7 @@ body.auth-locked .topnav {
   box-shadow: var(--clay-float);
   max-height: calc(100dvh - 48px);
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .cooldown-kicker {
@@ -5669,6 +5688,7 @@ body.auth-locked .topnav {
     padding: 10px 14px 16px;
     overflow-y: auto;
     overscroll-behavior: contain;
+    overscroll-behavior: contain;
     border-radius: var(--radius-clay-lg);
     background: var(--surface-2);
     box-shadow: var(--clay-float);
@@ -5914,10 +5934,13 @@ body.auth-locked .topnav {
     display: none;
   }
 
-  /* Three orphans in a 2-column grid leaves a hole. The third spans instead. */
-  .main-nav .sheet-grid .sheet-tile:nth-child(3) {
-    grid-column: 1 / -1;
-  }
+  /* No span rule. It counted DOM position, and the Terminal Pro tile in this
+     grid is conditionally hidden, so :nth-child(3) picked the wrong tile
+     whichever way that went: with four visible it made the third full width
+     and left the fourth in a dead half cell, and with three visible it spanned
+     a middle tile instead of the last. CSS cannot count only the visible
+     children. Four tiles tile as 2x2 on their own, and three leave one honest
+     gap, which is what a grid does. */
 }
 
 @media (prefers-reduced-motion: reduce) {
