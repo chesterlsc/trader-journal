@@ -1096,6 +1096,7 @@ function init() {
   syncTradeProgressState();
   bindEvents();
   syncMobileNavState();
+  syncChromeHeight();
   renderLoginLogs();
   renderAdminUsers();
   renderAll();
@@ -1729,6 +1730,7 @@ function bindEvents() {
       renderCharts(state.analytics);
     }
     syncMobileNavState();
+    syncChromeHeight();
   }, 120));
 
   window.addEventListener("keydown", (event) => {
@@ -2169,6 +2171,12 @@ function syncDemoNotice() {
     return;
   }
   ui.demoBanner.hidden = !state.auth.guestMode || state.auth.guestNoticeDismissed;
+  // The notice is chrome the pinned views have to clear, so its arrival and its
+  // dismissal both move the top edge. The observer in syncChromeHeight sees this
+  // too; calling it here means the offset is right in the same frame rather than
+  // one paint later, which is the frame the banner would sit on the wall's
+  // size controls.
+  syncChromeHeight();
 }
 
 function dismissDemoNotice() {
@@ -13166,6 +13174,58 @@ function getWallSize() {
   } catch (error) {
     return "band";
   }
+}
+
+/* Every view is pinned under the top bar, so the bar's height is a layout
+   number and 86px was only ever its height at 1440 wide. The bar grows the
+   moment the links wrap or the account switcher appears, and a stale offset
+   there means the page overlaps it or floats below it, which is what showed up
+   on the other desktop ratios.
+   A ResizeObserver rather than a pile of call sites: the bar changes height for
+   reasons scattered all over this file (auth state, account count, the badge,
+   a window resize) and observing the element catches all of them at once. */
+function syncChromeHeight() {
+  // Which bar is on screen depends on the width: .topnav from 1025 up, the
+  // sticky #sidebar header below it. The views are pinned from 900 up, so
+  // between 900 and 1024 the chrome is the sidebar, measured at 52px against
+  // the 86px that was hard coded, which left a 34px dead band above every
+  // page at those widths. Take whichever is actually rendered.
+  // The demo notice belongs in this list, not beside it: it is sticky at z-index
+  // 200, so it floats over every pinned view, and in the Edge tab it landed on
+  // the wall's own size controls and made band/half/max unreachable for a guest.
+  // It is hidden or dismissed most of the time and then measures zero, and the
+  // observer republishes the moment it appears or goes.
+  const bars = [
+    document.querySelector(".topnav"),
+    document.getElementById("sidebar"),
+    document.getElementById("demoBanner"),
+  ].filter(Boolean);
+  if (!bars.length) return;
+  const publish = () => {
+    const root = document.documentElement;
+    // bottom, not height: .topnav is sticky at top:18px, so its bottom edge is
+    // the first free pixel and already carries that offset.
+    const bottom = bars.reduce((low, bar) => {
+      const rect = bar.getBoundingClientRect();
+      return rect.height > 0 ? Math.max(low, Math.round(rect.bottom)) : low;
+    }, 0);
+    if (bottom > 0) {
+      root.style.setProperty("--chrome-h", `${bottom}px`);
+    } else {
+      // Both hidden: the locked-session screen, where nothing is pinned.
+      // Clearing lets the stylesheet fall back to its own number rather than
+      // pinning every view to the top of the window.
+      root.style.removeProperty("--chrome-h");
+    }
+  };
+  publish();
+  if (state.chromeObserver || typeof ResizeObserver !== "function") return;
+  state.chromeObserver = new ResizeObserver(publish);
+  // border-box, not the default content-box: a bar's padding is part of the
+  // offset the views sit under, and a content-box observer sleeps through a
+  // padding change. Verified by growing the bar's padding by 40px and watching
+  // the default box miss it.
+  bars.forEach((bar) => state.chromeObserver.observe(bar, { box: "border-box" }));
 }
 
 /* One attribute on the wall drives the whole layout, so the tiles are never

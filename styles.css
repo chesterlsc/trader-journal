@@ -9082,7 +9082,13 @@ body.auth-locked {
 /* THE RIGHT SIDE. A sticky column beside the dashboard, so the countdown sits
    in the periphery and the money keeps the main column. */
 @media (min-width: 1240px) {
-  #dashboard {
+  /* .is-active is load bearing, not decoration. A bare #dashboard carries ID
+     specificity, so its display beat .view { display: none } and the dashboard
+     stayed laid out under EVERY other tab at 1240px and up: 4839px of it,
+     which is where the "I see the dashboard across" bleed and the stray page
+     scroll both came from. Measured before the fix: documentElement
+     scrollHeight 5144 against a 900px viewport with only #terminal active. */
+  #dashboard.is-active {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 300px;
     gap: var(--space-5);
@@ -9960,7 +9966,7 @@ body.auth-locked {
    ========================================================================== */
 #terminal.is-active {
   position: fixed;
-  inset: 86px 0 0 0;          /* 68px bar + its 18px offset */
+  inset: var(--chrome-h, 86px) 0 0 0;   /* measured bar bottom, app.js syncChromeHeight */
   z-index: 30;
   gap: 0;
   padding: 0 var(--space-4) var(--space-4);
@@ -9971,7 +9977,9 @@ body.auth-locked {
 @media (max-width: 899px) {
   /* The dock owns the bottom on a phone, so the page stops above it. */
   #terminal.is-active {
-    inset: 64px 0 64px 0;
+    /* The dock owns the bottom; the top is the sticky sidebar header, which
+       measures 52px on a phone against the 64px that was assumed here. */
+    inset: var(--chrome-h, 64px) 0 64px 0;
     padding: 0 var(--space-3) var(--space-3);
   }
 }
@@ -10326,10 +10334,10 @@ body.auth-locked {
       so nothing overlaps at any desktop ratio. The offsets are the same ones
       #terminal.is-active already uses, not new magic numbers. */
 .bb-wall[data-size="max"] {
-  inset: calc(86px + var(--tape-h, 34px)) 0 0 0;
+  inset: calc(var(--chrome-h, 86px) + var(--tape-h, 34px)) 0 0 0;
 }
 @media (max-width: 899px) {
-  .bb-wall[data-size="max"] { inset: calc(64px + var(--tape-h, 34px)) 0 64px 0; }
+  .bb-wall[data-size="max"] { inset: calc(var(--chrome-h, 64px) + var(--tape-h, 34px)) 0 64px 0; }
 }
 
 /* 2. THE TAPE RIDES ABOVE THE NEWS. While the wall is maximised the price
@@ -10338,7 +10346,7 @@ body.auth-locked {
       leaving the normal page untouched. */
 #terminal:has(.bb-wall[data-size="max"]) .bb-tape {
   position: fixed;
-  top: 86px;
+  top: var(--chrome-h, 86px);
   left: 0;
   right: 0;
   z-index: 61;
@@ -10346,7 +10354,7 @@ body.auth-locked {
   border-bottom: 1px solid var(--term-line);
 }
 @media (max-width: 899px) {
-  #terminal:has(.bb-wall[data-size="max"]) .bb-tape { top: 64px; }
+  #terminal:has(.bb-wall[data-size="max"]) .bb-tape { top: var(--chrome-h, 64px); }
 }
 
 /* 3. FRAMELESS LABELS. At max the name stops being a row and becomes a mark on
@@ -10463,6 +10471,65 @@ body.auth-locked {
 .bb-wall[data-size="half"] .bb-mon-h em { display: none; }
 .bb-wall[data-size="half"] .bb-wall-note { display: none; }
 
+/* --- HALF SPLITS SIDEWAYS ON A WIDE DESKTOP ------------------------------
+   "the half is so so small." Measured at 1440x900 before this: the band was
+   504px tall, the 16:9 grid inside it 793x446, and 323px of black sat on EACH
+   side, so 45% of the width was thrown away. A bottom band is height limited
+   by definition, and height is the thing a wide monitor has least of. The
+   worse the ratio, the worse it got: on a 1283x608 window the grid fell to
+   551x310 and each monitor to 275x155.
+
+   So above 1100px half becomes a column on the right instead of a band on the
+   bottom, and the desk keeps the left. That spends width, which a wide screen
+   has, on the picture. Measured after: 1440x900 gives 893x502 and a 446x251
+   monitor; 1283x608 gives 795x447 and a 397x223 monitor, which is 44% wider
+   than the band gave on the same window.
+
+   --wall-w is declared on the desk so both sides read the same number: the
+   wall takes it as its width, the desk reserves exactly it as padding. The
+   min() caps the column at what the available height can fill at 16:9, so a
+   short window narrows the column rather than growing black bars beside it. */
+@media (min-width: 1100px) {
+  #terminal:has(.bb-wall[data-size="half"]) {
+    --wall-w: min(62vw, calc((100vh - var(--chrome-h, 86px) - 34px) * 16 / 9));
+    padding-right: calc(var(--wall-w) + var(--space-4));
+    padding-bottom: var(--space-4);
+  }
+  .bb-wall[data-size="half"] {
+    inset: var(--chrome-h, 86px) 0 0 auto;
+    width: var(--wall-w);
+    height: auto;
+    border-top: 0;
+    border-left: 1px solid var(--term-line);
+  }
+  /* Width drives the grid here, where the band had height drive it, and the
+     row centres it so a short window letterboxes the COLUMN rather than
+     stretching the tiles out of ratio. */
+  .bb-wall[data-size="half"] .bb-wall-grid {
+    width: 100%;
+    height: auto;
+    max-height: 100%;
+    align-self: center;
+  }
+  /* With the wall beside it the desk column is 472px at 1283 wide, which is
+     phone width, so the desk drops back to the single-column stack it already
+     uses there. Left at three columns F2/F3/F4 got about 150px each and F3's
+     tag clipped mid-word. It scrolls inside #terminal, which already owns its
+     own overflow. */
+  #terminal:has(.bb-wall[data-size="half"]) .bb-desk {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "cmd"
+      "keys"
+      "appr"
+      "wire"
+      "reck"
+      "tilt"
+      "clock"
+      "stat";
+  }
+}
+
 @media (max-width: 899px) {
   .bb-wall[data-size="half"] { height: 38vh; }
   #terminal:has(.bb-wall[data-size="half"]) { padding-bottom: 38vh; }
@@ -10486,7 +10553,13 @@ body.auth-locked {
 @media (min-width: 900px) {
   .view.is-active {
     position: fixed;
-    inset: 86px 0 0 0;
+    /* --chrome-h is the top bar's MEASURED bottom edge, published by app.js
+       (syncChromeHeight) the same way --tape-h already is. 86px was the height
+       at 1440 only: the bar is taller the moment the links wrap, which is what
+       made the page overlap on the narrower and shorter desktop ratios. The
+       fallback is the old number so a failed measurement degrades to what
+       shipped rather than to zero. */
+    inset: var(--chrome-h, 86px) 0 0 0;
     z-index: 20;
     padding: var(--space-5) var(--space-6) var(--space-8);
     overflow-y: auto;
