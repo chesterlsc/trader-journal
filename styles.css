@@ -1956,6 +1956,22 @@ body.is-guest:not(.demo-signup) .auth-shell {
     animation: lndTpBlink 1.06s steps(1) infinite;
   }
 
+  /* THE CUT owns the loop seam. The replay is built from per-element
+     animation-delay on an INFINITE animation, so every element restarts at its
+     own offset rather than on a shared boundary, and the restart arrived as a
+     one-by-one flicker instead of a beat. Dipping the screen across the
+     boundary makes it a cut, and a cut is what a recording does.
+     THE SCREEN ITSELF, not an overlay plate. A plate would be a new element
+     whose only job is to be invisible, and if this stylesheet were ever stale
+     against the markup, which happened twice while building this, it would
+     have no rules, default to opacity 1, and sit as an opaque black rectangle
+     over the whole teaser. Animating an element that is already there cannot
+     fail that way: with no CSS, or with reduced motion, the screen is simply
+     the finished desk. */
+  .lnd-tp-screen {
+    animation: lndTpCut 26s linear infinite;
+  }
+
   .lnd-tp-sweep {
     animation: lndTpSweep 9s linear infinite;
   }
@@ -1999,6 +2015,15 @@ body.is-guest:not(.demo-signup) .auth-shell {
   .lnd-tp-check span:last-child::before {
     animation: lndTpBlink 1.4s steps(1) infinite;
   }
+}
+
+/* Dark for the last 1.5% and first 1.5% of the cycle, about 780ms of cut
+   across the restart, and fully lit for the other 97%. Opacity only, so it
+   composites. */
+@keyframes lndTpCut {
+  0%, 1.5% { opacity: 0; }
+  3%, 97% { opacity: 1; }
+  98.5%, 100% { opacity: 0; }
 }
 
 @keyframes lndTpIn {
