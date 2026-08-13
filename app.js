@@ -12091,17 +12091,29 @@ function setupLandingTicker() {
 function setupStickyDashTicker() {
   const dock = document.getElementById("dashTickerDock");
   const head = document.querySelector(".dash-head");
-  if (!dock || !head) {
+  const dashboard = document.getElementById("dashboard");
+  if (!dock || !head || !dashboard) {
     return;
   }
   // No rAF throttle: one rect read + class toggle is cheaper than the jam a
   // queued-but-never-run frame causes in a hidden tab (raf id never clears,
   // and every later scroll gets swallowed by the guard).
   const update = () => {
-    const dashboardActive = canAccessApp() && document.getElementById("dashboard")?.classList.contains("is-active");
-    dock.classList.toggle("is-docked", dashboardActive && head.getBoundingClientRect().bottom < 0);
+    const dashboardActive = canAccessApp() && dashboard.classList.contains("is-active");
+    // The head is out of sight once it clears the TOP OF ITS OWN SCROLLER, not
+    // the top of the window. On desktop the dashboard is pinned under the bar,
+    // so that edge is --chrome-h; on a phone it is still in page flow and its
+    // top runs negative as the page scrolls, which the clamp turns back into
+    // the original "bottom < 0" test.
+    const edge = Math.max(0, dashboard.getBoundingClientRect().top);
+    dock.classList.toggle("is-docked", dashboardActive && head.getBoundingClientRect().bottom < edge);
   };
+  // BOTH scrollers. A scroll event on an element does not bubble to window, so
+  // once the views became position:fixed with their own overflow the window
+  // listener alone stopped firing on desktop: the dock never appeared again,
+  // and if it was already docked it stayed docked over every other tab.
   window.addEventListener("scroll", update, { passive: true });
+  dashboard.addEventListener("scroll", update, { passive: true });
 }
 
 /* Landing showcase: five sample scenes in one phone frame, chip-switched.

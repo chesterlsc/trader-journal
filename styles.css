@@ -8482,7 +8482,12 @@ body.auth-ready .lnd-tape-list .lnd-row {
    that triggers it. Sits under modals/toasts (they use higher z). */
 .dash-ticker-dock {
   position: fixed;
-  top: 10px;
+  /* UNDER the bar, not behind it. At a flat 10px this pill landed inside the
+     top bar's own band (18px to 86px) and the bar outranks it, z-index 100
+     against 60, so the docked state was invisible on desktop. The phone rule
+     below already cleared its own 52px rail; desktop never did, because back
+     then the bar scrolled away with the page. It does not any more. */
+  top: calc(var(--chrome-h, 86px) + 10px);
   left: 50%;
   transform: translate(-50%, -160%);
   display: inline-flex;
