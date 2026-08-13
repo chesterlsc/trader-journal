@@ -646,102 +646,97 @@
           <header class="lnd-tp-masthead">
             <p class="lnd-tp-plate">
               <span class="lnd-tp-stamp">Release&nbsp;edge</span>
-              <span>In development &middot; journal-fusion tier</span>
+              <span>Live &middot; pro tier</span>
             </p>
             <h2 id="lndTermHeading" class="lnd-tp-headline">Every terminal reads the tape.<br />This one has read <em>your journal</em>.</h2>
             <p class="lnd-tp-lede">
-              In build for the pro tier: the wire, the calendar and your own trading
-              record, fused into one instrument. When a number drops it doesn't just
-              show you the news. It shows you what that news usually does to you.
+              Seven panes. The calendar, the coverage tape and your own record, on one desk.
+              No call is the common case. That is the point.
             </p>
           </header>
 
-          <figure class="lnd-tp-frame" aria-label="Terminal Pro concept preview: a sample fusion workspace with invented figures, nothing live">
+          <figure class="lnd-tp-frame" aria-label="Release edge replay: the shipped desk on the demo journal's sample data, nothing live">
             <figcaption class="lnd-tp-chrome">
               <span class="lnd-tp-dot" aria-hidden="true"></span>
               <span class="lnd-tp-title">Release&nbsp;edge</span>
-              <span class="lnd-tp-tag">concept preview</span>
+              <span class="lnd-tp-tag">sample replay</span>
             </figcaption>
             <div class="lnd-tp-screen" aria-hidden="true">
               <div class="lnd-tp-sweep"></div>
               <div class="lnd-tp-cmd">
-                <span class="lnd-tp-prompt">&gt; wire --link journal<i class="lnd-tp-caret"></i></span>
-                <span class="lnd-tp-fkeys">F2 edge &middot; F5 stamp &middot; F8 arm &middot; F9 tilt</span>
+                <span class="lnd-tp-prompt">&gt; edge --link journal<i class="lnd-tp-caret"></i></span>
+                <span class="lnd-tp-fkeys">F1 approach &middot; F2 wire &middot; F3 reckoning &middot; F4 tilt &middot; F5 clock &middot; F6 news &middot; F7 wall</span>
                 <span class="lnd-tp-clock">13:32:05 UTC</span>
               </div>
               <div class="lnd-tp-panes">
+                <!-- F2 THE WIRE. The four releases are buildSampleReleases()
+                     (app.js), the same ones the demo desk shows. YOU reads
+                     "no file" on every row because the demo journal carries no
+                     event stamped trades, which is the honest output of
+                     eventFile() and not a placeholder. -->
                 <div class="lnd-tp-pane lnd-tp-wire">
-                  <p class="lnd-tp-pane-h"><b>F1</b>wire <em>journal link on</em></p>
+                  <p class="lnd-tp-pane-h"><b>F2</b>the wire <em>USD</em></p>
                   <div class="lnd-tp-row" style="--d:.2s">
-                    <span class="lnd-tp-t">13:29:41</span>
-                    <span class="lnd-tp-s">wire</span>
-                    <span class="lnd-tp-h">Desks lean long dollar into the print</span>
-                    <span class="lnd-tp-x">&mdash;</span>
+                    <span class="lnd-tp-t">T&minus;47m</span>
+                    <span class="lnd-tp-s is-hot">USD</span>
+                    <span class="lnd-tp-h">CPI m/m</span>
+                    <span class="lnd-tp-x">no file</span>
                   </div>
-                  <div class="lnd-tp-row is-flash" style="--d:.8s">
-                    <span class="lnd-tp-t">13:30:00</span>
-                    <span class="lnd-tp-s is-hot">tv</span>
-                    <span class="lnd-tp-h">CPI 3.1% y/y, two tenths under consensus</span>
-                    <span class="lnd-tp-x is-neg">USD &minus;0.4%</span>
+                  <div class="lnd-tp-row" style="--d:.9s">
+                    <span class="lnd-tp-t">T&minus;2h47</span>
+                    <span class="lnd-tp-s">USD</span>
+                    <span class="lnd-tp-h">Unemployment Claims</span>
+                    <span class="lnd-tp-x">no file</span>
                   </div>
-                  <div class="lnd-tp-row is-fuse" style="--d:1.5s">
-                    <span class="lnd-tp-t">13:30:00</span>
-                    <span class="lnd-tp-s is-hot">edge</span>
-                    <span class="lnd-tp-h">Your CPI file pulled. 7 prior prints &rarr; F2</span>
-                    <span class="lnd-tp-x">2W/5L</span>
+                  <div class="lnd-tp-row" style="--d:1.6s">
+                    <span class="lnd-tp-t">T&minus;5h42</span>
+                    <span class="lnd-tp-s is-hot">USD</span>
+                    <span class="lnd-tp-h">FOMC Member Speaks</span>
+                    <span class="lnd-tp-x">no file</span>
                   </div>
-                  <div class="lnd-tp-row" style="--d:2.2s">
-                    <span class="lnd-tp-t">13:30:04</span>
-                    <span class="lnd-tp-s">wire</span>
-                    <span class="lnd-tp-h">2Y &minus;9bp, June cut back on the table</span>
-                    <span class="lnd-tp-x is-pos">ES +0.4%</span>
+                  <div class="lnd-tp-row" style="--d:2.3s">
+                    <span class="lnd-tp-t">T&minus;24h47</span>
+                    <span class="lnd-tp-s">EUR</span>
+                    <span class="lnd-tp-h">Flash GDP q/q</span>
+                    <span class="lnd-tp-x">no file</span>
                   </div>
-                  <div class="lnd-tp-row" style="--d:2.9s">
-                    <span class="lnd-tp-t">13:30:31</span>
-                    <span class="lnd-tp-s">wire</span>
-                    <span class="lnd-tp-h">Gold takes out the Asia high</span>
-                    <span class="lnd-tp-x is-pos">XAU +18.4</span>
-                  </div>
-                  <div class="lnd-tp-row is-you" style="--d:7s">
-                    <span class="lnd-tp-t">13:31:07</span>
-                    <span class="lnd-tp-s is-you">you</span>
-                    <span class="lnd-tp-h">Short EURUSD 1.0841, context stamped &rarr; F5</span>
-                    <span class="lnd-tp-x">#482</span>
-                  </div>
-                  <div class="lnd-tp-row" style="--d:10.6s">
-                    <span class="lnd-tp-t">13:31:56</span>
-                    <span class="lnd-tp-s">cal</span>
-                    <span class="lnd-tp-h">FOMC minutes 14:00, discipline arming &rarr; F8</span>
-                    <span class="lnd-tp-x">T&minus;27:55</span>
-                  </div>
+                  <p class="lnd-tp-saved">5 prints buy a rate. 10 buy a verdict.</p>
                 </div>
+
+                <!-- F6 THE NEWS EDGE. Ratios, bands and headlines are
+                     buildSampleNews(). The sentence is newsLine()'s real
+                     output for this shape, assembled on screen. -->
                 <div class="lnd-tp-pane lnd-tp-edge">
-                  <p class="lnd-tp-pane-h"><b>F2</b>your edge <em>CPI prints</em></p>
-                  <div class="lnd-tp-stat" style="--i:0"><span>your record</span><b class="is-neg">2W/5L &middot; avg &minus;$84</b></div>
-                  <div class="lnd-tp-stat" style="--i:1"><span>worst window</span><b class="is-neg">first 15 min &middot; &minus;$212</b></div>
-                  <div class="lnd-tp-stat" style="--i:2"><span>best move</span><b class="is-pos">fade the spike +30m &middot; +$67</b></div>
-                  <p class="lnd-tp-verdict">verdict: stand down 15:00</p>
+                  <p class="lnd-tp-pane-h"><b>F6</b>the news edge <em>sample</em></p>
+                  <div class="lnd-tp-stat" style="--i:0"><span>GOLD</span><b class="is-neg">2.41x &middot; elevated</b></div>
+                  <div class="lnd-tp-stat" style="--i:1"><span>BITCOIN</span><b>1.04x &middot; normal</b></div>
+                  <div class="lnd-tp-stat" style="--i:2"><span>over</span><b>166 buckets</b></div>
+                  <p class="lnd-tp-verdict">no call to make</p>
                 </div>
+
+                <!-- F1 THE APPROACH. -->
                 <div class="lnd-tp-pane lnd-tp-journal">
-                  <p class="lnd-tp-pane-h"><b>F5</b>journal <em>auto-context</em></p>
-                  <p class="lnd-tp-entry">13:31:07 &middot; short EURUSD 1.0841 <i>entry #482</i></p>
+                  <p class="lnd-tp-pane-h"><b>F1</b>the approach <em>CPI m/m</em></p>
+                  <p class="lnd-tp-entry">Coverage 2.41x its 7 day median. <i>You have no file.</i></p>
                   <p class="lnd-tp-chips">
-                    <span class="lnd-tp-chip" style="--i:0">CPI miss &middot; 1 min prior</span>
-                    <span class="lnd-tp-chip" style="--i:1">USD &minus;0.4% &middot; 2Y &minus;9bp</span>
-                    <span class="lnd-tp-chip is-warn" style="--i:2">tilt: elevated</span>
+                    <span class="lnd-tp-chip" style="--i:0">far</span>
+                    <span class="lnd-tp-chip" style="--i:1">near</span>
+                    <span class="lnd-tp-chip is-warn" style="--i:2">T&minus;60</span>
                   </p>
-                  <p class="lnd-tp-saved">stamped for review week</p>
+                  <p class="lnd-tp-saved">No call is the common case.</p>
                 </div>
+
+                <!-- F7 THE WALL. Sixteen channels, four monitors, WALL_CHANNELS. -->
                 <div class="lnd-tp-pane lnd-tp-arm">
-                  <p class="lnd-tp-pane-h"><b>F8</b>discipline <em>arming</em></p>
-                  <p class="lnd-tp-count">FOMC minutes &middot; 14:00 <b>T&minus;27:55</b><span class="lnd-tp-armed">armed</span></p>
+                  <p class="lnd-tp-pane-h"><b>F7</b>the wall <em>4 monitors</em></p>
+                  <p class="lnd-tp-count">Reuters &middot; CNBC &middot; Topstep <b>16 channels</b></p>
                   <span class="lnd-tp-lockbar"><i></i></span>
                   <p class="lnd-tp-check">
-                    <span class="is-done">size halved</span>
-                    <span class="is-done">news rule read</span>
-                    <span>revenge guard</span>
+                    <span class="is-done">band</span>
+                    <span class="is-done">half</span>
+                    <span>max</span>
                   </p>
-                  <p class="lnd-tp-locknote">desk locks at 13:58:00 unless every box is ticked</p>
+                  <p class="lnd-tp-locknote">Official public streams. Nothing stored.</p>
                 </div>
               </div>
               <div class="lnd-tp-bar">
@@ -755,30 +750,29 @@
 
           <ul class="lnd-tp-legend">
             <li style="--i:0">
-              <b>F2</b>
-              <span class="lnd-tp-legend-k">Your edge vs this event</span>
-              <span class="lnd-tp-legend-d">A number breaks and your own record on that event type prints beside it. 2W/5L is a fact, not a feeling.</span>
+              <b>F1</b>
+              <span class="lnd-tp-legend-k">The approach</span>
+              <span class="lnd-tp-legend-d">The calendar to the second, and your record in each window around the print.</span>
             </li>
             <li style="--i:1">
-              <b>F5</b>
-              <span class="lnd-tp-legend-k">Context auto-stamp</span>
-              <span class="lnd-tp-legend-d">Every trade is stamped with the tape it was opened into. Review week reads &ldquo;CPI miss, 1 min prior&rdquo; instead of a guess.</span>
+              <b>F3</b>
+              <span class="lnd-tp-legend-k">The reckoning</span>
+              <span class="lnd-tp-legend-d">Your file on the aimed release. 5 prints buy a rate. 10 buy a verdict.</span>
             </li>
             <li style="--i:2">
-              <b>F8</b>
-              <span class="lnd-tp-legend-k">Discipline arming</span>
-              <span class="lnd-tp-legend-d">Before high-impact releases your own rules arm themselves. The desk locks ahead of the print unless your checklist is ticked.</span>
+              <b>F6</b>
+              <span class="lnd-tp-legend-k">The news edge</span>
+              <span class="lnd-tp-legend-d">How hard the press is covering the asset now, against its own 7 day median. Headlines included.</span>
             </li>
             <li style="--i:3">
-              <b>F9</b>
-              <span class="lnd-tp-legend-k">Tilt radar</span>
-              <span class="lnd-tp-legend-d">Your revenge and hesitation patterns, correlated to headline types. It knows which news makes you overtrade, and says so.</span>
+              <b>F7</b>
+              <span class="lnd-tp-legend-k">The wall</span>
+              <span class="lnd-tp-legend-d">Sixteen channels on four monitors. Official public streams, nothing stored.</span>
             </li>
           </ul>
           <p class="lnd-tp-fine">
-            Concept preview of a pro tier in development: every figure on the screen is
-            an invented sample and nothing on it is live. Pricing lands with the launch;
-            journalling itself stays free.
+            The screen replays the shipped desk on the demo journal's sample data.
+            Open the sample journal and it is the same desk. Journalling stays free.
           </p>
         </div>
       </section>
