@@ -12609,6 +12609,36 @@ function setupTerminal() {
     }
   });
 
+  /* THE FILTER STRIP'S FADE MEANS "THERE IS MORE TO THE RIGHT", so it has to
+     track the scroll. A mask paints on the border box and does not travel, so
+     left unconditional it half-erased the LAST filter at the far end of the
+     scroll, permanently, with nothing left to reveal.
+     Capture phase on the document: a scroll event does not bubble, and this is
+     one listener instead of one per strip that would have to be rebound every
+     time the row is re-rendered. */
+  const syncChipFade = (strip) => {
+    if (!strip) return;
+    strip.classList.toggle(
+      "has-more",
+      strip.scrollWidth - strip.clientWidth - strip.scrollLeft > 2
+    );
+  };
+  document.addEventListener(
+    "scroll",
+    (event) => {
+      const node = event.target;
+      if (node && node.classList && node.classList.contains("rev-chips")) {
+        syncChipFade(node);
+      }
+    },
+    true
+  );
+  // And on the two moments the answer changes without a scroll: first paint and
+  // a resize, both of which alter how much is off the right edge.
+  const syncEveryChipFade = () => document.querySelectorAll(".rev-chips").forEach(syncChipFade);
+  syncEveryChipFade();
+  window.addEventListener("resize", debounce(syncEveryChipFade, 120));
+
   // The rail's minimize control. Delegated from the document because the rail
   // is re-rendered, and writing the choice is what makes it beat the width
   // default from then on.

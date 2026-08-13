@@ -8009,8 +8009,13 @@ body:has(.tabbar .nav-btn[data-target="terminal"]:not([hidden])) .main-nav .shee
    it. Drop both out of the way while a text field has focus. :has is a
    progressive enhancement — where it is unsupported the whole rule is
    dropped and the bar simply stays put. */
-body:has(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus) .tabbar,
-body:has(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus) .tabbar-fab,
+/* The exclusion list is every input type that raises a PICKER rather than a
+   keyboard. Those open their own overlay, so there is nothing above the dock
+   for the dock to get out of the way of, and dropping it 150px with
+   pointer-events: none just took the whole bottom navigation away while the
+   user chose a date. Focusing a month field on the calendar did exactly that. */
+body:has(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="date"]):not([type="month"]):not([type="time"]):not([type="week"]):not([type="datetime-local"]):not([type="color"]):not([type="range"]):focus) .tabbar,
+body:has(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="date"]):not([type="month"]):not([type="time"]):not([type="week"]):not([type="datetime-local"]):not([type="color"]):not([type="range"]):focus) .tabbar-fab,
 body:has(textarea:focus) .tabbar,
 body:has(textarea:focus) .tabbar-fab {
   transform: translateY(150px);
@@ -8132,13 +8137,19 @@ body:has(textarea:focus) .tabbar-fab {
   padding: 1px 4px;
 }
 
-/* The edge quad goes 2-up below 900px. Its widest value is Expectancy, which
-   can read "-$1,234.56" — 10 mono glyphs. The desktop clamp floor (24px)
-   needs 144px and a 360px phone only gives the cell 128px, so the floor goes
-   viewport-relative rather than letting the numeral run past the card. */
+/* The edge quad goes 2-up below 900px. Its widest value is Expectancy, and the
+   budget here used to be "10 mono glyphs" for "-$1,234.56". Ten fits exactly,
+   111.2px inside 112.6px, which means eleven does not: a six-figure expectancy
+   is 12 glyphs and broke out of the moulded card into the gutter, where in
+   Clay V3 a numeral crossing the card edge reads as a rendering fault rather
+   than as a big number, because the edge is the language.
+   The 19px floor was what stopped the viewport term doing its job at 320. At
+   16px the same 12 glyphs measure 112.6px and stay inside, and 16px is still
+   well clear of the 11px type floor. Wrapping was the alternative and it is
+   worse: a price broken across two lines is a misread waiting to happen. */
 @media (max-width: 560px) {
   .dash-quad-card .metric-value {
-    font-size: clamp(19px, 5.6vw, 24px);
+    font-size: clamp(16px, 5.6vw, 24px);
   }
 }
 

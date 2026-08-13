@@ -3453,6 +3453,15 @@ body.auth-locked .topnav {
     padding: 4px 0 10px;
     margin-inline: 0;
     scrollbar-width: none;
+  }
+
+  /* THE FADE ONLY WHILE THERE IS MORE. mask-image paints on the container's
+     own border box and does not travel with scroll, so an unconditional mask
+     sat on the strip's right edge for the whole scroll range: at the far end
+     the LAST filter was still half-erased, permanently, with nothing left to
+     reveal. app.js toggles .has-more from the scroll position, so the fade now
+     means what it looks like it means. */
+  .rev-chips.has-more {
     -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
     mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
   }

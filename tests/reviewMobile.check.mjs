@@ -76,10 +76,26 @@ for (const rule of chipMobile) {
     /overflow-x:\s*auto/,
     ".rev-chips must stay a horizontal scroll strip, not force page width"
   );
-  assert.match(
-    rule.body || "",
-    /mask-image:\s*linear-gradient/,
-    ".rev-chips needs its fade affordance — iOS overlay scrollbars are invisible"
+}
+
+// 2b. THE FADE MUST EXIST AND MUST BE CONDITIONAL. iOS overlay scrollbars are
+//     invisible, so the strip needs a fade to say there is more to the right.
+//     But a mask paints on the border box and does not travel with the scroll,
+//     so an UNCONDITIONAL one sat on the edge for the whole scroll range and
+//     half-erased the last filter at the far end, permanently, with nothing
+//     left to reveal. app.js toggles .has-more from the scroll position.
+const chipFade = rules.filter(
+  (r) => /^\.rev-chips\.has-more$/.test(r.selector) && /mask-image:\s*linear-gradient/.test(r.body || "")
+);
+assert.ok(
+  chipFade.length > 0,
+  ".rev-chips needs its fade affordance, on .rev-chips.has-more — iOS overlay scrollbars are invisible"
+);
+for (const rule of chipMobile) {
+  assert.ok(
+    !/mask-image:\s*linear-gradient/.test(rule.body || ""),
+    ".rev-chips must not carry the fade unconditionally — it would half-erase the last " +
+      "filter at the end of the scroll, where there is nothing left to reveal"
   );
 }
 
