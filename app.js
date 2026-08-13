@@ -2249,6 +2249,51 @@ function nudgeGuest(target, message) {
    reflections. Every row is labelled SAMPLE DATA in its notes and carries the
    DEMO_BATCH_ID so it can never be mistaken for — or carried over as — real
    trading history. */
+/* SAMPLE releases and a SAMPLE coverage reading for the demo desk. The same
+   honesty contract as the demo trades: deterministic, labelled sample at the
+   feed tag, and never mistakable for a live link because no fetch happens.
+   Times are relative to now so the countdowns genuinely run. */
+function buildSampleReleases() {
+  const at = (minutes) => new Date(Date.now() + minutes * 60000).toISOString();
+  return [
+    { key: "demo-us-cpi-mm", title: "CPI m/m", currency: "USD", impact: "High", startsAt: at(47) },
+    { key: "demo-us-jobless", title: "Unemployment Claims", currency: "USD", impact: "Medium", startsAt: at(167) },
+    { key: "demo-us-fomc", title: "FOMC Member Speaks", currency: "USD", impact: "High", startsAt: at(342) },
+    { key: "demo-eu-gdp", title: "Flash GDP q/q", currency: "EUR", impact: "Medium", startsAt: at(1487) },
+  ];
+}
+
+function buildSampleNews() {
+  // Ratios sit where the shipped bands put them: gold elevated at its measured
+  // p90 of 2.30+, bitcoin normal. Headlines carry a sample source on purpose,
+  // never a real outlet's name on an invented sentence.
+  const headline = (title) => ({ title, domain: "sample wire", url: "#", at: "" });
+  return {
+    sample: true,
+    asOf: new Date().toISOString(),
+    stale: false,
+    assets: [
+      {
+        id: "gold", label: "GOLD", symbol: "XAUUSD",
+        ratio: 2.41, band: "elevated", n: 166, zeroShare: 0.07, through: new Date().toISOString(),
+        headlines: [
+          headline("Gold steadies as desks weigh the Fed path into the print"),
+          headline("Bullion holds its bid while real yields slip"),
+          headline("Dollar softens ahead of the inflation number"),
+        ],
+      },
+      {
+        id: "btc", label: "BITCOIN", symbol: "BTCUSDT",
+        ratio: 1.04, band: "normal", n: 165, zeroShare: 0.13, through: new Date().toISOString(),
+        headlines: [
+          headline("Bitcoin drifts with the majors into the data window"),
+          headline("Miners rotate hashpower as the halving cycle grinds on"),
+        ],
+      },
+    ],
+  };
+}
+
 function seedDemoJournal() {
   const demo = buildDemoJournal();
   state.settings = normalizeSettings(DEFAULT_SETTINGS);
@@ -12680,7 +12725,21 @@ function setupTerminal() {
 }
 
 async function loadTerminalCalendar() {
-  if (!canAccessApp() || state.auth.guestMode || state.auth.previewMode) {
+  if (!canAccessApp()) {
+    return;
+  }
+  // Guests and local preview get SAMPLE releases, never a fetch: the endpoint
+  // is auth-gated and the demo promises nothing leaves the tab. Relative to
+  // now, so the countdowns run and the desk is alive, and the feed tag says
+  // sample rather than pretending a link exists.
+  if (state.auth.guestMode || state.auth.previewMode) {
+    terminal.events = buildSampleReleases();
+    terminal.asOf = new Date().toISOString();
+    terminal.stale = false;
+    terminal.sample = true;
+    terminal.skewMs = 0;
+    renderEdgeBoard();
+    renderEdgeMini();
     return;
   }
   try {
@@ -12714,7 +12773,13 @@ async function loadTerminalCalendar() {
    terminal.news null, the pane says it has no reading, and nothing else on the
    desk notices. */
 async function loadNewsEdge() {
-  if (!canAccessApp() || state.auth.guestMode || state.auth.previewMode) {
+  if (!canAccessApp()) {
+    return;
+  }
+  if (state.auth.guestMode || state.auth.previewMode) {
+    terminal.news = buildSampleNews();
+    renderEdgeBoard();
+    renderEdgeMini();
     return;
   }
   try {
@@ -12828,7 +12893,11 @@ function syncTerminalAccess() {
   // grants the terminal so the view can be developed without a session. The
   // hostname check makes this unreachable in production — it is the same gate
   // the dev "Back to app" chip already rides on.
-  const granted = Boolean(state.auth.terminalPro) || isLocalPreviewMode();
+  // The DEMO gets the desk too. The sample journal exists to show the product,
+  // and hiding the flagship tier from the one visitor who is evaluating it was
+  // backwards: a guest saw everything except the reason to pay. Sample data
+  // rides the same rails as the demo trades, labelled, never fetched.
+  const granted = Boolean(state.auth.terminalPro) || state.auth.guestMode || isLocalPreviewMode();
   document.querySelectorAll("[data-terminal-nav]").forEach((button) => {
     button.hidden = !granted;
   });
@@ -12916,7 +12985,11 @@ function renderEdgeBoard() {
   desk.dataset.feed = stale ? "stale" : "live";
   setText(
     document.getElementById("bbFeedText"),
-    terminal.asOf === null ? "no link" : stale ? `feed ${feedAt}z stale` : `feed ${feedAt}z live`
+    // "sample" outranks both other states: a demo desk must never claim a live
+    // link it does not have, and never look broken for lacking one.
+    terminal.sample
+      ? "sample data"
+      : terminal.asOf === null ? "no link" : stale ? `feed ${feedAt}z stale` : `feed ${feedAt}z live`
   );
 
   // ---- F1 THE WIRE -------------------------------------------------------
@@ -13069,7 +13142,9 @@ function renderEdgeBoard() {
   const news = terminal.news;
   setText(
     document.getElementById("bbNewsTag"),
-    news === null || news.asOf === null
+    news?.sample
+      ? "sample data"
+      : news === null || news.asOf === null
       ? "no link"
       : news.stale
       ? `${new Date(news.asOf).toISOString().slice(11, 16)}z stale`
@@ -13714,7 +13789,9 @@ function renderEdgeMini() {
 
   setText(
     document.getElementById("dashEdgeMiniAsOf"),
-    terminal.asOf === null
+    terminal.sample
+      ? "sample data"
+      : terminal.asOf === null
       ? "link down"
       : `${new Date(terminal.asOf).toISOString().slice(11, 19)} UTC${terminal.stale ? " stale" : ""}`
   );
@@ -13741,7 +13818,7 @@ function renderEdgeMini() {
   setHtml(
     document.getElementById("dashEdgeMiniNews"),
     `<p class="dem-h"><b>F6</b>news edge<em>${
-      news === null || news.asOf === null ? "no link" : news.stale ? "stale" : "live"
+      news?.sample ? "sample" : news === null || news.asOf === null ? "no link" : news.stale ? "stale" : "live"
     }</em></p>` +
       (news === null
         ? `<p class="dem-empty">No coverage link.</p>`
