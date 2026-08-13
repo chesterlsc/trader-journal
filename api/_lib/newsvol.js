@@ -179,9 +179,41 @@ async function pullHeadlines(fetchImpl, asset) {
         url: String(row?.url ?? '').trim().slice(0, 400),
         at: String(row?.seendate ?? '').trim().slice(0, 20),
       }))
-      .filter((h) => h.title !== '' && /^https?:\/\//.test(h.url))
-      .slice(0, HEADLINE_COUNT);
-    return headlines.length === 0 ? null : headlines;
+      .filter((h) => h.title !== '' && /^https?:\/\//.test(h.url));
+
+    // ONE STORY, ONE SLOT. A wire story runs verbatim across a dozen outlets,
+    // so relevance ordering hands back the same headline several times: on a
+    // live capture the top three were "Gold rises to over two month peak as US
+    // inflation data..." from kitco, the same sentence from businesstimes, and
+    // only then a different story. Two of three slots on one story, out of
+    // three slots total.
+    // Compared on WORD OVERLAP, not on a prefix. A prefix does not work here
+    // and I measured that before settling: the two syndicated copies were
+    // "...two month PEAK as US inflation data..." and "...two month HIGH as US
+    // inflation data...", which diverge at character 27, so any prefix long
+    // enough to be safe misses them and any prefix short enough to catch them
+    // collides on unrelated stories that open the same way.
+    // Those two share 11 of 12 words. The third, genuinely different story
+    // shares about a quarter. 0.7 sits in the gap with room either side.
+    const kept = [];
+    for (const h of headlines) {
+      const words = new Set(h.title.toLowerCase().match(/[a-z0-9]+/g) ?? []);
+      if (words.size === 0) continue;
+      const duplicate = kept.some((prev) => {
+        let shared = 0;
+        for (const w of words) if (prev.words.has(w)) shared += 1;
+        // Against the SMALLER title, so a long headline cannot dilute its way
+        // past the threshold by padding with a subtitle.
+        return shared / Math.min(words.size, prev.words.size) >= 0.7;
+      });
+      if (duplicate) continue;
+      kept.push({ ...h, words });
+      if (kept.length === HEADLINE_COUNT) break;
+    }
+    // `words` was working state, never stored: it is a Set and would serialise
+    // to {} in the jsonb payload.
+    const deduped = kept.map(({ words, ...rest }) => rest);
+    return deduped.length === 0 ? null : deduped;
   } catch { return null; }
 }
 

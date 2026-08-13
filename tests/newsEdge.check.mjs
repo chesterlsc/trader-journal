@@ -323,6 +323,38 @@ assert.equal(hl[0].title, "Gold steadies as traders weigh Fed path.", "runs coll
 assert.equal(hl[2].title, "Dollar softens, gold bid");
 assert.ok(hl.every((h) => h.domain !== ""), "every headline is attributed");
 
+// 15b. SYNDICATION, on the live capture that exposed it. A wire story runs
+//      verbatim across many outlets, so relevance ordering returns it more
+//      than once: this real artlist response led with the SAME sentence from
+//      kitco and businesstimes, which would have spent two of three slots on
+//      one story. Prefix matching does not catch it, measured: the copies read
+//      "two month PEAK" and "two month HIGH" and diverge at character 27.
+const db5 = fakeDb(null);
+const realArtlist = readFileSync(
+  new URL("./fixtures/gdelt-gold-artlist.json", import.meta.url), "utf8"
+);
+let call6 = 0;
+const deduped = (await fetchNewsVolume(db5, async () => ({
+  ok: true, text: async () => (call6++ === 0 ? capture : realArtlist),
+}))).assets.find((a) => a.id === "gold").headlines;
+assert.equal(deduped.length, 3);
+const domains = deduped.map((h) => h.domain);
+assert.ok(
+  !deduped.some((h, i) => deduped.some((o, j) => {
+    if (i >= j) return false;
+    const a = new Set(h.title.toLowerCase().match(/[a-z0-9]+/g) ?? []);
+    const b = new Set(o.title.toLowerCase().match(/[a-z0-9]+/g) ?? []);
+    let shared = 0;
+    for (const w of a) if (b.has(w)) shared += 1;
+    return shared / Math.min(a.size, b.size) >= 0.7;
+  })),
+  `two slots on one story: ${JSON.stringify(deduped.map((h) => h.title))}`
+);
+// The working Set must never reach the jsonb payload, where it serialises to {}.
+assert.ok(deduped.every((h) => !("words" in h)), "internal state must not be stored");
+assert.deepEqual(Object.keys(deduped[0]).sort(), ["at", "domain", "title", "url"]);
+assert.ok(domains.length === 3);
+
 // A refused artlist keeps the previous cycle's headlines rather than blanking
 // them: a stale headline carries its own timestamp and beats an empty space.
 let call5 = 0;
