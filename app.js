@@ -13259,6 +13259,17 @@ function applyWallSize(size) {
       document.documentElement.style.setProperty("--tape-h", `${height}px`);
     }
   }
+  // Same reason, for the wall's own masthead: half sizes its column off the
+  // height left over after the chrome and this bar, and the bar is 57px, not
+  // the 34 that was assumed. Guessing it 23px short overflowed the grid and
+  // stretched every monitor off 16:9.
+  const head = document.querySelector("#terminal .bb-wall-h");
+  if (head) {
+    const height = Math.round(head.getBoundingClientRect().height);
+    if (height > 0) {
+      document.documentElement.style.setProperty("--wall-head-h", `${height}px`);
+    }
+  }
   document.querySelectorAll("[data-wall-size]").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.wallSize === next));
   });
