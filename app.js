@@ -983,6 +983,10 @@ const terminal = { events: [], asOf: null, stale: true, skewMs: 0, selectedKey: 
   // object rather than a new module-level const, which below init() would be in
   // the temporal dead zone on first render.
   news: null,
+  // When the news edge was last ASKED FOR, not when it last answered, so a
+  // refused fetch backs off the same as a successful one instead of retrying
+  // on every render.
+  newsAt: 0,
   // Last markup written per pane. The desk repaints once a second, so an
   // unchanged pane must not be re-written: rebuilding it would restart every
   // row entrance animation on every tick.
@@ -1021,6 +1025,10 @@ const WALL_CHANNELS = [
   { id: "UCNye-wNBqNL5ZzHSJj3l8Bg", name: "Al Jazeera", desk: "MENA" },
   { id: "UCknLrEdhRCp1aegoMqRaCZg", name: "DW News", desk: "Europe" }
 ];
+// Four minutes. The server caches on a 1800s claim, so anything faster mostly
+// re-reads the same row; anything slower and a reading that lands server side
+// sits unseen for most of an hour.
+const NEWS_REFRESH_MS = 4 * 60 * 1000;
 const WALL_STORAGE_KEY = "axiom_journal_wall_v1";
 const WALL_SIZE_KEY = "axiom_journal_wall_size_v1";
 // band: a strip under the desk. half: 2x2 at half height. max: 2x2 filling
@@ -12703,11 +12711,21 @@ function syncTerminalAccess() {
   document.querySelectorAll("[data-terminal-nav]").forEach((button) => {
     button.hidden = !granted;
   });
-  // Fetch the calendar once per session, not once per render — renderAll runs
-  // on every state change.
+  // The CALENDAR is an archive and moves once a day, so once per session is
+  // right for it: renderAll runs on every state change.
   if (granted && !terminal.requested) {
     terminal.requested = true;
     loadTerminalCalendar();
+  }
+  // THE NEWS EDGE IS NOT AN ARCHIVE. Once per session was wrong: the server
+  // refreshes on a 1800s claim, and GDELT refuses often enough that the first
+  // attempt of a session is frequently the one that got nothing. Fetching once
+  // meant a pane frozen empty for as long as the tab stayed open, while the
+  // news it is reporting on moved all day.
+  // Time based rather than a timer: this runs on every render anyway, so the
+  // guard is the whole mechanism and there is no interval to clear.
+  if (granted && Date.now() - terminal.newsAt > NEWS_REFRESH_MS) {
+    terminal.newsAt = Date.now();
     loadNewsEdge();
   }
 }

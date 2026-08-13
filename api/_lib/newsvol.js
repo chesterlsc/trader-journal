@@ -48,11 +48,14 @@ export const NEWS_ASSETS = [
     bands: { quiet: 0.63, elevated: 2.75, heavy: 7.5 } },
 ];
 
-/** Whichever asset's stored reading is oldest. Absent beats stale. */
+/** Whichever asset we last TRIED longest ago. Never tried beats tried.
+ *  Sorted on triedAt rather than on the reading's own timestamp: an asset whose
+ *  timelinevol call keeps getting refused would otherwise stay permanently
+ *  "oldest" and take every cycle, so the other asset would never be fetched at
+ *  all, headlines included. */
 export function oldestAsset(snapshot, assets = NEWS_ASSETS) {
-  return [...assets].sort(
-    (a, b) => Number(snapshot?.[a.id]?.at ?? 0) - Number(snapshot?.[b.id]?.at ?? 0)
-  )[0];
+  const tried = (id) => Number(snapshot?.[id]?.triedAt ?? snapshot?.[id]?.at ?? 0);
+  return [...assets].sort((a, b) => tried(a.id) - tried(b.id))[0];
 }
 
 /** Soft-fail ingest. Never throws. */
@@ -81,21 +84,48 @@ export async function fetchNewsVolume(db, fetchImpl = fetch, now = new Date()) {
     // gets an egress IP throttled.
     const reading = await pullVolume(fetchImpl, target);
     const headlines = await pullHeadlines(fetchImpl, target);
+    const prev = snapshot[target.id] ?? {};
+    // STRICTLY INCREASING, and that is load bearing rather than pedantry. Two
+    // cycles completing inside the same millisecond give both assets an equal
+    // triedAt, Array.sort is stable, so oldestAsset then returns the same asset
+    // forever and the other is never fetched again. Caught by a test that ran
+    // four cycles back to back and watched gold take all four.
+    const lastTried = Math.max(
+      0,
+      ...NEWS_ASSETS.map((a) => Number(snapshot[a.id]?.triedAt ?? 0))
+    );
+    const triedAt = Math.max(now.getTime(), lastTried + 1);
     try {
-      if (reading !== null) {
+      // WHATEVER LANDED IS KEPT. These two calls fail INDEPENDENTLY and the
+      // harder-throttled one must not veto the other: timelinevol is refused
+      // far more often than artlist, so gating the write on the reading meant
+      // the common case was headlines arriving and being thrown away, and a
+      // pane that stayed empty while the news was busy. That is the bug this
+      // shape exists to prevent, and it was mine.
+      if (reading !== null || headlines !== null) {
         snapshot = {
           ...snapshot,
-          // Headlines are kept from the PREVIOUS cycle when this one's artlist
-          // call was refused, because a stale headline is worth more than a
-          // blank space and it carries its own timestamp to be judged by.
           [target.id]: {
-            ...reading,
-            headlines: headlines ?? snapshot[target.id]?.headlines ?? [],
-            at: now.getTime(),
+            ...prev,
+            ...(reading ?? {}),
+            headlines: headlines ?? prev.headlines ?? [],
+            // THREE CLOCKS, because they answer three different questions and
+            // conflating them is how one failing half poisons the other:
+            //   at          when the RATIO was taken, so staleness is honest
+            //   headlinesAt when the HEADLINES were taken
+            //   triedAt     when we last talked to GDELT about this asset,
+            //               which is what the round robin sorts on, so an asset
+            //               whose reading keeps failing cannot starve the other
+            at: reading !== null ? now.getTime() : prev.at ?? 0,
+            headlinesAt: headlines !== null ? now.getTime() : prev.headlinesAt ?? 0,
+            triedAt,
           },
         };
         await db.writeFeedPayload(FEED_SOURCE, snapshot);
-        await db.markFeedSuccess(FEED_SOURCE, `ok:${target.id}${headlines === null ? ':nohl' : ''}`);
+        await db.markFeedSuccess(
+          FEED_SOURCE,
+          `${reading !== null ? 'ok' : 'novol'}:${target.id}${headlines === null ? ':nohl' : ''}`
+        );
       } else {
         await db.markFeedFailure(FEED_SOURCE, `empty:${target.id}`, FAILURE_TTL_SECONDS);
       }
@@ -118,7 +148,10 @@ export async function fetchNewsVolume(db, fetchImpl = fetch, now = new Date()) {
         zeroShare: row?.zeroShare ?? null,
         headlines: Array.isArray(row?.headlines) ? row.headlines : [],
         through: row?.through ?? null,
-        stale: !row || now.getTime() - Number(row.at ?? 0) > STALE_AFTER_MS,
+        stale: !row || !row.at || now.getTime() - Number(row.at) > STALE_AFTER_MS,
+        // Headlines carry their own staleness, so the pane can show current
+        // news beside a ratio that has not refreshed, and say which is which.
+        headlinesAt: row?.headlinesAt ? new Date(Number(row.headlinesAt)).toISOString() : null,
       };
     }),
     asOf: newest > 0 ? new Date(newest).toISOString() : null,

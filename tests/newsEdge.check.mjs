@@ -369,4 +369,42 @@ assert.equal(kept.assets.find((a) => a.id === "gold").headlines.length, 3);
 // can map over it without a guard.
 assert.deepEqual(fed.assets.find((a) => a.id === "btc").headlines, []);
 
+// 16. THE TWO PULLS FAIL INDEPENDENTLY, and the harder-throttled one must not
+//     veto the other. This is a REPORTED bug, not a hypothetical: timelinevol
+//     is refused far more often than artlist, especially from a shared egress
+//     IP, and gating the write on the reading meant the common case was
+//     headlines arriving and being discarded. The pane stayed empty while the
+//     news was busy, which is exactly what the user saw.
+const db6 = fakeDb(null);
+const artlistOnly = readFileSync(
+  new URL("./fixtures/gdelt-gold-artlist.json", import.meta.url), "utf8"
+);
+let turn = 0;
+const volRefused = await fetchNewsVolume(db6, async () => ({
+  ok: true,
+  // First call is the volume pull and gets the throttle; second is artlist.
+  text: async () => (turn++ === 0 ? "Please limit requests to one every 5 seconds" : artlistOnly),
+}));
+const g6 = volRefused.assets.find((a) => a.id === "gold");
+assert.equal(g6.ratio, null, "the reading genuinely did not land");
+assert.equal(g6.headlines.length, 3, "but the headlines did, and must be kept");
+assert.ok(
+  db6.successes.some((s) => s.startsWith("novol:")),
+  `status must distinguish "no volume" from "nothing at all", got ${JSON.stringify(db6.successes)}`
+);
+assert.equal(db6.failures.length, 0, "a partial success is not a failure");
+
+// Rotation sorts on triedAt, so an asset whose reading keeps failing cannot
+// take every cycle and starve the other of headlines too.
+const targets = [];
+for (let i = 0; i < 4; i += 1) {
+  let t = 0;
+  await fetchNewsVolume(db6, async () => ({
+    ok: true,
+    text: async () => (t++ === 0 ? "Please limit requests to one every 5 seconds" : artlistOnly),
+  }));
+  targets.push(oldestAsset(db6.reads).id);
+}
+assert.ok(new Set(targets).size > 1, `both assets must get turns, got ${targets.join(",")}`);
+
 console.log("newsEdge.check.mjs: OK — trailing bucket dropped, bands measured, stance gated, ingest soft-fails");
