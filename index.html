@@ -1264,10 +1264,21 @@
                time / source / line / value, and a verdict. Every figure is real
                or the row does not exist. -->
           <aside class="dash-edge-mini" id="dashEdgeMini" hidden aria-labelledby="dashEdgeMiniHeading">
+            <!-- The command bar doubles as the disclosure. Collapsed, this row
+                 IS the rail, so the dashboard keeps a one-line reminder the
+                 desk exists instead of losing it entirely. -->
             <div class="dem-cmd">
               <span class="dem-prompt" id="dashEdgeMiniHeading">&gt; edge --link journal<i class="dem-caret" aria-hidden="true"></i></span>
               <span class="dem-clock" id="dashEdgeMiniAsOf"></span>
+              <button
+                class="dem-min"
+                type="button"
+                id="dashEdgeMiniToggle"
+                aria-controls="dashEdgeMiniPanel"
+                aria-expanded="true"
+              ><span class="dem-min-label">hide</span></button>
             </div>
+            <div id="dashEdgeMiniPanel" class="dem-panel">
             <!-- ONE live monitor, on the dashboard for the same reason the desk
                  has four: the tape and the record are numbers, and a newsroom
                  is the thing that tells you the numbers are about to move. It
@@ -1289,6 +1300,7 @@
             <button class="nav-btn dem-key" type="button" data-target="terminal" data-terminal-nav hidden>
               <b>F1</b> open the desk
             </button>
+            </div>
           </aside>
 
           <div class="dash-stats" id="dashboardMetricGrid" aria-label="Performance metrics">

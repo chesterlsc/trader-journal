@@ -9112,6 +9112,36 @@ body.auth-locked {
   font: 400 11px/1.45 var(--font-mono);
 }
 
+/* THE MINIMIZE CONTROL, and its default is width-dependent on purpose.
+   On a desk the rail is a sticky column in the periphery and open is right. On
+   a phone it stacks into the single column, where a live monitor plus the news
+   edge plus the wire is a lot of screen between the trader and their money, so
+   it opens minimized. An explicit choice is remembered and beats the default at
+   both widths; the width only decides what happens before anyone has chosen. */
+.dem-min {
+  margin-left: auto;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--term-line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--term-faint);
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+  cursor: pointer;
+}
+.dem-min:hover { color: var(--term-ink); border-color: var(--term-acc); }
+.dem-min:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* Collapsed, the command bar IS the rail: one line saying the desk is there. */
+.dash-edge-mini.is-min .dem-panel { display: none; }
+
+@media (max-width: 899px) {
+  /* 44px on a phone, where it is a thumb target rather than a pointer one. */
+  .dem-min { min-height: 44px; padding: 0 var(--space-3); }
+}
+
 /* --- the command bar ----------------------------------------------------- */
 .dem-cmd {
   display: flex;
@@ -9318,6 +9348,14 @@ body.auth-locked {
        Measured at 0: rect.top 106, level with .dash-head. */
     top: 0;
   }
+}
+
+@media (max-width: 899px) {
+  /* THE LEON TAPE IS OFF ON A PHONE. It is a public feed of somebody else's
+     trades, sitting in the middle of the one screen the owner opens to see
+     their own money. On a desk it is a side panel; in a single column it is a
+     full-height interruption between the balance and the analytics. */
+  .dash-leon { display: none; }
 }
 
 @media (max-width: 1239px) {

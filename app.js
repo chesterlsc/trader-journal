@@ -1059,6 +1059,9 @@ const NEWS_REFRESH_MS = 4 * 60 * 1000;
 // const below the init() call at the bottom of this block is in the temporal
 // dead zone on first render. That has shipped four times; bootOrder.check.mjs
 // caught this one before it did.
+// The rail's open/minimized choice. "" means the trader has not chosen, which
+// is what lets the width pick the default without ever overriding them.
+const EDGE_MINI_KEY = "axiom_journal_edge_mini_v1";
 const WALL_DARK_KEY = "axiom_journal_wall_dark_v1";
 const DARK_NOTE_MAX_MS = 6 * 60 * 60 * 1000;
 const WALL_STORAGE_KEY = "axiom_journal_wall_v1";
@@ -12606,6 +12609,23 @@ function setupTerminal() {
     }
   });
 
+  // The rail's minimize control. Delegated from the document because the rail
+  // is re-rendered, and writing the choice is what makes it beat the width
+  // default from then on.
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest("#dashEdgeMiniToggle")) {
+      return;
+    }
+    const host = document.getElementById("dashEdgeMini");
+    const next = host && host.classList.contains("is-min") ? "open" : "min";
+    try {
+      localStorage.setItem(EDGE_MINI_KEY, next);
+    } catch (error) {
+      /* private mode: the choice holds for this session */
+    }
+    syncEdgeMiniCollapsed();
+  });
+
   // The picker, same reasoning. The dashboard tile carries slot 0, so changing
   // the channel there changes the wall's first monitor and persists with it:
   // one roster, two places to look at it, no second stored preference.
@@ -13621,6 +13641,29 @@ function setWallSlot(slot, channelId) {
    same stream as the schedule, so it does that here too, with real figures.
 
    It is a SUMMARY, not a second desk: its own ids, so nothing renders twice. */
+/* Open on a desk, minimized on a phone, until the trader says otherwise.
+   Read on every render rather than set once: it is idempotent, it costs a class
+   toggle, and it means the default follows a rotation or a resize for someone
+   who has never touched the control. A stored choice is absolute at both
+   widths, which is the whole point of having a control. */
+function syncEdgeMiniCollapsed() {
+  const host = document.getElementById("dashEdgeMini");
+  const toggle = document.getElementById("dashEdgeMiniToggle");
+  if (!host || !toggle) {
+    return;
+  }
+  let stored = "";
+  try {
+    stored = localStorage.getItem(EDGE_MINI_KEY) || "";
+  } catch (error) {
+    stored = "";
+  }
+  const collapsed = stored === "min" || (stored === "" && window.matchMedia("(max-width: 899px)").matches);
+  host.classList.toggle("is-min", collapsed);
+  toggle.setAttribute("aria-expanded", String(!collapsed));
+  setText(toggle.querySelector(".dem-min-label"), collapsed ? "show" : "hide");
+}
+
 function renderEdgeMini() {
   const host = document.getElementById("dashEdgeMini");
   if (!host) {
@@ -13631,6 +13674,8 @@ function renderEdgeMini() {
   if (host.hidden) {
     return;
   }
+
+  syncEdgeMiniCollapsed();
 
   const closed = getClosedTrades(state.trades);
   const currencies = tradedCurrencies(state.trades);
