@@ -22,7 +22,12 @@ import { join } from "node:path";
 const ROOT = new URL("..", import.meta.url).pathname;
 
 // word (or %, closing bracket) · optional spaces · dash · optional spaces · word
-const PROSE_DASH = /[\w%)\]][ \t]*[—–][ \t]*[\w(\[$]/;
+//
+// THE ENTITY FORM COUNTS, and missing it is how this regressed a THIRD time.
+// index.html writes &mdash; rather than the literal character, so a scanner
+// looking only for [—–] read the landing page as clean while 31 of them sat in
+// the copy. Same character, same reader, same complaint.
+const PROSE_DASH = /[\w%)\]][ \t]*(?:&mdash;|&ndash;|[—–])[ \t]*[\w(\[$]/;
 
 /** Blank out comment bodies, preserving every newline so line numbers survive. */
 function blankJsComments(src) {
@@ -101,5 +106,13 @@ assert.ok(PROSE_DASH.test("Clip ready — 4s, 12kB."), "the scanner must catch a
 assert.ok(PROSE_DASH.test("7W–5L"), "the scanner must catch a prose en dash");
 assert.ok(!PROSE_DASH.test('const DASH = "—";'), "a standalone placeholder dash must stay legal");
 assert.ok(!PROSE_DASH.test("<span>—</span>"), "an empty-state glyph must stay legal");
+assert.ok(
+  PROSE_DASH.test("the news &mdash; it shows you"),
+  "the scanner must catch the HTML entity, which is how it got back in"
+);
+assert.ok(
+  !PROSE_DASH.test('<span class="lnd-tp-x">&mdash;</span>'),
+  "a standalone entity glyph must stay legal, the same as the literal one"
+);
 
 console.log(`copyDashes.check.mjs: OK — ${TARGETS.length} copy files clean of prose em/en dashes`);
