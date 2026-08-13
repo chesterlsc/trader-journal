@@ -13245,8 +13245,20 @@ function syncChromeHeight() {
       // is exactly what a page has to keep clear. No invented breathing gap:
       // the bar already floats 12px off the edge.
       root.style.setProperty("--dock-h", `${Math.round(window.innerHeight - dockRect.top)}px`);
+      // The FAB rides higher than the bar it sits in, and it is an opaque
+      // 60px accent circle. Text can run under it, which is what the bar band
+      // is for, but a live video tile cannot: measured at 375x812 the FAB's
+      // top is at 700 against a bar top of 736, so it covered the bottom 36px
+      // of the fourth monitor's picture. The wall clears this one instead.
+      const fab = document.querySelector(".tabbar-fab");
+      const fabRect = fab ? fab.getBoundingClientRect() : null;
+      const clear = fabRect && fabRect.height > 0
+        ? Math.min(dockRect.top, fabRect.top)
+        : dockRect.top;
+      root.style.setProperty("--dock-clear-h", `${Math.round(window.innerHeight - clear)}px`);
     } else {
       root.style.removeProperty("--dock-h");
+      root.style.removeProperty("--dock-clear-h");
     }
   };
   publish();

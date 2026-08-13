@@ -3803,9 +3803,20 @@ body.is-guest:not(.demo-signup) .trust-row {
 }
 
 @media (min-width: 1025px) {
+  /* The shell's width, written once. It was spelled out at three sizes in
+     three places, and the pinned views needed a fourth copy to line up with
+     the bar, which is exactly the drift that puts the bar and the page on
+     different columns again the next time someone widens the shell. Declared
+     here rather than at the top because it only exists above 1025: below that
+     .topnav is display:none, so there is no bar to align anything to and the
+     views fall back to their own gutter. */
+  :root {
+    --shell-w: min(1480px, 96vw);
+  }
+
   .app-layout {
     grid-template-columns: 1fr;
-    width: min(1480px, 96vw);
+    width: var(--shell-w);
   }
 
   .sidebar {
@@ -4291,15 +4302,23 @@ body.is-guest:not(.demo-signup) .trust-row {
   }
 }
 
-/* View enter — 4px rise + fade on activation; no exit animation. */
+/* View enter — fade on activation; no exit animation.
+
+   The 4px rise is gone, and its absence is load bearing. A transform on an
+   element makes it the containing block for its own position:fixed
+   descendants, so for the 180ms this ran, the maximised wall and its pinned
+   tape resolved their inset against the animating view instead of the viewport
+   and jumped by the full chrome height on every entry into Edge. Removing it
+   from the keyframe rather than overriding the animation for pinned views
+   covers the phone too, where #terminal is fixed at every width and no
+   min-width override would have reached it. Opacity creates no containing
+   block, and a 4px rise buys nothing on a view that fills the viewport. */
 @keyframes viewEnter {
   from {
     opacity: 0;
-    transform: translateY(4px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 
@@ -9107,7 +9126,17 @@ body.auth-locked {
     grid-column: 2;
     grid-row: 1 / 30;
     position: sticky;
-    top: 78px;
+    /* 78px cleared the top bar back when #dashboard sat in document flow and
+       the WINDOW scrolled. The dashboard is its own scrollport now, and it
+       already starts below the bar, so the offset was being applied a second
+       time: measured at 1512x900, the rail sat at y=184 against a .dash-head
+       at 106 and stayed there at every scroll position, leaving a dead 78px
+       band at the top of the right column that never closed.
+       Not var(--chrome-h) and not var(--space-5) either: sticky measures from
+       the scroller's CONTENT box, so the view's own 20px padding-top is
+       already in the reference and adding it again just halves the error.
+       Measured at 0: rect.top 106, level with .dash-head. */
+    top: 0;
   }
 }
 
@@ -10325,6 +10354,16 @@ body.auth-locked {
   .bb-wall[data-size="max"] .bb-wall-grid {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: repeat(4, minmax(0, 1fr));
+    /* The desktop max rule sizes this grid off its HEIGHT at 16:9 and centres
+       it, which is right for a 2x2 and catastrophic for a single column: at
+       375x812 the leftover height of 411 became 411 * 16/9 = 731px of width
+       inside a 375px wall, so each monitor measured 731x102, a ratio of 7.2,
+       and three quarters of every picture was off the side of the phone.
+       One column takes the width it has and lets each stream letterbox in its
+       own row, the same way the cell decides the size at max on desktop. */
+    aspect-ratio: auto;
+    width: 100%;
+    margin-inline: 0;
   }
   .bb-wall-tok { min-height: 44px; }
 }
@@ -10348,7 +10387,7 @@ body.auth-locked {
   /* Same band at the bottom: fixing #terminal alone would leave the maximised
      wall clipping its last monitor under the dock, since the wall is its own
      fixed box and does not inherit the page's inset. */
-  .bb-wall[data-size="max"] { inset: calc(var(--chrome-h, 64px) + var(--tape-h, 34px)) 0 var(--dock-h, 76px) 0; }
+  .bb-wall[data-size="max"] { inset: calc(var(--chrome-h, 64px) + var(--tape-h, 34px)) 0 var(--dock-clear-h, 112px) 0; }
 }
 
 /* 2. THE TAPE RIDES ABOVE THE NEWS. While the wall is maximised the price
@@ -10590,6 +10629,21 @@ body.auth-locked {
        scroll, which is the part that made tabs feel like one page. */
     scroll-behavior: auto;
   }
+  /* THE PAGE SITS ON THE SAME COLUMN AS THE BAR IT HANGS FROM. The pinned box
+     is full-viewport on purpose, so the ground and the scrollbar still reach
+     the edges, but its CONTENT is pulled onto the shell's column. Without this
+     the bar is a 1480px pill in the middle of a 1920px window while the panels
+     below it run 220px past it on both sides, measured at 1920x1000.
+     100% rather than 100vw: a fixed box resolves percentages against the
+     initial containing block, which excludes a classic scrollbar, and 100vw
+     does not. max() means this is inert until the window is wide enough to
+     out-run the shell, and below 1025 --shell-w is not declared at all, so it
+     degrades to the plain gutter. The Edge desk stays full-bleed: it is an
+     instrument, not a document, and its own padding already outranks this. */
+  .view.is-active:not(#terminal) {
+    padding-inline: max(var(--space-6), calc((100% - var(--shell-w, 100%)) / 2));
+  }
+
   /* The dashboard keeps its rail column; the fixed box is just the canvas. */
   #dashboard.is-active { align-content: start; }
   /* The Edge desk is a dark instrument and sets its own ground and padding. */
