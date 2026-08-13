@@ -1012,8 +1012,24 @@ const TICKER_SYMBOLS = ["BTCUSDT", "XAUUSD", "MGC", "ETHUSDT", "SOLUSDT", "XAGUS
    nothing legitimate to embed. The US networks below are the substitutes that
    DO stream free, which is the closest honest answer.
 
-   Nine channels, four monitors: the trader picks. The choice is stored, because
-   a desk you have to re-tune every morning is not a desk. */
+   Sixteen channels, four monitors: the trader picks. The choice is stored,
+   because a desk you have to re-tune every morning is not a desk.
+
+   TWO KINDS OF CHANNEL, and the difference is on screen because otherwise the
+   second kind looks broken. The news desks run rolling 24/7 streams and are
+   live whenever you open the wall. The trading desks, which is where the prop
+   firms and the brokers live, stream their SESSION: Topstep and Apex around the
+   futures open, tastylive and Schwab through the US cash session. Outside those
+   hours their tile shows YouTube's own "no live stream" state, which is correct
+   rather than faulty, so `hours: "session"` prints beside the name.
+
+   EVERY ID WAS RESOLVED FROM ITS HANDLE AND THEN VERIFIED BACKWARDS, by
+   fetching /channel/<id> and checking the title came back the same. That is not
+   ceremony: the first Benzinga id I pulled resolved to "Benzinga Events", a
+   different channel, and would have shipped a tile that plays the wrong thing.
+   The same method reproduces Yahoo Finance's existing id exactly, which is what
+   says the method is sound. FTMO and The Funded Trader are deliberately absent:
+   neither handle resolved, and a guessed id is a dead tile. */
 const WALL_CHANNELS = [
   { id: "UChqUTb7kYRX8-EiaN3XFrSQ", name: "Reuters", desk: "markets" },
   { id: "UCvJJ_dzjViJCoLf5uKUTwoA", name: "CNBC", desk: "US markets" },
@@ -1023,7 +1039,16 @@ const WALL_CHANNELS = [
   { id: "UC8p1vwvWtl6T73JiExfWs1g", name: "CBS News", desk: "US" },
   { id: "UCoMdktPbSTixAyNGwb-UYkQ", name: "Sky News", desk: "UK" },
   { id: "UCNye-wNBqNL5ZzHSJj3l8Bg", name: "Al Jazeera", desk: "MENA" },
-  { id: "UCknLrEdhRCp1aegoMqRaCZg", name: "DW News", desk: "Europe" }
+  { id: "UCknLrEdhRCp1aegoMqRaCZg", name: "DW News", desk: "Europe" },
+  // The funded desks.
+  { id: "UCSyUeVzpYW6VYv0EpNRxVAA", name: "Topstep", desk: "prop", hours: "session" },
+  { id: "UC0F1ZMdysGBgGCMpdxVyGGQ", name: "Apex Trader Funding", desk: "prop", hours: "session" },
+  // The trading desks.
+  { id: "UCZjvPx9-AsOotq4d3aUcR3Q", name: "tastylive", desk: "options", hours: "session" },
+  { id: "UCqQs28K2zj2dOsc5NfXUKEg", name: "Benzinga", desk: "US markets", hours: "session" },
+  { id: "UCqoSrYgusd8ZddtMoWhjHYA", name: "Schwab Network", desk: "US markets", hours: "session" },
+  { id: "UCfOflihrkOKDQZ_ZKtF2VfQ", name: "TradingView", desk: "charts", hours: "session" },
+  { id: "UCGXWKlq1Oxr3ddEtmKhAkPg", name: "Real Vision", desk: "macro", hours: "session" }
 ];
 // Four minutes. The server caches on a 1800s claim, so anything faster mostly
 // re-reads the same row; anything slower and a reading that lands server side
@@ -13313,7 +13338,7 @@ function monitorTile(channelId, index) {
         <p class="bb-mon-h">
           <span class="bb-mon-dot" aria-hidden="true"></span>
           <select class="bb-mon-pick" aria-label="Monitor ${index + 1} channel">${options}</select>
-          <em>${escapeHtml(channel.desk)}</em>
+          <em>${escapeHtml(channel.desk)}${channel.hours === "session" ? " · session" : ""}</em>
         </p>
         <button class="bb-mon-screen" type="button" aria-label="Play ${escapeHtml(channel.name)} live">
           <span class="bb-mon-scan" aria-hidden="true"></span>
