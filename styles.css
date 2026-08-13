@@ -9461,17 +9461,53 @@ body.auth-locked {
 /* The splitters are the container's own background showing through a 1px grid
    gap. No border is declared anywhere below: one paint, no seams, nothing to
    keep in sync when a pane moves. */
+/* THE LANDING FRAME, ON THE REAL DESK. Ported by request: the teaser's
+   moulded floating screen, its chrome dot and its slow oxide sweep, applied to
+   the live left-hand desk. Design only, every figure stays the renderers'.
+   position: relative anchors the sweep, which is absolutely positioned so it
+   never becomes a grid item and disturbs the pane areas. */
 .bb-desk {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 1px;
   padding: 1px;
   overflow: hidden;
-  border-radius: var(--radius-clay-sm);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-clay-lg);
+  box-shadow: var(--clay-raised);
   background: var(--bb-void);
   color: var(--bb-soft);
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+}
+
+/* The teaser's sweep, same geometry and the same barely-there oxide. z-index 1
+   rides above the panes but under nothing interactive: pointer-events none. */
+.bb-sweep {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 64px;
+  z-index: 1;
+  background: linear-gradient(180deg, transparent, rgba(240, 118, 61, 0.05), transparent);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .bb-sweep { animation: lndTpSweep 9s linear infinite; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* A sweep frozen mid-screen would read as a smudge, so it goes entirely. */
+  .bb-sweep { display: none; }
+}
+
+/* The chrome mark. Static: the feed lamp beside it is the one element allowed
+   to breathe, and only while the link is live. */
+.bb-dot {
+  align-self: center;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--bb-oxide);
 }
 
 .bb-desk[hidden] { display: none; }

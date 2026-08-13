@@ -2634,9 +2634,17 @@
 
 
           <section class="bb-desk" id="bbDesk" data-feed="stale">
+            <!-- The landing frame's sweep, ported. Absolutely positioned so it
+                 never becomes a grid item and disturbs the pane areas. -->
+            <span class="bb-sweep" aria-hidden="true"></span>
 
-            <!-- COMMAND BAR -->
+            <!-- COMMAND BAR. The dot is the landing chrome's mark, STATIC on
+                 purpose: this desk's stated rule is that its only always-on
+                 motion is the feed lamp, which breathes only while the link is
+                 live. A second pulsing dot would be decoration wearing the
+                 lamp's meaning. -->
             <header class="bb-cmd">
+              <i class="bb-dot" aria-hidden="true"></i>
               <h2 id="bbDeskName">RELEASE EDGE</h2>
               <p>The calendar, welded to your own record.</p>
               <!-- THE STALL: the lamp breathes while the feed is live and stops
