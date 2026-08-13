@@ -458,9 +458,18 @@ button.calendar-cell.calendar-cell-negative:hover {
 }
 
 /* Mobile FAB grows to match and keeps the accent clay. */
-.tabbar-fab {
-  width: 66px;
-  height: 66px;
+/* The clay bump, scoped to PORTRAIT. Unconditional, this loaded after
+   styles.css and beat both the 60px base and the 52px rule in
+   @media (max-width: 899px) and (max-height: 480px), so a phone in landscape
+   kept a 66px button: measured at 812x375, the landscape query matching and
+   the FAB still 66, eating 18% of the viewport height on the axis that has
+   least of it. min-height 481 is the same seam that rule uses, from the other
+   side, so the two agree instead of racing. */
+@media (min-height: 481px) {
+  .tabbar-fab {
+    width: 66px;
+    height: 66px;
+  }
 }
 
 /* ==========================================================================
@@ -2136,12 +2145,27 @@ body.auth-locked .topnav {
 }
 
 /* --- 11d. Capture confirmation ------------------------------------------- */
+/* CENTRED BY MARGINS, NOT BY TRANSFORM, and both halves of that mattered.
+   Measured at 375x812 before this: the toast was 184px wide sitting at x=189,
+   so half the screen wide and in the right half of it, wrapping to five lines.
+   Two bugs stacked.
+   One: a fixed box with left:50% and right:auto shrink-to-fits into the space
+   REMAINING to its right, which is 187.5px, so max-width could never be
+   reached however large it was.
+   Two: captureRise ends on `transform: none`, which cancelled the
+   translateX(-50%) the centring depended on, so the finished state was not
+   centred at all. Spanning the viewport and letting auto margins centre a
+   fit-content box fixes both and leaves transform free for the animation,
+   which is what wanted it. This toast carries the UNDO for the one
+   irreversible action in the app, so it earning its width is not cosmetic. */
 .capture-toast {
   position: fixed;
-  left: 50%;
+  left: 0;
+  right: 0;
   bottom: 24px;
   z-index: 90;
-  transform: translateX(-50%);
+  width: fit-content;
+  margin-inline: auto;
   max-width: min(520px, calc(100vw - 32px));
   padding: 14px 20px;
   border-radius: var(--radius-clay-md);
