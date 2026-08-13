@@ -51,6 +51,11 @@ export async function fetchNewsVolume(db, fetchImpl = fetch, now = new Date()) {
   // OBJECT. Anything that is not our object is a fresh row. Do not remove.
   if (snapshot === null || typeof snapshot !== 'object' || Array.isArray(snapshot)) snapshot = {};
 
+  // Before claiming, not after: the claim is an UPDATE, so with no row it
+  // matches nothing and this feature would be silently dead forever rather
+  // than loudly broken once.
+  try { await db.ensureFeedSource?.(FEED_SOURCE); } catch { /* the claim below just fails shut */ }
+
   let claimed = false;
   try { claimed = await db.claimFeedFetch(FEED_SOURCE, SUCCESS_TTL_SECONDS); } catch { claimed = false; }
 

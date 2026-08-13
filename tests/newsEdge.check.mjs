@@ -136,6 +136,8 @@ const fakeDb = (store) => ({
   reads: store,
   failures: [],
   successes: [],
+  ensured: [],
+  async ensureFeedSource(source) { this.ensured.push(source); },
   async readFeedPayload() { return this.reads; },
   async writeFeedPayload(source, payload) { this.reads = payload; },
   async claimFeedFetch() { return true; },
@@ -149,6 +151,9 @@ const goldRow = fed.assets.find((a) => a.id === "gold");
 assert.ok(Math.abs(goldRow.ratio - 1.287) < 0.005, `ingest ratio ${goldRow.ratio}`);
 assert.equal(goldRow.n, 166);
 assert.deepEqual(db1.successes, ["ok:gold"]);
+// The feed row is asserted before the claim, because the claim is an UPDATE and
+// with no row it matches nothing: the feature would be dead and silent.
+assert.deepEqual(db1.ensured, ["mw_headlines"]);
 // The asset never read still gets a row, so the pane's two lines never reorder.
 const btcRow = fed.assets.find((a) => a.id === "btc");
 assert.equal(btcRow.ratio, null);

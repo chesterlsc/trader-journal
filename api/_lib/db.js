@@ -368,6 +368,19 @@ export function createDb(pgPool) {
       return rows[0]?.last_success_at ?? null;
     },
 
+    // The claim UPDATE matches nothing when the row is absent, which
+    // db/schema.sql warns in its own comment "silently means never fetch".
+    // schema.sql does seed this row, but THIS database's schema was applied by
+    // hand through the Neon console, so the ingest asserts its own row instead
+    // of trusting that a particular INSERT line was run. Idempotent, one
+    // statement, and it turns a silent dead feature into a working one.
+    async ensureFeedSource(source) {
+      await query(
+        'INSERT INTO feed_state (source) VALUES ($1) ON CONFLICT (source) DO NOTHING',
+        [source]
+      );
+    },
+
     // feed_state.payload has existed since the table was created and nothing
     // has ever read it. The news edge keeps its whole state there: two readings
     // of about 200 bytes each, one row, no new table and no hand-applied
