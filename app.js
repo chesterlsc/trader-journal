@@ -1054,6 +1054,13 @@ const WALL_CHANNELS = [
 // re-reads the same row; anything slower and a reading that lands server side
 // sits unseen for most of an hour.
 const NEWS_REFRESH_MS = 4 * 60 * 1000;
+// Channels the player itself reported dark, and how long that is worth knowing.
+// Both live up here rather than beside their functions because a module-level
+// const below the init() call at the bottom of this block is in the temporal
+// dead zone on first render. That has shipped four times; bootOrder.check.mjs
+// caught this one before it did.
+const WALL_DARK_KEY = "axiom_journal_wall_dark_v1";
+const DARK_NOTE_MAX_MS = 6 * 60 * 60 * 1000;
 const WALL_STORAGE_KEY = "axiom_journal_wall_v1";
 const WALL_SIZE_KEY = "axiom_journal_wall_size_v1";
 // band: a strip under the desk. half: 2x2 at half height. max: 2x2 filling
@@ -12542,7 +12549,12 @@ function setupTerminal() {
     }
     const frame = document.createElement("iframe");
     // By CHANNEL, so a nightly stream restart does not break the tile.
-    frame.src = `https://www.youtube.com/embed/live_stream?channel=${encodeURIComponent(channel)}&autoplay=1&mute=1`;
+    // enablejsapi=1 buys the ONE liveness signal that exists without a Google
+    // API key: the player posts its own state back to this page, so when a
+    // channel is dark we hear it from YouTube itself rather than guessing.
+    frame.src = `https://www.youtube.com/embed/live_stream?channel=${encodeURIComponent(channel)}` +
+      `&autoplay=1&mute=1&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
+    frame.dataset.channel = channel;
     frame.title = tile.querySelector(".bb-mon-pick")?.selectedOptions?.[0]?.textContent || "Live news";
     frame.loading = "lazy";
     frame.allow = "autoplay; encrypted-media; picture-in-picture";
@@ -12568,6 +12580,29 @@ function setupTerminal() {
       !document.querySelector("dialog[open]")
     ) {
       applyWallSize("band");
+    }
+  });
+
+  // THE PLAYER TELLS US WHEN IT CANNOT PLAY. With enablejsapi=1 the embed posts
+  // its state to this window, which is the only liveness signal available
+  // without a Google API key. onError fires for a channel with no live stream,
+  // and 150/101 mean the owner disallows embedding, which is just as dead from
+  // here. Origin checked because any frame can post to this window.
+  window.addEventListener("message", (event) => {
+    if (!/^https?:\/\/(www\.)?youtube(-nocookie)?\.com$/.test(event.origin)) {
+      return;
+    }
+    let data = event.data;
+    if (typeof data === "string") {
+      try { data = JSON.parse(data); } catch { return; }
+    }
+    if (!data || data.event !== "onError") {
+      return;
+    }
+    const frame = [...document.querySelectorAll("iframe[data-channel]")]
+      .find((f) => f.contentWindow === event.source);
+    if (frame) {
+      markChannelDark(frame.dataset.channel);
     }
   });
 
@@ -13320,14 +13355,16 @@ function formatTapePrice(value) {
    moment the tab opened, which on a trading desk is bandwidth and CPU the
    trader did not ask for. Each tile is a poster until it is clicked, and only
    then is the iframe created. */
-function renderWall() {
+function renderWall(force) {
   const grid = document.getElementById("bbWallGrid");
   if (!grid) {
     return;
   }
   const chosen = getWallChoice();
-  const sig = chosen.join(",");
-  if (grid.dataset.sig === sig) {
+  // The signature carries the dark notes too, so a channel going dark repaints
+  // the pickers. Without that the note only appeared after a roster change.
+  const sig = chosen.join(",") + "|" + JSON.stringify(readDarkChannels());
+  if (grid.dataset.sig === sig && force !== true) {
     return;
   }
   grid.dataset.sig = sig;
@@ -13336,13 +13373,64 @@ function renderWall() {
   grid.innerHTML = chosen.map((channelId, index) => monitorTile(channelId, index)).join("");
 }
 
+/* WHICH CHANNELS WERE DARK LAST TIME YOU LOOKED.
+   There is no free way to know a YouTube channel is live before you play it. I
+   tested five and every one fails: /live returns the channel shell with no
+   markers, /embed/live_stream is a byte-identical JS shell whether the channel
+   is live or dark, oEmbed 404s on the live_stream alias and returns 200 even
+   for a stream that ENDED, the RSS feed 404s, and the one real flag
+   (liveBroadcastDetails.isLiveNow) sits 57% into a 1.27MB watch page behind a
+   1.2MB channel page, with Range requests ignored. That is 2.5MB per channel
+   and 39MB to refresh sixteen, on a shared serverless egress. The cheap route
+   is the YouTube Data API, which needs a key.
+
+   So this does the honest thing available: it REMEMBERS. The player reports its
+   own errors over postMessage, so the moment a tile turns out to be dark we
+   record it against that channel with a timestamp, and the picker says so. It
+   cannot tell you about a channel you have never opened. It can stop you
+   opening the same dead one twice, which is the actual complaint. */
+function readDarkChannels() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(WALL_DARK_KEY) || "{}");
+    return raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function markChannelDark(channelId) {
+  if (!channelId) return;
+  const seen = readDarkChannels();
+  seen[channelId] = Date.now();
+  try {
+    localStorage.setItem(WALL_DARK_KEY, JSON.stringify(seen));
+  } catch (error) {
+    /* private mode: the note holds for this render only */
+  }
+  renderWall(true);
+  renderEdgeMini();
+}
+
+/* "was dark 09:14" rather than a bare cross: the time is the whole point,
+   because a session channel that was dark at 3am says nothing about 9am. Older
+   than six hours is dropped entirely, since by then it is not evidence. */
+function darkNote(channelId, seen = readDarkChannels()) {
+  const at = Number(seen[channelId] ?? 0);
+  if (!at || Date.now() - at > DARK_NOTE_MAX_MS) return "";
+  return ` · was dark ${new Date(at).toISOString().slice(11, 16)}z`;
+}
+
 /* One monitor, built in one place. The dashboard rail renders a single tile
    from this too, so the picker, the standby state and the click-to-play path
    are the same code in both and cannot drift apart. */
 function monitorTile(channelId, index) {
   const channel = WALL_CHANNELS.find((c) => c.id === channelId) || WALL_CHANNELS[index] || WALL_CHANNELS[0];
+  const seen = readDarkChannels();
   const options = WALL_CHANNELS.map(
-    (c) => `<option value="${escapeHtml(c.id)}"${c.id === channel.id ? " selected" : ""}>${escapeHtml(c.name)}</option>`
+    (c) =>
+      `<option value="${escapeHtml(c.id)}"${c.id === channel.id ? " selected" : ""}>${escapeHtml(
+        c.name + (c.hours === "session" ? " · session" : "") + darkNote(c.id, seen)
+      )}</option>`
   ).join("");
   return `
       <article class="bb-mon" data-slot="${index}" data-channel="${escapeHtml(channel.id)}" style="--i:${index}">
