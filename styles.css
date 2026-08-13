@@ -9992,8 +9992,21 @@ body.auth-locked {
 .bb-clock {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(76px, 1fr);
+  /* max-content, not 1fr. At 1fr every session column was pinned to 76px, so
+     the strip clipped BOTH its labels and its money: measured at 375, "Late /
+     rollover" overflowed by 35px and read "Late / r…", and a session net wider
+     than 64px was cut under the NEXT slot's opaque background, which is a
+     truncated number with nothing on screen saying so. This strip already
+     lives in .bb-clock-scroll, so letting a column take the width its content
+     needs costs a scroll and nothing else. */
+  grid-auto-columns: minmax(76px, max-content);
   gap: 1px;
+  /* width, not just min-width. max-content columns can only take the width
+     their content needs if the GRID is allowed to exceed its scroller; sized
+     to the scroller it stays 380px and the columns clamp right back, which is
+     what left the labels ellipsised and the money cut. .bb-clock-scroll is
+     overflow-x:auto, so growing here scrolls and costs nothing. */
+  width: max-content;
   min-width: 380px;
   background: var(--bb-void);
 }

@@ -2257,6 +2257,13 @@ body.auth-locked .topnav {
    the UA [hidden] rule, so it has to be restated. */
 .sheet-body[hidden] { display: none; }
 
+/* A TILE THAT IS hidden MUST NOT PAINT. .sheet-tile sets display:grid, which
+   beats the UA's [hidden] { display: none }, so app.js setting
+   button.hidden = !granted did nothing here and a non-entitled account still
+   saw the paid Terminal Pro destination in the phone menu. Every other place
+   that hides a control in this file already carries its own guard. */
+.sheet-tile[hidden] { display: none; }
+
 /* The journalling half is two columns wide where 1b is one. Guarded above the
    bottom-sheet breakpoint: below it the sheet is full-bleed and this must not
    out-specify §11e's width. */
@@ -3453,21 +3460,40 @@ body.auth-locked .topnav {
     flex: none;
   }
 
+  /* THE HEADER HAS TO BE ABLE TO SHRINK. Three unshrinkable blocks in one
+     nowrap row gave the calendar a 371px floor against 363px of available
+     width, so the whole PAGE slid 8px sideways at 375 and 63px at 320, taking
+     Saturday's column and the Reflect tab off the right edge. Every term was a
+     fixed pixel, so it did not shrink at narrower widths, it just overflowed
+     harder.
+     Worse than the scroll: .cal-net-value is 26px mono, so a real month net
+     like -$2,099,160.00 is 218px of unbreakable glyphs and CLIPPED MID-NUMBER,
+     which is a wrong figure rather than an ugly one. Wrapping lets the money
+     take its own line and the nav shrink beside it. */
   .cal-head-side {
     justify-content: space-between;
     width: 100%;
+    flex-wrap: wrap;
+    row-gap: 8px;
   }
 
   .cal-net {
     text-align: left;
+    min-width: 0;
   }
 
   .cal-net-value {
     font-size: 26px;
   }
 
+  .cal-jump {
+    flex: 1 1 120px;
+    min-width: 0;
+  }
+
   .cal-jump input {
-    width: 130px;
+    width: 100%;
+    min-width: 0;
   }
 
   .cal-legend {
