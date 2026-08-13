@@ -9287,6 +9287,23 @@ body.auth-locked {
 
 @media (max-width: 1239px) {
   .dash-edge-mini { grid-column: 1 / -1; }
+
+  /* MONEY FIRST. The rail sits before .dash-stats in the DOM because at 1240px
+     and up it is pulled into column 2 with grid-row: 1/30, where being early
+     costs nothing. Below that it stacks where it lies, so the first screen of
+     the dashboard became the black terminal instrument and the account equity
+     went 900px below the fold: measured at 375x812, .dash-edge-mini top 444
+     height 437, .dash-stats top 897. Adding a live monitor and the news edge to
+     that rail is what made it tall enough to matter.
+     The desktop rule two blocks up already states the intent, "the countdown
+     sits in the periphery and the money keeps the main column"; this is the
+     same sentence expressed at a width where there is only one column.
+     order works on grid items, and equal values keep DOM order, so the rest of
+     the dashboard needs no per-element rule. */
+  #dashboard.is-active > * { order: 3; }
+  #dashboard.is-active > .dash-head { order: 0; }
+  #dashboard.is-active > .dash-stats { order: 1; }
+  #dashboard.is-active > .dash-edge-mini { order: 2; }
 }
 
 .dash-edge-mini[hidden] { display: none; }
@@ -9416,12 +9433,36 @@ body.auth-locked {
 /* Not tabs: every pane is on screen at every width, so these scroll one into
    view and mark themselves pressed. aria-pressed, never role="tab", because
    nothing is hidden. */
+/* THE FADE IS THE AFFORDANCE, not decoration. This row scrolls and hides its
+   own scrollbar, and iOS overlay bars are invisible at rest, so at 375px the
+   user saw four keys with the fourth cut mid-word: measured clientWidth 349
+   against scrollWidth 549, F5 CLOCK at x=398 and F6 NEWS at x=485 entirely
+   outside the viewport. Two panes read as ABSENT rather than as off-screen,
+   and adding F6 is what pushed it over.
+   The same mask .rev-chips already uses for the same reason, so the two
+   scrollers behave alike. scroll-padding keeps a key clear of the fade when
+   the jump links scroll one into view. */
 .bb-keys {
   display: flex;
-  gap: 1px;
+  gap: 2px;
   overflow-x: auto;
   background: var(--bb-void);
   scrollbar-width: none;
+  scroll-padding-inline-end: 26px;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
+}
+
+.bb-keys::-webkit-scrollbar { display: none; }
+
+/* The mask is only honest while there IS more to the right. Once the row fits,
+   it would fade a key that is fully present, so it is dropped where the row
+   cannot overflow. */
+@media (min-width: 700px) {
+  .bb-keys {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
 }
 
 .bb-key {
@@ -10854,9 +10895,46 @@ body.auth-locked {
 }
 
 @media (max-width: 899px) {
-  .bb-wall[data-size="half"] { height: 38vh; }
-  #terminal:has(.bb-wall[data-size="half"]) { padding-bottom: 38vh; }
-  .bb-wall[data-size="half"] .bb-wall-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+  /* ON A PHONE THE WIDTH LEADS, and the 16:9 grid must let go of it. The
+     desktop half rule sizes the grid from its height at 16:9, which is right
+     beside a desk column and wrong in a full-width band: measured at 375x812
+     the grid came out 441px inside a 375px wall, columns 220.4 and 220.4, so
+     the entire right column of monitors and their channel pickers sat off the
+     screen edge with nothing to scroll. Width 100% with the ratio released
+     lets each stream letterbox inside its own cell, which is what max already
+     does here.
+     The band also has to clear the dock and the FAB. --dock-clear-h is the
+     measured distance to the FAB's top, published by app.js, and the reserved
+     padding has to match it or the last row is unreachable rather than merely
+     covered: measured before, the bottom row's play buttons were at y 688..811
+     under a dock at 736..800 and a FAB at 700..766. */
+  .bb-wall[data-size="half"] {
+    height: 38vh;
+    bottom: var(--dock-clear-h, 112px);
+  }
+  #terminal:has(.bb-wall[data-size="half"]) {
+    padding-bottom: calc(38vh + var(--dock-clear-h, 112px));
+  }
+  .bb-wall[data-size="half"] .bb-wall-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    aspect-ratio: auto;
+    margin-inline: 0;
+  }
+
+  /* The masthead is one row on a desk and three ragged columns on a phone:
+     measured at 375, "F7 THE WALL" wrapped to two lines at 24px wide while the
+     hint wrapped to three at 83px. The hint takes its own line instead. */
+  .bb-wall-h {
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 6px;
+  }
+  .bb-wall-h em {
+    margin-left: 0;
+    flex: 1 0 100%;
+  }
 }
 
 /* ==========================================================================
