@@ -368,6 +368,28 @@ export function createDb(pgPool) {
       return rows[0]?.last_success_at ?? null;
     },
 
+    // feed_state.payload has existed since the table was created and nothing
+    // has ever read it. The news edge keeps its whole state there: two readings
+    // of about 200 bytes each, one row, no new table and no hand-applied
+    // migration against a live database.
+    // ::text then JSON.parse rather than letting the driver hand back an
+    // object, so a row holding something unexpected returns null instead of
+    // throwing inside the caller's try.
+    async readFeedPayload(source) {
+      const { rows } = await query(
+        'SELECT payload::text AS payload FROM feed_state WHERE source = $1',
+        [source]
+      );
+      try { return JSON.parse(rows[0]?.payload ?? 'null'); } catch { return null; }
+    },
+
+    async writeFeedPayload(source, payload) {
+      await query(
+        'UPDATE feed_state SET payload = CAST($2 AS jsonb), updated_at = NOW() WHERE source = $1',
+        [source, JSON.stringify(payload ?? {})]
+      );
+    },
+
     async upsertMarketEvents(events) {
       for (const event of events) {
         await query(

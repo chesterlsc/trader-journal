@@ -17,6 +17,7 @@ import {
   sha256Hex,
 } from './session.js';
 import { fetchCalendarEvents } from './calendar.js';
+import { fetchNewsVolume } from './newsvol.js';
 import { fetchLivePrices } from './prices.js';
 import { UniqueViolation } from './db.js';
 import { journalDefaults, sanitizeArray, sanitizeReplayNotes, sanitizeSettings, str } from './sanitize.js';
@@ -690,6 +691,23 @@ const actions = {
     });
   },
 
+  // Same posture as market_calendar directly above, for the same reasons: the
+  // coverage reading is public, the fusion with the trader's own record happens
+  // in their browser from their own trades and never leaves it, and the auth
+  // check keeps our shared Vercel egress IP off GDELT's limiter. GET, so router
+  // CSRF does not apply.
+  async news_edge(ctx) {
+    await requireAuth(ctx);
+    const { assets, asOf, stale } = await fetchNewsVolume(ctx.db, ctx.fetch);
+    respond(200, {
+      ok: true,
+      assets,
+      asOf,
+      stale,
+      serverNow: new Date().toISOString(),
+    });
+  },
+
   // ARCHIVE INTEGRITY, not cache warming. ForexFactory publishes only the
   // current week and nextweek.xml is a 404, so a week in which nobody opens
   // the terminal is gone at any price. This is the floor under that: Vercel
@@ -721,6 +739,19 @@ const actions = {
     console.log(
       `cron_ingest ff_calendar: events=${calendar.events.length} asOf=${asOf ?? 'never'} ` +
         `age=${asOf === null ? 'n/a' : (ageMs / 3600000).toFixed(1) + 'h'} healthy=${healthy}`
+    );
+
+    // Rotates one asset per run, and DELIBERATELY NOT part of the health gate
+    // above. The archive that cannot be refetched is the calendar; a coverage
+    // reading that GDELT throttled is refetchable half an hour later, and it
+    // must never colour a cron run red. Its own soft-fail means this cannot
+    // throw, so no try/catch either.
+    // ponytail: one asset per run. If NEWS_ASSETS grows past four, give this
+    // its own claim source rather than sharing the 1800s TTL.
+    const news = await fetchNewsVolume(ctx.db, ctx.fetch);
+    console.log(
+      `cron_ingest mw_headlines: assets=${news.assets.length} asOf=${news.asOf ?? 'never'} ` +
+        `stale=${news.stale}`
     );
 
     // 503 rather than 200 when the archive did not advance. Vercel never

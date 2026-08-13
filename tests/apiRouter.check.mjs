@@ -99,8 +99,16 @@ assert.deepStrictEqual(new Set(ACTION_NAMES), new Set([
   // Phase 2 archive integrity. NOT session-gated: it is called by Vercel Cron
   // with a bearer secret, so its whole security model is requireCronAuth.
   'cron_ingest',
+  // The news edge coverage reading. Same posture as market_calendar: public
+  // data, requireAuth only, GET, no tier gate. The auth check is there to keep
+  // our shared Vercel egress IP off GDELT's rate limiter, which answers a
+  // refusal with HTTP 200 and prose rather than a status code.
+  'news_edge',
 ]));
-assert.strictEqual(ACTION_NAMES.length, 17, 'the 15 PHP actions + market_calendar + cron_ingest');
+assert.strictEqual(
+  ACTION_NAMES.length, 18,
+  'the 15 PHP actions + market_calendar + cron_ingest + news_edge'
+);
 
 // --- cron_ingest is gated by a bearer secret, and fails CLOSED ------------
 // It is a GET on a public path with no session and no CSRF, so this gate is
@@ -515,6 +523,17 @@ const sensitiveTrade = (index) => ({
 for (const action of ['load', 'recent_trades', 'login_logs', 'users_admin']) {
   const response = await call(makeCtx({ action, session: null }));
   assert.strictEqual(response.status, 401, `${action} must require authentication`);
+}
+
+// news_edge serves public data, so the auth check is not protecting the rows —
+// it is the only thing stopping an anonymous caller from driving our shared
+// Vercel egress IP into GDELT's rate limiter, which would take the pane down
+// for every signed-in user at once. That makes it a real control, not a
+// formality, and it is asserted here for the same reason cron_ingest's bearer
+// gate is.
+{
+  const anon = await call(makeCtx({ action: 'news_edge', session: null }));
+  assert.strictEqual(anon.status, 401, 'news_edge must require authentication');
 }
 
 // update_prices is authenticated too — it writes to symbol_prices.
