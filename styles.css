@@ -10277,6 +10277,9 @@ body.auth-locked {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
   height: 100%;
+  width: auto;
+  aspect-ratio: 16 / 9;
+  margin-inline: auto;
   border: 0;
 }
 .bb-wall[data-size="max"] .bb-mon { min-height: 0; grid-template-rows: auto minmax(0, 1fr); }
@@ -10391,7 +10394,10 @@ body.auth-locked {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 46vh;
+  /* 2x2 needs the height a single row did not: at 56vh each cell is about
+     250px tall against a 720px width, which is close enough to 16:9 that the
+     letterbox is a hairline rather than a border. */
+  height: 56vh;
   z-index: 55;
   margin: 0;
   padding: 0;
@@ -10400,7 +10406,7 @@ body.auth-locked {
   border-top: 1px solid var(--term-line);
   background: var(--term-void);
 }
-#terminal:has(.bb-wall[data-size="half"]) { padding-bottom: 46vh; }
+#terminal:has(.bb-wall[data-size="half"]) { padding-bottom: 56vh; }
 
 .bb-wall[data-size="half"] .bb-wall-h {
   margin: 0;
@@ -10408,11 +10414,24 @@ body.auth-locked {
   border-bottom: 1px solid var(--term-line);
   background: var(--term-rail);
 }
+/* 2x2, not four across. Four in a half-height band gives a 359x356 cell that a
+   16:9 stream cannot fill, so each monitor letterboxed to a thin strip with
+   black either side. Two across doubles the cell width and the picture fits. */
+/* THE GRID ITSELF IS 16:9, so every cell is too. Two columns of 16:9 beside
+   two rows of it makes (2x16)/(2x9), which is 16:9 again, so sizing the whole
+   grid to that ratio and centring it means each monitor fills its cell with no
+   letterbox at all. Measured before this: a 720x223 cell against a 16:9 stream,
+   an aspect of 3.23, which showed the picture as a strip with black either
+   side. Height drives the width here, so the band's height stays the control. */
 .bb-wall[data-size="half"] .bb-wall-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
   height: 100%;
+  width: auto;
+  aspect-ratio: 16 / 9;
+  margin-inline: auto;
   border: 0;
+  gap: 1px;
 }
 /* Four across in a half-height band: the cell decides the size, so a 16:9
    stream letterboxes inside it rather than forcing the band taller. */
@@ -10448,4 +10467,63 @@ body.auth-locked {
   .bb-wall[data-size="half"] { height: 38vh; }
   #terminal:has(.bb-wall[data-size="half"]) { padding-bottom: 38vh; }
   .bb-wall[data-size="half"] .bb-wall-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ==========================================================================
+   EVERY TAB IS ITS OWN PAGE.
+
+   All views shared one scrolling shell, so switching tabs changed the contents
+   of a page rather than changing page: the same gutters, the same scroll
+   position carried across, and the dashboard's chrome framing everything. The
+   Edge tab already escaped that and reads as its own screen, which is what was
+   asked for everywhere.
+
+   Each active view now owns the area under the top bar and scrolls inside
+   itself. The bar stays, so navigation is always there. Desktop only: on a
+   phone the views already fill the screen and the dock owns the bottom, and
+   pinning them would fight the browser's own address-bar behaviour.
+   ========================================================================== */
+@media (min-width: 900px) {
+  .view.is-active {
+    position: fixed;
+    inset: 86px 0 0 0;
+    z-index: 20;
+    padding: var(--space-5) var(--space-6) var(--space-8);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Each page starts at its own top rather than inheriting the last one's
+       scroll, which is the part that made tabs feel like one page. */
+    scroll-behavior: auto;
+  }
+  /* The dashboard keeps its rail column; the fixed box is just the canvas. */
+  #dashboard.is-active { align-content: start; }
+  /* The Edge desk is a dark instrument and sets its own ground and padding. */
+  #terminal.is-active {
+    padding: 0 var(--space-4) var(--space-4);
+    z-index: 30;
+  }
+}
+
+/* FRAME MINIMISED so the picture is the panel. No padding, no border, no
+   reserved header row: the cell is the video and the label floats on it. This
+   applies to half and max alike, because in both the tile is the point. */
+.bb-wall[data-size="half"] .bb-mon,
+.bb-wall[data-size="max"] .bb-mon {
+  padding: 0;
+  border: 0;
+  background: #000;
+  overflow: hidden;
+}
+.bb-wall[data-size="half"] .bb-mon-screen,
+.bb-wall[data-size="max"] .bb-mon-screen {
+  height: 100%;
+  width: 100%;
+  background: var(--term-well);
+}
+.bb-wall[data-size="half"] .bb-mon iframe,
+.bb-wall[data-size="max"] .bb-mon iframe {
+  height: 100%;
+  width: 100%;
+  display: block;
+  border: 0;
 }
