@@ -97,6 +97,38 @@ export function parseWallLink(input) {
 }
 
 /**
+ * What to print back at the trader while they are still typing, so the parse
+ * is visible BEFORE anything commits.
+ *
+ * Lives here rather than in the handler so it is reachable from node: this is
+ * the only branchy string in the feature, and inside a closure in app.js the
+ * test harness could not see it.
+ *
+ * The note is authored lowercase and must never be uppercased downstream: a
+ * video id is case sensitive, so "dQw4w9WgXcQ" shown as "DQW4W9WGXCQ" would be
+ * a readback that lies about the very thing it exists to confirm.
+ *
+ * @returns {{state: "empty"|"ok"|"bad", note: string, target: object|null}}
+ */
+export function wallLinkNote(input) {
+  const raw = String(input ?? "").trim();
+  if (raw === "") {
+    return { state: "empty", note: "", target: null };
+  }
+  const target = parseWallLink(raw);
+  if (target) {
+    return { state: "ok", note: `${target.kind} ${target.id}`, target };
+  }
+  // A handle link is the one refusal worth naming, because it looks completely
+  // valid to the person pasting it. Resolving it to an id needs an API call the
+  // wall does not make.
+  if (/youtube\.com\/(@|c\/|user\/)/i.test(raw)) {
+    return { state: "bad", note: "that handle carries no id. open the channel and copy its link", target: null };
+  }
+  return { state: "bad", note: "not a youtube link", target: null };
+}
+
+/**
  * A parsed target to the embed URL the wall loads.
  * `origin` is passed in rather than read from location, so this stays pure and
  * testable in node.

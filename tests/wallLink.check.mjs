@@ -10,6 +10,7 @@ import {
   wallEmbedUrl,
   wallSlotValue,
   parseWallSlot,
+  wallLinkNote,
 } from "../src/lib/wallLink.js";
 
 const CH = "UChqUTb7kYRX8-EiaN3XFrSQ"; // Reuters, a real roster id
@@ -138,4 +139,51 @@ assert.equal(parseWallSlot(""), null);
 // not a 24 char channel id, and the stored form says which it is.
 assert.notEqual(wallSlotValue({ kind: "video", id: VID }), VID);
 
-console.log("wallLink.check.mjs: OK — allowlist holds, 10 paste shapes parse, storage round trips");
+// --- 5. The readback the trader reads before committing. -------------------
+assert.deepEqual(wallLinkNote(""), { state: "empty", note: "", target: null });
+assert.deepEqual(wallLinkNote("   "), { state: "empty", note: "", target: null });
+
+const okVideo = wallLinkNote(`https://youtu.be/${VID}`);
+assert.equal(okVideo.state, "ok");
+assert.deepEqual(okVideo.target, { kind: "video", id: VID });
+
+// THE CASE ASSERTION. A video id is case sensitive, so the readback must carry
+// it through byte for byte. This fails if anyone uppercases the note, in CSS or
+// in JS, which would make the one row that exists to confirm the parse lie
+// about it.
+const mixed = "dQw4w9WgXcQ";
+assert.ok(
+  wallLinkNote(`https://youtu.be/${mixed}`).note.includes(mixed),
+  "the readback must preserve the exact case of a video id"
+);
+assert.ok(!/[A-Z]/.test(wallLinkNote(`https://youtu.be/${mixed}`).note.replace(mixed, "")),
+  "everything around the id is authored lowercase");
+
+assert.equal(wallLinkNote(`https://www.youtube.com/channel/${CH}`).state, "ok");
+assert.ok(wallLinkNote(`https://www.youtube.com/channel/${CH}`).note.includes(CH));
+
+// A handle is refused, and says so specifically: it looks entirely valid to the
+// person pasting it, so "not a youtube link" would read as a bug.
+for (const handle of [
+  "https://www.youtube.com/@Reuters",
+  "https://www.youtube.com/c/Reuters",
+  "https://www.youtube.com/user/Reuters",
+]) {
+  const note = wallLinkNote(handle);
+  assert.equal(note.state, "bad", handle);
+  assert.equal(note.target, null);
+  assert.match(note.note, /handle/, "a handle gets its own message");
+}
+
+const hostile = wallLinkNote("javascript:alert(1)");
+assert.equal(hostile.state, "bad");
+assert.equal(hostile.target, null);
+assert.equal(hostile.note, "not a youtube link");
+
+// No dashes anywhere in copy this module authors: the project bans them and
+// these strings reach the screen.
+for (const probe of ["", `https://youtu.be/${VID}`, "https://www.youtube.com/@x", "garbage"]) {
+  assert.ok(!/[–—]/.test(wallLinkNote(probe).note), "no em or en dashes in the readback");
+}
+
+console.log("wallLink.check.mjs: OK — allowlist holds, 10 paste shapes parse, readback preserves id case, storage round trips");

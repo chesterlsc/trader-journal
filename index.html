@@ -2914,6 +2914,33 @@
          the old form asked for post-trade moved out of the open path and into
          step 2 (Close & journal). On mobile the .tabbar-fab expands into this
          same sheet rather than navigating to the form view. -->
+    <!-- THE WALL'S COMMAND LINE. One entry surface for every monitor, on every
+         surface: the F7 grid and the dashboard rail both aim it here. It lives
+         outside #bbWallGrid deliberately, because that grid is replaced whole
+         by innerHTML, so a field inside it would be wiped by any repaint that
+         landed mid typing. A native <dialog> brings the focus trap, Escape and
+         the top layer with it, so there is no z-index arithmetic against the
+         half wall or the maximised tape. -->
+    <dialog id="wallCmd" class="wcmd" aria-labelledby="wallCmdTag">
+      <form class="wcmd-row" id="wallCmdForm" method="dialog" novalidate>
+        <p class="wcmd-tag" id="wallCmdTag">mon <b id="wallCmdSlot">1</b></p>
+        <input
+          class="wcmd-in"
+          id="wallCmdIn"
+          type="text"
+          inputmode="url"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          placeholder="paste a youtube link"
+          aria-describedby="wallCmdRead"
+        />
+        <button class="wcmd-go" type="submit" id="wallCmdGo">enter</button>
+        <button class="wcmd-x" type="button" id="wallCmdX" aria-label="Close">esc</button>
+      </form>
+      <p class="wcmd-read" id="wallCmdRead" role="status" aria-live="polite"></p>
+    </dialog>
+
     <dialog id="captureBar" class="cmdk" aria-label="Quick trade capture">
       <form method="dialog" class="cmdk-form" id="captureBarForm">
         <div class="cmdk-well">

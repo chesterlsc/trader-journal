@@ -42,7 +42,7 @@ import {
   EDGE_MIN_VERDICT
 } from "./src/lib/eventEdge.js";
 import { newsVerdict } from "./src/lib/newsEdge.js";
-import { parseWallLink, wallEmbedUrl, wallSlotValue, parseWallSlot } from "./src/lib/wallLink.js";
+import { wallEmbedUrl, wallSlotValue, parseWallSlot, wallLinkNote } from "./src/lib/wallLink.js";
 import { createChartsModule, traceSmoothPath } from "./src/modules/charts.js";
 import { parseQuickTrade, resolveSymbol, inferMarket } from "./src/lib/tradeParse.js";
 import { parseTopstepCsv, topstepDuplicateKey } from "./src/lib/topstepImport.js";
@@ -1024,7 +1024,11 @@ const terminal = { events: [], asOf: null, stale: true, skewMs: 0, selectedKey: 
   // Last markup written per pane. The desk repaints once a second, so an
   // unchanged pane must not be re-written: rebuilding it would restart every
   // row entrance animation on every tick.
-  sigs: {} };
+  sigs: {},
+  // The wall's four slots for THIS session, or null before the first change.
+  // getWallChoice prefers it over localStorage so a refused write cannot
+  // repaint the old channel back over the trader's choice.
+  wallChoice: null };
 
 // Terminal mode. Declared HERE, above the init() call at the bottom of this
 // block, because a module-level binding below it is in the temporal dead zone
@@ -13466,36 +13470,9 @@ function setupTerminal() {
   // One binding for both, because a monitor is a monitor.
   document.addEventListener("click", (event) => {
     const button = event.target.closest(".bb-mon-screen");
-    if (!button) {
-      return;
+    if (button) {
+      playMonitor(button.closest(".bb-mon"));
     }
-    const tile = button.closest(".bb-mon");
-    const channel = tile?.dataset.channel;
-    if (!channel || tile.querySelector("iframe")) {
-      return;
-    }
-    // A slot holds a roster channel id or a pasted link, and parseWallSlot is
-    // the only thing that turns either into a src. A stored value that does
-    // not pass the allowlist yields no target and nothing loads, which is the
-    // behaviour that matters if localStorage is ever tampered with.
-    const target = parseWallSlot(channel);
-    if (!target) {
-      return;
-    }
-    const frame = document.createElement("iframe");
-    // A roster slot embeds BY CHANNEL, so a nightly stream restart does not
-    // break the tile. A pasted link embeds the video it names.
-    // enablejsapi=1 buys the ONE liveness signal that exists without a Google
-    // API key: the player posts its own state back to this page, so when a
-    // channel is dark we hear it from YouTube itself rather than guessing.
-    frame.src = wallEmbedUrl(target, location.origin);
-    frame.dataset.channel = channel;
-    frame.title = tile.querySelector(".bb-mon-pick")?.selectedOptions?.[0]?.textContent || "Live news";
-    frame.loading = "lazy";
-    frame.allow = "autoplay; encrypted-media; picture-in-picture";
-    frame.referrerPolicy = "strict-origin-when-cross-origin";
-    frame.setAttribute("allowfullscreen", "");
-    button.replaceWith(frame);
   });
   // Size tokens. Delegated from the wall section, not the grid, because the
   // control lives in the masthead above it.
@@ -13571,30 +13548,84 @@ function setupTerminal() {
   syncEveryChipFade();
   window.addEventListener("resize", debounce(syncEveryChipFade, 120));
 
-  /* PASTE A LINK INTO A MONITOR. A prompt rather than an inline field: the
-     tile is 187px wide on a phone and a text input inside it would be smaller
-     than the thing being pasted. The parser is the gate, so a refused paste
-     says so and changes nothing. */
+  /* PASTE A LINK INTO A MONITOR, through the wall's own command line.
+
+     This was window.prompt, and prompt was the wrong instrument twice over.
+     It is refused outright in embedded webviews and by Chrome's "prevent this
+     page from creating additional dialogs", where it throws or returns null
+     with nothing drawn, so the feature simply died with no way to tell. And it
+     could not show the trader what the parser made of the paste, which is the
+     one thing worth showing before a slot changes.
+
+     The line is wall level rather than tile level because a monitor is 187px
+     across at four up, and a URL is not. */
+  const cmd = document.getElementById("wallCmd");
+  const cmdIn = document.getElementById("wallCmdIn");
+  const cmdRead = document.getElementById("wallCmdRead");
+
+  function closeCmd() {
+    document.querySelector(".bb-mon[data-aim]")?.removeAttribute("data-aim");
+    if (cmd?.open) {
+      cmd.close();
+    }
+  }
+
+  // Everything the trader types is run through the SAME parser that will build
+  // the src, and the verdict is printed live. Nothing is committed by typing.
+  function readCmd() {
+    if (!cmdIn || !cmdRead) {
+      return null;
+    }
+    const note = wallLinkNote(cmdIn.value);
+    cmdRead.textContent = note.note;
+    cmd.dataset.state = note.state;
+    return note;
+  }
+
   document.addEventListener("click", (event) => {
     const key = event.target.closest("[data-wall-link]");
-    if (!key) {
+    if (!key || !cmd) {
       return;
     }
     const slot = Number(key.dataset.wallLink);
-    const raw = window.prompt(
-      "Paste a YouTube link for this monitor.\n\nA live stream, a video, or a channel link."
+    cmd.dataset.slot = String(slot);
+    const label = document.getElementById("wallCmdSlot");
+    if (label) {
+      label.textContent = String(slot + 1);
+    }
+    // The aimed tile outlines, so the line is visibly tied to a monitor.
+    document.querySelector(".bb-mon[data-aim]")?.removeAttribute("data-aim");
+    key.closest(".bb-mon")?.setAttribute("data-aim", "");
+    cmdIn.value = "";
+    readCmd();
+    cmd.showModal();
+    cmdIn.focus();
+  });
+
+  cmdIn?.addEventListener("input", readCmd);
+  document.getElementById("wallCmdX")?.addEventListener("click", closeCmd);
+  cmd?.addEventListener("close", () => {
+    document.querySelector(".bb-mon[data-aim]")?.removeAttribute("data-aim");
+  });
+
+  document.getElementById("wallCmdForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const note = readCmd();
+    if (!note || note.state !== "ok") {
+      // Refusing keeps the line open with the text still in it, so a paste that
+      // was nearly right can be corrected instead of retyped.
+      cmdIn.focus();
+      return;
+    }
+    const slot = Number(cmd.dataset.slot);
+    setWallSlot(slot, wallSlotValue(note.target));
+    closeCmd();
+    // Playing the tile IS the confirmation. A silent success was one of the
+    // reasons a working paste read as a broken button.
+    playMonitor(
+      document.querySelector(`#bbWallGrid .bb-mon[data-slot="${slot}"]`) ||
+        document.querySelector("#dashEdgeMiniTv .bb-mon")
     );
-    if (raw === null) {
-      return;
-    }
-    const target = parseWallLink(raw);
-    if (!target) {
-      // Says what was refused and why, rather than failing silently or
-      // guessing at what was meant.
-      showCaptureToast("That is not a YouTube link this wall can embed.", "error");
-      return;
-    }
-    setWallSlot(slot, wallSlotValue(target));
   });
 
   // The rail's minimize control. Delegated from the document because the rail
@@ -14410,9 +14441,7 @@ function renderWall(force) {
     return;
   }
   const chosen = getWallChoice();
-  // The signature carries the dark notes too, so a channel going dark repaints
-  // the pickers. Without that the note only appeared after a roster change.
-  const sig = chosen.join(",") + "|" + JSON.stringify(readDarkChannels());
+  const sig = wallSig();
   if (grid.dataset.sig === sig && force !== true) {
     return;
   }
@@ -14656,6 +14685,11 @@ function applyWallSize(size) {
 }
 
 function getWallChoice() {
+  // The session's copy wins over storage. Without this, a browser that refuses
+  // the write reverts the trader's choice on the very next read.
+  if (Array.isArray(terminal.wallChoice)) {
+    return terminal.wallChoice.slice(0, WALL_SLOTS);
+  }
   let stored = [];
   try {
     stored = JSON.parse(localStorage.getItem(WALL_STORAGE_KEY) || "[]");
@@ -14673,19 +14707,91 @@ function getWallChoice() {
   return [...clean, ...fallback].slice(0, WALL_SLOTS);
 }
 
+/* START A MONITOR. A function declaration, so it hoists above the init() call
+   near the top of this file and can be reached from the paste handler as well
+   as the click handler. Committing a pasted link plays the tile immediately:
+   that IS the confirmation, and a silent success was one of the reasons the
+   feature read as broken. */
+function playMonitor(tile) {
+  const channel = tile?.dataset.channel;
+  const button = tile?.querySelector(".bb-mon-screen");
+  if (!channel || !button || tile.querySelector("iframe")) {
+    return;
+  }
+  // A slot holds a roster channel id or a pasted link, and parseWallSlot is
+  // the only thing that turns either into a src. A stored value that does not
+  // pass the allowlist yields no target and nothing loads, which is the
+  // behaviour that matters if localStorage is ever tampered with.
+  const target = parseWallSlot(channel);
+  if (!target) {
+    return;
+  }
+  const frame = document.createElement("iframe");
+  // A roster slot embeds BY CHANNEL, so a nightly stream restart does not
+  // break the tile. A pasted link embeds the video it names.
+  // enablejsapi=1 buys the ONE liveness signal that exists without a Google
+  // API key: the player posts its own state back to this page, so when a
+  // channel is dark we hear it from YouTube itself rather than guessing.
+  frame.src = wallEmbedUrl(target, location.origin);
+  frame.dataset.channel = channel;
+  frame.title = tile.querySelector(".bb-mon-pick")?.selectedOptions?.[0]?.textContent || "Live news";
+  frame.loading = "lazy";
+  frame.allow = "autoplay; encrypted-media; picture-in-picture";
+  frame.referrerPolicy = "strict-origin-when-cross-origin";
+  frame.setAttribute("allowfullscreen", "");
+  button.replaceWith(frame);
+}
+
+/* The one expression that says "the wall would paint differently now". Shared
+   by renderWall and setWallSlot: when those two disagreed, a targeted repaint
+   left a stale signature behind and the next render rebuilt the whole grid,
+   undoing the point of repainting one tile. */
+function wallSig() {
+  return getWallChoice().join(",") + "|" + JSON.stringify(readDarkChannels());
+}
+
+/* CHANGE WHAT ONE MONITOR SHOWS, WITHOUT DISTURBING THE OTHERS.
+
+   This used to clear the render signature and call renderWall(), which does
+   grid.innerHTML = ... . That destroyed every tile, so changing monitor 4 tore
+   down the streams playing in 1, 2 and 3 and dropped them back to standby. The
+   wall's own contract (a tile is never rebuilt, so a playing stream is never
+   interrupted) was broken by the one function whose job is to change a tile.
+   So: patch the tiles that show this slot, repaint the rail if it shows it,
+   and leave every other iframe alone. */
 function setWallSlot(slot, channelId) {
   const next = getWallChoice().slice();
   next[slot] = channelId;
+  // The session's own copy is authoritative. getWallChoice reads it first, so a
+  // storage write that throws (Safari private mode, quota, policy) no longer
+  // repaints the OLD value straight back over the new one.
+  terminal.wallChoice = next.slice();
   try {
     localStorage.setItem(WALL_STORAGE_KEY, JSON.stringify(next));
   } catch (error) {
-    /* private mode: the choice still holds for this session */
+    /* private mode: terminal.wallChoice still holds the choice for this session */
   }
+
   const grid = document.getElementById("bbWallGrid");
-  if (grid) {
-    grid.dataset.sig = "";
+  const tile = grid?.querySelector(`.bb-mon[data-slot="${slot}"]`);
+  if (tile) {
+    tile.outerHTML = monitorTile(channelId, slot);
+    // The signature has to track the change, or the next full render sees a
+    // mismatch and rebuilds everything, which is what we just avoided.
+    grid.dataset.sig = wallSig();
+  } else if (grid) {
+    renderWall();
   }
-  renderWall();
+
+  // The dashboard rail draws slot 0 from the same stored array. It was never
+  // repainted here, so a paste into the rail changed storage and nothing else:
+  // the tile kept its old name and its old data-channel, and clicking play
+  // loaded the previous channel from that stale attribute.
+  const tv = document.getElementById("dashEdgeMiniTv");
+  if (tv && slot === 0) {
+    tv.dataset.channel = channelId;
+    setHtml(tv, monitorTile(channelId, 0));
+  }
 }
 
 /* RELEASE EDGE, DOCKED. The dashboard's right-hand instrument.
