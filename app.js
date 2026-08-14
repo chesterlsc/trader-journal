@@ -14485,8 +14485,40 @@ function markChannelDark(channelId) {
   } catch (error) {
     /* private mode: the note holds for this render only */
   }
-  renderWall(true);
+  // This used to call renderWall(true), an unconditional grid.innerHTML. A dark
+  // channel would then destroy every tile, so ONE monitor erroring dropped all
+  // four playing streams back to standby. It fires from YouTube's own onError
+  // over postMessage, so it happened on its own, with nothing touched.
+  // All the note actually changes is option text, so change option text.
+  refreshDarkNotes();
   renderEdgeMini();
+}
+
+/* The dark note lives in the picker options, and every picker lists the whole
+   roster, so a channel going dark changes a label in all of them. Rewriting
+   those labels in place is the entire repaint: no tile is rebuilt, so no
+   stream is interrupted. */
+function refreshDarkNotes() {
+  const seen = readDarkChannels();
+  const byId = new Map(WALL_CHANNELS.map((c) => [c.id, c]));
+  document.querySelectorAll(".bb-mon-pick").forEach((pick) => {
+    for (const option of pick.options) {
+      const channel = byId.get(option.value);
+      if (!channel) {
+        continue; // a pasted link, which has no roster note
+      }
+      option.textContent =
+        channel.name +
+        (channel.hours === "session" ? " · session" : "") +
+        darkNote(channel.id, seen);
+    }
+  });
+  // The signature carries the dark notes, so it has to move with them or the
+  // next render sees a mismatch and rebuilds the grid anyway.
+  const grid = document.getElementById("bbWallGrid");
+  if (grid && grid.dataset.sig) {
+    grid.dataset.sig = wallSig();
+  }
 }
 
 /* "was dark 09:14" rather than a bare cross: the time is the whole point,

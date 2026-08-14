@@ -126,7 +126,71 @@ assert.equal(parsed.trades.length, 14);
 assert.equal(parsed.trades.reduce((sum, trade) => sum + trade.sourceOrderIds.length, 0), 67);
 assert.equal(parsed.trades.reduce((sum, trade) => sum + trade.roundTurnQuantity, 0), 61);
 assert.ok(parsed.trades.every((trade) => trade.positionSize === trade.peakPositionSize));
-assert.ok(parsed.trades.some((trade) => trade.roundTurnQuantity > trade.positionSize));
+// This line used to assert that SOME episode in the fixture had more round
+// turns than peak position. It cannot: every one of the 14 episodes here opens
+// fully and then closes, never re-entering after a partial exit, so opening
+// contracts, closing contracts and peak position are equal episode by episode.
+// The assertion was also unsatisfiable ALONGSIDE its neighbours. Round turns
+// can never be fewer than the peak (you cannot hold 9 contracts having bought
+// fewer than 9), the line above pins the total at 61, and the fixture's peaks
+// also total 61. Non negative differences summing to zero are all zero, so
+// every episode must have round turns EQUAL to its peak, which the previous
+// line then restates. Making it pass would have meant reporting fewer round
+// turns than contracts opened, and round turns are what the cost schedule bills
+// on, so the "fix" would have mispriced fees.
+// Pin the real per episode vector instead. It is strictly stronger than the sum.
+assert.deepEqual(
+  parsed.trades.map((trade) => trade.roundTurnQuantity),
+  [2, 2, 5, 3, 9, 6, 4, 6, 6, 2, 5, 2, 5, 4]
+);
+
+// Re entry after a partial exit is the one shape where round turns DO exceed
+// the peak, and the fixture has none of it. Build the minimal case so the
+// behaviour the line above was reaching for is still covered:
+// open 2, close 1, open 1, close 2. Peak is 2, round turns are 3.
+const reEntry = parseTopstepOrdersCsv(
+  makeCsv([
+    order({ Id: "SANITIZED-RE-1", Size: "2" }),
+    order({
+      Id: "SANITIZED-RE-2",
+      Size: "1",
+      Side: "Ask",
+      PositionDisposition: "Closing",
+      CreationDisposition: "ClosePosition",
+      CreatedAt: "08/13/2026 09:01:00 +08:00",
+      FilledAt: "08/13/2026 09:01:00 +08:00",
+    }),
+    order({
+      Id: "SANITIZED-RE-3",
+      Size: "1",
+      CreatedAt: "08/13/2026 09:02:00 +08:00",
+      FilledAt: "08/13/2026 09:02:00 +08:00",
+    }),
+    order({
+      Id: "SANITIZED-RE-4",
+      Size: "2",
+      Side: "Ask",
+      PositionDisposition: "Closing",
+      CreationDisposition: "ClosePosition",
+      CreatedAt: "08/13/2026 09:03:00 +08:00",
+      FilledAt: "08/13/2026 09:03:00 +08:00",
+    }),
+  ])
+).trades[0];
+assert.deepEqual(
+  {
+    roundTurnQuantity: reEntry.roundTurnQuantity,
+    positionSize: reEntry.positionSize,
+    peakPositionSize: reEntry.peakPositionSize,
+    entryFillCount: reEntry.entryFillCount,
+    exitFillCount: reEntry.exitFillCount,
+  },
+  { roundTurnQuantity: 3, positionSize: 2, peakPositionSize: 2, entryFillCount: 2, exitFillCount: 2 }
+);
+assert.ok(
+  reEntry.roundTurnQuantity > reEntry.positionSize,
+  "round turns exceed peak position when a position is re entered after a partial exit"
+);
 assert.deepEqual(parsed.trades.map((trade) => trade.entryFillCount), [1, 2, 5, 1, 9, 6, 2, 3, 4, 1, 3, 1, 4, 4]);
 assert.deepEqual(parsed.trades.map((trade) => trade.exitFillCount), [1, 1, 4, 2, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1]);
 
