@@ -42,8 +42,15 @@ import {
   EDGE_MIN_VERDICT
 } from "./src/lib/eventEdge.js";
 import { newsVerdict } from "./src/lib/newsEdge.js";
+import { parseWallLink, wallEmbedUrl, wallSlotValue, parseWallSlot } from "./src/lib/wallLink.js";
 import { createChartsModule, traceSmoothPath } from "./src/modules/charts.js";
 import { parseQuickTrade, resolveSymbol, inferMarket } from "./src/lib/tradeParse.js";
+import { parseTopstepCsv, topstepDuplicateKey } from "./src/lib/topstepImport.js";
+import {
+  detectTopstepExport,
+  parseTopstepOrdersCsv,
+  topstepOrdersDuplicateKey
+} from "./src/lib/topstepOrdersImport.js";
 import {
   PROP_PRESETS,
   PROP_PRESET_AS_OF,
@@ -54,6 +61,17 @@ import {
   normalizePropRules,
   propSteps
 } from "./src/lib/propRules.js";
+
+// The Orders CSV contains no charges. These two rows are the documented
+// TopstepX round-turn schedule effective 2026-07-20 and re-verified on
+// 2026-08-14. Orders CSVs do not contain charges or account class, so this is
+// only an explicit estimate. Dates after the verification boundary keep gross
+// fill math but do not receive a silently stale cost estimate.
+const TOPSTEP_ORDERS_COST_SCHEDULE = Object.freeze({
+  MGC: Object.freeze({ effectiveFrom: "2026-07-20", verifiedThrough: "2026-08-14", fees: 1.42, commissions: 0.5 }),
+  GC: Object.freeze({ effectiveFrom: "2026-07-20", verifiedThrough: "2026-08-14", fees: 3.32, commissions: 1 })
+});
+const TOPSTEP_COST_SCHEDULE_URL = "https://help.topstep.com/en/articles/8284213-topstepx-commissions-and-fees";
 
 const STORAGE_KEYS = {
   trades: "axiom_journal_trades_v1",
@@ -190,6 +208,7 @@ const state = {
   reflections: [],
   replayNotes: {},
   bulkPreview: [],
+  bulkErrors: [],
   recentTrades: [],
   publicRecentTrades: [],
   loginLogs: [],
@@ -346,6 +365,7 @@ const ui = {
   balanceRangeButtons: Array.from(document.querySelectorAll("[data-balance-range]")),
   dashClock: document.getElementById("dashClock"),
   dashHello: document.getElementById("dashboardHeading"),
+  estimatedAnalyticsNotice: document.getElementById("estimatedAnalyticsNotice"),
   riskState: document.getElementById("riskState"),
   riskDial: document.getElementById("riskDial"),
   riskDialArc: document.getElementById("riskDialArc"),
@@ -386,6 +406,8 @@ const ui = {
   scoreInfoDialog: document.getElementById("scoreInfoDialog"),
   scoreInfoButtons: Array.from(document.querySelectorAll("[data-score-info]")),
   dashboardEmptyState: document.getElementById("dashboardEmptyState"),
+  dashboardEmptyHeading: document.getElementById("dashboardEmptyHeading"),
+  dashboardEmptyCopy: document.getElementById("dashboardEmptyCopy"),
   dashboardEmptyCta: document.getElementById("dashboardEmptyCta"),
   riskForm: document.getElementById("riskForm"),
   riskFormMessage: document.getElementById("riskFormMessage"),
@@ -568,13 +590,24 @@ const ui = {
   tradeFormMessage: document.getElementById("tradeFormMessage"),
   bulkSource: document.getElementById("bulkSource"),
   bulkInput: document.getElementById("bulkInput"),
+  bulkFileInput: document.getElementById("bulkFileInput"),
+  bulkDropZone: document.getElementById("bulkDropZone"),
+  bulkFileName: document.getElementById("bulkFileName"),
   bulkPreviewBtn: document.getElementById("bulkPreviewBtn"),
   bulkImportBtn: document.getElementById("bulkImportBtn"),
   bulkClearBtn: document.getElementById("bulkClearBtn"),
   bulkUndoBtn: document.getElementById("bulkUndoBtn"),
   bulkMessage: document.getElementById("bulkMessage"),
   bulkPreviewWrap: document.getElementById("bulkPreviewWrap"),
+  bulkPreviewHead: document.getElementById("bulkPreviewHead"),
   bulkPreviewBody: document.getElementById("bulkPreviewBody"),
+  bulkErrorList: document.getElementById("bulkErrorList"),
+  tradeImportDialog: document.getElementById("tradeImportDialog"),
+  tradeImportCloseBtn: document.getElementById("tradeImportCloseBtn"),
+  bulkAccountLabel: document.getElementById("bulkAccountLabel"),
+  topstepImportGuide: document.getElementById("topstepImportGuide"),
+  topstepOrdersAttestation: document.getElementById("topstepOrdersAttestation"),
+  topstepOrdersFullDayConfirm: document.getElementById("topstepOrdersFullDayConfirm"),
   // Admin panel markup is JS-injected into this mount only when the session
   // is an admin (ship-now #12); the handles below are bound at injection time.
   adminPanelsMount: document.getElementById("adminPanelsMount"),
@@ -631,6 +664,7 @@ const ui = {
   reviewChips: Array.from(document.querySelectorAll(".rev-chip")),
   reviewCount: document.getElementById("reviewCount"),
   reviewNoNoteCount: document.getElementById("revNoNoteCount"),
+  reviewImportBtn: document.getElementById("reviewImportBtn"),
   reviewExportBtn: document.getElementById("reviewExportBtn"),
   clearFiltersBtn: document.getElementById("clearFiltersBtn"),
   journalSortHeaders: Array.from(document.querySelectorAll("#journal th[data-sort]")),
@@ -1491,6 +1525,38 @@ function bindEvents() {
   if (ui.bulkPreviewBtn) {
     ui.bulkPreviewBtn.addEventListener("click", handleBulkPreview);
   }
+  ui.reviewImportBtn?.addEventListener("click", openTradeImport);
+  ui.tradeImportCloseBtn?.addEventListener("click", closeTradeImport);
+  ui.tradeImportDialog?.addEventListener("click", (event) => {
+    if (event.target === ui.tradeImportDialog) closeTradeImport();
+  });
+  ui.bulkSource?.addEventListener("change", syncTradeImportSource);
+  ui.topstepOrdersFullDayConfirm?.addEventListener("change", handleBulkPreview);
+  ui.bulkFileInput?.addEventListener("change", handleBulkFileSelect);
+  if (ui.bulkDropZone) {
+    ui.bulkDropZone.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        ui.bulkFileInput?.click();
+      }
+    });
+    ["dragenter", "dragover"].forEach((type) => {
+      ui.bulkDropZone.addEventListener(type, (event) => {
+        event.preventDefault();
+        ui.bulkDropZone.classList.add("is-dragging");
+      });
+    });
+    ["dragleave", "drop"].forEach((type) => {
+      ui.bulkDropZone.addEventListener(type, (event) => {
+        event.preventDefault();
+        ui.bulkDropZone.classList.remove("is-dragging");
+      });
+    });
+    ui.bulkDropZone.addEventListener("drop", (event) => {
+      const file = event.dataTransfer?.files?.[0];
+      if (file) readBulkFile(file);
+    });
+  }
   if (ui.bulkImportBtn) {
     // Pending flash before the synchronous parse so large pastes show
     // feedback; the timeout lets the label paint first.
@@ -1537,7 +1603,7 @@ function bindEvents() {
   ui.tradesBody.addEventListener("click", handleTradeTableClick);
   bindRowSwipe();
 
-  // 1e review chips + header Export.
+  // 1e review chips + header data actions.
   ui.reviewChips.forEach((chip) => {
     chip.addEventListener("click", () => setQuickFilter(chip.dataset.quick));
   });
@@ -3264,7 +3330,23 @@ function handleTradeSubmit(event) {
   const existingTrade = existingId ? getExistingTrade(existingId) : null;
   // 1f #03: a NEW trade written after a cooldown override carries the answer.
   // An edit does not — buildTradeRecord already carries the original stamp.
-  const input = existingId ? payload.value : { ...consumePendingCooldown(), ...payload.value };
+  const input = existingId
+    ? isTopstepImport(existingTrade)
+      ? {
+          ...payload.value,
+          date: existingTrade.date,
+          market: existingTrade.market,
+          asset: existingTrade.asset,
+          direction: existingTrade.direction,
+          entryPrice: existingTrade.entryPrice,
+          exitPrice: existingTrade.exitPrice,
+          positionSize: existingTrade.positionSize,
+          tradeResult: existingTrade.tradeResult,
+          status: "closed",
+          importSource: existingTrade.importSource
+        }
+      : { ...payload.value, importSource: existingTrade?.importSource || "" }
+    : { ...consumePendingCooldown(), ...payload.value };
   const trade = buildTradeRecord(input, {
     id: existingId,
     createdAt: existingTrade?.createdAt || "",
@@ -3352,11 +3434,44 @@ function syncTradeProgressState() {
   }
 }
 
+function setImportedExecutionLock(locked) {
+  [
+    ui.tradeFields.tradeDate,
+    ui.tradeFields.market,
+    ui.tradeFields.asset,
+    ui.tradeFields.direction,
+    ui.tradeFields.entryPrice,
+    ui.tradeFields.exitPrice,
+    ui.tradeFields.positionSize,
+    ui.tradeFields.tradeResult
+  ].forEach((field) => {
+    if (!field) return;
+    field.disabled = locked;
+    field.closest("label")?.classList.toggle("is-source-locked", locked);
+  });
+  ui.directionButtons.forEach((button) => {
+    button.disabled = locked;
+    button.title = locked ? "Execution fields are locked to the Topstep source record." : "";
+  });
+}
+
 function getExistingTrade(id) {
   return state.trades.find((trade) => trade.id === id);
 }
 
+function isTopstepOrdersImport(trade) {
+  return String(trade?.importSource || "").toLowerCase() === "topstepx-orders";
+}
+
+function isTopstepImport(trade) {
+  const source = String(trade?.importSource || "").toLowerCase();
+  return source === "topstepx" || source === "topstepx-orders";
+}
+
 function readTradeForm() {
+  const existingId = ui.tradeFields.tradeId.value.trim();
+  const existingTrade = existingId ? getExistingTrade(existingId) : null;
+  const editingTopstep = isTopstepImport(existingTrade);
   const screenshotFile = ui.tradeFields.screenshot.files?.[0] || null;
   const screenshotLabel = ui.tradeFields.screenshotLabel.textContent || "";
   const hasStoredLabel =
@@ -3410,9 +3525,13 @@ function readTradeForm() {
   // silent focus jump. Empty means "no target"; a typed one must make sense.
   const numericFields = [
     ["Entry Price", value.entryPrice, ui.tradeFields.entryPrice],
-    ["Stop Loss", value.stopLoss, ui.tradeFields.stopLoss],
-    ["Risk %", value.riskPercent, ui.tradeFields.riskPercent],
-    ["Position Size", value.positionSize, ui.tradeFields.positionSize]
+    ["Position Size", value.positionSize, ui.tradeFields.positionSize],
+    ...(editingTopstep
+      ? []
+      : [
+          ["Stop Loss", value.stopLoss, ui.tradeFields.stopLoss],
+          ["Risk %", value.riskPercent, ui.tradeFields.riskPercent]
+        ])
   ];
 
   for (const [label, amount, field] of numericFields) {
@@ -3429,7 +3548,7 @@ function readTradeForm() {
     };
   }
 
-  if (value.direction === "Buy" && value.stopLoss >= value.entryPrice) {
+  if (!editingTopstep && value.direction === "Buy" && value.stopLoss >= value.entryPrice) {
     return {
       ok: false,
       error: "For Buy trades, stop loss should be below entry price.",
@@ -3437,7 +3556,7 @@ function readTradeForm() {
     };
   }
 
-  if (value.direction === "Sell" && value.stopLoss <= value.entryPrice) {
+  if (!editingTopstep && value.direction === "Sell" && value.stopLoss <= value.entryPrice) {
     return {
       ok: false,
       error: "For Sell trades, stop loss should be above entry price.",
@@ -3471,18 +3590,57 @@ function buildTradeRecord(tradeInput, options = {}) {
   const now = new Date().toISOString();
   const existingId = String(options.id || "").trim();
   const existingTrade = options.existingTrade && typeof options.existingTrade === "object" ? options.existingTrade : null;
-  const status = tradeInput.status === "open" ? "open" : "closed";
+  const isTopstep = isTopstepImport(tradeInput) || isTopstepImport(existingTrade);
+  const isTopstepOrders = isTopstepOrdersImport(tradeInput) || isTopstepOrdersImport(existingTrade);
+  // Both native Trades rows and strictly reconstructed Orders episodes are
+  // completed round trips. Keep them closed even if a later full-form edit
+  // submits the generic in-progress checkbox.
+  const status = isTopstep ? "closed" : tradeInput.status === "open" ? "open" : "closed";
   const metricsInput = status === "open" ? { ...tradeInput, exitPrice: tradeInput.entryPrice } : tradeInput;
   const metrics = calculateTradeMetrics(metricsInput);
+  const explicitReportedPnl = Number.isFinite(tradeInput.reportedNetPnl)
+    ? tradeInput.reportedNetPnl
+    : Number.isFinite(existingTrade?.reportedNetPnl)
+      ? existingTrade.reportedNetPnl
+      : null;
+  const reconstructedPnl = Number.isFinite(tradeInput.estimatedNetPnl)
+    ? tradeInput.estimatedNetPnl
+    : Number.isFinite(existingTrade?.estimatedNetPnl)
+      ? existingTrade.estimatedNetPnl
+      : Number.isFinite(tradeInput.calculatedGrossPnl)
+        ? tradeInput.calculatedGrossPnl
+        : Number.isFinite(existingTrade?.calculatedGrossPnl)
+          ? existingTrade.calculatedGrossPnl
+          : null;
+  const brokerReportedPnl = Number.isFinite(tradeInput.brokerPnl)
+    ? tradeInput.brokerPnl
+    : Number.isFinite(existingTrade?.brokerPnl)
+      ? existingTrade.brokerPnl
+      : null;
+  const sourcePnl = isTopstepOrders ? reconstructedPnl : isTopstep ? brokerReportedPnl : null;
+  const reportedPnl = explicitReportedPnl !== null
+    ? round(explicitReportedPnl)
+    : sourcePnl !== null
+      ? round(sourcePnl)
+      : null;
+  const reportedResult = reportedPnl === null
+    ? ""
+    : reportedPnl > 0
+      ? "Win"
+      : reportedPnl < 0
+        ? "Loss"
+        : "Break Even";
   const closedAt = status === "open"
     ? ""
     : String(options.closedAt || existingTrade?.closedAt || now);
   const resolvedResult =
     status === "open"
       ? "Open"
-      : tradeInput.tradeResult === "Auto"
-        ? metrics.autoResult
-        : tradeInput.tradeResult;
+      : reportedResult
+        ? reportedResult
+        : tradeInput.tradeResult === "Auto"
+          ? metrics.autoResult
+          : tradeInput.tradeResult;
 
   return {
     id: existingId || createId(),
@@ -3495,6 +3653,144 @@ function buildTradeRecord(tradeInput, options = {}) {
     // filed under; a new row lands in whichever account is on screen. Placed
     // after the spread so a caller cannot half-set it.
     accountId: String(existingTrade?.accountId || tradeInput.accountId || state.settings.activeAccountId || ""),
+    // Broker identity and execution facts survive journal edits. The form does
+    // not expose these fields; dropping them would make a later re-import look
+    // new and would replace Topstep's reported dollars with generic point math.
+    importBatchId: String(tradeInput.importBatchId || existingTrade?.importBatchId || ""),
+    importSource: String(tradeInput.importSource || existingTrade?.importSource || ""),
+    externalSource: String(tradeInput.externalSource || existingTrade?.externalSource || tradeInput.importSource || ""),
+    importKey: String(tradeInput.importKey || existingTrade?.importKey || ""),
+    externalTradeId: String(tradeInput.externalTradeId || existingTrade?.externalTradeId || ""),
+    externalFingerprint: String(tradeInput.externalFingerprint || existingTrade?.externalFingerprint || ""),
+    contractName: String(tradeInput.contractName || existingTrade?.contractName || ""),
+    enteredAt: String(tradeInput.enteredAt || existingTrade?.enteredAt || ""),
+    exitedAt: String(tradeInput.exitedAt || existingTrade?.exitedAt || ""),
+    sourceTradeDay: String(tradeInput.sourceTradeDay || existingTrade?.sourceTradeDay || ""),
+    sourceTimezone: String(tradeInput.sourceTimezone || existingTrade?.sourceTimezone || ""),
+    tradeDuration: String(tradeInput.tradeDuration || existingTrade?.tradeDuration || ""),
+    sourceOrderCount: ensureNonNegative(tradeInput.sourceOrderCount, ensureNonNegative(existingTrade?.sourceOrderCount, 0)),
+    roundTurnQuantity: ensureNonNegative(
+      tradeInput.roundTurnQuantity,
+      ensureNonNegative(existingTrade?.roundTurnQuantity, 0)
+    ),
+    entryFillCount: ensureNonNegative(tradeInput.entryFillCount, ensureNonNegative(existingTrade?.entryFillCount, 0)),
+    exitFillCount: ensureNonNegative(tradeInput.exitFillCount, ensureNonNegative(existingTrade?.exitFillCount, 0)),
+    peakPositionSize: ensureNonNegative(tradeInput.peakPositionSize, ensureNonNegative(existingTrade?.peakPositionSize, 0)),
+    contractMultiplier: Number.isFinite(tradeInput.contractMultiplier)
+      ? tradeInput.contractMultiplier
+      : Number.isFinite(existingTrade?.contractMultiplier)
+        ? existingTrade.contractMultiplier
+        : null,
+    reconstructionMethod: String(tradeInput.reconstructionMethod || existingTrade?.reconstructionMethod || ""),
+    reconstructedDuration: String(tradeInput.reconstructedDuration || existingTrade?.reconstructedDuration || ""),
+    sourceTradeDayTimezone: String(tradeInput.sourceTradeDayTimezone || existingTrade?.sourceTradeDayTimezone || ""),
+    sourceAccountFingerprint: String(
+      tradeInput.sourceAccountFingerprint || existingTrade?.sourceAccountFingerprint || ""
+    ),
+    sourceOrderFingerprints: Array.isArray(tradeInput.sourceOrderFingerprints)
+      ? tradeInput.sourceOrderFingerprints.map(String)
+      : Array.isArray(existingTrade?.sourceOrderFingerprints)
+        ? existingTrade.sourceOrderFingerprints.map(String)
+        : [],
+    sourceFullDayConfirmed: Boolean(
+      tradeInput.sourceFullDayConfirmed === undefined
+        ? existingTrade?.sourceFullDayConfirmed
+        : tradeInput.sourceFullDayConfirmed
+    ),
+    sourceFullDayConfirmedAt: String(
+      tradeInput.sourceFullDayConfirmedAt || existingTrade?.sourceFullDayConfirmedAt || ""
+    ),
+    pnlProvenance: String(tradeInput.pnlProvenance || existingTrade?.pnlProvenance || ""),
+    pnlIsEstimated: Boolean(
+      tradeInput.pnlIsEstimated === undefined ? existingTrade?.pnlIsEstimated : tradeInput.pnlIsEstimated
+    ),
+    analyticsExcluded: Boolean(
+      tradeInput.analyticsExcluded === undefined ? existingTrade?.analyticsExcluded : tradeInput.analyticsExcluded
+    ),
+    costProvenance: String(tradeInput.costProvenance || existingTrade?.costProvenance || ""),
+    costScheduleUrl: String(tradeInput.costScheduleUrl || existingTrade?.costScheduleUrl || ""),
+    costScheduleAsOf: String(tradeInput.costScheduleAsOf || existingTrade?.costScheduleAsOf || ""),
+    costScheduleEffectiveFrom: String(
+      tradeInput.costScheduleEffectiveFrom || existingTrade?.costScheduleEffectiveFrom || ""
+    ),
+    costScheduleVerifiedThrough: String(
+      tradeInput.costScheduleVerifiedThrough || existingTrade?.costScheduleVerifiedThrough || ""
+    ),
+    estimatedFeeRate: Number.isFinite(tradeInput.estimatedFeeRate)
+      ? tradeInput.estimatedFeeRate
+      : Number.isFinite(existingTrade?.estimatedFeeRate)
+        ? existingTrade.estimatedFeeRate
+        : null,
+    estimatedCommissionRate: Number.isFinite(tradeInput.estimatedCommissionRate)
+      ? tradeInput.estimatedCommissionRate
+      : Number.isFinite(existingTrade?.estimatedCommissionRate)
+        ? existingTrade.estimatedCommissionRate
+        : null,
+    costAccountClass: String(tradeInput.costAccountClass || existingTrade?.costAccountClass || ""),
+    costEstimateUnavailableReason: String(
+      tradeInput.costEstimateUnavailableReason || existingTrade?.costEstimateUnavailableReason || ""
+    ),
+    calculatedGrossPnl: Number.isFinite(tradeInput.calculatedGrossPnl)
+      ? round(tradeInput.calculatedGrossPnl)
+      : Number.isFinite(existingTrade?.calculatedGrossPnl)
+        ? round(existingTrade.calculatedGrossPnl)
+        : null,
+    estimatedFees: Number.isFinite(tradeInput.estimatedFees)
+      ? Math.abs(round(tradeInput.estimatedFees))
+      : Number.isFinite(existingTrade?.estimatedFees)
+        ? Math.abs(round(existingTrade.estimatedFees))
+        : null,
+    estimatedCommissions: Number.isFinite(tradeInput.estimatedCommissions)
+      ? Math.abs(round(tradeInput.estimatedCommissions))
+      : Number.isFinite(existingTrade?.estimatedCommissions)
+        ? Math.abs(round(existingTrade.estimatedCommissions))
+        : null,
+    estimatedCosts: Number.isFinite(tradeInput.estimatedCosts)
+      ? Math.abs(round(tradeInput.estimatedCosts))
+      : Number.isFinite(existingTrade?.estimatedCosts)
+        ? Math.abs(round(existingTrade.estimatedCosts))
+        : null,
+    estimatedNetPnl: Number.isFinite(tradeInput.estimatedNetPnl)
+      ? round(tradeInput.estimatedNetPnl)
+      : Number.isFinite(existingTrade?.estimatedNetPnl)
+        ? round(existingTrade.estimatedNetPnl)
+        : null,
+    brokerPnl: isTopstepOrders
+      ? null
+      : Number.isFinite(tradeInput.brokerPnl)
+        ? round(tradeInput.brokerPnl)
+        : ensureNumber(existingTrade?.brokerPnl, 0),
+    sourceFees: Number.isFinite(tradeInput.sourceFees)
+      ? round(tradeInput.sourceFees)
+      : Number.isFinite(existingTrade?.sourceFees)
+        ? round(existingTrade.sourceFees)
+        : null,
+    sourceCommissions: Number.isFinite(tradeInput.sourceCommissions)
+      ? round(tradeInput.sourceCommissions)
+      : Number.isFinite(existingTrade?.sourceCommissions)
+        ? round(existingTrade.sourceCommissions)
+        : null,
+    reportedNetPnl: Number.isFinite(tradeInput.reportedNetPnl)
+      ? round(tradeInput.reportedNetPnl)
+      : Number.isFinite(existingTrade?.reportedNetPnl)
+        ? round(existingTrade.reportedNetPnl)
+        : undefined,
+    fees: isTopstepOrders
+      ? null
+      : Number.isFinite(tradeInput.fees)
+        ? Math.abs(round(tradeInput.fees))
+        : ensureNonNegative(existingTrade?.fees, 0),
+    commissions: isTopstepOrders
+      ? null
+      : Number.isFinite(tradeInput.commissions)
+        ? Math.abs(round(tradeInput.commissions))
+        : ensureNonNegative(existingTrade?.commissions, 0),
+    costs: isTopstepOrders
+      ? null
+      : Number.isFinite(tradeInput.costs)
+        ? Math.abs(round(tradeInput.costs))
+        : Math.abs(ensureNumber(tradeInput.fees ?? existingTrade?.fees, 0)) +
+          Math.abs(ensureNumber(tradeInput.commissions ?? existingTrade?.commissions, 0)),
     // THE CONTEXT AUTO-STAMP. What was on the calendar when this position was
     // opened, so review week reads "CPI miss, 8 min prior" instead of a guess.
     // Guarded three ways, and the guard is the whole correctness story:
@@ -3507,7 +3803,7 @@ function buildTradeRecord(tradeInput, options = {}) {
     //     look real. That is the worst failure this feature could have.
     eventContext: Array.isArray(existingTrade?.eventContext)
       ? existingTrade.eventContext
-      : !existingId && tradeInput.date === toDateInputValue(new Date())
+      : !existingId && !tradeInput.importSource && !tradeInput.importBatchId && tradeInput.date === toDateInputValue(new Date())
         ? stampFromEvents(terminal.events, new Date(), 120)
         : [],
     // 1b: the pre-trade rules the trader ticked in the sheet. The full form
@@ -3542,15 +3838,216 @@ function buildTradeRecord(tradeInput, options = {}) {
     status,
     closedAt,
     result: resolvedResult,
-    netPnl: status === "open" ? 0 : metrics.netPnl,
-    riskAmount: metrics.riskAmount,
-    rMultiple: status === "open" ? 0 : metrics.rMultiple,
-    rrRatio: metrics.rrRatio,
-    pips: status === "open" ? 0 : metrics.pips,
-    pipSize: metrics.pipSize,
-    pipValuePerLot: metrics.pipValuePerLot,
-    dollarPerPip: metrics.dollarPerPip
+    // A paired broker export is the execution ledger. Its dollar result is
+    // authoritative across futures contracts whose point values differ; the
+    // generic price model is only for manual rows.
+    netPnl: status === "open"
+      ? 0
+      : reportedPnl !== null
+        ? reportedPnl
+        : metrics.netPnl,
+    riskAmount: isTopstep ? 0 : metrics.riskAmount,
+    rMultiple: status === "open" ? 0 : isTopstep ? null : metrics.rMultiple,
+    rrRatio: isTopstep ? null : metrics.rrRatio,
+    pips: status === "open" ? 0 : isTopstep ? null : metrics.pips,
+    pipSize: isTopstep ? null : metrics.pipSize,
+    pipValuePerLot: isTopstep ? null : metrics.pipValuePerLot,
+    dollarPerPip: isTopstep ? null : metrics.dollarPerPip
   };
+}
+
+function openTradeImport() {
+  if (!canAccessApp() || !ui.tradeImportDialog) return;
+  const account = getActiveAccount();
+  if (ui.bulkAccountLabel) {
+    ui.bulkAccountLabel.textContent = `Importing into ${account?.label || "the active account"}. Topstep exports one account at a time.`;
+  }
+  syncTradeImportSource();
+  syncBulkUndoButton();
+  ui.tradeImportDialog.showModal();
+}
+
+function closeTradeImport() {
+  if (ui.tradeImportDialog?.open) ui.tradeImportDialog.close();
+  ui.reviewImportBtn?.focus();
+}
+
+function syncTradeImportSource() {
+  const isTopstep = ui.bulkSource?.value === "topstep";
+  if (ui.topstepImportGuide) ui.topstepImportGuide.hidden = !isTopstep;
+  if (ui.bulkFileName && !ui.bulkFileInput?.files?.length) {
+    ui.bulkFileName.textContent = isTopstep
+      ? "or drop the original TopstepX Trades or Orders export here"
+      : "or drop a CSV, TSV, or text export here";
+  }
+  state.bulkPreview = [];
+  state.bulkErrors = [];
+  if (ui.topstepOrdersFullDayConfirm) ui.topstepOrdersFullDayConfirm.checked = false;
+  if (ui.topstepOrdersAttestation) ui.topstepOrdersAttestation.hidden = true;
+  renderBulkPreview([], []);
+  renderBulkErrors([]);
+  if (ui.bulkImportBtn) ui.bulkImportBtn.disabled = true;
+}
+
+function handleBulkFileSelect() {
+  const file = ui.bulkFileInput?.files?.[0];
+  if (file) readBulkFile(file);
+}
+
+function readBulkFile(file) {
+  if (!file || !ui.bulkInput) return;
+  const allowed = /\.(csv|tsv|txt)$/i.test(file.name) || /^(text\/|application\/csv)/i.test(file.type || "");
+  if (!allowed) {
+    setMessage(ui.bulkMessage, "Choose a CSV, TSV, or text export.", "error");
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    setMessage(ui.bulkMessage, "That file is over 5 MB. Export a smaller date range and try again.", "error");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    ui.bulkInput.value = String(reader.result || "");
+    const detected = detectTopstepExport(ui.bulkInput.value);
+    if (detected.kind === "trades" || detected.kind === "orders") {
+      ui.bulkSource.value = "topstep";
+      syncTradeImportSource();
+    }
+    if (ui.bulkFileName) ui.bulkFileName.textContent = `${file.name} · ${Math.max(1, Math.ceil(file.size / 1024))} KB`;
+    handleBulkPreview();
+  };
+  reader.onerror = () => setMessage(ui.bulkMessage, "The file could not be read.", "error");
+  reader.readAsText(file);
+}
+
+function applyTopstepOrdersCostEstimate(trade) {
+  if (!isTopstepOrdersImport(trade) || !Number.isFinite(trade.calculatedGrossPnl)) {
+    return trade;
+  }
+
+  const schedule = TOPSTEP_ORDERS_COST_SCHEDULE[String(trade.asset || "").toUpperCase()];
+  const roundTurns = Number(trade.roundTurnQuantity);
+  const tradeDay = String(trade.sourceTradeDay || "");
+  if (!schedule || !(roundTurns > 0)) {
+    return trade;
+  }
+  if (tradeDay < schedule.effectiveFrom || tradeDay > schedule.verifiedThrough) {
+    return {
+      ...trade,
+      costEstimateUnavailableReason: tradeDay > schedule.verifiedThrough
+        ? `Topstep fee schedule is only verified through ${schedule.verifiedThrough}.`
+        : `Topstep fee schedule starts on ${schedule.effectiveFrom}.`
+    };
+  }
+
+  const estimatedFees = round(roundTurns * schedule.fees);
+  const estimatedCommissions = round(roundTurns * schedule.commissions);
+  const estimatedCosts = round(estimatedFees + estimatedCommissions);
+  return {
+    ...trade,
+    estimatedFees,
+    estimatedCommissions,
+    estimatedCosts,
+    estimatedNetPnl: round(trade.calculatedGrossPnl - estimatedCosts),
+    pnlIsEstimated: true,
+    analyticsExcluded: true,
+    costProvenance: "estimated-topstep-round-turn-schedule",
+    costScheduleEffectiveFrom: schedule.effectiveFrom,
+    costScheduleVerifiedThrough: schedule.verifiedThrough,
+    costScheduleAsOf: schedule.verifiedThrough,
+    estimatedFeeRate: schedule.fees,
+    estimatedCommissionRate: schedule.commissions,
+    costAccountClass: "Unverified from Orders CSV",
+    costScheduleUrl: TOPSTEP_COST_SCHEDULE_URL
+  };
+}
+
+function parseSelectedBulkTrades() {
+  const rawInput = ui.bulkInput?.value || "";
+  const detected = detectTopstepExport(rawInput);
+  const selectedTopstep = ui.bulkSource?.value === "topstep";
+  const fileKind = detected.kind === "orders" || detected.kind === "trades" ? detected.kind : "unknown";
+
+  if (fileKind === "orders" || fileKind === "trades" || selectedTopstep) {
+    const sourceParsed = fileKind === "orders" ? parseTopstepOrdersCsv(rawInput) : parseTopstepCsv(rawInput);
+    const unsupportedAssets = fileKind === "orders"
+      ? Array.from(new Set(sourceParsed.trades
+        .filter((trade) => !Number.isFinite(trade.calculatedGrossPnl))
+        .map((trade) => trade.asset || trade.contractName || "unknown")))
+      : [];
+    const parsed = {
+      ...sourceParsed,
+      errors: [
+        ...sourceParsed.errors,
+        ...unsupportedAssets.map((asset) =>
+          `Topstep Orders reconstruction currently supports MGC and GC. Export Trades to import ${asset} with verified P&L.`
+        )
+      ],
+      trades: fileKind === "orders"
+        ? sourceParsed.trades.filter((trade) => Number.isFinite(trade.calculatedGrossPnl))
+        : sourceParsed.trades
+    };
+    const accountId = String(state.settings.activeAccountId || "");
+    return {
+      ...parsed,
+      fileKind,
+      trades: parsed.trades.map((sourceTrade) => {
+        const reconstructedDuration = fileKind === "orders" ? sourceTrade.tradeDuration : "";
+        const reconstructedTrade = fileKind === "orders"
+          ? {
+              ...sourceTrade,
+              pnlProvenance: "calculated-from-filled-orders",
+              pnlIsEstimated: true,
+              analyticsExcluded: true,
+              reconstructionMethod: "flat-to-flat-v1",
+              reconstructedDuration,
+              tradeDuration: ""
+            }
+          : sourceTrade;
+        const trade = fileKind === "orders"
+          ? applyTopstepOrdersCostEstimate(reconstructedTrade)
+          : reconstructedTrade;
+        const sourceKey = fileKind === "orders"
+          ? topstepOrdersDuplicateKey(trade)
+          : topstepDuplicateKey(trade);
+        const sourceOrderCount = Array.isArray(trade.sourceOrderIds) ? trade.sourceOrderIds.length : 0;
+        return {
+          ...trade,
+          importSource: fileKind === "orders" ? "topstepx-orders" : "topstepx",
+          importKey: sourceKey ? `${sourceKey}:account:${accountId}` : "",
+          accountId,
+          // Order/account identifiers are used transiently to derive the
+          // stable fingerprint, then deliberately omitted from persistence.
+          sourceAccountName: undefined,
+          sourceOrderIds: undefined,
+          sourceExchangeOrderIds: undefined,
+          sourcePlatformOrderIds: undefined,
+          sourceTradeDays: undefined,
+          sourceTimezones: undefined,
+          sourceTradeDayTimezones: undefined,
+          pnlBasis: undefined,
+          sourceOrderCount,
+          sourceTimezone: trade.sourceTimezone || "Unknown",
+          session: "Not recorded",
+          setupType: "Not recorded",
+          timeframe: "Not recorded",
+          psychology: "Not recorded",
+          executionQuality: "Not recorded",
+          stopLoss: 0,
+          takeProfit: 0,
+          riskPercent: 0,
+          tradeResult: "Auto",
+          screenshotName: "",
+          screenshotData: "",
+          notes: "",
+          preTradeRules: [],
+          preTradeRulesAsked: [],
+          eventContext: []
+        };
+      })
+    };
+  }
+  return { ...parseBulkTrades(rawInput, ui.bulkSource?.value || "generic"), fileKind: "generic" };
 }
 
 function handleBulkPreview() {
@@ -3559,9 +4056,12 @@ function handleBulkPreview() {
     return;
   }
 
-  const parsed = parseBulkTrades(ui.bulkInput.value, ui.bulkSource.value);
+  const parsed = parseSelectedBulkTrades();
   state.bulkPreview = parsed.trades;
-  renderBulkPreview(parsed.trades);
+  state.bulkErrors = parsed.errors;
+  const preview = markBulkPreviewDuplicates(parsed.trades);
+  renderBulkPreview(preview, parsed.errors);
+  renderBulkErrors(parsed.errors);
 
   if (!parsed.trades.length) {
     const errorText = parsed.errors[0] || "No valid rows found. Check your headers and values.";
@@ -3569,11 +4069,35 @@ function handleBulkPreview() {
     return;
   }
 
-  let message = `Preview ready: ${parsed.trades.length} valid row(s).`;
+  const duplicates = preview.filter((trade) => trade.previewState === "duplicate").length;
+  const ready = preview.length - duplicates;
+  const reconstructedOrders = parsed.fileKind === "orders";
+  if (ui.topstepOrdersAttestation) ui.topstepOrdersAttestation.hidden = !reconstructedOrders;
+  if (!reconstructedOrders && ui.topstepOrdersFullDayConfirm) {
+    ui.topstepOrdersFullDayConfirm.checked = false;
+  }
+  const fullDayConfirmed = !reconstructedOrders || Boolean(ui.topstepOrdersFullDayConfirm?.checked);
+  const filledOrderCount = reconstructedOrders
+    ? parsed.trades.reduce((count, trade) => count + (Number(trade.sourceOrderCount) || 0), 0)
+    : 0;
+  let message = reconstructedOrders
+    ? `Topstep Orders detected: ${ready} reconstructed flat-to-flat trade(s) ready from ${filledOrderCount} filled order(s)`
+    : `Review ready: ${ready} trade(s) ready`;
+  if (duplicates > 0) message += `, ${duplicates} duplicate(s)`;
+  message += ".";
+  if (reconstructedOrders) {
+    message += " P&L is calculated from fill prices; supported fee totals are estimates.";
+    if (!fullDayConfirmed) message += " Confirm the complete trading-day export to enable import.";
+    const estimateWarnings = Array.from(new Set(parsed.trades
+      .map((trade) => trade.costEstimateUnavailableReason)
+      .filter(Boolean)));
+    if (estimateWarnings.length) message += ` ${estimateWarnings.join(" ")}`;
+  }
   if (parsed.errors.length > 0) {
-    message += ` Skipped ${parsed.errors.length} invalid row(s).`;
+    message += ` ${parsed.errors.length} row(s) need attention.`;
   }
   setMessage(ui.bulkMessage, message, "success");
+  if (ui.bulkImportBtn) ui.bulkImportBtn.disabled = ready === 0 || !fullDayConfirmed;
 }
 
 function handleBulkImport() {
@@ -3582,11 +4106,19 @@ function handleBulkImport() {
     return;
   }
 
-  const parsed = parseBulkTrades(ui.bulkInput.value, ui.bulkSource.value);
+  const parsed = parseSelectedBulkTrades();
   if (!parsed.trades.length) {
     const errorText = parsed.errors[0] || "No valid rows found to import.";
     setMessage(ui.bulkMessage, errorText, "error");
     renderBulkPreview([]);
+    return;
+  }
+  if (parsed.fileKind === "orders" && !ui.topstepOrdersFullDayConfirm?.checked) {
+    setMessage(
+      ui.bulkMessage,
+      "Confirm that this file covers the complete Topstep trading day before importing reconstructed Orders episodes.",
+      "error"
+    );
     return;
   }
 
@@ -3595,6 +4127,7 @@ function handleBulkImport() {
   // Every imported row carries the same batch id so Undo Last Import can
   // remove exactly this batch later.
   const importBatchId = createId();
+  const sourceFullDayConfirmedAt = parsed.fileKind === "orders" ? new Date().toISOString() : "";
 
   parsed.trades.forEach((tradeInput) => {
     if (isLikelyDuplicateTrade(tradeInput)) {
@@ -3602,7 +4135,18 @@ function handleBulkImport() {
       return;
     }
 
-    state.trades.push({ ...buildTradeRecord(tradeInput), importBatchId });
+    state.trades.push({
+      ...buildTradeRecord(
+        {
+          ...tradeInput,
+          importBatchId,
+          sourceFullDayConfirmed: parsed.fileKind === "orders",
+          sourceFullDayConfirmedAt
+        },
+        { closedAt: tradeInput.exitedAt || "" }
+      ),
+      importBatchId
+    });
     imported += 1;
   });
 
@@ -3615,7 +4159,9 @@ function handleBulkImport() {
   renderAll();
   clearBulkImport(true);
 
-  let message = `Imported ${imported} trade(s).`;
+  let message = parsed.fileKind === "orders"
+    ? `Imported ${imported} journal episode(s) reconstructed from Topstep Orders.`
+    : `Imported ${imported} trade(s).`;
   if (duplicates > 0) {
     message += ` Skipped ${duplicates} duplicate row(s).`;
   }
@@ -3623,13 +4169,14 @@ function handleBulkImport() {
     message += ` Skipped ${parsed.errors.length} invalid row(s).`;
   }
   setMessage(ui.bulkMessage, message, "success");
-  setMessage(ui.tradeFormMessage, message, "success");
+  setMessage(ui.journalMessage, `${message} Added to ${getActiveAccount()?.label || "the active account"}.`, "success");
+  closeTradeImport();
 }
 
 function getLastImportBatch() {
   let latest = null;
   state.trades.forEach((trade) => {
-    if (!trade.importBatchId) {
+    if (!trade.importBatchId || trade.importBatchId === DEMO_BATCH_ID) {
       return;
     }
     if (!latest || String(trade.createdAt) > String(latest.createdAt)) {
@@ -3678,53 +4225,153 @@ function clearBulkImport(keepMessage = false) {
   if (ui.bulkInput) {
     ui.bulkInput.value = "";
   }
+  if (ui.bulkFileInput) ui.bulkFileInput.value = "";
+  if (ui.topstepOrdersFullDayConfirm) ui.topstepOrdersFullDayConfirm.checked = false;
+  if (ui.topstepOrdersAttestation) ui.topstepOrdersAttestation.hidden = true;
+  if (ui.bulkFileName) {
+    ui.bulkFileName.textContent = ui.bulkSource?.value === "topstep"
+      ? "or drop the original TopstepX Trades or Orders export here"
+      : "or drop a CSV, TSV, or text export here";
+  }
   state.bulkPreview = [];
-  renderBulkPreview([]);
+  state.bulkErrors = [];
+  renderBulkPreview([], []);
+  renderBulkErrors([]);
+  if (ui.bulkImportBtn) ui.bulkImportBtn.disabled = true;
   if (!keepMessage) {
     setMessage(ui.bulkMessage, "", "");
   }
 }
 
-function renderBulkPreview(trades) {
+function markBulkPreviewDuplicates(trades) {
+  const seen = new Set();
+  return trades.map((trade) => {
+    const key = isTopstepOrdersImport(trade)
+      ? topstepOrdersDuplicateKey(trade)
+      : trade.importSource === "topstepx"
+        ? topstepDuplicateKey(trade)
+        : genericTradeDuplicateKey(trade);
+    const duplicate = isLikelyDuplicateTrade(trade) || seen.has(key);
+    if (key) seen.add(key);
+    return { ...trade, previewState: duplicate ? "duplicate" : "ready" };
+  });
+}
+
+function renderBulkErrors(errors) {
+  if (!ui.bulkErrorList) return;
+  ui.bulkErrorList.hidden = !errors.length;
+  ui.bulkErrorList.innerHTML = errors.slice(0, 12).map((error) => `<li>${escapeHtml(String(error))}</li>`).join("");
+}
+
+function renderBulkPreview(trades, errors = []) {
   if (!ui.bulkPreviewWrap || !ui.bulkPreviewBody) {
     return;
   }
+
+  const isOrders = trades.some(isTopstepOrdersImport);
+  const isTopstep = trades.some(isTopstepImport) || ui.bulkSource?.value === "topstep";
+  renderBulkPreviewHead(isTopstep, isOrders);
 
   if (!trades.length) {
     ui.bulkPreviewWrap.hidden = true;
     ui.bulkPreviewBody.innerHTML = `
       <tr class="empty-row">
-        <td colspan="10">No preview rows.</td>
+        <td colspan="10">${errors.length ? "No importable trades were found." : "Choose a file to review its trades."}</td>
       </tr>
     `;
     return;
   }
 
-  // Missing stop/TP/exit values are flagged with an em dash instead of being
-  // fabricated; rows without an exit import as open positions.
-  const priceCell = (label, value) =>
-    Number.isFinite(value) && value > 0
-      ? `<td data-label="${label}" class="num">${escapeHtml(String(value))}</td>`
-      : `<td data-label="${label}" class="num bulk-missing" title="Not provided in the pasted data">—</td>`;
-
   ui.bulkPreviewWrap.hidden = false;
   ui.bulkPreviewBody.innerHTML = trades
     .slice(0, 30)
-    .map((trade) => `
+    .map((trade) => {
+      if (!isTopstepImport(trade)) {
+        const status = trade.previewState === "duplicate" ? "Duplicate" : "Ready";
+        return `
+          <tr>
+            <td data-label="Date">${escapeHtml(trade.date)}</td>
+            <td data-label="Asset">${escapeHtml(trade.asset)}</td>
+            <td data-label="Market">${escapeHtml(trade.market)}</td>
+            <td data-label="Direction">${escapeHtml(trade.direction)}</td>
+            <td data-label="Entry" class="num">${escapeHtml(String(trade.entryPrice))}</td>
+            <td data-label="Stop" class="num">${escapeHtml(String(trade.stopLoss || "—"))}</td>
+            <td data-label="Target" class="num">${escapeHtml(String(trade.takeProfit || "—"))}</td>
+            <td data-label="Exit" class="num">${escapeHtml(String(trade.exitPrice || "—"))}</td>
+            <td data-label="Size" class="num">${escapeHtml(String(trade.positionSize))}</td>
+            <td data-label="State"><span class="import-state is-${trade.previewState || "ready"}">${status}</span></td>
+          </tr>
+        `;
+      }
+      const reconstructed = isTopstepOrdersImport(trade);
+      const sourcePnlValue = reconstructed
+        ? Number.isFinite(trade.estimatedNetPnl)
+          ? trade.estimatedNetPnl
+          : Number.isFinite(trade.calculatedGrossPnl)
+            ? trade.calculatedGrossPnl
+            : null
+        : Number.isFinite(trade.reportedNetPnl)
+          ? trade.reportedNetPnl
+          : Number.isFinite(trade.brokerPnl)
+            ? trade.brokerPnl
+            : null;
+      const sourcePnl = sourcePnlValue !== null
+        ? formatCurrency(sourcePnlValue)
+          : "—";
+      const feesValue = reconstructed ? trade.estimatedFees : trade.fees;
+      const commissionsValue = reconstructed ? trade.estimatedCommissions : trade.commissions;
+      const fees = Number.isFinite(feesValue) ? formatCurrency(-Math.abs(feesValue)) : "—";
+      const commissions = Number.isFinite(commissionsValue) ? formatCurrency(-Math.abs(commissionsValue)) : "—";
+      const status = trade.previewState === "duplicate" ? "Duplicate" : "Ready";
+      return `
       <tr>
-        <td data-label="Date">${escapeHtml(trade.date)}</td>
-        <td data-label="Asset">${escapeHtml(trade.asset)}</td>
-        <td data-label="Market">${escapeHtml(trade.market)}</td>
-        <td data-label="Direction">${escapeHtml(trade.direction)}</td>
+        <td data-label="Date / time">${escapeHtml(trade.enteredAt || trade.date)}</td>
+        <td data-label="Contract">${escapeHtml(trade.contractName || trade.asset)}</td>
+        <td data-label="Side">${escapeHtml(trade.direction)}</td>
+        <td data-label="Qty" class="num">${escapeHtml(String(trade.positionSize))}</td>
         <td data-label="Entry" class="num">${escapeHtml(String(trade.entryPrice))}</td>
-        ${priceCell("Stop", trade.stopLoss)}
-        ${priceCell("Take", trade.takeProfit)}
-        ${priceCell("Exit", trade.exitPrice)}
-        <td data-label="Size" class="num">${escapeHtml(String(trade.positionSize))}</td>
-        <td data-label="Status">${trade.status === "open" ? '<span class="pill">Open</span>' : "Closed"}</td>
+        <td data-label="Exit" class="num">${escapeHtml(String(trade.exitPrice || "—"))}</td>
+        <td data-label="${reconstructed ? "Estimated net P&L" : "Broker P&L"}" class="num ${sourcePnlValue === null ? "bulk-missing" : sourcePnlValue >= 0 ? "pnl-positive" : "pnl-negative"}">${escapeHtml(sourcePnl)}</td>
+        <td data-label="${reconstructed ? "Estimated fees" : "Fees"}" class="num">${escapeHtml(fees)}</td>
+        <td data-label="${reconstructed ? "Estimated commissions" : "Commissions"}" class="num">${escapeHtml(commissions)}</td>
+        <td data-label="State"><span class="import-state is-${trade.previewState || "ready"}">${status}</span></td>
       </tr>
-    `)
+    `;
+    })
     .join("");
+}
+
+function renderBulkPreviewHead(isTopstep, isOrders = false) {
+  if (!ui.bulkPreviewHead) return;
+  ui.bulkPreviewHead.innerHTML = isTopstep
+    ? `
+      <tr>
+        <th>Date / time</th>
+        <th>Contract</th>
+        <th>Side</th>
+        <th class="num">Qty</th>
+        <th class="num">Entry</th>
+        <th class="num">Exit</th>
+        <th class="num">${isOrders ? "Est. net P&amp;L" : "Broker P&amp;L"}</th>
+        <th class="num">${isOrders ? "Est. fees" : "Fees"}</th>
+        <th class="num">${isOrders ? "Est. comm." : "Commissions"}</th>
+        <th>State</th>
+      </tr>
+    `
+    : `
+      <tr>
+        <th>Date</th>
+        <th>Asset</th>
+        <th>Market</th>
+        <th>Direction</th>
+        <th class="num">Entry</th>
+        <th class="num">Stop</th>
+        <th class="num">Target</th>
+        <th class="num">Exit</th>
+        <th class="num">Size</th>
+        <th>State</th>
+      </tr>
+    `;
 }
 
 function parseBulkTrades(rawInput, source) {
@@ -4058,14 +4705,33 @@ function normalizeMarketLabel(rawValue) {
 }
 
 function isLikelyDuplicateTrade(tradeInput) {
-  return state.trades.some((trade) =>
-    trade.date === tradeInput.date &&
-    trade.asset === tradeInput.asset &&
-    trade.direction === tradeInput.direction &&
-    Math.abs(Number(trade.entryPrice) - Number(tradeInput.entryPrice)) < 1e-9 &&
-    Math.abs(Number(trade.exitPrice) - Number(tradeInput.exitPrice)) < 1e-9 &&
-    Math.abs(Number(trade.positionSize) - Number(tradeInput.positionSize)) < 1e-9
-  );
+  const sourceKey = isTopstepOrdersImport(tradeInput)
+    ? topstepOrdersDuplicateKey(tradeInput)
+    : tradeInput.importSource === "topstepx"
+      ? topstepDuplicateKey(tradeInput)
+      : "";
+  if (sourceKey) {
+    return state.trades.some((trade) =>
+      trade.importSource === tradeInput.importSource && (
+        isTopstepOrdersImport(trade)
+          ? topstepOrdersDuplicateKey(trade) === sourceKey
+          : topstepDuplicateKey(trade) === sourceKey
+      )
+    );
+  }
+  const genericKey = genericTradeDuplicateKey(tradeInput);
+  return state.trades.some((trade) => genericTradeDuplicateKey(trade) === genericKey);
+}
+
+function genericTradeDuplicateKey(trade) {
+  return [
+    trade.date,
+    trade.asset,
+    trade.direction,
+    Number(trade.entryPrice),
+    Number(trade.exitPrice),
+    Number(trade.positionSize)
+  ].join("|");
 }
 
 function calculateTradeMetrics(trade) {
@@ -4329,12 +4995,15 @@ function resetTradeForm(keepDate) {
   ui.tradeFields.tradeId.value = "";
   ui.tradeFields.tradeResult.value = "Auto";
   ui.tradeFields.tradeInProgress.checked = false;
+  ui.tradeFields.tradeInProgress.disabled = false;
+  ui.tradeFields.tradeInProgress.closest(".trade-status-toggle")?.removeAttribute("hidden");
   ui.tradeFields.setupType.value = "Breakout";
   ui.tradeFields.customSetupType.value = "";
   ui.tradeFields.riskPercent.value = String(state.settings.riskPerTrade);
   ui.tradeFields.screenshot.value = "";
   clearScreenshotPreview();
   ui.tradeSubmitBtn.textContent = "Save Trade";
+  setImportedExecutionLock(false);
   syncDirectionToggle();
   syncSetupTypeCustomField();
   syncTradeProgressState();
@@ -5068,13 +5737,13 @@ function renderJournalHeader(trade) {
   ui.journalNet.textContent = formatSignedCurrency(net);
   ui.journalNet.className = `jrn-net ${net > 0 ? "is-pos" : net < 0 ? "is-neg" : ""}`.trim();
 
-  const rMultiple = Number(trade.rMultiple);
-  const rLabel = Number.isFinite(rMultiple)
-    ? `${rMultiple > 0 ? "+" : ""}${rMultiple.toFixed(2)}R`
+  const rLabel = Number.isFinite(trade.rMultiple)
+    ? `${trade.rMultiple > 0 ? "+" : ""}${trade.rMultiple.toFixed(2)}R`
     : "—";
+  const pipsLabel = Number.isFinite(trade.pips) ? formatSignedPips(trade.pips) : "—";
   // The result word carries win/loss as text, so colour and depth are never
   // the only signal (WCAG 1.4.1).
-  ui.journalSub.textContent = `${trade.result || "—"} · ${rLabel} · ${formatSignedPips(Number(trade.pips))}`;
+  ui.journalSub.textContent = `${trade.result || "—"} · ${rLabel} · ${pipsLabel}`;
 }
 
 function journalChipHtml(kind, value, label, active, className) {
@@ -6258,20 +6927,25 @@ function loadTradeIntoForm(id) {
     return;
   }
 
+  const isTopstep = isTopstepImport(trade);
+  const isOpen = !isTopstep && trade.status === "open";
+
   ui.tradeFields.tradeId.value = trade.id;
   ui.tradeFields.tradeDate.value = trade.date;
-  ui.tradeFields.session.value = trade.session;
+  setSelectValueWithFallback(ui.tradeFields.session, trade.session, "Custom");
   ui.tradeFields.market.value = trade.market;
   ui.tradeFields.asset.value = trade.asset;
   ui.tradeFields.direction.value = trade.direction;
   ui.tradeFields.entryPrice.value = trade.entryPrice;
   ui.tradeFields.stopLoss.value = trade.stopLoss;
   ui.tradeFields.takeProfit.value = trade.takeProfit > 0 ? trade.takeProfit : "";
-  ui.tradeFields.exitPrice.value = trade.status === "open" ? "" : trade.exitPrice;
+  ui.tradeFields.exitPrice.value = isOpen ? "" : trade.exitPrice;
   ui.tradeFields.riskPercent.value = trade.riskPercent;
   ui.tradeFields.positionSize.value = trade.positionSize;
-  ui.tradeFields.tradeResult.value = trade.status === "open" ? "Auto" : trade.tradeResult === "Auto" ? "Auto" : trade.result;
-  ui.tradeFields.tradeInProgress.checked = trade.status === "open";
+  ui.tradeFields.tradeResult.value = isOpen ? "Auto" : trade.tradeResult === "Auto" ? "Auto" : trade.result;
+  ui.tradeFields.tradeInProgress.checked = isOpen;
+  ui.tradeFields.tradeInProgress.disabled = isTopstep;
+  ui.tradeFields.tradeInProgress.closest(".trade-status-toggle")?.toggleAttribute("hidden", isTopstep);
   if (PRESET_SETUP_TYPES.has(trade.setupType)) {
     ui.tradeFields.setupType.value = trade.setupType;
     ui.tradeFields.customSetupType.value = "";
@@ -6279,9 +6953,9 @@ function loadTradeIntoForm(id) {
     ui.tradeFields.setupType.value = "Custom";
     ui.tradeFields.customSetupType.value = trade.setupType;
   }
-  ui.tradeFields.timeframe.value = trade.timeframe;
-  ui.tradeFields.psychology.value = trade.psychology;
-  ui.tradeFields.executionQuality.value = trade.executionQuality;
+  setSelectValueWithFallback(ui.tradeFields.timeframe, trade.timeframe, "M15");
+  setSelectValueWithFallback(ui.tradeFields.psychology, trade.psychology, "Focused");
+  setSelectValueWithFallback(ui.tradeFields.executionQuality, trade.executionQuality, "B");
   ui.tradeFields.tradeNotes.value = trade.notes || "";
   ui.tradeFields.screenshotData.value = trade.screenshotData || "";
 
@@ -6298,9 +6972,23 @@ function loadTradeIntoForm(id) {
   syncDirectionToggle();
   syncSetupTypeCustomField();
   syncTradeProgressState();
+  setImportedExecutionLock(isTopstep);
 
   switchView("trade-entry");
-  setMessage(ui.tradeFormMessage, "Editing trade entry.", "success");
+  setMessage(
+    ui.tradeFormMessage,
+    isTopstep
+      ? "Execution fields are locked to the Topstep source record. Journal fields remain editable."
+      : "Editing trade entry.",
+    "success"
+  );
+}
+
+function setSelectValueWithFallback(select, value, fallback) {
+  if (!select) return;
+  const requested = String(value || "");
+  const hasRequested = Array.from(select.options).some((option) => option.value === requested);
+  select.value = hasRequested ? requested : fallback;
 }
 
 function handleReflectionSubmit(event) {
@@ -7042,6 +7730,7 @@ function renderAll() {
   renderWall();
   renderLiveEquity();
   renderProgressTradeSummary();
+  renderEstimatedAnalyticsBoundary();
   renderDashboardMetrics(state.analytics);
   renderRiskStrip(state.analytics);
   renderPropTracker();
@@ -7158,7 +7847,37 @@ function handleProgressTradeDetailsToggle(event) {
 }
 
 function getClosedTrades(trades = state.trades) {
-  return trades.filter((trade) => trade.status !== "open");
+  // Orders episodes carry calculated/estimated dollars rather than a broker
+  // trade P&L. They stay fully visible in Trade Review, but do not silently
+  // move verified equity, win rate, calendars, playbooks, prop rules or edge
+  // reports. Native Topstep Trades and manual rows remain in this population.
+  return trades.filter((trade) =>
+    trade.status !== "open" &&
+      !trade.analyticsExcluded &&
+      String(trade.importSource || "").toLowerCase() !== "topstepx-orders"
+  );
+}
+
+function renderEstimatedAnalyticsBoundary() {
+  const count = state.trades.filter(isTopstepOrdersImport).length;
+  if (ui.estimatedAnalyticsNotice) {
+    ui.estimatedAnalyticsNotice.hidden = count === 0;
+    ui.estimatedAnalyticsNotice.textContent = count
+      ? `${count} Topstep Orders journal episode${count === 1 ? "" : "s"} use calculated or estimated P&L. They remain in Trade Review and are excluded from verified dashboard, calendar, playbook, prop-rule and report figures.`
+      : "";
+  }
+
+  const hasVerifiedTrades = getClosedTrades().length > 0;
+  if (ui.dashboardEmptyHeading) {
+    ui.dashboardEmptyHeading.textContent = count > 0 && !hasVerifiedTrades
+      ? "No broker-verified trades yet"
+      : "No trades yet";
+  }
+  if (ui.dashboardEmptyCopy) {
+    ui.dashboardEmptyCopy.textContent = count > 0 && !hasVerifiedTrades
+      ? `${count} reconstructed Orders episode${count === 1 ? " is" : "s are"} in Trade Review. Import Topstep Trades when available to include broker P&L in performance analytics.`
+      : "Log your first trade to unlock your equity curve, edge metrics, and discipline scores.";
+  }
 }
 
 function calculateAnalytics(trades, settings, reflections) {
@@ -7405,7 +8124,7 @@ function buildRMultipleHistogram(trades) {
   ].map((bucket) => ({ ...bucket, count: 0 }));
 
   trades.forEach((trade) => {
-    const r = Number(trade.rMultiple);
+    const r = trade.rMultiple;
     if (!Number.isFinite(r)) {
       return;
     }
@@ -7701,7 +8420,7 @@ function renderMetricDeltas() {
 }
 
 function renderDashboardMetrics(analytics) {
-  const hasTrades = state.trades.length > 0;
+  const hasTrades = analytics.totalTrades > 0;
   if (ui.metricGrid && ui.dashboardEmptyState) {
     ui.metricGrid.hidden = !hasTrades;
     ui.dashboardEmptyState.hidden = hasTrades;
@@ -8098,7 +8817,7 @@ function renderRiskStrip(analytics) {
     { key: "week", pnl: analytics.weekPnl, limit: state.settings.weeklyMaxLoss }
   ];
 
-  const visible = state.trades.length > 0 && entries.some((entry) => entry.limit > 0);
+  const visible = analytics.totalTrades > 0 && entries.some((entry) => entry.limit > 0);
   ui.riskStrip.hidden = !visible;
   if (!visible) {
     return;
@@ -8417,7 +9136,7 @@ function renderBalanceCard(analytics) {
   }
   syncBalanceRangeButtons();
 
-  const hasTrades = state.trades.length > 0;
+  const hasTrades = analytics.totalTrades > 0;
   const equity = Array.isArray(analytics.equity) ? analytics.equity : [];
   // Change figures come off the computed equity curve, never off a manual
   // balance override — mixing the two would produce a number nobody can trace.
@@ -8916,7 +9635,8 @@ function isTradeJournalled(trade) {
 }
 
 function getUnjournalledTrades() {
-  return getClosedTrades()
+  return state.trades
+    .filter((trade) => trade.status !== "open")
     .filter((trade) => !isTradeJournalled(trade))
     .sort(sortTradesDesc);
 }
@@ -8945,7 +9665,7 @@ function renderUnjournalled() {
   // The card stays up once there is anything closed to journal: with an empty
   // queue it flips to the all-clear state, which is the only place the streak
   // is visible — hiding it would hide the reward for keeping it.
-  const hasClosed = getClosedTrades().length > 0;
+  const hasClosed = state.trades.some((trade) => trade.status !== "open");
   ui.dashUnjournalled.hidden = !hasClosed;
   if (ui.dashJournalCta) {
     ui.dashJournalCta.hidden = !hasClosed || pending.length === 0;
@@ -9670,7 +10390,7 @@ function getActivePropEvaluation() {
   return evaluateProp({
     rules: account.prop,
     startBalance: account.startingBalance,
-    steps: propSteps(state.trades, account.prop.basis),
+    steps: propSteps(getClosedTrades(state.trades), account.prop.basis),
     todayKey: toDateInputValue(new Date()),
     personalDailyLimit: state.settings.dailyMaxLoss
   });
@@ -10563,9 +11283,13 @@ function renderReviewHeader(shownCount) {
 
   const parts = describeJournalFilters();
   const noun = `trade${total === 1 ? "" : "s"}`;
-  ui.reviewCount.innerHTML = parts.length
+  const estimatedCount = state.trades.filter(isTopstepOrdersImport).length;
+  const estimateNote = estimatedCount
+    ? ` · ${estimatedCount} Orders estimate${estimatedCount === 1 ? "" : "s"} excluded from analytics`
+    : "";
+  ui.reviewCount.innerHTML = (parts.length
     ? `${shownCount} of ${total} ${noun} · filtered to <strong>${escapeHtml(parts.join(" · "))}</strong>`
-    : `${total} ${noun} · <strong>all time</strong>`;
+    : `${total} ${noun} · <strong>all time</strong>`) + estimateNote;
 }
 
 /* id -> seconds, read ONCE per table render. Calling voiceClipFor() per row
@@ -10604,8 +11328,32 @@ function buildTradeDetailRow(trade, isOpen, voiceIndex = new Map()) {
     [isOpen ? "Stop" : "Exit", (isOpen ? trade.stopLoss : trade.exitPrice) > 0
       ? escapeHtml(formatProgressTradePrice(isOpen ? trade.stopLoss : trade.exitPrice))
       : "—"],
-    ["Risk", `${Number(trade.riskPercent || 0).toFixed(2)}%${isRuleBroken(trade) ? ' <span class="rev-flag">over cap</span>' : ""}`]
+    ["Risk", isTopstepImport(trade)
+      ? "—"
+      : `${Number(trade.riskPercent || 0).toFixed(2)}%${isRuleBroken(trade) ? ' <span class="rev-flag">over cap</span>' : ""}`]
   ];
+
+  if (trade.importSource === "topstepx") {
+    const costs = Math.abs(Number(trade.fees) || 0) + Math.abs(Number(trade.commissions) || 0);
+    facts.push(
+      ["Source", "TopstepX"],
+      ["Reported costs", costs > 0 ? escapeHtml(formatCurrency(-costs)) : "—"],
+      ["Source timezone", escapeHtml(trade.sourceTimezone || "Unknown")]
+    );
+  } else if (isTopstepOrdersImport(trade)) {
+    const estimatedCosts = Number.isFinite(trade.estimatedCosts) ? trade.estimatedCosts : null;
+    facts.push(
+      ["Source", "TopstepX Orders reconstruction"],
+      ["Calculated gross P&L", Number.isFinite(trade.calculatedGrossPnl)
+        ? escapeHtml(formatCurrency(trade.calculatedGrossPnl))
+        : "—"],
+      ["Estimated costs", estimatedCosts !== null ? escapeHtml(formatCurrency(-estimatedCosts)) : "Not available"],
+      ["Estimated net P&L", Number.isFinite(trade.estimatedNetPnl)
+        ? escapeHtml(formatCurrency(trade.estimatedNetPnl))
+        : "—"],
+      ["Source timezone", escapeHtml(trade.sourceTimezone || "Unknown")]
+    );
+  }
 
   const asked = trade.preTradeRulesAsked || [];
   const ticked = trade.preTradeRules || [];
@@ -10614,6 +11362,31 @@ function buildTradeDetailRow(trade, isOpen, voiceIndex = new Map()) {
   const skipped = asked.filter((id) => !ticked.includes(id)).map(preTradeRuleLabel);
 
   const extras = [];
+  if (trade.importSource === "topstepx") {
+    const sourceBits = [
+      trade.contractName ? `Contract ${trade.contractName}` : "",
+      trade.enteredAt ? `entered ${trade.enteredAt}` : "",
+      trade.exitedAt ? `exited ${trade.exitedAt}` : "",
+      trade.externalTradeId ? `trade ${trade.externalTradeId}` : ""
+    ].filter(Boolean);
+    extras.push(
+      `<p class="rev-detail-note"><span class="rev-detail-key">Broker record</span>${escapeHtml(sourceBits.join(" · ") || "TopstepX Trades export")}</p>`
+    );
+  } else if (isTopstepOrdersImport(trade)) {
+    const orderCount = Number(trade.sourceOrderCount) || 0;
+    const sourceBits = [
+      trade.contractName ? `Contract ${trade.contractName}` : "",
+      trade.enteredAt ? `entered ${trade.enteredAt}` : "",
+      trade.exitedAt ? `flattened ${trade.exitedAt}` : "",
+      trade.reconstructedDuration ? `held ${trade.reconstructedDuration}` : "",
+      orderCount ? `${orderCount} filled order${orderCount === 1 ? "" : "s"}` : "",
+      "flat-to-flat reconstruction"
+    ].filter(Boolean);
+    extras.push(
+      `<p class="rev-detail-note"><span class="rev-detail-key">Reconstruction record</span>${escapeHtml(sourceBits.join(" · "))}</p>`,
+      `<p class="rev-detail-note is-warn"><span class="rev-detail-key">Estimate boundary</span>Orders does not contain Topstep trade P&amp;L or charges. Gross is calculated from fills; costs use the stored Topstep schedule snapshot.</p>`
+    );
+  }
   if (checklist.length) {
     extras.push(`<p class="rev-detail-note"><span class="rev-detail-key">Checked before entry</span>${escapeHtml(checklist.join(" · "))}</p>`);
   }
@@ -10734,15 +11507,18 @@ function renderJournalTable() {
       const intensity = !isOpen && peakAbsPnl > 0
         ? Math.ceil(clamp(Math.abs(trade.netPnl) / peakAbsPnl, 0, 1) * 4) / 4
         : 0;
+      const reconstructed = isTopstepOrdersImport(trade);
+      const closedNet = trade.netPnl === 0 ? formatCurrency(0) : formatSignedCurrency(trade.netPnl);
+      const netLabel = reconstructed ? `${closedNet} <small class="rev-net-basis">est.</small>` : closedNet;
 
       return `
         <tr${rowClasses ? ` class="${rowClasses}"` : ""} data-trade-id="${id}" style="--row-intensity:${intensity};">
           <td data-label="Date" class="rev-date">${escapeHtml(formatIsoShort(trade.date))}</td>
           <td data-label="Symbol" class="rev-symbol">${escapeHtml(trade.asset)}</td>
           <td data-label="Setup" class="rev-setup">${escapeHtml(setupLine)}</td>
-          <td data-label="Net" class="num rev-net ${pnlClass}${isOpen ? " live-cell" : ""}"${isOpen ? ` ${liveCellAttrs(trade, "livePercent")}` : ""}>${isOpen ? escapeHtml(formatLivePercentLabel(livePercent, "OPEN")) : escapeHtml(trade.netPnl === 0 ? formatCurrency(0) : formatSignedCurrency(trade.netPnl))}</td>
-          <td data-label="R" class="num">${isOpen ? "—" : escapeHtml(formatSignedR(trade.rMultiple))}</td>
-          <td data-label="Pips" class="num ${pipClass}">${isOpen ? "—" : Number.isFinite(trade.pips) ? trade.pips.toFixed(2) : "0.00"}</td>
+          <td data-label="Net" class="num rev-net ${pnlClass}${isOpen ? " live-cell" : ""}"${isOpen ? ` ${liveCellAttrs(trade, "livePercent")}` : reconstructed ? ' title="Estimated net P&amp;L reconstructed from Topstep Orders"' : ""}>${isOpen ? escapeHtml(formatLivePercentLabel(livePercent, "OPEN")) : netLabel}</td>
+          <td data-label="R" class="num">${isOpen || isTopstepImport(trade) ? "—" : escapeHtml(formatSignedR(trade.rMultiple))}</td>
+          <td data-label="Pips" class="num ${pipClass}">${isOpen || isTopstepImport(trade) ? "—" : Number.isFinite(trade.pips) ? trade.pips.toFixed(2) : "0.00"}</td>
           <td data-label="Mood"><span class="rev-mood ${moodTone}">${escapeHtml(trade.psychology)}</span></td>
           <td class="rev-chev-cell">
             <button
@@ -11572,7 +12348,9 @@ function normalizeTrades(input) {
         riskPercent: ensureNonNegative(item.riskPercent, 0),
         positionSize: ensurePositiveNumber(item.positionSize, 0),
         tradeResult: String(item.tradeResult || "Auto"),
-        status: item.status === "open" ? "open" : "closed",
+        // A Topstep Trades row is an already-paired round trip. Repair any
+        // legacy/edit-corrupted open status while normalizing stored data.
+        status: isTopstepImport(item) ? "closed" : item.status === "open" ? "open" : "closed",
         setupType: String(item.setupType || "Custom"),
         timeframe: String(item.timeframe || "M15"),
         psychology: String(item.psychology || "Focused"),
@@ -11580,6 +12358,85 @@ function normalizeTrades(input) {
         screenshotName: String(item.screenshotName || ""),
         screenshotData: String(item.screenshotData || ""),
         importBatchId: String(item.importBatchId || ""),
+        importSource: String(item.importSource || ""),
+        externalSource: String(item.externalSource || item.importSource || ""),
+        importKey: String(item.importKey || ""),
+        externalTradeId: String(item.externalTradeId || ""),
+        externalFingerprint: String(item.externalFingerprint || ""),
+        contractName: String(item.contractName || ""),
+        enteredAt: String(item.enteredAt || ""),
+        exitedAt: String(item.exitedAt || ""),
+        brokerPnl: isTopstepOrdersImport(item)
+          ? null
+          : ensureNumber(item.brokerPnl, ensureNumber(item.reportedNetPnl, 0)),
+        sourceFees: item.sourceFees === undefined || item.sourceFees === null
+          ? null
+          : ensureNumber(item.sourceFees, null),
+        sourceCommissions: item.sourceCommissions === undefined || item.sourceCommissions === null
+          ? null
+          : ensureNumber(item.sourceCommissions, null),
+        fees: isTopstepOrdersImport(item) ? null : ensureNonNegative(item.fees, 0),
+        commissions: isTopstepOrdersImport(item) ? null : ensureNonNegative(item.commissions, 0),
+        costs: isTopstepOrdersImport(item)
+          ? null
+          : ensureNonNegative(
+              item.costs,
+              Math.abs(ensureNumber(item.fees, 0)) + Math.abs(ensureNumber(item.commissions, 0))
+            ),
+        sourceTradeDay: String(item.sourceTradeDay || ""),
+        sourceTimezone: String(item.sourceTimezone || ""),
+        tradeDuration: String(item.tradeDuration || ""),
+        sourceOrderCount: ensureNonNegative(item.sourceOrderCount, 0),
+        roundTurnQuantity: ensureNonNegative(item.roundTurnQuantity, 0),
+        entryFillCount: ensureNonNegative(item.entryFillCount, 0),
+        exitFillCount: ensureNonNegative(item.exitFillCount, 0),
+        peakPositionSize: ensureNonNegative(item.peakPositionSize, 0),
+        contractMultiplier: item.contractMultiplier === undefined || item.contractMultiplier === null
+          ? null
+          : ensureNumber(item.contractMultiplier, null),
+        reconstructionMethod: String(item.reconstructionMethod || ""),
+        reconstructedDuration: String(item.reconstructedDuration || ""),
+        sourceTradeDayTimezone: String(item.sourceTradeDayTimezone || ""),
+        sourceAccountFingerprint: String(item.sourceAccountFingerprint || ""),
+        sourceOrderFingerprints: Array.isArray(item.sourceOrderFingerprints)
+          ? item.sourceOrderFingerprints.map(String)
+          : [],
+        sourceFullDayConfirmed: Boolean(item.sourceFullDayConfirmed),
+        sourceFullDayConfirmedAt: String(item.sourceFullDayConfirmedAt || ""),
+        pnlProvenance: String(item.pnlProvenance || ""),
+        pnlIsEstimated: Boolean(item.pnlIsEstimated || isTopstepOrdersImport(item)),
+        analyticsExcluded: Boolean(item.analyticsExcluded || isTopstepOrdersImport(item)),
+        costProvenance: String(item.costProvenance || ""),
+        costScheduleUrl: String(item.costScheduleUrl || ""),
+        costScheduleAsOf: String(item.costScheduleAsOf || ""),
+        costScheduleEffectiveFrom: String(item.costScheduleEffectiveFrom || ""),
+        costScheduleVerifiedThrough: String(item.costScheduleVerifiedThrough || ""),
+        estimatedFeeRate: item.estimatedFeeRate === undefined || item.estimatedFeeRate === null
+          ? null
+          : ensureNonNegative(item.estimatedFeeRate, null),
+        estimatedCommissionRate: item.estimatedCommissionRate === undefined || item.estimatedCommissionRate === null
+          ? null
+          : ensureNonNegative(item.estimatedCommissionRate, null),
+        costAccountClass: String(item.costAccountClass || ""),
+        costEstimateUnavailableReason: String(item.costEstimateUnavailableReason || ""),
+        calculatedGrossPnl: item.calculatedGrossPnl === undefined || item.calculatedGrossPnl === null
+          ? null
+          : ensureNumber(item.calculatedGrossPnl, null),
+        estimatedFees: item.estimatedFees === undefined || item.estimatedFees === null
+          ? null
+          : ensureNonNegative(item.estimatedFees, null),
+        estimatedCommissions: item.estimatedCommissions === undefined || item.estimatedCommissions === null
+          ? null
+          : ensureNonNegative(item.estimatedCommissions, null),
+        estimatedCosts: item.estimatedCosts === undefined || item.estimatedCosts === null
+          ? null
+          : ensureNonNegative(item.estimatedCosts, null),
+        estimatedNetPnl: item.estimatedNetPnl === undefined || item.estimatedNetPnl === null
+          ? null
+          : ensureNumber(item.estimatedNetPnl, null),
+        reportedNetPnl: item.reportedNetPnl === undefined || item.reportedNetPnl === null
+          ? null
+          : ensureNumber(item.reportedNetPnl, null),
         // Multi-account. Empty on every trade written before this ships;
         // adoptAllTrades() adopts those rows into the migrated default account
         // rather than leaving them ownerless (and therefore invisible).
@@ -11625,6 +12482,18 @@ function normalizeTrades(input) {
       };
 
       const metrics = calculateTradeMetrics(baseTrade);
+      const reconstructedPnl = Number.isFinite(baseTrade.estimatedNetPnl)
+        ? baseTrade.estimatedNetPnl
+        : Number.isFinite(baseTrade.calculatedGrossPnl)
+          ? baseTrade.calculatedGrossPnl
+          : null;
+      const authoritativePnl = Number.isFinite(baseTrade.reportedNetPnl)
+        ? round(baseTrade.reportedNetPnl)
+        : isTopstepOrdersImport(baseTrade) && reconstructedPnl !== null
+          ? round(reconstructedPnl)
+          : baseTrade.importSource === "topstepx" && Number.isFinite(baseTrade.brokerPnl)
+          ? round(baseTrade.brokerPnl)
+          : null;
       const manualResult = String(item.result || "").trim();
       const safeManualResult =
         manualResult === "Win" || manualResult === "Loss" || manualResult === "Break Even"
@@ -11632,6 +12501,12 @@ function normalizeTrades(input) {
           : metrics.autoResult;
       const resolvedResult = baseTrade.status === "open"
         ? "Open"
+        : authoritativePnl !== null
+          ? authoritativePnl > 0
+            ? "Win"
+            : authoritativePnl < 0
+              ? "Loss"
+              : "Break Even"
         : baseTrade.tradeResult === "Auto"
           ? metrics.autoResult
           : safeManualResult;
@@ -11639,14 +12514,18 @@ function normalizeTrades(input) {
       return {
         ...baseTrade,
         result: resolvedResult,
-        netPnl: baseTrade.status === "open" ? 0 : metrics.netPnl,
-        riskAmount: metrics.riskAmount,
-        rMultiple: baseTrade.status === "open" ? 0 : metrics.rMultiple,
-        rrRatio: metrics.rrRatio,
-        pips: baseTrade.status === "open" ? 0 : metrics.pips,
-        pipSize: metrics.pipSize,
-        pipValuePerLot: metrics.pipValuePerLot,
-        dollarPerPip: metrics.dollarPerPip
+        netPnl: baseTrade.status === "open"
+          ? 0
+          : authoritativePnl !== null
+            ? authoritativePnl
+            : metrics.netPnl,
+        riskAmount: isTopstepImport(baseTrade) ? 0 : metrics.riskAmount,
+        rMultiple: baseTrade.status === "open" ? 0 : isTopstepImport(baseTrade) ? null : metrics.rMultiple,
+        rrRatio: isTopstepImport(baseTrade) ? null : metrics.rrRatio,
+        pips: baseTrade.status === "open" ? 0 : isTopstepImport(baseTrade) ? null : metrics.pips,
+        pipSize: isTopstepImport(baseTrade) ? null : metrics.pipSize,
+        pipValuePerLot: isTopstepImport(baseTrade) ? null : metrics.pipValuePerLot,
+        dollarPerPip: isTopstepImport(baseTrade) ? null : metrics.dollarPerPip
       };
     });
 }
@@ -12595,13 +13474,21 @@ function setupTerminal() {
     if (!channel || tile.querySelector("iframe")) {
       return;
     }
+    // A slot holds a roster channel id or a pasted link, and parseWallSlot is
+    // the only thing that turns either into a src. A stored value that does
+    // not pass the allowlist yields no target and nothing loads, which is the
+    // behaviour that matters if localStorage is ever tampered with.
+    const target = parseWallSlot(channel);
+    if (!target) {
+      return;
+    }
     const frame = document.createElement("iframe");
-    // By CHANNEL, so a nightly stream restart does not break the tile.
+    // A roster slot embeds BY CHANNEL, so a nightly stream restart does not
+    // break the tile. A pasted link embeds the video it names.
     // enablejsapi=1 buys the ONE liveness signal that exists without a Google
     // API key: the player posts its own state back to this page, so when a
     // channel is dark we hear it from YouTube itself rather than guessing.
-    frame.src = `https://www.youtube.com/embed/live_stream?channel=${encodeURIComponent(channel)}` +
-      `&autoplay=1&mute=1&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
+    frame.src = wallEmbedUrl(target, location.origin);
     frame.dataset.channel = channel;
     frame.title = tile.querySelector(".bb-mon-pick")?.selectedOptions?.[0]?.textContent || "Live news";
     frame.loading = "lazy";
@@ -12683,6 +13570,32 @@ function setupTerminal() {
   const syncEveryChipFade = () => document.querySelectorAll(".rev-chips").forEach(syncChipFade);
   syncEveryChipFade();
   window.addEventListener("resize", debounce(syncEveryChipFade, 120));
+
+  /* PASTE A LINK INTO A MONITOR. A prompt rather than an inline field: the
+     tile is 187px wide on a phone and a text input inside it would be smaller
+     than the thing being pasted. The parser is the gate, so a refused paste
+     says so and changes nothing. */
+  document.addEventListener("click", (event) => {
+    const key = event.target.closest("[data-wall-link]");
+    if (!key) {
+      return;
+    }
+    const slot = Number(key.dataset.wallLink);
+    const raw = window.prompt(
+      "Paste a YouTube link for this monitor.\n\nA live stream, a video, or a channel link."
+    );
+    if (raw === null) {
+      return;
+    }
+    const target = parseWallLink(raw);
+    if (!target) {
+      // Says what was refused and why, rather than failing silently or
+      // guessing at what was meant.
+      showCaptureToast("That is not a YouTube link this wall can embed.", "error");
+      return;
+    }
+    setWallSlot(slot, wallSlotValue(target));
+  });
 
   // The rail's minimize control. Delegated from the document because the rail
   // is re-rendered, and writing the choice is what makes it beat the width
@@ -13563,23 +14476,44 @@ function darkNote(channelId, seen = readDarkChannels()) {
 /* One monitor, built in one place. The dashboard rail renders a single tile
    from this too, so the picker, the standby state and the click-to-play path
    are the same code in both and cannot drift apart. */
-function monitorTile(channelId, index) {
-  const channel = WALL_CHANNELS.find((c) => c.id === channelId) || WALL_CHANNELS[index] || WALL_CHANNELS[0];
+function monitorTile(slotValue, index) {
   const seen = readDarkChannels();
+  // A slot holds either a roster channel id or a pasted link. A pasted one is
+  // not on the roster, so the picker gains a row for it and the tile names it
+  // by its id: we have no title without an API call, and inventing one would
+  // be a claim about someone else's stream.
+  const roster = WALL_CHANNELS.find((c) => c.id === slotValue);
+  const pasted = roster ? null : parseWallSlot(slotValue);
+  const channel = roster || WALL_CHANNELS[index] || WALL_CHANNELS[0];
+  const activeValue = roster ? roster.id : pasted ? slotValue : channel.id;
+
   const options = WALL_CHANNELS.map(
     (c) =>
-      `<option value="${escapeHtml(c.id)}"${c.id === channel.id ? " selected" : ""}>${escapeHtml(
+      `<option value="${escapeHtml(c.id)}"${c.id === activeValue ? " selected" : ""}>${escapeHtml(
         c.name + (c.hours === "session" ? " · session" : "") + darkNote(c.id, seen)
       )}</option>`
   ).join("");
+  const pastedOption = pasted
+    ? `<option value="${escapeHtml(slotValue)}" selected>${escapeHtml(
+        (pasted.kind === "video" ? "link · " : "link · channel ") + pasted.id
+      )}</option>`
+    : "";
+
+  const label = pasted
+    ? (pasted.kind === "video" ? "pasted link" : "pasted channel")
+    : channel.desk + (channel.hours === "session" ? " · session" : "");
+  const playLabel = pasted ? `pasted link ${pasted.id}` : channel.name;
+
   return `
-      <article class="bb-mon" data-slot="${index}" data-channel="${escapeHtml(channel.id)}" style="--i:${index}">
+      <article class="bb-mon" data-slot="${index}" data-channel="${escapeHtml(activeValue)}" style="--i:${index}">
         <p class="bb-mon-h">
           <span class="bb-mon-dot" aria-hidden="true"></span>
-          <select class="bb-mon-pick" aria-label="Monitor ${index + 1} channel">${options}</select>
-          <em>${escapeHtml(channel.desk)}${channel.hours === "session" ? " · session" : ""}</em>
+          <select class="bb-mon-pick" aria-label="Monitor ${index + 1} channel">${pastedOption}${options}</select>
+          <em>${escapeHtml(label)}</em>
+          <button class="bb-mon-link" type="button" data-wall-link="${index}"
+            aria-label="Paste a YouTube link into monitor ${index + 1}">link</button>
         </p>
-        <button class="bb-mon-screen" type="button" aria-label="Play ${escapeHtml(channel.name)} live">
+        <button class="bb-mon-screen" type="button" aria-label="Play ${escapeHtml(playLabel)} live">
           <span class="bb-mon-scan" aria-hidden="true"></span>
           <span class="bb-mon-play" aria-hidden="true">&#9654;</span>
           <span class="bb-mon-off">standby</span>
@@ -13729,7 +14663,12 @@ function getWallChoice() {
     stored = [];
   }
   const known = new Set(WALL_CHANNELS.map((c) => c.id));
-  const clean = (Array.isArray(stored) ? stored : []).filter((id) => known.has(id));
+  // A slot is valid if it is a roster channel OR a link the trader pasted.
+  // parseWallSlot is the same gate the parser uses, so a stored value that is
+  // not one of ours cannot come back to life as an iframe src after a reload.
+  const clean = (Array.isArray(stored) ? stored : []).filter(
+    (id) => known.has(id) || parseWallSlot(id) !== null
+  );
   const fallback = WALL_CHANNELS.map((c) => c.id).filter((id) => !clean.includes(id));
   return [...clean, ...fallback].slice(0, WALL_SLOTS);
 }
@@ -13911,5 +14850,3 @@ function renderEdgeMini() {
   setHtml(document.getElementById("dashEdgeMiniBody"), out);
   renderTerminalClock();
 }
-
-

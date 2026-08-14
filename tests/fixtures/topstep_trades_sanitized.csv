@@ -1,0 +1,8 @@
+TopstepX Trades Export
+"Account: Practice, 50K"
+"Generated for
+sanitized QA"
+Id,ContractName,EnteredAt,ExitedAt,EntryPrice,ExitPrice,Fees,PnL,Size,Type,TradeDay,TradeDuration,Commissions
+TRD-1001,MGCZ26,2026-08-12T13:30:00Z,2026-08-12T14:15:30Z,2675.10,2681.375,-4.26,125.50,2,0,08/12/2026,00:45:30,-2.50
+TRD-1002,MNQU26,8/13/2026 9:05:00 AM,8/13/2026 9:22:10 AM,"23,450.25","23,418.75",3.74,$62.50,-1,1,08/13/2026,00:17:10,
+TRD-1003,ESU26,2026-08-14 10:00:00,2026-08-14 10:02:30,6420.25,6419.75,$0.00,($25.00),1,Long,2026-08-14,00:02:30,0

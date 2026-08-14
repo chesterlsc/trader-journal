@@ -7,7 +7,8 @@ Professional trading journal web app ("Institutional Terminal" design, dark + li
 - Live prices with targeted DOM ticks; close-at-market on open trades; daily/weekly loss-budget strips
 - Login, registration, password reset, and per-user cloud save (CSRF-protected, rate-limited)
 - Local autosave plus PostgreSQL sync
-- Bulk import from Vantage, Binance, and Google Sheets CSV/TSV — missing values flagged, open rows supported, one-click undo per import batch
+- First-class TopstepX CSV import in Trade Review — exact Trades imports plus strict flat-to-flat reconstruction from filled Orders, active-account targeting, source-aware P&L labels, stable deduplication, row errors, and one-click batch undo
+- Generic import from Vantage, Binance, and Google Sheets CSV/TSV — missing values flagged and open rows supported
 
 See `MVP.md` for the full scope and roadmap, `docs/DEPLOY.md` for the step-by-step
 deploy, and `docs/renovation/` for the design blueprint and build log.

@@ -1,0 +1,3 @@
+TopstepX Orders Export
+Id,AccountName,ContractName,Status,Type,Size,Side,CreatedAt,TradeDay,FilledAt,StopPrice,LimitPrice,ExecutePrice,PositionDisposition,CreationDisposition,PlatformOrderId
+ORD-1001,"Practice, 50K",MGCZ26,Filled,Market,2,Bid,2026-08-12T13:29:59Z,2026-08-12,2026-08-12T13:30:00Z,0,2675.10,2675.10,Opening,Trader,PLAT-1001

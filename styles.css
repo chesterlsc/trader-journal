@@ -10736,6 +10736,42 @@ body.auth-locked {
   .bb-mon-pick { min-height: 44px; }
 }
 
+/* PASTE A LINK. Sits beside the picker because it does the same job: choose
+   what this monitor shows. Kept as quiet chrome until the tile is touched, so
+   sixteen roster channels stay the visible offer and the link is the escape
+   hatch for the seventeenth. */
+.bb-mon-link {
+  flex: 0 0 auto;
+  padding: 1px 5px;
+  border: 1px solid var(--term-line);
+  border-radius: 3px;
+  background: none;
+  color: var(--term-faint);
+  font: 600 11px/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 140ms var(--ease-out), color 140ms var(--ease-out),
+    border-color 140ms var(--ease-out);
+}
+.bb-mon:hover .bb-mon-link,
+.bb-mon:focus-within .bb-mon-link,
+.bb-mon-link:focus-visible { opacity: 1; }
+.bb-mon-link:hover {
+  color: var(--term-ink);
+  border-color: var(--term-ink);
+}
+.bb-mon-link:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* Touch has no hover, so the control is always visible and reaches 44px. */
+@media (hover: none) {
+  .bb-mon-link { opacity: 1; }
+}
+@media (max-width: 899px) {
+  .bb-mon-link { min-height: 44px; min-width: 44px; }
+}
+
 /* --- THE WALL, SIZED ------------------------------------------------------
    Four 16:9 tiles in two columns is about 1100px tall, which pushed the desk
    entirely below the fold: the page read as "only news TV" and the instrument
@@ -11280,4 +11316,459 @@ body.auth-locked {
   width: 100%;
   display: block;
   border: 0;
+}
+
+/* ==========================================================================
+   TOPSTEP / BROKER IMPORT
+   The workflow belongs to Trade Review because that is where its rows land.
+   A native dialog supplies focus trapping and Escape; on a phone the same
+   surface docks to the thumb edge as a bottom sheet.
+   ========================================================================== */
+
+.rev-import {
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+
+.rev-import:hover,
+.rev-import:focus-visible {
+  filter: brightness(1.05);
+}
+
+.trade-import-dialog {
+  width: min(1120px, calc(100vw - 32px));
+  max-width: none;
+  max-height: min(880px, calc(100dvh - 32px));
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-xl);
+  background: var(--surface-1);
+  color: var(--text);
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+}
+
+.trade-import-dialog::backdrop {
+  background: rgba(4, 5, 8, 0.68);
+  backdrop-filter: blur(4px);
+}
+
+[data-theme="light"] .trade-import-dialog::backdrop {
+  background: rgba(23, 26, 33, 0.38);
+}
+
+.trade-import-dialog[open] {
+  animation: captureRise var(--dur-base) var(--ease-out);
+}
+
+.trade-import-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: inherit;
+}
+
+.trade-import-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.trade-import-head h2,
+.trade-import-guide h3 {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-ui);
+  letter-spacing: -0.02em;
+}
+
+.trade-import-head h2 {
+  font-size: clamp(22px, 3vw, 30px);
+}
+
+.trade-import-kicker {
+  margin: 0 0 5px;
+  color: var(--accent);
+  font: 700 var(--fs-micro)/1.2 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.trade-import-account {
+  margin: 7px 0 0;
+  color: var(--text-soft);
+  font-size: var(--fs-body);
+}
+
+.trade-import-close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-inset);
+  color: var(--text-soft);
+  font: 400 27px/1 var(--font-ui);
+  cursor: pointer;
+  box-shadow: var(--clay-pressed);
+}
+
+.trade-import-close:focus-visible,
+.trade-import-drop:focus-within,
+.trade-import-drop:focus-visible,
+.rev-import:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.trade-import-body {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.trade-import-guide {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(320px, 1.3fr);
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-inset);
+  box-shadow: var(--edge-highlight);
+}
+
+.trade-import-guide[hidden] {
+  display: none;
+}
+
+.trade-import-guide ol {
+  grid-row: span 2;
+  margin: 0;
+  padding-left: 22px;
+  color: var(--text-soft);
+  line-height: 1.65;
+}
+
+.trade-import-guide p:last-child {
+  grid-column: 1;
+  margin: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-label);
+  line-height: 1.5;
+}
+
+.trade-import-guide a {
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.trade-import-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.55fr) minmax(0, 1.45fr);
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.trade-import-file {
+  min-width: 0;
+}
+
+.trade-import-drop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 112px;
+  padding: var(--space-4);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-inset);
+  color: var(--text-soft);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+
+.trade-import-drop:hover,
+.trade-import-drop.is-dragging {
+  border-color: var(--accent);
+  background: var(--accent-muted);
+}
+
+.trade-import-drop-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--accent);
+  font: 700 20px/1 var(--font-mono);
+  box-shadow: var(--clay-raised);
+}
+
+.trade-import-drop strong,
+.trade-import-drop small {
+  display: block;
+}
+
+.trade-import-drop strong {
+  color: var(--text);
+  font-size: var(--fs-body);
+}
+
+.trade-import-drop small {
+  max-width: 54ch;
+  margin-top: 4px;
+  color: var(--text-faint);
+}
+
+.trade-import-paste {
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-3);
+}
+
+.trade-import-paste summary {
+  width: max-content;
+  color: var(--text-soft);
+  font: 600 var(--fs-label)/1.4 var(--font-ui);
+  cursor: pointer;
+}
+
+.trade-import-paste label {
+  display: grid;
+  gap: 7px;
+  margin-top: var(--space-3);
+}
+
+.trade-import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.trade-import-actions .btn {
+  min-height: 44px;
+}
+
+.trade-import-attestation {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  color: var(--text-soft);
+  cursor: pointer;
+}
+
+.trade-import-attestation[hidden] {
+  display: none;
+}
+
+.trade-import-attestation input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+
+.trade-import-attestation strong,
+.trade-import-attestation small {
+  display: block;
+}
+
+.trade-import-attestation strong {
+  color: var(--text);
+}
+
+.trade-import-attestation small {
+  margin-top: 3px;
+  color: var(--text-faint);
+  line-height: 1.45;
+}
+
+.trade-import-errors {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: var(--space-3) var(--space-3) var(--space-3) 34px;
+  border: 1px solid var(--pnl-neg-line);
+  border-radius: var(--radius-md);
+  background: var(--pnl-neg-soft);
+  color: var(--pnl-neg);
+  font-size: var(--fs-label);
+}
+
+.trade-import-errors[hidden] {
+  display: none;
+}
+
+.trade-import-preview {
+  max-height: 360px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.trade-import-preview table {
+  min-width: 1020px;
+}
+
+.import-state {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-soft);
+  font: 700 var(--fs-micro)/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.import-state.is-ready {
+  border-color: var(--pnl-pos-line);
+  background: var(--pnl-pos-soft);
+  color: var(--pnl-pos);
+}
+
+.import-state.is-duplicate {
+  background: var(--surface-inset);
+  color: var(--text-faint);
+}
+
+@media (max-width: 700px) {
+  .trade-import-dialog {
+    width: 100%;
+    max-height: 92dvh;
+    margin: auto 0 0;
+    border-width: 1px 0 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+
+  .trade-import-head,
+  .trade-import-body {
+    padding: var(--space-4);
+  }
+
+  .trade-import-guide,
+  .trade-import-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .trade-import-guide ol,
+  .trade-import-guide p:last-child {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .trade-import-preview {
+    max-height: none;
+    overflow: visible;
+    border: 0;
+  }
+
+  .trade-import-preview table,
+  .trade-import-preview tbody,
+  .trade-import-preview tr,
+  .trade-import-preview td {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .trade-import-preview thead {
+    display: none;
+  }
+
+  .trade-import-preview tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px var(--space-3);
+    margin-bottom: var(--space-3);
+    padding: var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface-2);
+  }
+
+  .trade-import-preview td,
+  .trade-import-preview td.num {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .trade-import-preview td::before {
+    content: attr(data-label);
+    color: var(--text-faint);
+    font: 600 var(--fs-micro)/1.35 var(--font-mono);
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .trade-import-preview .empty-row td {
+    grid-column: 1 / -1;
+    display: block;
+    text-align: center;
+  }
+
+  .trade-import-preview .empty-row td::before {
+    content: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trade-import-dialog[open] {
+    animation: none;
+  }
+}
+
+.rev-net-basis {
+  margin-inline-start: 0.3em;
+  color: var(--text-faint);
+  font: 600 0.68em/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.estimated-analytics-notice {
+  margin: 0 0 var(--space-4);
+  padding: 10px 12px;
+  border: 1px solid var(--warning-line, var(--line-strong));
+  border-radius: var(--radius-md);
+  background: var(--warning-soft, var(--surface-inset));
+  color: var(--text-soft);
+  font: 600 var(--fs-label)/1.5 var(--font-ui);
+}
+
+.estimated-analytics-notice[hidden] {
+  display: none;
+}
+
+.is-source-locked {
+  opacity: 0.72;
+}
+
+.is-source-locked select:disabled,
+.is-source-locked input:disabled {
+  cursor: not-allowed;
 }

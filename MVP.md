@@ -1,6 +1,6 @@
 # Trader Journal — MVP Definition
 
-_Last updated: 2026-08-05, post-renovation (branch `renovation/v2`)._
+_Last updated: 2026-08-14._
 
 ## Product
 
@@ -13,7 +13,8 @@ A professional trading journal for retail traders who journal manually: log trad
 ### Core journaling
 - Trade entry with domain validation (stop-side checks, open/closed status), Long/Short segmented control, psychology + execution grading, screenshot attach (≤350KB inline)
 - Trade review table: 13 columns, click-to-sort, filters, edit/delete, CSV export, JSON backup/restore
-- Bulk import (Vantage/Binance/Sheets CSV-TSV) — **honest**: missing stop/TP/exit stay blank and flagged "—", no-exit rows import as open positions, every batch stamped with `importBatchId` + one-click **Undo Last Import**
+- First-class TopstepX CSV import inside Trade Review — active-account targeting, broker-reported Trades P&L/costs preserved without guessed contract math, plus strict flat-to-flat reconstruction for filled Orders with calculated-gross provenance, stable source deduplication, row-level preview/errors, and safe rejection of ambiguous/incomplete ledgers
+- Generic bulk import (Vantage/Binance/Sheets CSV-TSV) — **honest**: missing stop/TP/exit stay blank and flagged "—", no-exit rows import as open positions, every batch stamped with `importBatchId` + one-click **Undo Last Import**
 - Close-at-market on open trades from the dashboard progress card or journal row (uses last live price, inline confirm)
 - Daily reflections journal + monthly review + replay notes
 
