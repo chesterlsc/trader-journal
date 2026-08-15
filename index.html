@@ -161,13 +161,13 @@
                The claim is countable on sight: the desk beside it draws the
                band, the tick and the stand down it is describing. -->
           <h1 class="lnd-hero-title">
-            <span class="lnd-title-line" style="--line-i: 0">Every calendar tells you</span>
-            <span class="lnd-title-line" style="--line-i: 1">what is coming.</span>
-            <span class="lnd-title-line lnd-hero-title-accent" style="--line-i: 2">This one tells you to sit it out.</span>
+            <span class="lnd-title-line" style="--line-i: 0">Journalling is the part</span>
+            <span class="lnd-title-line" style="--line-i: 1">everyone skips.</span>
+            <span class="lnd-title-line lnd-hero-title-accent" style="--line-i: 2">This is one line and two taps.</span>
           </h1>
           <p class="lnd-hero-lede">
-            It reads the release against your own record on it. Fourteen prints, three wins.
-            Most of the time it has nothing to say, and says that.
+            Type the trade. It sizes it and watches the price.
+            When it closes, two taps and a sentence. Watch it happen.
           </p>
           <!-- The email is handed straight to the auth panel's identifier field
                (it accepts a username or an email), so this is one real step of
@@ -215,197 +215,107 @@
         </section>
 
         <div class="lnd-hero-side">
-          <!-- ═══════════════════════════════════════════════════════════
-               THE DESK, ALREADY OPEN.
+          <!-- ===========================================================
+               WATCH A TRADE GET JOURNALLED.
 
-               Not a lens on the product and not a picture of one: the
-               instrument itself, mid session, aimed at one release. It wears
-               .lnd-tp-frame, the one scope allowed to hard-reference gunmetal,
-               so it stays a dark screen on the concrete theme with no second
-               palette to maintain. Everything inside reads --tp-*.
+               The product demo IS the hero now. It used to sit three screens
+               down the page while the hero showed a second release edge, which
+               the Release edge section below already is: one instrument, twice.
 
-               THE SIGNATURE, and the only thing the visitor has to watch: the
-               trader's own fill printing ON THE WIRE between two calendar
-               rows, in the same row component, already stamped. No calendar
-               can print that row and no journal can print that row.
+               This is the real interface replaying a scripted trade. Not
+               footage, not a mock-up. It plays itself on first sight, pauses
+               when it scrolls away and resumes where it stopped, so it reads as
+               a video without being one. #lndDemoFrame, #lndDemoBtn and
+               #lndDemoCaption keep their ids: setupLandingDemo binds them and
+               drives every scene.
 
-               FIGURES. The releases are buildSampleReleases(); the coverage
-               read is buildSampleNews() at 2.41x over 166 buckets. The file is
-               a SAMPLE journal, not the demo journal: 3W/11L over 14 prints
-               gives a 95% band of 8% to 48%, which sits under a 51% baseline,
-               and that is what newsVerdict() needs before it will issue a
-               stand down. The demo journal has 0 stamped trades and honestly
-               reads "no file", which is what the teaser below shows. Both say
-               sample out loud, and the figcaption names the difference.
-               ═══════════════════════════════════════════════════════════ -->
-          <figure class="lnd-tp-frame lnd-desk" aria-label="Release edge sample desk: a sample journal aimed at one release, nothing live">
-            <div class="lnd-tp-chrome" aria-hidden="true">
-              <span class="lnd-tp-dot"></span>
-              <span class="lnd-tp-title">Release&nbsp;edge</span>
-              <span class="lnd-tp-tag">sample desk</span>
+               Under reduced motion the player composes the FINAL frame and the
+               button walks the keyframes one static step per press. Nothing
+               moves on its own and nothing is hidden.
+               =========================================================== -->
+          <figure class="lnd-play">
+            <div class="lnd-play-chrome" aria-hidden="true">
+              <span class="lnd-play-dot"></span>
+              <span class="lnd-play-title">Product demo</span>
+              <span class="lnd-play-tag">sample</span>
             </div>
 
-            <div class="lnd-desk-screen" aria-hidden="true">
-              <!-- The curtain over .lnd-desk-typed is painted in the screen's
-                   own fill and retracts right, so the RESTING state is the
-                   finished command. Reduced motion, no JS and a screenshot all
-                   read a composed desk instead of an empty prompt. -->
-              <p class="lnd-desk-cmd">
-                <span class="lnd-desk-prompt">&gt; edge --aim</span>
-                <span class="lnd-desk-typed">cpi m/m<i class="lnd-desk-caret"></i></span>
-                <span class="lnd-desk-clock">T&minus;47m</span>
-              </p>
+          <div class="lnd-demo-frame" id="lndDemoFrame" aria-hidden="true">
+            <div class="lnd-demo-chrome">
+              <span class="lnd-demo-dot"></span><span class="lnd-demo-dot"></span><span class="lnd-demo-dot"></span>
+              <span class="lnd-demo-chrome-tag">demo</span>
+            </div>
 
-              <!-- F8 is not shipped and says so on the key, not in a footnote. -->
-              <p class="lnd-desk-keys">
-                <span class="lnd-desk-key" style="--k-i:0"><b>F1</b>approach</span>
-                <span class="lnd-desk-key is-live" style="--k-i:1"><b>F2</b>wire</span>
-                <span class="lnd-desk-key is-live" style="--k-i:2"><b>F3</b>reckoning</span>
-                <span class="lnd-desk-key" style="--k-i:3"><b>F4</b>tilt</span>
-                <span class="lnd-desk-key" style="--k-i:4"><b>F5</b>clock</span>
-                <span class="lnd-desk-key is-live" style="--k-i:5"><b>F6</b>news</span>
-                <span class="lnd-desk-key is-live" style="--k-i:6"><b>F7</b>wall</span>
-                <span class="lnd-desk-key" style="--k-i:7"><b>F8</b>armed<i class="lnd-desk-soon">soon</i></span>
-              </p>
-
-              <div class="lnd-desk-panes">
-                <section class="lnd-tp-pane lnd-desk-wire">
-                  <p class="lnd-tp-pane-h"><b>F2</b>the wire <em>USD</em></p>
-                  <div class="lnd-tp-row" style="--r-i:0">
-                    <span class="lnd-tp-t">T&minus;47m</span>
-                    <span class="lnd-tp-s is-hot">USD</span>
-                    <span class="lnd-tp-h">CPI m/m</span>
-                    <span class="lnd-tp-x">14 prints</span>
+            <div class="lnd-demo-stage">
+              <div class="lnd-demo-scene is-active" data-demo-scene="capture">
+                <div class="cmdk-well">
+                  <div class="cmdk-line">
+                    <span class="cmdk-caret">&rsaquo;</span>
+                    <span class="cmdk-input lnd-demo-input"><span id="lndDemoTyped"></span><span class="lnd-demo-caret-bar" id="lndDemoCaretBar"></span></span>
+                    <span class="cmdk-key" id="lndDemoEnterKey">ENTER</span>
                   </div>
-                  <div class="lnd-tp-row is-you" style="--r-i:1">
-                    <span class="lnd-tp-t">13:31</span>
-                    <span class="lnd-tp-s is-you">you</span>
-                    <span class="lnd-tp-h lnd-desk-type">XAUUSD short 0.02 at 4234</span>
-                    <span class="lnd-tp-x is-pos">stamped</span>
+                  <div class="cmdk-readout">
+                    <div class="cmdk-chips" id="lndDemoChips"></div>
+                    <p class="cmdk-status is-ok" id="lndDemoStatus" hidden>Enter opens this position.</p>
                   </div>
-                  <div class="lnd-tp-row" style="--r-i:2">
-                    <span class="lnd-tp-t">T&minus;2h47</span>
-                    <span class="lnd-tp-s">USD</span>
-                    <span class="lnd-tp-h">Unemployment Claims</span>
-                    <span class="lnd-tp-x">6 prints</span>
-                  </div>
-                  <p class="lnd-tp-saved">auto stamped on open</p>
-                </section>
-
-                <!-- The verdict has to be earned. The band is the 95% interval
-                     on 14 prints; the tick is the trader's OWN baseline, never
-                     50%. The tick sitting right of the band is the argument. -->
-                <section class="lnd-tp-pane lnd-desk-reck">
-                  <p class="lnd-tp-pane-h"><b>F3</b>the reckoning <em>CPI m/m</em></p>
-                  <div class="lnd-tp-stat" style="--s-i:0"><span>prints on record</span><b>14</b></div>
-                  <div class="lnd-tp-stat" style="--s-i:1"><span>wins losses</span><b class="is-neg">3W 11L</b></div>
-                  <div class="lnd-tp-stat" style="--s-i:2"><span>net</span><b class="is-neg">&minus;$650.00</b></div>
-                  <div class="lnd-tp-stat" style="--s-i:3"><span>on this release</span><b>21%</b></div>
-                  <div class="lnd-tp-stat lnd-desk-stat-wide" style="--s-i:4"><span>your baseline</span><b>51% over 137</b></div>
-                  <span class="lnd-desk-band" style="--lo:8%;--hi:48%;--base:51%"><i></i><b></b></span>
-                  <p class="lnd-desk-scale"><span>8%</span><span>95% band</span><span>48%</span></p>
-                  <p class="lnd-tp-verdict">stand down</p>
-                </section>
-
-                <!-- coverageRead() already returns base, now, through and
-                     zeroShare; the UI has only ever drawn the ratio. This draws
-                     the window it was measured on. Not shipped, so it says so. -->
-                <section class="lnd-tp-pane lnd-desk-cov">
-                  <p class="lnd-tp-pane-h"><b>F6</b>coverage tape<i class="lnd-desk-soon">soon</i></p>
-                  <p class="lnd-desk-read"><b>2.41x</b><span>gold &middot; elevated</span></p>
-                  <span class="lnd-desk-bars">
-                    <i style="--b-i:0;--h:38"></i><i style="--b-i:1;--h:52"></i><i style="--b-i:2;--h:31"></i>
-                    <i style="--b-i:3;--h:44"></i><i style="--b-i:4;--h:29"></i><i style="--b-i:5;--h:61"></i>
-                    <i style="--b-i:6;--h:35"></i><i style="--b-i:7;--h:48"></i><i style="--b-i:8;--h:27"></i>
-                    <i style="--b-i:9;--h:55"></i><i style="--b-i:10;--h:40"></i><i style="--b-i:11;--h:33"></i>
-                    <i style="--b-i:12;--h:58"></i><i style="--b-i:13;--h:36"></i><i style="--b-i:14;--h:42"></i>
-                    <i style="--b-i:15;--h:30"></i><i style="--b-i:16;--h:49"></i><i style="--b-i:17;--h:34"></i>
-                    <i style="--b-i:18;--h:57"></i><i style="--b-i:19;--h:39"></i><i style="--b-i:20;--h:46"></i>
-                    <i class="is-now" style="--b-i:21;--h:84"></i><i class="is-now" style="--b-i:22;--h:91"></i><i class="is-now" style="--b-i:23;--h:79"></i>
-                    <i class="is-part" style="--b-i:24;--h:52"></i>
-                  </span>
-                  <p class="lnd-desk-fig">
-                    <span>now 1.83%</span><span>base 0.76%</span><span>166 buckets</span>
-                    <span>7% zero hours</span><span class="is-drop">partial hour dropped</span>
-                  </p>
-                </section>
-
-                <!-- armingWindow() is written, tested, exported, and nothing
-                     calls it yet: T-30 to T-0 arms, 0 to +15 is live, a stale
-                     feed returns null so the lock fails closed. -->
-                <section class="lnd-tp-pane lnd-desk-arm">
-                  <p class="lnd-tp-pane-h"><b>F8</b>armed<i class="lnd-desk-soon">soon</i></p>
-                  <p class="lnd-tp-count">CPI m/m in <b>27m 14s</b><span class="lnd-desk-phase">arming</span></p>
-                  <span class="lnd-desk-lock"><i></i></span>
-                  <p class="lnd-tp-check">
-                    <span class="is-done">plan on file</span>
-                    <span class="is-done">size halved</span>
-                    <span>stop clear of the print</span>
-                  </p>
-                  <p class="lnd-tp-locknote">The lock blocks the prompt, never the logging.</p>
-                </section>
+                </div>
+                <p class="lnd-demo-toast" id="lndDemoToast" hidden>XAUUSD short opened &middot; 0.02 lots at risk $20</p>
               </div>
 
-              <!-- F7, docked the way the desk docks it. Built on .bb-mon, the
-                   SHIPPED monitor, exactly as the dashboard tile is: never a
-                   second monitor implementation. Desktop only, because the
-                   Release edge section below carries the full wall and two of
-                   them on a phone is the same picture twice. -->
-              <div class="lnd-desk-wall">
-                <p class="lnd-desk-wall-h"><b>F7</b>the wall<em>16 channels &middot; 4 monitors</em></p>
-                <div class="lnd-desk-mons lnd-mon-grid">
-                  <article class="bb-mon lnd-mon" style="--m-i:0">
-                    <p class="bb-mon-h"><span class="bb-mon-dot"></span>markets</p>
-                    <span class="bb-mon-screen">
-                      <span class="lnd-mon-scene is-studio"></span>
-                      <span class="bb-mon-scan"></span>
-                      <span class="lnd-mon-badge">sample</span>
-                      <span class="lnd-mon-third"><b>DOLLAR BID</b></span>
-                    </span>
-                  </article>
-                  <article class="bb-mon lnd-mon" style="--m-i:1">
-                    <p class="bb-mon-h"><span class="bb-mon-dot"></span>macro</p>
-                    <span class="bb-mon-screen">
-                      <span class="lnd-mon-scene is-chart"></span>
-                      <span class="bb-mon-scan"></span>
-                      <span class="lnd-mon-badge">sample</span>
-                      <span class="lnd-mon-third"><b>GOLD 2.41x</b></span>
-                    </span>
-                  </article>
-                  <article class="bb-mon lnd-mon" style="--m-i:2">
-                    <p class="bb-mon-h"><span class="bb-mon-dot"></span>US markets</p>
-                    <span class="bb-mon-screen">
-                      <span class="lnd-mon-scene is-podium"></span>
-                      <span class="bb-mon-scan"></span>
-                      <span class="lnd-mon-badge">sample</span>
-                      <span class="lnd-mon-third"><b>CPI IN 47M</b></span>
-                    </span>
-                  </article>
-                  <article class="bb-mon lnd-mon is-dark" style="--m-i:3">
-                    <p class="bb-mon-h"><span class="bb-mon-dot"></span>prop</p>
-                    <span class="bb-mon-screen">
-                      <span class="lnd-mon-scene is-floor"></span>
-                      <span class="bb-mon-scan"></span>
-                      <span class="lnd-mon-badge">sample</span>
-                      <span class="lnd-mon-third"><b>NO READ</b></span>
-                    </span>
-                  </article>
+              <div class="lnd-demo-scene" data-demo-scene="close">
+                <header class="jrn-head">
+                  <div class="jrn-id">
+                    <p class="jrn-kicker">Closed &middot; demo trade</p>
+                    <h3 class="jrn-symbol">XAUUSD <span class="jrn-meta">Short &middot; 0.02 lots</span></h3>
+                  </div>
+                  <div class="jrn-result">
+                    <p class="jrn-net is-pos">+$40.00</p>
+                    <p class="jrn-sub">+20.0 pips &middot; demo</p>
+                  </div>
+                </header>
+                <div class="jrn-block">
+                  <p class="jrn-label">How did that feel? <span class="jrn-hint">one tap</span></p>
+                  <div class="jrn-chips">
+                    <span class="jrn-chip" id="lndDemoMood" aria-pressed="false">Focused</span>
+                    <span class="jrn-chip" aria-pressed="false">Hesitant</span>
+                    <span class="jrn-chip" aria-pressed="false">Emotional</span>
+                    <span class="jrn-chip" aria-pressed="false">Revenge</span>
+                    <span class="jrn-chip" aria-pressed="false">Perfect</span>
+                  </div>
+                </div>
+                <div class="jrn-block">
+                  <p class="jrn-label">Execution</p>
+                  <div class="jrn-grades">
+                    <span class="jrn-grade" aria-pressed="false">A+</span>
+                    <span class="jrn-grade" id="lndDemoGrade" aria-pressed="false">A</span>
+                    <span class="jrn-grade" aria-pressed="false">B</span>
+                    <span class="jrn-grade" aria-pressed="false">C</span>
+                    <span class="jrn-grade" aria-pressed="false">F</span>
+                  </div>
+                </div>
+                <div class="jrn-block">
+                  <p class="jrn-label">Note</p>
+                  <div class="jrn-note lnd-demo-note"><span id="lndDemoNote"></span><span class="lnd-demo-caret-bar" id="lndDemoNoteCaret" hidden></span></div>
+                </div>
+                <div class="sheet-actions">
+                  <span class="sheet-submit lnd-demo-save" id="lndDemoSave">Save &amp; close</span>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <!-- Reused verbatim from the Release edge frame, so the two
-                   instruments cannot drift. -->
-              <div class="lnd-tp-bar">
-                <span class="lnd-tp-bar-sample">sample data &middot; nothing live</span>
-                <span>closed 137 &middot; stamped 61</span>
-                <span class="lnd-tp-bar-clock">archive 73 events</span>
-              </div>
+            <!-- The transport. The demo's own controls, moved inside the frame
+                 so the thing reads as a player and not a diagram with a button
+                 beside it. -->
+            <div class="lnd-play-transport">
+              <button class="lnd-play-btn" type="button" id="lndDemoBtn">Replay</button>
+              <p class="lnd-play-cap" id="lndDemoCaption" role="status" aria-live="polite"></p>
+              <div class="lnd-play-track" aria-hidden="true"><span id="lndDemoProgress"></span></div>
             </div>
 
             <figcaption class="lnd-lens-cap">
-              Sample desk on a sample journal. Nothing here is live.
-              A stand down needs 10 prints on the release before the desk will issue one. This file has 14.
-              The demo journal you can open has none, and says so.
+              The real interface on a $10,000 demo account, replaying one scripted trade.
+              Sample numbers. No footage, nothing mocked up.
             </figcaption>
           </figure>
 
@@ -520,94 +430,6 @@
           </div>
         </div>
       </div>
-
-      <!-- ══ PRODUCT DEMO ═══════════════════════════════════════════════════
-           A scripted replay of the real journalling loop, built from the live
-           component markup and V3 styles — not a video file, not a mock
-           screenshot. Every number in it is sample data on a $10,000 demo
-           account and the frame says so. The frame is aria-hidden; the
-           narration line (#lndDemoCaption) carries the story for AT. Reduced
-           motion gets the final composed frame plus a static step-through. -->
-      <section class="lnd-demo" data-landing-reveal aria-labelledby="lndDemoHeading">
-        <div class="lnd-demo-copy">
-          <p class="lnd-kicker">Product demo</p>
-          <h2 id="lndDemoHeading" class="lnd-demo-title">Watch a trade get journalled.</h2>
-          <p class="lnd-demo-lede">
-            One line opens a sized position. When it closes, the journal asks for two taps and a
-            sentence. This is the real interface replaying a scripted trade with sample numbers on a
-            $10,000 demo account, no footage, nothing mocked up.
-          </p>
-          <div class="lnd-demo-controls">
-            <button class="lnd-btn lnd-btn-quiet lnd-demo-btn" type="button" id="lndDemoBtn">Replay</button>
-            <p class="lnd-demo-caption" id="lndDemoCaption" role="status" aria-live="polite"></p>
-            <div class="lnd-demo-progress" aria-hidden="true"><span id="lndDemoProgress"></span></div>
-          </div>
-        </div>
-
-        <div class="lnd-demo-frame" id="lndDemoFrame" aria-hidden="true">
-          <div class="lnd-demo-chrome">
-            <span class="lnd-demo-dot"></span><span class="lnd-demo-dot"></span><span class="lnd-demo-dot"></span>
-            <span class="lnd-demo-chrome-tag">demo</span>
-          </div>
-
-          <div class="lnd-demo-stage">
-            <div class="lnd-demo-scene is-active" data-demo-scene="capture">
-              <div class="cmdk-well">
-                <div class="cmdk-line">
-                  <span class="cmdk-caret">&rsaquo;</span>
-                  <span class="cmdk-input lnd-demo-input"><span id="lndDemoTyped"></span><span class="lnd-demo-caret-bar" id="lndDemoCaretBar"></span></span>
-                  <span class="cmdk-key" id="lndDemoEnterKey">ENTER</span>
-                </div>
-                <div class="cmdk-readout">
-                  <div class="cmdk-chips" id="lndDemoChips"></div>
-                  <p class="cmdk-status is-ok" id="lndDemoStatus" hidden>Enter opens this position.</p>
-                </div>
-              </div>
-              <p class="lnd-demo-toast" id="lndDemoToast" hidden>XAUUSD short opened &middot; 0.02 lots at risk $20</p>
-            </div>
-
-            <div class="lnd-demo-scene" data-demo-scene="close">
-              <header class="jrn-head">
-                <div class="jrn-id">
-                  <p class="jrn-kicker">Closed &middot; demo trade</p>
-                  <h3 class="jrn-symbol">XAUUSD <span class="jrn-meta">Short &middot; 0.02 lots</span></h3>
-                </div>
-                <div class="jrn-result">
-                  <p class="jrn-net is-pos">+$40.00</p>
-                  <p class="jrn-sub">+20.0 pips &middot; demo</p>
-                </div>
-              </header>
-              <div class="jrn-block">
-                <p class="jrn-label">How did that feel? <span class="jrn-hint">one tap</span></p>
-                <div class="jrn-chips">
-                  <span class="jrn-chip" id="lndDemoMood" aria-pressed="false">Focused</span>
-                  <span class="jrn-chip" aria-pressed="false">Hesitant</span>
-                  <span class="jrn-chip" aria-pressed="false">Emotional</span>
-                  <span class="jrn-chip" aria-pressed="false">Revenge</span>
-                  <span class="jrn-chip" aria-pressed="false">Perfect</span>
-                </div>
-              </div>
-              <div class="jrn-block">
-                <p class="jrn-label">Execution</p>
-                <div class="jrn-grades">
-                  <span class="jrn-grade" aria-pressed="false">A+</span>
-                  <span class="jrn-grade" id="lndDemoGrade" aria-pressed="false">A</span>
-                  <span class="jrn-grade" aria-pressed="false">B</span>
-                  <span class="jrn-grade" aria-pressed="false">C</span>
-                  <span class="jrn-grade" aria-pressed="false">F</span>
-                </div>
-              </div>
-              <div class="jrn-block">
-                <p class="jrn-label">Note</p>
-                <div class="jrn-note lnd-demo-note"><span id="lndDemoNote"></span><span class="lnd-demo-caret-bar" id="lndDemoNoteCaret" hidden></span></div>
-              </div>
-              <div class="sheet-actions">
-                <span class="sheet-submit lnd-demo-save" id="lndDemoSave">Save &amp; close</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <!-- Showcase: three looping SAMPLE frames in real component styles —
            the phone dashboard, the calendar, the analytics. CSS-only loops
