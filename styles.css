@@ -1976,39 +1976,45 @@ body.is-guest:not(.demo-signup) .auth-shell {
     animation: lndTpSweep 9s linear infinite;
   }
 
-  .lnd-tp-row,
-  .lnd-tp-stat,
-  .lnd-tp-entry,
-  .lnd-tp-saved {
+  /* SCOPED TO THE TEASER, DELIBERATELY. These nine carry a 26s INFINITE
+     replay whose blank phase is hidden only by the lndTpCut curtain on
+     .lnd-tp-screen just above. Left bare, any other section reusing a
+     .lnd-tp-* class inherits the replay WITHOUT the curtain and blinks out
+     mid cycle with nothing covering it. The class names are the teaser's
+     anatomy and are meant to be reused; the replay is not. */
+  .lnd-tp .lnd-tp-row,
+  .lnd-tp .lnd-tp-stat,
+  .lnd-tp .lnd-tp-entry,
+  .lnd-tp .lnd-tp-saved {
     animation: lndTpIn 26s var(--ease-out) infinite backwards;
     animation-delay: var(--d, 0s);
   }
 
-  .lnd-tp-stat { animation-delay: calc(1.9s + var(--i, 0) * 0.5s); }
-  .lnd-tp-entry { animation-delay: 7.2s; }
-  .lnd-tp-saved { animation-delay: 9.8s; }
+  .lnd-tp .lnd-tp-stat { animation-delay: calc(1.9s + var(--i, 0) * 0.5s); }
+  .lnd-tp .lnd-tp-entry { animation-delay: 7.2s; }
+  .lnd-tp .lnd-tp-saved { animation-delay: 9.8s; }
 
-  .lnd-tp-chip,
-  .lnd-tp-verdict {
+  .lnd-tp .lnd-tp-chip,
+  .lnd-tp .lnd-tp-verdict {
     animation: lndTpStampIn 26s var(--ease-out) infinite backwards;
   }
 
-  .lnd-tp-chip { animation-delay: calc(7.9s + var(--i, 0) * 0.6s); }
-  .lnd-tp-verdict { animation-delay: 4.1s; }
+  .lnd-tp .lnd-tp-chip { animation-delay: calc(7.9s + var(--i, 0) * 0.6s); }
+  .lnd-tp .lnd-tp-verdict { animation-delay: 4.1s; }
 
-  .lnd-tp-row.is-flash::after {
+  .lnd-tp .lnd-tp-row.is-flash::after {
     animation: lndTpFlash 26s linear infinite;
   }
 
-  .lnd-tp-lockbar i {
+  .lnd-tp .lnd-tp-lockbar i {
     animation: lndTpLock 26s linear infinite;
   }
 
-  .lnd-tp-armed {
+  .lnd-tp .lnd-tp-armed {
     animation: lndTpArm 26s linear infinite;
   }
 
-  .lnd-tp-tilt {
+  .lnd-tp .lnd-tp-tilt {
     animation: lndTpTilt 26s linear infinite;
   }
 
