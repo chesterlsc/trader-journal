@@ -1488,8 +1488,7 @@ body.is-guest:not(.demo-signup) .auth-shell {
 /* THE SCREEN. A screen has its own light: gunmetal pinned here so the
    instrument stays dark on concrete. Only this scope may hard-reference
    dark-surface derivations. */
-.lnd-tp-frame,
-.lnd-lens {
+.lnd-tp-frame {
   /* ALIASES onto the one terminal ramp (clay-v3.css). The names stay because
      200-odd landing rules read them; the values are now shared with the Release
      edge desk, so the preview on the landing and the real desk are literally
@@ -5984,196 +5983,13 @@ body.demo-signup::before {
   font: 400 clamp(1rem, 1.1vw, 1.0625rem) / 1.55 var(--font-ui);
 }
 
-/* --- 2. The lens: frame -------------------------------------------------- */
-/* NO NEW FRAME AND NO NEW PALETTE. The lens wears `.lnd-tp-frame` (styles.css
-   1491) alongside `.lnd-lens`, so it inherits the one scope in this codebase
-   allowed to hard-reference gunmetal — the Terminal Pro v5 contract, "dark
-   screen in both themes" (HEAD c35d13a). That gives the lens its border,
-   radius, --clay-raised shadow, overflow clip and the whole --tp-* scale for
-   free, and it guarantees the two instruments on this page can never drift
-   apart. Its chrome bar reuses .lnd-tp-chrome / -dot / -title / -tag for the
-   same reason. The reveal transitions on .lnd-tp-frame are scoped to
-   `.lnd-tp .lnd-tp-frame` (styles.css 2162), so nothing bleeds into the hero.
-   Everything below is only what the lens does that the terminal does not. */
+/* --- 2. What outlived the capture lens ------------------------------------
+   The lens ("the other eleven") is retired: the hero is the instrument now,
+   not one view onto it. Four rules living inside its block were never the
+   lens and are reprinted here verbatim. .lnd-lens-cap stays because the new
+   desk's figcaption still wears it, and it is the only honesty line either
+   instrument has. */
 
-.lnd-lens-screen {
-  padding: 20px;
-  background: var(--tp-s0);
-  color: var(--tp-soft);
-  font-feature-settings: "tnum";
-}
-
-/* Block, not flex: a flex step turns the caption and its <em> into two
-   columns that split badly at 375px. As prose it simply wraps. */
-.lnd-lens-step {
-  display: block;
-  margin: 0 0 14px;
-  color: var(--tp-faint);
-  font: 600 var(--fs-micro)/1.6 var(--font-mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.lnd-lens-step b {
-  display: inline-grid;
-  place-items: center;
-  width: 19px;
-  height: 19px;
-  margin-right: 9px;
-  border: 1px solid var(--tp-line2);
-  border-radius: 50%;
-  color: var(--tp-acc);
-  font: 700 var(--fs-micro)/1 var(--font-mono);
-  vertical-align: -5px;
-}
-
-.lnd-lens-step em {
-  color: var(--tp-acc);
-  font-style: normal;
-}
-
-/* --- 3. Band 1: the sentence, already annotated -------------------------- */
-/* The top line of the strip IS the sentence, in reading order. Under each
-   word, the field name the parser claimed from it. Wrapping is harmless
-   because nothing is aligned to anything below it. */
-.lnd-lens-strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: start;
-  gap: 14px 20px;
-  margin: 0 0 22px;
-}
-
-.lnd-lens-tok {
-  display: grid;
-  gap: 6px;
-  align-content: start;
-}
-
-.lnd-lens-tok b {
-  color: var(--tp-text);
-  font: 700 15px/1 var(--font-mono);
-}
-
-.lnd-lens-tok i {
-  color: var(--tp-faint);
-  font: 600 var(--fs-micro)/1 var(--font-mono);
-  font-style: normal;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.lnd-lens-caret {
-  display: inline-block;
-  width: 7px;
-  height: 13px;
-  margin-left: 4px;
-  background: var(--tp-acc);
-  vertical-align: -2px;
-}
-
-/* --- 4. Band 2: the ten numbers nobody typed ----------------------------- */
-/* 1px gaps over the line colour — the splitters ARE the grid, no borders. */
-.lnd-lens-out {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1px;
-  margin: 0 0 22px;
-  border: 1px solid var(--tp-line);
-  border-radius: var(--radius-clay-sm);
-  background: var(--tp-line);
-  overflow: hidden;
-}
-
-.lnd-lens-f {
-  display: grid;
-  gap: 5px;
-  padding: 11px 13px;
-  background: var(--tp-s0);
-}
-
-.lnd-lens-f dt {
-  color: var(--tp-faint);
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.lnd-lens-f dd {
-  margin: 0;
-  color: var(--tp-text);
-  font: 700 var(--fs-data)/1.15 var(--font-mono);
-}
-
-.lnd-lens-f dd.is-pos {
-  color: var(--tp-pos);
-}
-
-.lnd-lens-f-wide {
-  grid-column: 1 / -1;
-}
-
-.lnd-lens-armed {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  margin-right: 7px;
-  border-radius: 50%;
-  background: var(--tp-pos);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--tp-pos) 16%, transparent);
-  vertical-align: 1px;
-}
-
-/* --- 5. Band 3: the eleventh — the line it wrote by itself --------------- */
-/* THE SIGNATURE. Everything above is arithmetic; this is authorship. The
-   curtain is the screen's own colour retracting in steps, so the resting
-   state (and therefore the reduced-motion frame, and the screenshot) is
-   simply the finished row. */
-.lnd-lens-wrote {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 10px;
-  margin: 0;
-  padding: 12px 14px;
-  border: 1px solid var(--tp-line2);
-  border-radius: var(--radius-clay-sm);
-  background: var(--tp-s2);
-  box-shadow: inset 3px 0 0 var(--tp-acc);
-  color: var(--tp-soft);
-  font: 500 12.5px/1.45 var(--font-ui);
-}
-
-.lnd-lens-wrote .lnd-lens-stamp {
-  padding: 4px 8px;
-  border: 1px solid var(--tp-acc);
-  border-radius: var(--radius-pill);
-  color: var(--tp-acc);
-  font: 700 var(--fs-micro)/1 var(--font-mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.lnd-lens-wrote time {
-  color: var(--tp-faint);
-  font: 700 var(--fs-micro)/1 var(--font-mono);
-  letter-spacing: 0.06em;
-}
-
-.lnd-lens-typed {
-  position: relative;
-  flex: 1 1 100%;
-  color: var(--tp-text);
-}
-
-.lnd-lens-typed::after {
-  content: "";
-  position: absolute;
-  inset: -2px -2px -2px -1px;
-  background: var(--tp-s2);
-  transform: scaleX(0);
-  transform-origin: right;
-}
 
 .lnd-lens-cap {
   padding: 13px 20px 15px;
@@ -6183,11 +5999,6 @@ body.demo-signup::before {
   font: 400 12px/1.45 var(--font-ui);
 }
 
-/* --- 6. The tape: spooling, not floating --------------------------------- */
-/* Four rows in view inside the existing pressed well; the rest reach by
-   native scroll. No toggle, no new JS, and #recentTradesList keeps its id,
-   its place and its visibility for renderHeroRecentTrades. Scoped to the
-   hero so the dashboard's .dash-leon tape is untouched. */
 .lnd-hero-tape .lnd-tape-list {
   max-height: 218px;
   overflow-y: auto;
@@ -6197,51 +6008,6 @@ body.demo-signup::before {
   mask-image: linear-gradient(180deg, #000 0 88%, transparent 100%);
 }
 
-/* --- 7. Motion ----------------------------------------------------------- */
-/* One scripted ~4.5s build, once. The words land, then the field names they
-   became appear underneath them (that second pass IS the parse), then the ten
-   numbers resolve, then the journal writes the eleventh. */
-@media (prefers-reduced-motion: no-preference) {
-  .lnd-lens-armed {
-    animation: livePulse 2s var(--ease-in-out) infinite;
-  }
-
-  .lnd-lens-caret {
-    animation: lndCaretBreathe 2.4s var(--ease-in-out) infinite alternate;
-  }
-
-  body.auth-ready .lnd-lens-tok b {
-    animation: lndLensIn 500ms var(--ease-clay) backwards;
-    animation-delay: calc(300ms + var(--tok-i, 0) * 110ms);
-  }
-
-  body.auth-ready .lnd-lens-tok i {
-    animation: lndLensIn 440ms var(--ease-clay) backwards;
-    animation-delay: calc(1.16s + var(--tok-i, 0) * 80ms);
-  }
-
-  body.auth-ready .lnd-lens-f {
-    animation: lndLensIn 480ms var(--ease-clay) backwards;
-    animation-delay: calc(1.85s + var(--f-i, 0) * 90ms);
-  }
-
-  body.auth-ready .lnd-lens-step-3,
-  body.auth-ready .lnd-lens-wrote {
-    animation: lndLensIn 520ms var(--ease-clay) 2.95s backwards;
-  }
-
-  body.auth-ready .lnd-lens-typed::after {
-    animation: lndLensType 1.15s steps(30, end) 3.35s backwards;
-  }
-}
-
-@keyframes lndLensIn {
-  from { opacity: 0; transform: translateY(8px); }
-}
-
-@keyframes lndLensType {
-  from { transform: scaleX(1); }
-}
 
 /* --- 8. Responsive -------------------------------------------------------- */
 /* The single-column switch already lives at styles.css:6226 (@media
@@ -6253,36 +6019,755 @@ body.demo-signup::before {
   }
 }
 
-/* The phone version is designed down, not stripped: all six annotated tokens
-   and all eleven written fields survive. Only the column count changes. */
 @media (max-width: 760px) {
-  .lnd-lens-screen {
-    padding: 16px;
-  }
-
-  .lnd-lens-strip {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px 10px;
-  }
-
-  .lnd-lens-tok b {
-    font-size: 14px;
-  }
-
-  /* Nine cells + one wide is an exact 3x3+1 at desktop; at two columns the
-     tenth stops spanning so there is never an empty cell showing the gap
-     colour as a hole. */
-  .lnd-lens-out {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .lnd-lens-f-wide {
-    grid-column: auto;
-  }
-
+  /* Shorter spool on a phone: the tape is proof, not the point. */
   .lnd-hero-tape .lnd-tape-list {
     max-height: 176px;
+  }
+}
+
+/* ==========================================================================
+   THE DESK. The hero is the instrument, already open and aimed at one release.
+   The retired lens showed one sentence being parsed; the desk shows the whole
+   machine answering.
+
+   NO NEW FRAME AND NO NEW PALETTE. .lnd-desk wears .lnd-tp-frame exactly as the
+   lens did, inheriting the border, radius, shadow, overflow clip and the whole
+   --tp-* scale, which is aliased onto the :root --term-* ramp. That is what
+   keeps it a dark instrument on the concrete theme with no second set of hexes.
+
+   The 26s replay on the reused .lnd-tp-* children is scoped to `.lnd-tp` (see
+   the motion block far above), so nothing here inherits it.
+   ========================================================================== */
+
+.lnd-desk {
+  /* A grid item in .lnd-hero-side. overflow:hidden already zeroes its automatic
+     minimum size; stating it means no nowrap figure inside can drag the hero
+     column wider than its track. */
+  min-width: 0;
+}
+
+.lnd-desk-screen {
+  position: relative;
+  background: var(--tp-s0);
+  color: var(--tp-soft);
+  font: 500 12px/1.45 var(--font-mono);
+  font-feature-settings: "tnum";
+  overflow: hidden;
+}
+
+/* --- THE AIM: the command line, and the only typing the visitor watches -----
+   The curtain is painted in the screen's OWN fill and retracts to the right, so
+   the resting state is the FINISHED command. Reduced motion, JS off and a
+   screenshot all read a composed desk instead of an empty prompt. */
+.lnd-desk-cmd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--tp-line);
+}
+
+.lnd-desk-prompt {
+  color: var(--tp-acc);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.lnd-desk-typed {
+  position: relative;
+  color: var(--tp-text);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.lnd-desk-typed::after {
+  content: "";
+  position: absolute;
+  inset: -2px -2px -2px -1px;
+  background: var(--tp-s0);
+  transform: scaleX(0);
+  transform-origin: right;
+}
+
+/* Inside .lnd-desk-typed on purpose: the curtain covers the caret too, so it
+   arrives exactly as the last character lands. It breathes rather than blinks,
+   so a frozen frame is a composed cursor and not a missing one. */
+.lnd-desk-caret {
+  display: inline-block;
+  width: 7px;
+  height: 13px;
+  margin-left: 4px;
+  background: var(--tp-acc);
+  vertical-align: -2px;
+}
+
+.lnd-desk-clock {
+  margin-left: auto;
+  color: var(--tp-text);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* --- The F key rail. Hairline splitters are the 1px gap over the line colour,
+   the same idiom as .lnd-tp-panes. It wraps rather than scrolls. */
+.lnd-desk-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  margin: 0;
+  background: var(--tp-line);
+  border-bottom: 1px solid var(--tp-line);
+}
+
+.lnd-desk-key {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  background: var(--tp-s1);
+  color: var(--tp-faint);
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.lnd-desk-key b {
+  color: var(--tp-soft);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.lnd-desk-key.is-live {
+  background: var(--tp-s2);
+  color: var(--tp-text);
+  box-shadow: inset 0 -2px 0 var(--tp-acc);
+}
+
+.lnd-desk-key.is-live b { color: var(--tp-acc); }
+
+/* Roadmap marker, on the key itself rather than in a footnote. Warn, not
+   accent: it is a promise, not a reading. */
+.lnd-desk-soon {
+  margin-left: auto;
+  padding: 2px 6px;
+  border: 1px solid var(--tp-warn);
+  border-radius: var(--radius-pill);
+  color: var(--tp-warn);
+  font: 700 11px/1 var(--font-mono);
+  font-style: normal;
+  letter-spacing: 0.12em;
+}
+
+/* --- The pane workspace. Wire across the top, the reckoning holding the left
+   column at full height, the two unshipped panes stacked right. Splitters are
+   the 1px gap; panes stretch, so the column never shows a hole. */
+.lnd-desk-panes {
+  display: grid;
+  gap: 1px;
+  background: var(--tp-line);
+}
+
+@media (min-width: 640px) {
+  .lnd-desk-panes {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "wire wire"
+      "reck cov"
+      "reck arm";
+  }
+
+  .lnd-desk-wire { grid-area: wire; }
+  .lnd-desk-reck { grid-area: reck; }
+  .lnd-desk-cov { grid-area: cov; }
+  .lnd-desk-arm { grid-area: arm; }
+}
+
+/* The typed headline on the YOU row. Same curtain, same rule: at rest the
+   sentence is finished. THE FILL MUST MATCH THE PANE, NOT THE SCREEN, and it
+   does: .lnd-tp-pane is also --tp-s0 and .lnd-tp-row.is-you adds only an inset
+   box-shadow. If the pane fill ever changes, this curtain becomes a visible
+   rectangle over the YOU row. */
+.lnd-desk-type { position: relative; }
+
+.lnd-desk-type::after {
+  content: "";
+  position: absolute;
+  inset: -2px -2px -2px -1px;
+  background: var(--tp-s0);
+  transform: scaleX(0);
+  transform-origin: right;
+}
+
+/* --- The reckoning: the 95% band, and the tick that is YOUR baseline.
+   The tick is drawn OUTSIDE the band on purpose. That gap is the verdict. */
+.lnd-desk-band {
+  position: relative;
+  display: block;
+  height: 8px;
+  margin: 10px 16px 6px;
+  border-radius: 2px;
+  /* --term-well is the carved-well ground on the :root ramp, theme independent
+     like the rest of it. .bb-mon-screen reads it the same way. */
+  background: var(--term-well);
+}
+
+.lnd-desk-band i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--lo, 0%);
+  width: calc(var(--hi, 100%) - var(--lo, 0%));
+  border-radius: 2px;
+  background: var(--tp-acc-soft);
+  box-shadow: inset 1px 0 0 var(--tp-acc), inset -1px 0 0 var(--tp-acc);
+  transform-origin: left;
+}
+
+.lnd-desk-band b {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  left: var(--base, 50%);
+  width: 2px;
+  background: var(--tp-text);
+}
+
+.lnd-desk-scale {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 4px;
+  padding: 0 16px;
+  color: var(--tp-faint);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.lnd-desk-stat-wide { grid-column: 1 / -1; }
+
+/* --- The coverage tape. coverageRead() already returns base, now, through and
+   zeroShare; only the ratio was ever drawn. This is the window it was measured
+   on: complete hourly buckets, the 7 day median as the dashed rule, the three
+   hours the ratio is actually made of in accent, and the partial hour that is
+   always dropped drawn hollow so the refusal is visible rather than explained. */
+.lnd-desk-read {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin: 2px 0 9px;
+  padding: 0 16px;
+}
+
+.lnd-desk-read b {
+  color: var(--tp-text);
+  font: 700 22px/1 var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+.lnd-desk-read span {
+  color: var(--tp-acc);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lnd-desk-bars {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 44px;
+  margin: 0 16px 9px;
+  border-bottom: 1px solid var(--tp-line);
+}
+
+/* The median, drawn where it sits. Everything above this line is a loud hour. */
+.lnd-desk-bars::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 38%;
+  left: 0;
+  border-top: 1px dashed var(--tp-line2);
+}
+
+.lnd-desk-bars i {
+  flex: 1 1 0;
+  min-width: 2px;
+  height: calc(var(--h, 20) * 1%);
+  background: var(--tp-line2);
+  transform-origin: bottom;
+}
+
+.lnd-desk-bars i.is-now { background: var(--tp-acc); }
+
+/* The hour in progress. Outlined and never filled, because a partial bucket is
+   dropped from the ratio. The tape says so instead of a sentence saying so. */
+.lnd-desk-bars i.is-part {
+  background: none;
+  border: 1px dashed var(--tp-line2);
+  border-bottom: 0;
+}
+
+.lnd-desk-fig {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 12px;
+  margin: 0;
+  padding: 0 16px;
+  color: var(--tp-faint);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.lnd-desk-fig span { white-space: nowrap; }
+.lnd-desk-fig .is-drop { color: var(--tp-line2); }
+
+/* --- F8 armed. armingWindow() is written, tested, exported and uncalled:
+   T-30 to T-0 arms, 0 to +15 is live, a stale feed returns null so the lock
+   fails closed. The bar is the checklist, not the countdown. */
+.lnd-desk-phase {
+  margin-left: auto;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--tp-warn-soft);
+  color: var(--tp-warn);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lnd-desk-lock {
+  display: block;
+  height: 4px;
+  margin: 0 16px 10px;
+  border-radius: 2px;
+  background: var(--tp-s2);
+  overflow: hidden;
+}
+
+.lnd-desk-lock i {
+  display: block;
+  height: 100%;
+  background: var(--tp-warn);
+  transform: scaleX(0.66);
+  transform-origin: left;
+}
+
+/* --- F7, docked. -----------------------------------------------------------
+   Built on .bb-mon, the SHIPPED monitor, exactly as the dashboard tile is.
+   Never a second monitor implementation: .bb-mon brings the 16:9 tile, the
+   masthead row, the live dot and the scanline, and everything below is only
+   what a drawn sample screen does that a real one does not.
+
+   EVERY OVERRIDE IS A TWO CLASS COMPOUND. The real wall's rules live near the
+   end of this file, far below this point, so a single class override would lose
+   on source order and fail SILENTLY. */
+.lnd-desk-wall {
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--tp-line);
+  background: var(--tp-s0);
+}
+
+.lnd-desk-wall-h {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  color: var(--tp-text);
+  font: 700 11px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.lnd-desk-wall-h b {
+  padding: 3px 6px;
+  border: 1px solid var(--tp-line2);
+  border-radius: 4px;
+  color: var(--tp-acc);
+  letter-spacing: 0.08em;
+}
+
+.lnd-desk-wall-h em {
+  margin-left: auto;
+  color: var(--tp-faint);
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: none;
+}
+
+.lnd-mon-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--tp-line);
+  border: 1px solid var(--tp-line);
+}
+
+@media (min-width: 620px) {
+  .lnd-mon-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* ==========================================================================
+   THE DRAWN MONITOR. Shared by the hero's docked strip and the Release edge
+   wall below, so the two are literally the same component.
+
+   These are SAMPLE SCREENS, not streams: no iframe, no third party request,
+   nothing autoplaying. On the shipped desk these slots play the broadcasters'
+   own public streams, and only on a click. Each screen says "sample" in the
+   corner where a broadcaster puts LIVE, because there is no free way to know a
+   channel is live before playing it and the product refuses to claim otherwise.
+   Desk labels only, never a real outlet's name over an invented headline.
+   ========================================================================== */
+
+/* The tile is decorative here: no picker, no play button, nothing to click. */
+.lnd-mon.bb-mon {
+  cursor: default;
+}
+
+.lnd-mon .bb-mon-h {
+  gap: 6px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--tp-line);
+  background: var(--tp-s1);
+  color: var(--tp-faint);
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* .bb-mon-screen ships as a centred flex button for the standby state. Here it
+   is a picture, so it becomes a positioned block. */
+.lnd-mon .bb-mon-screen {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: var(--term-well);
+  cursor: default;
+  overflow: hidden;
+}
+
+/* --- The picture. Four drawn scenes, each a flat gradient stack on the
+   terminal ramp. No photograph, nothing that could be mistaken for footage. */
+.lnd-mon-scene {
+  position: absolute;
+  inset: 0;
+}
+
+.lnd-mon-scene.is-studio {
+  background:
+    linear-gradient(180deg, transparent 62%, var(--tp-s2) 62%),
+    radial-gradient(60% 44% at 30% 52%, var(--tp-line2) 0 38%, transparent 39%),
+    radial-gradient(60% 44% at 68% 54%, var(--tp-line2) 0 34%, transparent 35%),
+    linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
+}
+
+.lnd-mon-scene.is-chart {
+  background:
+    linear-gradient(90deg, var(--tp-acc-soft) 0 2px, transparent 2px) 0 100% / 100% 34% no-repeat,
+    repeating-linear-gradient(90deg, transparent 0 11px, var(--tp-line) 11px 12px),
+    linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
+}
+
+.lnd-mon-scene.is-podium {
+  background:
+    linear-gradient(180deg, transparent 70%, var(--tp-s2) 70%),
+    radial-gradient(28% 40% at 50% 46%, var(--tp-line2) 0 46%, transparent 47%),
+    linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
+}
+
+.lnd-mon-scene.is-floor {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 15px, var(--tp-line) 15px 16px),
+    repeating-linear-gradient(180deg, transparent 0 13px, var(--tp-line) 13px 14px),
+    linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
+}
+
+/* Where a broadcaster puts LIVE. It says sample, on purpose. */
+.lnd-mon-badge {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  padding: 2px 5px;
+  border: 1px solid var(--tp-line2);
+  border-radius: 3px;
+  background: var(--tp-s0);
+  color: var(--tp-faint);
+  font: 700 11px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* The lower third. */
+.lnd-mon-third {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 5px 7px;
+  background: linear-gradient(180deg, transparent, var(--tp-s0) 62%);
+  color: var(--tp-text);
+}
+
+.lnd-mon-third b {
+  display: block;
+  font: 700 11px/1.2 var(--font-mono);
+  letter-spacing: 0.06em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lnd-mon-third span {
+  display: block;
+  margin-top: 2px;
+  color: var(--tp-faint);
+  font: 600 11px/1.2 var(--font-mono);
+  letter-spacing: 0.04em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* THE ONE THAT SAYS NOTHING. A channel with no read is the same refusal the
+   desk is built on, and it is what stops the wall reading as decoration. */
+.lnd-mon.is-dark .lnd-mon-third b { color: var(--tp-faint); }
+.lnd-mon.is-dark .bb-mon-screen { opacity: 0.72; }
+
+/* --- The wall at full size, in the Release edge section. -------------------
+   Same .bb-mon tiles as the strip docked in the hero, one size up. */
+.lnd-wall-screen {
+  background: var(--tp-s0);
+  color: var(--tp-soft);
+  font: 500 12px/1.45 var(--font-mono);
+  font-feature-settings: "tnum";
+}
+
+.lnd-wall-rail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--tp-line);
+  color: var(--tp-faint);
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* The size tokens the real wall carries. Drawn, not clickable. */
+.lnd-wall-size {
+  padding: 4px 8px;
+  border: 1px solid var(--tp-line2);
+  border-radius: 3px;
+}
+
+.lnd-wall-size.is-on {
+  border-color: var(--tp-acc);
+  color: var(--tp-acc);
+}
+
+.lnd-wall-n { margin-left: 4px; }
+
+.lnd-wall-rail em {
+  margin-left: auto;
+  font-style: normal;
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+
+.lnd-wall-grid {
+  border: 0;
+  border-bottom: 1px solid var(--tp-line);
+}
+
+/* The per tile footer: the reading the desk takes off that channel. */
+.lnd-mon-f {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin: 0;
+  padding: 6px 9px;
+  border-top: 1px solid var(--tp-line);
+  background: var(--tp-s1);
+  color: var(--tp-faint);
+  font: 600 11px/1.2 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.lnd-mon-f b {
+  color: var(--tp-text);
+  letter-spacing: 0.02em;
+}
+
+.lnd-mon-f em {
+  margin-left: auto;
+  color: var(--tp-acc);
+  font-style: normal;
+}
+
+.lnd-mon.is-dark .lnd-mon-f b,
+.lnd-mon.is-dark .lnd-mon-f em { color: var(--tp-faint); }
+
+/* --- Phone. ----------------------------------------------------------------
+   The reused .lnd-tp-* children already drop their gutters in the block above;
+   these are the desk's own. */
+@media (max-width: 700px) {
+  .lnd-desk-cmd,
+  .lnd-desk-wall,
+  .lnd-desk-read,
+  .lnd-desk-fig,
+  .lnd-desk-scale {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .lnd-desk-bars,
+  .lnd-desk-band,
+  .lnd-desk-lock {
+    margin-left: 12px;
+    margin-right: 12px;
+  }
+
+  .lnd-desk-key { padding: 7px 8px; }
+  .lnd-desk-read b { font-size: 20px; }
+
+  /* THE DOCKED WALL COMES OFF THE PHONE ENTIRELY. The Release edge section
+     below carries the full four screen wall, and at 375px both are 2x2, so
+     keeping this one shows the same picture twice two screens apart. Dropping
+     it also removes 16 simultaneous infinite animations and about 230px of
+     scroll from the tallest column on the page. */
+  .lnd-desk-wall { display: none; }
+
+  /* The four keys with nothing behind them yet cost three rows of wrapping on
+     a phone. F8 stays because it carries the roadmap pill. */
+  .lnd-desk-key:not(.is-live):not(:last-child) { display: none; }
+}
+
+/* --- THE AIM, timed. -------------------------------------------------------
+   One finite pass of about 4.9s, then the desk simply sits there being a desk.
+   Nothing loops except the caret and the live dot, so there is no seam to hide
+   and no cut is needed.
+
+   Every entrance is FINITE with fill-mode backwards and its final keyframe IS
+   its resting state, so the global reduced-motion block (which zeroes duration
+   and delay with !important) lands on a finished, fully populated desk rather
+   than a blank one. Gated on body.auth-ready like every other landing
+   entrance, so a visitor with JS off is never left staring at an empty hero. */
+@media (prefers-reduced-motion: no-preference) {
+  body.auth-ready .lnd-desk-prompt,
+  body.auth-ready .lnd-desk-clock {
+    animation: lndDeskIn 420ms var(--ease-clay) 250ms backwards;
+  }
+
+  /* 7 characters, 7 steps. */
+  body.auth-ready .lnd-desk-typed::after {
+    animation: lndDeskType 840ms steps(7, end) 700ms backwards;
+  }
+
+  body.auth-ready .lnd-desk-caret {
+    animation: lndCaretBreathe 2.4s var(--ease-in-out) infinite alternate;
+  }
+
+  body.auth-ready .lnd-desk-key {
+    animation: lndDeskIn 380ms var(--ease-clay) backwards;
+    animation-delay: calc(1.6s + var(--k-i, 0) * 55ms);
+  }
+
+  body.auth-ready .lnd-desk .lnd-tp-row {
+    animation: lndDeskIn 420ms var(--ease-out) backwards;
+    animation-delay: calc(2s + var(--r-i, 0) * 140ms);
+  }
+
+  body.auth-ready .lnd-desk-bars i {
+    animation: lndDeskBar 420ms var(--ease-clay) backwards;
+    animation-delay: calc(2.35s + var(--b-i, 0) * 18ms);
+  }
+
+  body.auth-ready .lnd-desk .lnd-tp-stat {
+    animation: lndDeskIn 380ms var(--ease-clay) backwards;
+    animation-delay: calc(2.6s + var(--s-i, 0) * 90ms);
+  }
+
+  body.auth-ready .lnd-desk-band i {
+    animation: lndDeskDraw 520ms var(--ease-clay) 3.05s backwards;
+  }
+
+  body.auth-ready .lnd-desk-band b {
+    animation: lndDeskTick 320ms var(--ease-snap) 3.45s backwards;
+  }
+
+  /* THE MOMENT. */
+  body.auth-ready .lnd-desk .lnd-tp-verdict {
+    animation: lndDeskStamp 380ms var(--ease-out) 3.6s backwards;
+  }
+
+  /* 25 characters, 25 steps: your own fill printing on the wire. */
+  body.auth-ready .lnd-desk-type::after {
+    animation: lndDeskType 900ms steps(25, end) 3.95s backwards;
+  }
+
+  body.auth-ready .lnd-desk .lnd-tp-saved {
+    animation: lndDeskIn 400ms var(--ease-clay) 4.9s backwards;
+  }
+
+  body.auth-ready .lnd-desk .lnd-mon {
+    animation: lndDeskIn 420ms var(--ease-clay) backwards;
+    animation-delay: calc(4.3s + var(--m-i, 0) * 90ms);
+  }
+}
+
+@keyframes lndDeskIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes lndDeskType {
+  from { transform: scaleX(1); }
+}
+
+@keyframes lndDeskBar {
+  from { transform: scaleY(0); }
+}
+
+@keyframes lndDeskDraw {
+  from { transform: scaleX(0); }
+}
+
+@keyframes lndDeskTick {
+  from {
+    opacity: 0;
+    transform: translateY(-7px);
+  }
+}
+
+@keyframes lndDeskStamp {
+  0% {
+    opacity: 0;
+    transform: scale(1.45) rotate(-3deg);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
   }
 }
 

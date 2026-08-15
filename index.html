@@ -158,17 +158,16 @@
           </p>
           <!-- Each line is a block so the reveal can stagger them; reduced
                motion lands all three instantly via the global kill block.
-               "Eleven" is not a slogan: the instrument beside it renders
-               exactly eleven things the journal wrote, so the claim is
-               countable on sight. -->
+               The claim is countable on sight: the desk beside it draws the
+               band, the tick and the stand down it is describing. -->
           <h1 class="lnd-hero-title">
-            <span class="lnd-title-line" style="--line-i: 0">You type one line.</span>
-            <span class="lnd-title-line" style="--line-i: 1">The journal writes</span>
-            <span class="lnd-title-line lnd-hero-title-accent" style="--line-i: 2">the other eleven.</span>
+            <span class="lnd-title-line" style="--line-i: 0">Every calendar tells you</span>
+            <span class="lnd-title-line" style="--line-i: 1">what is coming.</span>
+            <span class="lnd-title-line lnd-hero-title-accent" style="--line-i: 2">This one tells you to sit it out.</span>
           </h1>
           <p class="lnd-hero-lede">
-            Say the trade out loud. It works out the pips, the R:R and the risk, watches the price,
-            and closes at your stop or target. Then it opens the note while it still stings.
+            It reads the release against your own record on it. Fourteen prints, three wins.
+            Most of the time it has nothing to say, and says that.
           </p>
           <!-- The email is handed straight to the auth panel's identifier field
                (it accepts a username or an email), so this is one real step of
@@ -216,73 +215,197 @@
         </section>
 
         <div class="lnd-hero-side">
-          <!-- THE OTHER ELEVEN — the signature. The sentence is not shown and
-               then replaced: it arrives ALREADY ANNOTATED, every word carrying
-               underneath it the field it became, so the parse is the typography
-               rather than an effect laid over it. Then ten numbers nobody
-               typed. Then the eleventh, which is not a number at all: the line
-               the journal writes by itself when the stop trades through
-               (app.js:11613 — "Closing IS the trigger: the journalling sheet
-               opens for the first fill").
+          <!-- ═══════════════════════════════════════════════════════════
+               THE DESK, ALREADY OPEN.
 
-               Sample figures are the app's own demo trade (app.js:941) settled
-               with the app's own arithmetic (app.js:11970-11977; gold 0.01 lot
-               = $1/pip per tests/pips.check.mjs, so 0.02 lots = 2oz = $2.00/pip
-               and 2 x 4234 = $8,468 notional). The screen is aria-hidden and
-               the figcaption says out loud that it is a sample, so it can never
-               pose as a live account. -->
-          <figure class="lnd-tp-frame lnd-lens">
-            <!-- The chrome bar and the whole gunmetal scale are the Terminal
-                 Pro instrument's, reused verbatim: .lnd-tp-frame is the one
-                 scope allowed to hard-reference dark surfaces, so wearing it
-                 is what keeps this a dark screen on the concrete theme without
-                 a second palette to maintain. A <figure> may carry only one
-                 <figcaption>, and it is the honesty line at the foot. -->
+               Not a lens on the product and not a picture of one: the
+               instrument itself, mid session, aimed at one release. It wears
+               .lnd-tp-frame, the one scope allowed to hard-reference gunmetal,
+               so it stays a dark screen on the concrete theme with no second
+               palette to maintain. Everything inside reads --tp-*.
+
+               THE SIGNATURE, and the only thing the visitor has to watch: the
+               trader's own fill printing ON THE WIRE between two calendar
+               rows, in the same row component, already stamped. No calendar
+               can print that row and no journal can print that row.
+
+               FIGURES. The releases are buildSampleReleases(); the coverage
+               read is buildSampleNews() at 2.41x over 166 buckets. The file is
+               a SAMPLE journal, not the demo journal: 3W/11L over 14 prints
+               gives a 95% band of 8% to 48%, which sits under a 51% baseline,
+               and that is what newsVerdict() needs before it will issue a
+               stand down. The demo journal has 0 stamped trades and honestly
+               reads "no file", which is what the teaser below shows. Both say
+               sample out loud, and the figcaption names the difference.
+               ═══════════════════════════════════════════════════════════ -->
+          <figure class="lnd-tp-frame lnd-desk" aria-label="Release edge sample desk: a sample journal aimed at one release, nothing live">
             <div class="lnd-tp-chrome" aria-hidden="true">
               <span class="lnd-tp-dot"></span>
-              <span class="lnd-tp-title">Capture</span>
-              <span class="lnd-tp-tag">sample</span>
+              <span class="lnd-tp-title">Release&nbsp;edge</span>
+              <span class="lnd-tp-tag">sample desk</span>
             </div>
 
-            <div class="lnd-lens-screen" aria-hidden="true">
-              <p class="lnd-lens-step"><b>1</b> the six things you type</p>
+            <div class="lnd-desk-screen" aria-hidden="true">
+              <!-- The curtain over .lnd-desk-typed is painted in the screen's
+                   own fill and retracts right, so the RESTING state is the
+                   finished command. Reduced motion, no JS and a screenshot all
+                   read a composed desk instead of an empty prompt. -->
+              <p class="lnd-desk-cmd">
+                <span class="lnd-desk-prompt">&gt; edge --aim</span>
+                <span class="lnd-desk-typed">cpi m/m<i class="lnd-desk-caret"></i></span>
+                <span class="lnd-desk-clock">T&minus;47m</span>
+              </p>
 
-              <div class="lnd-lens-strip">
-                <span class="lnd-lens-tok" style="--tok-i:0"><b>xauusd</b><i>symbol</i></span>
-                <span class="lnd-lens-tok" style="--tok-i:1"><b>short</b><i>side</i></span>
-                <span class="lnd-lens-tok" style="--tok-i:2"><b>4234</b><i>entry</i></span>
-                <span class="lnd-lens-tok" style="--tok-i:3"><b>sl 4244</b><i>stop</i></span>
-                <span class="lnd-lens-tok" style="--tok-i:4"><b>tp 4214</b><i>target</i></span>
-                <span class="lnd-lens-tok" style="--tok-i:5"><b>0.02 lots<span class="lnd-lens-caret"></span></b><i>size</i></span>
+              <!-- F8 is not shipped and says so on the key, not in a footnote. -->
+              <p class="lnd-desk-keys">
+                <span class="lnd-desk-key" style="--k-i:0"><b>F1</b>approach</span>
+                <span class="lnd-desk-key is-live" style="--k-i:1"><b>F2</b>wire</span>
+                <span class="lnd-desk-key is-live" style="--k-i:2"><b>F3</b>reckoning</span>
+                <span class="lnd-desk-key" style="--k-i:3"><b>F4</b>tilt</span>
+                <span class="lnd-desk-key" style="--k-i:4"><b>F5</b>clock</span>
+                <span class="lnd-desk-key is-live" style="--k-i:5"><b>F6</b>news</span>
+                <span class="lnd-desk-key is-live" style="--k-i:6"><b>F7</b>wall</span>
+                <span class="lnd-desk-key" style="--k-i:7"><b>F8</b>armed<i class="lnd-desk-soon">soon</i></span>
+              </p>
+
+              <div class="lnd-desk-panes">
+                <section class="lnd-tp-pane lnd-desk-wire">
+                  <p class="lnd-tp-pane-h"><b>F2</b>the wire <em>USD</em></p>
+                  <div class="lnd-tp-row" style="--r-i:0">
+                    <span class="lnd-tp-t">T&minus;47m</span>
+                    <span class="lnd-tp-s is-hot">USD</span>
+                    <span class="lnd-tp-h">CPI m/m</span>
+                    <span class="lnd-tp-x">14 prints</span>
+                  </div>
+                  <div class="lnd-tp-row is-you" style="--r-i:1">
+                    <span class="lnd-tp-t">13:31</span>
+                    <span class="lnd-tp-s is-you">you</span>
+                    <span class="lnd-tp-h lnd-desk-type">XAUUSD short 0.02 at 4234</span>
+                    <span class="lnd-tp-x is-pos">stamped</span>
+                  </div>
+                  <div class="lnd-tp-row" style="--r-i:2">
+                    <span class="lnd-tp-t">T&minus;2h47</span>
+                    <span class="lnd-tp-s">USD</span>
+                    <span class="lnd-tp-h">Unemployment Claims</span>
+                    <span class="lnd-tp-x">6 prints</span>
+                  </div>
+                  <p class="lnd-tp-saved">auto stamped on open</p>
+                </section>
+
+                <!-- The verdict has to be earned. The band is the 95% interval
+                     on 14 prints; the tick is the trader's OWN baseline, never
+                     50%. The tick sitting right of the band is the argument. -->
+                <section class="lnd-tp-pane lnd-desk-reck">
+                  <p class="lnd-tp-pane-h"><b>F3</b>the reckoning <em>CPI m/m</em></p>
+                  <div class="lnd-tp-stat" style="--s-i:0"><span>prints on record</span><b>14</b></div>
+                  <div class="lnd-tp-stat" style="--s-i:1"><span>wins losses</span><b class="is-neg">3W 11L</b></div>
+                  <div class="lnd-tp-stat" style="--s-i:2"><span>net</span><b class="is-neg">&minus;$650.00</b></div>
+                  <div class="lnd-tp-stat" style="--s-i:3"><span>on this release</span><b>21%</b></div>
+                  <div class="lnd-tp-stat lnd-desk-stat-wide" style="--s-i:4"><span>your baseline</span><b>51% over 137</b></div>
+                  <span class="lnd-desk-band" style="--lo:8%;--hi:48%;--base:51%"><i></i><b></b></span>
+                  <p class="lnd-desk-scale"><span>8%</span><span>95% band</span><span>48%</span></p>
+                  <p class="lnd-tp-verdict">stand down</p>
+                </section>
+
+                <!-- coverageRead() already returns base, now, through and
+                     zeroShare; the UI has only ever drawn the ratio. This draws
+                     the window it was measured on. Not shipped, so it says so. -->
+                <section class="lnd-tp-pane lnd-desk-cov">
+                  <p class="lnd-tp-pane-h"><b>F6</b>coverage tape<i class="lnd-desk-soon">soon</i></p>
+                  <p class="lnd-desk-read"><b>2.41x</b><span>gold &middot; elevated</span></p>
+                  <span class="lnd-desk-bars">
+                    <i style="--b-i:0;--h:38"></i><i style="--b-i:1;--h:52"></i><i style="--b-i:2;--h:31"></i>
+                    <i style="--b-i:3;--h:44"></i><i style="--b-i:4;--h:29"></i><i style="--b-i:5;--h:61"></i>
+                    <i style="--b-i:6;--h:35"></i><i style="--b-i:7;--h:48"></i><i style="--b-i:8;--h:27"></i>
+                    <i style="--b-i:9;--h:55"></i><i style="--b-i:10;--h:40"></i><i style="--b-i:11;--h:33"></i>
+                    <i style="--b-i:12;--h:58"></i><i style="--b-i:13;--h:36"></i><i style="--b-i:14;--h:42"></i>
+                    <i style="--b-i:15;--h:30"></i><i style="--b-i:16;--h:49"></i><i style="--b-i:17;--h:34"></i>
+                    <i style="--b-i:18;--h:57"></i><i style="--b-i:19;--h:39"></i><i style="--b-i:20;--h:46"></i>
+                    <i class="is-now" style="--b-i:21;--h:84"></i><i class="is-now" style="--b-i:22;--h:91"></i><i class="is-now" style="--b-i:23;--h:79"></i>
+                    <i class="is-part" style="--b-i:24;--h:52"></i>
+                  </span>
+                  <p class="lnd-desk-fig">
+                    <span>now 1.83%</span><span>base 0.76%</span><span>166 buckets</span>
+                    <span>7% zero hours</span><span class="is-drop">partial hour dropped</span>
+                  </p>
+                </section>
+
+                <!-- armingWindow() is written, tested, exported, and nothing
+                     calls it yet: T-30 to T-0 arms, 0 to +15 is live, a stale
+                     feed returns null so the lock fails closed. -->
+                <section class="lnd-tp-pane lnd-desk-arm">
+                  <p class="lnd-tp-pane-h"><b>F8</b>armed<i class="lnd-desk-soon">soon</i></p>
+                  <p class="lnd-tp-count">CPI m/m in <b>27m 14s</b><span class="lnd-desk-phase">arming</span></p>
+                  <span class="lnd-desk-lock"><i></i></span>
+                  <p class="lnd-tp-check">
+                    <span class="is-done">plan on file</span>
+                    <span class="is-done">size halved</span>
+                    <span>stop clear of the print</span>
+                  </p>
+                  <p class="lnd-tp-locknote">The lock blocks the prompt, never the logging.</p>
+                </section>
               </div>
 
-              <p class="lnd-lens-step"><b>2</b> ten numbers <em>&mdash; you typed none of them</em></p>
+              <!-- F7, docked the way the desk docks it. Built on .bb-mon, the
+                   SHIPPED monitor, exactly as the dashboard tile is: never a
+                   second monitor implementation. Desktop only, because the
+                   Release edge section below carries the full wall and two of
+                   them on a phone is the same picture twice. -->
+              <div class="lnd-desk-wall">
+                <p class="lnd-desk-wall-h"><b>F7</b>the wall<em>16 channels &middot; 4 monitors</em></p>
+                <div class="lnd-desk-mons lnd-mon-grid">
+                  <article class="bb-mon lnd-mon" style="--m-i:0">
+                    <p class="bb-mon-h"><span class="bb-mon-dot"></span>markets</p>
+                    <span class="bb-mon-screen">
+                      <span class="lnd-mon-scene is-studio"></span>
+                      <span class="bb-mon-scan"></span>
+                      <span class="lnd-mon-badge">sample</span>
+                      <span class="lnd-mon-third"><b>DOLLAR BID</b></span>
+                    </span>
+                  </article>
+                  <article class="bb-mon lnd-mon" style="--m-i:1">
+                    <p class="bb-mon-h"><span class="bb-mon-dot"></span>macro</p>
+                    <span class="bb-mon-screen">
+                      <span class="lnd-mon-scene is-chart"></span>
+                      <span class="bb-mon-scan"></span>
+                      <span class="lnd-mon-badge">sample</span>
+                      <span class="lnd-mon-third"><b>GOLD 2.41x</b></span>
+                    </span>
+                  </article>
+                  <article class="bb-mon lnd-mon" style="--m-i:2">
+                    <p class="bb-mon-h"><span class="bb-mon-dot"></span>US markets</p>
+                    <span class="bb-mon-screen">
+                      <span class="lnd-mon-scene is-podium"></span>
+                      <span class="bb-mon-scan"></span>
+                      <span class="lnd-mon-badge">sample</span>
+                      <span class="lnd-mon-third"><b>CPI IN 47M</b></span>
+                    </span>
+                  </article>
+                  <article class="bb-mon lnd-mon is-dark" style="--m-i:3">
+                    <p class="bb-mon-h"><span class="bb-mon-dot"></span>prop</p>
+                    <span class="bb-mon-screen">
+                      <span class="lnd-mon-scene is-floor"></span>
+                      <span class="bb-mon-scan"></span>
+                      <span class="lnd-mon-badge">sample</span>
+                      <span class="lnd-mon-third"><b>NO READ</b></span>
+                    </span>
+                  </article>
+                </div>
+              </div>
 
-              <dl class="lnd-lens-out">
-                <div class="lnd-lens-f" style="--f-i:0"><dt>stop distance</dt><dd>10.0 pips</dd></div>
-                <div class="lnd-lens-f" style="--f-i:1"><dt>target distance</dt><dd>20.0 pips</dd></div>
-                <div class="lnd-lens-f" style="--f-i:2"><dt>risk : reward</dt><dd>1 : 2.00</dd></div>
-                <div class="lnd-lens-f" style="--f-i:3"><dt>pip value</dt><dd>$2.00</dd></div>
-                <div class="lnd-lens-f" style="--f-i:4"><dt>money at risk</dt><dd>$20.00</dd></div>
-                <div class="lnd-lens-f" style="--f-i:5"><dt>at target</dt><dd class="is-pos">+$40.00</dd></div>
-                <div class="lnd-lens-f" style="--f-i:6"><dt>notional</dt><dd>$8,468</dd></div>
-                <div class="lnd-lens-f" style="--f-i:7"><dt>of the account</dt><dd>0.20%</dd></div>
-                <div class="lnd-lens-f" style="--f-i:8"><dt>daily loss left</dt><dd>$480 of $500</dd></div>
-                <div class="lnd-lens-f lnd-lens-f-wide" style="--f-i:9"><dt>auto-close armed</dt><dd><span class="lnd-lens-armed"></span>4,244.0 &middot; 4,214.0</dd></div>
-              </dl>
-
-              <p class="lnd-lens-step lnd-lens-step-3"><b>3</b> and the eleventh, <em>which it wrote by itself</em></p>
-
-              <p class="lnd-lens-wrote">
-                <span class="lnd-lens-stamp">journal</span>
-                <time>14:02:31</time>
-                <span class="lnd-lens-typed">4,244.0 traded through your stop. Position closed, note opened. You were not at the screen.</span>
-              </p>
+              <!-- Reused verbatim from the Release edge frame, so the two
+                   instruments cannot drift. -->
+              <div class="lnd-tp-bar">
+                <span class="lnd-tp-bar-sample">sample data &middot; nothing live</span>
+                <span>closed 137 &middot; stamped 61</span>
+                <span class="lnd-tp-bar-clock">archive 73 events</span>
+              </div>
             </div>
 
             <figcaption class="lnd-lens-cap">
-              A sample capture on the $10,000 demo account, not a live one.
-              Six things typed. Eleven written back. The last one while nobody was watching.
+              Sample desk on a sample journal. Nothing here is live.
+              A stand down needs 10 prints on the release before the desk will issue one. This file has 14.
+              The demo journal you can open has none, and says so.
             </figcaption>
           </figure>
 
@@ -752,6 +875,113 @@
               </div>
             </div>
           </figure>
+
+          <!-- ═══════════════════════════════════════════════════════════════
+               F7 THE WALL, DRAWN AT FULL SIZE.
+
+               Four news screens rendered in CSS on the terminal ramp. No
+               iframe, no third party request, nothing autoplaying, nothing
+               stored. On the shipped desk these four slots play the
+               broadcasters' own public streams, and only on a click. Each
+               screen says "sample" in the corner where a broadcaster puts
+               LIVE, because there is no free way to know a channel is live
+               before playing it and the product refuses to claim otherwise.
+
+               DESK LABELS, never a real outlet's name over an invented
+               headline. buildSampleNews() sets domain "sample wire" for the
+               same reason.
+
+               Same .bb-mon component as the strip docked in the hero, one size
+               up, so the landing and the real desk are the same instrument.
+               The fourth screen has NO READ on purpose: the demo journal has 0
+               stamped trades, so the honest output is no call.
+               ═══════════════════════════════════════════════════════════ -->
+          <figure class="lnd-tp-frame lnd-wall" aria-label="The wall: four sample news screens drawn in the browser, nothing streaming">
+            <figcaption class="lnd-tp-chrome">
+              <span class="lnd-tp-dot" aria-hidden="true"></span>
+              <span class="lnd-tp-title">F7&nbsp;the wall</span>
+              <span class="lnd-tp-tag">sample screens</span>
+            </figcaption>
+            <div class="lnd-wall-screen" aria-hidden="true">
+              <p class="lnd-wall-rail">
+                <span class="lnd-wall-size is-on">band</span>
+                <span class="lnd-wall-size">half</span>
+                <span class="lnd-wall-size">max</span>
+                <span class="lnd-wall-n">16 channels &middot; 4 monitors</span>
+                <em>on the desk, a click plays one</em>
+              </p>
+
+              <div class="lnd-mon-grid lnd-wall-grid">
+                <article class="bb-mon lnd-mon" style="--m-i:0">
+                  <p class="bb-mon-h"><span class="bb-mon-dot"></span>markets<em>13:32:05</em></p>
+                  <span class="bb-mon-screen">
+                    <span class="lnd-mon-scene is-studio"></span>
+                    <span class="bb-mon-scan"></span>
+                    <span class="lnd-mon-badge">sample</span>
+                    <span class="lnd-mon-third">
+                      <b>DOLLAR BID INTO THE PRINT</b>
+                      <span>USD &middot; CPI m/m T&minus;47m</span>
+                    </span>
+                  </span>
+                  <p class="lnd-mon-f"><span>coverage</span><b>gold 2.41x</b><em>elevated</em></p>
+                </article>
+
+                <article class="bb-mon lnd-mon" style="--m-i:1">
+                  <p class="bb-mon-h"><span class="bb-mon-dot"></span>macro<em>13:32:04</em></p>
+                  <span class="bb-mon-screen">
+                    <span class="lnd-mon-scene is-chart"></span>
+                    <span class="bb-mon-scan"></span>
+                    <span class="lnd-mon-badge">sample</span>
+                    <span class="lnd-mon-third">
+                      <b>COVERAGE OFF ITS MEDIAN</b>
+                      <span>7 day hourly window</span>
+                    </span>
+                  </span>
+                  <p class="lnd-mon-f"><span>coverage</span><b>bitcoin 1.04x</b><em>normal</em></p>
+                </article>
+
+                <article class="bb-mon lnd-mon" style="--m-i:2">
+                  <p class="bb-mon-h"><span class="bb-mon-dot"></span>US markets<em>13:32:05</em></p>
+                  <span class="bb-mon-screen">
+                    <span class="lnd-mon-scene is-podium"></span>
+                    <span class="bb-mon-scan"></span>
+                    <span class="lnd-mon-badge">sample</span>
+                    <span class="lnd-mon-third">
+                      <b>CPI M/M IN 47 MINUTES</b>
+                      <span>High impact &middot; USD</span>
+                    </span>
+                  </span>
+                  <p class="lnd-mon-f"><span>wire</span><b>USD T&minus;47m</b><em>high</em></p>
+                </article>
+
+                <!-- The one that says nothing. Same refusal the desk is built
+                     on, and what stops the wall reading as decoration. -->
+                <article class="bb-mon lnd-mon is-dark" style="--m-i:3">
+                  <p class="bb-mon-h"><span class="bb-mon-dot"></span>prop<em>13:32:03</em></p>
+                  <span class="bb-mon-screen">
+                    <span class="lnd-mon-scene is-floor"></span>
+                    <span class="bb-mon-scan"></span>
+                    <span class="lnd-mon-badge">sample</span>
+                    <span class="lnd-mon-third">
+                      <b>NO READ</b>
+                      <span>the ratio comes from the wire, never the picture</span>
+                    </span>
+                  </span>
+                  <p class="lnd-mon-f"><span>your file</span><b>no prints</b><em>no call</em></p>
+                </article>
+              </div>
+
+              <div class="lnd-tp-bar">
+                <span class="lnd-tp-bar-sample">sample screens &middot; nothing streaming</span>
+                <span>4 monitors &middot; band</span>
+                <span class="lnd-tp-bar-clock">13:32:05 UTC</span>
+              </div>
+            </div>
+          </figure>
+          <p class="lnd-tp-fine">
+            On the desk these four are the broadcasters&rsquo; own public streams, embedded unmodified when you click one.
+            Nothing is stored and nothing is rebroadcast. The screens above are drawn.
+          </p>
 
           <ul class="lnd-tp-legend">
             <li style="--i:0">
