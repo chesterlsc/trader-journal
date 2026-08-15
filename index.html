@@ -733,64 +733,82 @@
                 <em>on the desk, a click plays one</em>
               </p>
 
+              <!-- THE GALLERY. Not four equal tiles: a broadcast gallery.
+                   One PROGRAM monitor holding the aimed channel at full luma,
+                   two preview monitors beside it, and the channel with no read
+                   as a dead letterbox strip along the bottom.
+
+                   Every panel cuts on its own COPRIME period (21s, 13s, 17s)
+                   with NO animation-delay anywhere, so the wall never pulses in
+                   unison and no loop has a seam to hide. 21, 13 and 17 are
+                   pairwise coprime on purpose: round 21 to 20 and the whole
+                   wall starts visibly beating together. -->
               <div class="lnd-mon-grid lnd-wall-grid">
-                <article class="bb-mon lnd-mon" style="--m-i:0">
-                  <p class="bb-mon-h"><span class="bb-mon-dot"></span>markets<em>13:32:05</em></p>
+                <article class="bb-mon lnd-mon is-aim" style="--cut:21s;--roll:6.5s">
+                  <p class="bb-mon-h"><span class="bb-mon-dot"></span>markets<em>13:32:0</em></p>
                   <span class="bb-mon-screen">
                     <span class="lnd-mon-scene is-studio"></span>
+                    <span class="lnd-mon-roll"></span>
                     <span class="bb-mon-scan"></span>
                     <span class="lnd-mon-badge">sample</span>
                     <span class="lnd-mon-third">
-                      <b>DOLLAR BID INTO THE PRINT</b>
-                      <span>USD &middot; CPI m/m T&minus;47m</span>
+                      <i class="lnd-mon-line is-a"><b>DOLLAR BID INTO THE PRINT</b><u>USD &middot; CPI m/m T&minus;47m</u></i>
                     </span>
                   </span>
                   <p class="lnd-mon-f"><span>coverage</span><b>gold 2.41x</b><em>elevated</em></p>
                 </article>
-
-                <article class="bb-mon lnd-mon" style="--m-i:1">
+                <article class="bb-mon lnd-mon " style="--cut:13s;--roll:8s">
                   <p class="bb-mon-h"><span class="bb-mon-dot"></span>macro<em>13:32:04</em></p>
                   <span class="bb-mon-screen">
                     <span class="lnd-mon-scene is-chart"></span>
+                    <span class="lnd-mon-roll"></span>
                     <span class="bb-mon-scan"></span>
                     <span class="lnd-mon-badge">sample</span>
                     <span class="lnd-mon-third">
-                      <b>COVERAGE OFF ITS MEDIAN</b>
-                      <span>7 day hourly window</span>
+                      <i class="lnd-mon-line is-a"><b>COVERAGE OFF ITS MEDIAN</b><u>7 day hourly window</u></i>
                     </span>
                   </span>
                   <p class="lnd-mon-f"><span>coverage</span><b>bitcoin 1.04x</b><em>normal</em></p>
                 </article>
-
-                <article class="bb-mon lnd-mon" style="--m-i:2">
-                  <p class="bb-mon-h"><span class="bb-mon-dot"></span>US markets<em>13:32:05</em></p>
+                <article class="bb-mon lnd-mon " style="--cut:17s;--roll:9.5s">
+                  <p class="bb-mon-h"><span class="bb-mon-dot"></span>US markets<em>13:32:03</em></p>
                   <span class="bb-mon-screen">
                     <span class="lnd-mon-scene is-podium"></span>
+                    <span class="lnd-mon-roll"></span>
                     <span class="bb-mon-scan"></span>
                     <span class="lnd-mon-badge">sample</span>
                     <span class="lnd-mon-third">
-                      <b>CPI M/M IN 47 MINUTES</b>
-                      <span>High impact &middot; USD</span>
+                      <i class="lnd-mon-line is-a"><b>CPI M/M IN 47 MINUTES</b><u>High impact &middot; USD</u></i>
                     </span>
                   </span>
                   <p class="lnd-mon-f"><span>wire</span><b>USD T&minus;47m</b><em>high</em></p>
                 </article>
-
-                <!-- The one that says nothing. Same refusal the desk is built
-                     on, and what stops the wall reading as decoration. -->
-                <article class="bb-mon lnd-mon is-dark" style="--m-i:3">
+                <!-- The one that says nothing. It does not cut, because it
+                     has nothing to cut to. The demo journal has 0 stamped
+                     trades, so the honest output is no call. -->
+                <article class="bb-mon lnd-mon is-wide is-dark" style="--roll:12s">
                   <p class="bb-mon-h"><span class="bb-mon-dot"></span>prop<em>13:32:03</em></p>
                   <span class="bb-mon-screen">
                     <span class="lnd-mon-scene is-floor"></span>
+                    <span class="lnd-mon-roll"></span>
                     <span class="bb-mon-scan"></span>
                     <span class="lnd-mon-badge">sample</span>
                     <span class="lnd-mon-third">
-                      <b>NO READ</b>
-                      <span>the ratio comes from the wire, never the picture</span>
+                      <i class="lnd-mon-line is-a"><b>NO READ</b><u>16 closed &middot; 0 stamped</u></i>
                     </span>
                   </span>
                   <p class="lnd-mon-f"><span>your file</span><b>no prints</b><em>no call</em></p>
                 </article>
+              </div>
+
+              <!-- The crawl runs under the whole gallery, not per panel. Two
+                   identical halves and the SHIPPED lndMarquee, which is already
+                   translateX(0) to translateX(-50%): no new keyframe. -->
+              <div class="lnd-wall-crawl" aria-hidden="true">
+                <span class="lnd-wall-crawl-run">
+                  <b>gold 2.41x over 166 buckets &middot; bitcoin 1.04x over 165 &middot; CPI m/m T&minus;47m high &middot; closed 16 &middot; stamped 0 &middot; rate floor 5 &middot; verdict floor 10 &middot;&nbsp;</b>
+                  <b>gold 2.41x over 166 buckets &middot; bitcoin 1.04x over 165 &middot; CPI m/m T&minus;47m high &middot; closed 16 &middot; stamped 0 &middot; rate floor 5 &middot; verdict floor 10 &middot;&nbsp;</b>
+                </span>
               </div>
 
               <div class="lnd-tp-bar">
