@@ -378,6 +378,82 @@ assert.equal(reconstructedEdit.fees, null);
 assert.equal(reconstructedEdit.commissions, null);
 assert.equal(reconstructedEdit.costs, null);
 
+// --- The seam that lost the bracket: parseSelectedBulkTrades end to end ----
+// The parser attached the resting stop and target, buildTradeRecord preserved
+// them, and the makeup between the two hard zeroed both for every Topstep row.
+// Run the REAL parse pipeline on the mid session shape and pin the output.
+{
+  const midSessionCsv = [
+    "Id,AccountName,ContractName,Status,Type,Size,Side,CreatedAt,TradeDay,FilledAt,CancelledAt,TriggeredAt,StopPrice,LimitPrice,ExecutePrice,TriggeredPrice,PositionDisposition,CreationDisposition,RejectionReason,ExchangeOrderId,PlatformOrderId",
+    "SANITIZED-LIVE-1,SIM-SANITIZED-001,MGCZ6,Filled,Market,2,Bid,08/17/2026 06:48:35 +08:00,08/17/2026 00:00:00 -05:00,08/17/2026 06:48:35 +08:00,,,,,4436.000000000,,Opening,Trader,,,",
+    "SANITIZED-LIVE-TP,SIM-SANITIZED-001,MGCZ6,Open,Limit,2,Ask,08/17/2026 06:48:40 +08:00,08/17/2026 00:00:00 -05:00,,,,,4444.400000000,,,Undetermined,TakeProfit,,,",
+    "SANITIZED-LIVE-SL,SIM-SANITIZED-001,MGCZ6,Open,Stop,2,Ask,08/17/2026 06:48:37 +08:00,08/17/2026 00:00:00 -05:00,,,,4430.900000000,,,,Undetermined,StopLoss,,,",
+    ""
+  ].join("\n");
+  uiForParse.bulkSource.value = "topstep";
+  uiForParse.bulkInput.value = midSessionCsv;
+  const liveParsed = parseSelectedApi.parseSelectedBulkTrades();
+  assert.equal(liveParsed.fileKind, "orders");
+  assert.deepEqual(liveParsed.errors, [], "a mid session export parses clean end to end");
+  assert.equal(liveParsed.trades.length, 1);
+  const liveTrade = liveParsed.trades[0];
+  assert.equal(liveTrade.status, "open");
+  assert.equal(liveTrade.reconstructionMethod, "open-position-v1");
+  assert.equal(liveTrade.entryPrice, 4436);
+  assert.equal(liveTrade.stopLoss, 4430.9, "the resting stop survives the whole pipeline");
+  assert.equal(liveTrade.takeProfit, 4444.4, "the resting target survives the whole pipeline");
+  assert.equal(liveTrade.positionSize, 2);
+  assert.ok(String(liveTrade.importKey).includes("topstepx-orders:fingerprint:"),
+    "an open import carries a stable dedupe key");
+  uiForParse.bulkSource.value = "generic";
+  uiForParse.bulkInput.value = ordersCsv;
+}
+
+// --- An imported OPEN position stays open, with its resting bracket --------
+// A mid session Orders export carries a live position: entry at average cost,
+// stop and target from the resting bracket. It must land in the journal OPEN
+// (the app then watches the price like any command bar trade), even though
+// every other Topstep import path forces closed.
+const openPosition = buildApi.buildTradeRecord({
+  status: "open",
+  reconstructionMethod: "open-position-v1",
+  market: "Futures",
+  asset: "MGC",
+  contractName: "MGCZ6",
+  direction: "Buy",
+  date: today,
+  entryPrice: 4436,
+  exitPrice: 0,
+  positionSize: 2,
+  stopLoss: 4430.9,
+  takeProfit: 4444.4,
+  importSource: "topstepx-orders",
+  externalSource: "topstepx-orders",
+  externalFingerprint: "tso_openposition1",
+  sourceOrderFingerprints: ["tsi_openfill1"],
+  calculatedGrossPnl: null,
+  tradeResult: "Auto",
+  session: "Not recorded",
+  setupType: "Not recorded",
+  timeframe: "Not recorded",
+  psychology: "Not recorded",
+  executionQuality: "Not recorded",
+  accountId: "acct-funded"
+}, {});
+assert.equal(openPosition.status, "open", "a mid session open position imports OPEN");
+assert.equal(openPosition.closedAt, "", "an open import has no close timestamp");
+assert.equal(openPosition.netPnl, 0, "an open import claims no P&L");
+assert.equal(openPosition.result, "Open");
+assert.equal(openPosition.stopLoss, 4430.9, "the resting stop survives to the journal");
+assert.equal(openPosition.takeProfit, 4444.4, "the resting target survives to the journal");
+assert.deepEqual(openPosition.sourceOrderFingerprints, ["tsi_openfill1"],
+  "the per order fingerprints survive so a later closed import can supersede this row");
+
+// The supersede rule exists in the commit path and keys on those fingerprints.
+const commitSrc = appSrc;
+assert.match(commitSrc, /supersedes the open import/i, "the commit loop documents the supersede rule");
+assert.match(commitSrc, /reconstructionMethod === "open-position-v1"/, "the supersede filter targets only open imports");
+
 const loadTradeIntoFormSrc = takeFunction(appSrc, "loadTradeIntoForm");
 assert.match(loadTradeIntoFormSrc, /const isTopstep = isTopstepImport\(trade\)/);
 assert.match(loadTradeIntoFormSrc, /tradeInProgress\.disabled = isTopstep/);

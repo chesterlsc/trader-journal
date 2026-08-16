@@ -113,6 +113,7 @@ export function parseTopstepOrdersCsv(text) {
 
   const errors = [];
   const filled = [];
+  const resting = [];
   const seenOrderIds = new Map();
   const records = located.parsed.records.slice(located.recordIndex + 1);
 
@@ -120,7 +121,10 @@ export function parseTopstepOrdersCsv(text) {
     if (record.cells.every((cell) => !String(cell).trim())) return;
 
     const mapped = mapFilledOrder(record, located.indexes);
-    if (mapped.skip) return;
+    if (mapped.skip) {
+      if (mapped.resting) resting.push(mapped.resting);
+      return;
+    }
     if (mapped.error) {
       errors.push(mapped.error);
       return;
@@ -136,12 +140,13 @@ export function parseTopstepOrdersCsv(text) {
   });
 
   if (errors.length) {
-    return { trades: [], errors, headerRow: located.record.rowNumber };
+    return { trades: [], errors, openPositions: [], headerRow: located.record.rowNumber };
   }
   if (!filled.length) {
     return {
       trades: [],
       errors: ["No Filled orders were found in this TopstepX Orders export."],
+      openPositions: [],
       headerRow: located.record.rowNumber
     };
   }
@@ -153,6 +158,7 @@ export function parseTopstepOrdersCsv(text) {
       errors: [
         "This Orders export contains more than one Topstep account. Export one account at a time, then choose its destination journal account."
       ],
+      openPositions: [],
       headerRow: located.record.rowNumber
     };
   }
@@ -168,22 +174,38 @@ export function parseTopstepOrdersCsv(text) {
   });
 
   const trades = [];
+  const openPositions = [];
   groups.forEach((orders) => {
     const reconstructed = reconstructGroup(orders);
     errors.push(...reconstructed.errors);
     trades.push(...reconstructed.trades);
+    openPositions.push(...reconstructed.openPositions);
   });
 
   if (errors.length) {
-    return { trades: [], errors, headerRow: located.record.rowNumber };
+    return { trades: [], errors, openPositions: [], headerRow: located.record.rowNumber };
   }
+
+  // Attach the resting bracket to its position: same account and contract,
+  // newest order of each kind wins if the trader replaced one.
+  openPositions.forEach((positionSummary) => {
+    resting
+      .filter((order) =>
+        order.sourceAccountName === positionSummary.sourceAccountName &&
+        order.contractName === positionSummary.contractName.toUpperCase())
+      .sort((left, right) => left.createdMs - right.createdMs)
+      .forEach((order) => {
+        if (order.kind === "stoploss") positionSummary.stopPrice = order.price;
+        if (order.kind === "takeprofit") positionSummary.takeProfitPrice = order.price;
+      });
+  });
 
   trades.sort((left, right) =>
     String(left.enteredAt).localeCompare(String(right.enteredAt)) ||
     String(left.exitedAt).localeCompare(String(right.exitedAt)) ||
     String(left.externalFingerprint).localeCompare(String(right.externalFingerprint))
   );
-  return { trades, errors: [], headerRow: located.record.rowNumber };
+  return { trades, errors: [], openPositions, headerRow: located.record.rowNumber };
 }
 
 /**
@@ -265,6 +287,29 @@ function mapFilledOrder(record, indexes) {
     if (value("FilledAt") || value("ExecutePrice")) {
       return { error: `Row ${record.rowNumber}: non-Filled order contains execution data and may be partially filled.` };
     }
+    // A RESTING BRACKET IS EVIDENCE, not noise. An export taken mid session
+    // carries the live position's protection as Open StopLoss / TakeProfit
+    // orders, and those prices are exactly the stop and target a journal
+    // entry needs. Harvested here, attached to the open position later.
+    if (status.toLowerCase() === "open") {
+      const creation = normalizeHeader(value("CreationDisposition"));
+      if (creation === "stoploss" || creation === "takeprofit") {
+        const price = parseNumeric(creation === "stoploss" ? value("StopPrice") : value("LimitPrice"));
+        const created = parseExplicitTimestamp(value("CreatedAt"));
+        if (price > 0) {
+          return {
+            skip: true,
+            resting: {
+              kind: creation,
+              price,
+              sourceAccountName: value("AccountName"),
+              contractName: value("ContractName").toUpperCase(),
+              createdMs: created ? created.ms : 0
+            }
+          };
+        }
+      }
+    }
     return { skip: true };
   }
 
@@ -341,7 +386,7 @@ function reconstructGroup(input) {
     const dispositions = new Set(tied.map((order) => order.disposition));
     if (signs.size > 1 || dispositions.size > 1) {
       errors.push(`Row ${orders[index].rowNumber}: fills with different sides or position dispositions share a timestamp, so execution order is ambiguous.`);
-      return { trades: [], errors };
+      return { trades: [], errors, openPositions: [] };
     }
     index = end;
   }
@@ -385,12 +430,59 @@ function reconstructGroup(input) {
     }
   }
 
+  // A position still open at the end of the export is the NORMAL state of a
+  // live account exported mid session, not an anomaly. It becomes an open
+  // position summary rather than a file killing error. Every mid file
+  // inconsistency above still fails the whole group closed.
+  let openPosition = null;
   if (!errors.length && position !== 0 && episode) {
-    const firstRow = episode.orders[0]?.rowNumber || orders[0]?.rowNumber || 0;
-    errors.push(`Row ${firstRow}: incomplete position remains open at the end of the export.`);
+    openPosition = buildOpenPosition(episode, position);
   }
 
-  return errors.length ? { trades: [], errors } : { trades, errors: [] };
+  return errors.length
+    ? { trades: [], errors, openPositions: [] }
+    : { trades, errors: [], openPositions: openPosition ? [openPosition] : [] };
+}
+
+/* The trailing episode as a journal ready OPEN position: the cost basis is the
+   VWAP of every opening fill (standard average cost), the size is what is
+   still on, and the protection prices are attached later from the resting
+   Open StopLoss / TakeProfit orders in the same export. */
+function buildOpenPosition(episode, position) {
+  const first = episode.openings[0];
+  const openedQuantity = episode.openings.reduce((sum, order) => sum + order.size, 0);
+  const entryValue = episode.openings.reduce((sum, order) => sum + order.executePrice * order.size, 0);
+  const direction = position > 0 ? "Buy" : "Sell";
+  const asset = contractRoot(first.contractName);
+  const sourceOrderIds = episode.orders.map((order) => order.orderId);
+  const sourceOrderFingerprints = episode.orders.map((order) =>
+    hashFingerprint(`${SOURCE}|${first.sourceAccountName}|order|${order.orderId}`, "tsi")
+  );
+  return {
+    kind: "open-position",
+    asset,
+    contractName: first.contractName,
+    direction,
+    size: Math.abs(position),
+    avgEntryPrice: roundPrice(entryValue / openedQuantity),
+    enteredAt: first.filledAt,
+    sourceTradeDay: first.sourceTradeDay,
+    sourceTimezone: first.sourceTimezone,
+    entryFillCount: episode.openings.length,
+    exitFillCount: episode.closings.length,
+    sourceAccountName: first.sourceAccountName,
+    sourceAccountFingerprint: hashFingerprint(`${SOURCE}|account|${first.sourceAccountName}`, "tsa"),
+    sourceOrderIds,
+    sourceOrderFingerprints,
+    externalFingerprint: createEpisodeFingerprint({
+      sourceAccountName: first.sourceAccountName,
+      contractName: first.contractName,
+      sourceOrderIds
+    }),
+    contractMultiplier: POINT_MULTIPLIERS[asset] || null,
+    stopPrice: 0,
+    takeProfitPrice: 0
+  };
 }
 
 function buildEpisodeTrade(episode) {

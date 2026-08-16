@@ -3599,8 +3599,16 @@ function buildTradeRecord(tradeInput, options = {}) {
   const isTopstepOrders = isTopstepOrdersImport(tradeInput) || isTopstepOrdersImport(existingTrade);
   // Both native Trades rows and strictly reconstructed Orders episodes are
   // completed round trips. Keep them closed even if a later full-form edit
-  // submits the generic in-progress checkbox.
-  const status = isTopstep ? "closed" : tradeInput.status === "open" ? "open" : "closed";
+  // submits the generic in-progress checkbox. The one exception is an
+  // imported OPEN position (a mid session Orders export): it is genuinely
+  // open, carries its resting stop and target, and the app watches it live
+  // exactly like a trade captured at the command bar.
+  const isImportedOpenPosition =
+    tradeInput.reconstructionMethod === "open-position-v1" ||
+    existingTrade?.reconstructionMethod === "open-position-v1";
+  const status = isImportedOpenPosition && tradeInput.status !== "closed"
+    ? "open"
+    : isTopstep ? "closed" : tradeInput.status === "open" ? "open" : "closed";
   const metricsInput = status === "open" ? { ...tradeInput, exitPrice: tradeInput.entryPrice } : tradeInput;
   const metrics = calculateTradeMetrics(metricsInput);
   const explicitReportedPnl = Number.isFinite(tradeInput.reportedNetPnl)
@@ -3975,10 +3983,70 @@ function parseSelectedBulkTrades() {
 
   if (fileKind === "orders" || fileKind === "trades" || selectedTopstep) {
     const sourceParsed = fileKind === "orders" ? parseTopstepOrdersCsv(rawInput) : parseTopstepCsv(rawInput);
+
+    // A position still open at export time imports as an OPEN journal trade:
+    // entry at the fills' average cost, stop and target from the resting
+    // bracket, and the app watches the price from there, the same as a trade
+    // captured at the command bar. Same asset rule as the closed episodes:
+    // only contracts with a verified point multiplier.
+    const openPositionTrades = fileKind === "orders"
+      ? (sourceParsed.openPositions || [])
+        .filter((position) => Number.isFinite(position.contractMultiplier))
+        .map((position) => ({
+          status: "open",
+          reconstructionMethod: "open-position-v1",
+          market: "Futures",
+          asset: position.asset,
+          contractName: position.contractName,
+          direction: position.direction,
+          entryPrice: position.avgEntryPrice,
+          exitPrice: 0,
+          positionSize: position.size,
+          stopLoss: position.stopPrice || 0,
+          takeProfit: position.takeProfitPrice || 0,
+          date: position.sourceTradeDay,
+          enteredAt: position.enteredAt,
+          exitedAt: "",
+          tradeDuration: "",
+          entryFillCount: position.entryFillCount,
+          exitFillCount: position.exitFillCount,
+          sourceTradeDay: position.sourceTradeDay,
+          sourceTimezone: position.sourceTimezone,
+          sourceAccountName: position.sourceAccountName,
+          sourceAccountFingerprint: position.sourceAccountFingerprint,
+          sourceOrderIds: position.sourceOrderIds,
+          sourceOrderFingerprints: position.sourceOrderFingerprints,
+          externalFingerprint: position.externalFingerprint,
+          externalSource: "topstepx-orders",
+          importSource: "topstepx-orders",
+          contractMultiplier: position.contractMultiplier,
+          calculatedGrossPnl: null,
+          session: "Not recorded",
+          setupType: "Not recorded",
+          timeframe: "Not recorded",
+          psychology: "Not recorded",
+          executionQuality: "Not recorded",
+          riskPercent: 0,
+          tradeResult: "Auto",
+          riskAmount: 0,
+          notes: "",
+          preTradeRules: [],
+          preTradeRulesAsked: [],
+          eventContext: []
+        }))
+      : [];
+    const unsupportedOpenAssets = fileKind === "orders"
+      ? (sourceParsed.openPositions || [])
+        .filter((position) => !Number.isFinite(position.contractMultiplier))
+        .map((position) => position.asset || position.contractName || "unknown")
+      : [];
     const unsupportedAssets = fileKind === "orders"
-      ? Array.from(new Set(sourceParsed.trades
-        .filter((trade) => !Number.isFinite(trade.calculatedGrossPnl))
-        .map((trade) => trade.asset || trade.contractName || "unknown")))
+      ? Array.from(new Set([
+        ...sourceParsed.trades
+          .filter((trade) => !Number.isFinite(trade.calculatedGrossPnl))
+          .map((trade) => trade.asset || trade.contractName || "unknown"),
+        ...unsupportedOpenAssets
+      ]))
       : [];
     const parsed = {
       ...sourceParsed,
@@ -3989,7 +4057,10 @@ function parseSelectedBulkTrades() {
         )
       ],
       trades: fileKind === "orders"
-        ? sourceParsed.trades.filter((trade) => Number.isFinite(trade.calculatedGrossPnl))
+        ? [
+          ...sourceParsed.trades.filter((trade) => Number.isFinite(trade.calculatedGrossPnl)),
+          ...openPositionTrades
+        ]
         : sourceParsed.trades
     };
     const accountId = String(state.settings.activeAccountId || "");
@@ -3998,7 +4069,7 @@ function parseSelectedBulkTrades() {
       fileKind,
       trades: parsed.trades.map((sourceTrade) => {
         const reconstructedDuration = fileKind === "orders" ? sourceTrade.tradeDuration : "";
-        const reconstructedTrade = fileKind === "orders"
+        const reconstructedTrade = fileKind === "orders" && sourceTrade.reconstructionMethod !== "open-position-v1"
           ? {
               ...sourceTrade,
               pnlProvenance: "calculated-from-filled-orders",
@@ -4009,7 +4080,7 @@ function parseSelectedBulkTrades() {
               tradeDuration: ""
             }
           : sourceTrade;
-        const trade = fileKind === "orders"
+        const trade = fileKind === "orders" && sourceTrade.reconstructionMethod !== "open-position-v1"
           ? applyTopstepOrdersCostEstimate(reconstructedTrade)
           : reconstructedTrade;
         const sourceKey = fileKind === "orders"
@@ -4038,8 +4109,12 @@ function parseSelectedBulkTrades() {
           timeframe: "Not recorded",
           psychology: "Not recorded",
           executionQuality: "Not recorded",
-          stopLoss: 0,
-          takeProfit: 0,
+          // A closed reconstruction has no bracket to keep: the orders that
+          // held it are history. An OPEN position's resting stop and target
+          // are the live bracket, and they are the whole point of importing
+          // it, so they survive.
+          stopLoss: trade.reconstructionMethod === "open-position-v1" ? trade.stopLoss || 0 : 0,
+          takeProfit: trade.reconstructionMethod === "open-position-v1" ? trade.takeProfit || 0 : 0,
           riskPercent: 0,
           tradeResult: "Auto",
           screenshotName: "",
@@ -4085,8 +4160,16 @@ function handleBulkPreview() {
   const filledOrderCount = reconstructedOrders
     ? parsed.trades.reduce((count, trade) => count + (Number(trade.sourceOrderCount) || 0), 0)
     : 0;
+  const openPositionCount = reconstructedOrders
+    ? parsed.trades.filter((trade) => trade.status === "open").length
+    : 0;
+  const closedReady = ready - openPositionCount;
   let message = reconstructedOrders
-    ? `Topstep Orders detected: ${ready} reconstructed flat-to-flat trade(s) ready from ${filledOrderCount} filled order(s)`
+    ? `Topstep Orders detected: ${closedReady} reconstructed flat-to-flat trade(s)${
+        openPositionCount
+          ? ` and ${openPositionCount} open position(s) with the resting stop and target`
+          : ""
+      } ready from ${filledOrderCount} filled order(s)`
     : `Review ready: ${ready} trade(s) ready`;
   if (duplicates > 0) message += `, ${duplicates} duplicate(s)`;
   message += ".";
@@ -4138,6 +4221,25 @@ function handleBulkImport() {
     if (isLikelyDuplicateTrade(tradeInput)) {
       duplicates += 1;
       return;
+    }
+
+    // A closed reconstruction SUPERSEDES the open import of the same position:
+    // its entry fills are the same broker orders, so the per order fingerprints
+    // intersect. Without this, importing mid session and again after the close
+    // would leave the same trade in the journal twice, once open and once
+    // closed.
+    if (
+      isTopstepOrdersImport(tradeInput) &&
+      tradeInput.status !== "open" &&
+      Array.isArray(tradeInput.sourceOrderFingerprints)
+    ) {
+      const incoming = new Set(tradeInput.sourceOrderFingerprints.map(String));
+      state.trades = state.trades.filter((existing) =>
+        !(existing.status === "open" &&
+          existing.reconstructionMethod === "open-position-v1" &&
+          isTopstepOrdersImport(existing) &&
+          Array.isArray(existing.sourceOrderFingerprints) &&
+          existing.sourceOrderFingerprints.some((fp) => incoming.has(String(fp)))));
     }
 
     state.trades.push({
@@ -4327,7 +4429,11 @@ function renderBulkPreview(trades, errors = []) {
       const commissionsValue = reconstructed ? trade.estimatedCommissions : trade.commissions;
       const fees = Number.isFinite(feesValue) ? formatCurrency(-Math.abs(feesValue)) : "—";
       const commissions = Number.isFinite(commissionsValue) ? formatCurrency(-Math.abs(commissionsValue)) : "—";
-      const status = trade.previewState === "duplicate" ? "Duplicate" : "Ready";
+      const status = trade.previewState === "duplicate"
+        ? "Duplicate"
+        : trade.status === "open"
+          ? "Open position"
+          : "Ready";
       return `
       <tr>
         <td data-label="Date / time">${escapeHtml(trade.enteredAt || trade.date)}</td>

@@ -447,11 +447,18 @@ expectFailure(
   /Row 2: Closing fill cannot be applied because the position is flat/,
   "close while flat"
 );
-expectFailure(
-  [pair()[0]],
-  /Row 2: incomplete position remains open/,
-  "incomplete date range"
-);
+// A lone opening fill is no longer a failure: it is the normal state of a
+// live account exported mid session, and it comes back as an OPEN POSITION
+// with no trades and no errors. The mid file guards above all still fail
+// the whole group closed.
+{
+  const live = parseTopstepOrdersCsv(makeCsv([pair()[0]]));
+  assert.deepEqual(live.errors, [], "a trailing open position is not an error");
+  assert.equal(live.trades.length, 0);
+  assert.equal(live.openPositions.length, 1);
+  assert.equal(live.openPositions[0].direction, "Buy");
+  assert.equal(live.openPositions[0].size, 1);
+}
 expectFailure(
   [pair()[0], { ...pair()[1], Id: "SANITIZED-OPEN" }],
   /Row 3: Id duplicates another Filled order/,
@@ -476,6 +483,68 @@ assert.match(
   /^topstepx-orders:fingerprint:tso_[0-9a-f]{16}$/,
   "hashed account and order provenance remains usable without raw identifiers"
 );
+
+// --- The mid session export: one fill in, bracket resting. -----------------
+// The exact shape a live TopstepX account exports during the day: a Filled
+// Market entry plus the protection as Open StopLoss and TakeProfit orders
+// with no execution data. This used to kill the whole file with "incomplete
+// position remains open". It is now a journal ready open position carrying
+// the bracket prices.
+{
+  const midSession = makeCsv([
+    order({ Id: "SANITIZED-LIVE-1", Size: "2", ExecutePrice: "4436.000000000" }),
+    {
+      Id: "SANITIZED-LIVE-TP", AccountName: "SIM-SANITIZED-001", ContractName: "MGCZ6",
+      Status: "Open", Type: "Limit", Size: "2", Side: "Ask",
+      CreatedAt: "08/13/2026 09:00:05 +08:00", TradeDay: "08/13/2026 00:00:00 -05:00",
+      FilledAt: "", CancelledAt: "", TriggeredAt: "",
+      StopPrice: "", LimitPrice: "4444.400000000", ExecutePrice: "", TriggeredPrice: "",
+      PositionDisposition: "Undetermined", CreationDisposition: "TakeProfit",
+      RejectionReason: "", ExchangeOrderId: "", PlatformOrderId: ""
+    },
+    {
+      Id: "SANITIZED-LIVE-SL", AccountName: "SIM-SANITIZED-001", ContractName: "MGCZ6",
+      Status: "Open", Type: "Stop", Size: "2", Side: "Ask",
+      CreatedAt: "08/13/2026 09:00:03 +08:00", TradeDay: "08/13/2026 00:00:00 -05:00",
+      FilledAt: "", CancelledAt: "", TriggeredAt: "",
+      StopPrice: "4430.900000000", LimitPrice: "", ExecutePrice: "", TriggeredPrice: "",
+      PositionDisposition: "Undetermined", CreationDisposition: "StopLoss",
+      RejectionReason: "", ExchangeOrderId: "", PlatformOrderId: ""
+    }
+  ]);
+  const live = parseTopstepOrdersCsv(midSession);
+  assert.deepEqual(live.errors, []);
+  assert.equal(live.trades.length, 0);
+  assert.equal(live.openPositions.length, 1);
+  const position = live.openPositions[0];
+  assert.equal(position.asset, "MGC");
+  assert.equal(position.direction, "Buy");
+  assert.equal(position.size, 2);
+  assert.equal(position.avgEntryPrice, 4436);
+  assert.equal(position.stopPrice, 4430.9, "the resting stop rides along");
+  assert.equal(position.takeProfitPrice, 4444.4, "the resting target rides along");
+  assert.equal(position.contractMultiplier, 10);
+  assert.ok(position.externalFingerprint.startsWith("tso_"));
+  assert.equal(position.entryFillCount, 1);
+  assert.equal(position.exitFillCount, 0);
+}
+
+// Completed episodes and a trailing open position coexist: the fixture day
+// plus a fresh fill after the last flat reconstructs all 14 episodes AND
+// reports the tail as open, with no errors.
+{
+  const trailing = fixture.trimEnd() + "\n" +
+    '3999999999,"SIM-DEMO-001","MGCZ6","Filled","Market","3","Bid",' +
+    '"08/13/2026 21:00:00 +08:00","08/13/2026 00:00:00 -05:00","08/13/2026 21:00:00 +08:00",' +
+    '"","","","","4440.500000000","","Opening","Trader","","",""\n';
+  const mixed = parseTopstepOrdersCsv(trailing);
+  assert.deepEqual(mixed.errors, []);
+  assert.equal(mixed.trades.length, 14, "the closed day still reconstructs in full");
+  assert.equal(mixed.openPositions.length, 1);
+  assert.equal(mixed.openPositions[0].size, 3);
+  assert.equal(mixed.openPositions[0].avgEntryPrice, 4440.5);
+  assert.equal(mixed.openPositions[0].stopPrice, 0, "no resting bracket, no invented one");
+}
 
 console.log(
   "topstepOrdersImport.check.mjs: OK — strict 21-column detection, 14 flat-to-flat episodes, VWAP, gross basis and rejection guards pinned"
