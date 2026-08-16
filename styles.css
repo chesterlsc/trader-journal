@@ -6296,31 +6296,6 @@ body.demo-signup::before {
   opacity: 0;
 }
 
-/* studio: two presenters, cut to a single wider desk */
-.lnd-mon-scene.is-studio::before {
-  background:
-    linear-gradient(180deg, transparent 58%, var(--tp-s2) 58%),
-    radial-gradient(38% 52% at 50% 50%, var(--tp-line2) 0 42%, transparent 43%),
-    linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
-}
-
-/* chart: the line redraws at a different scale */
-.lnd-mon-scene.is-chart::before {
-  background:
-    linear-gradient(90deg, var(--tp-acc-soft) 0 2px, transparent 2px) 0 100% / 100% 58% no-repeat,
-    repeating-linear-gradient(90deg, transparent 0 19px, var(--tp-line) 19px 20px),
-    linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
-}
-
-/* podium: cut from the wide to the lectern */
-.lnd-mon-scene.is-podium::before {
-  background:
-    linear-gradient(180deg, transparent 62%, var(--tp-s2) 62%),
-    radial-gradient(15% 30% at 38% 52%, var(--tp-line2) 0 50%, transparent 51%),
-    radial-gradient(15% 30% at 62% 52%, var(--tp-line2) 0 50%, transparent 51%),
-    linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
-}
-
 /* The luma band rolling down the tube. Tiled at exactly one screen height and
    translated by exactly one tile per cycle, so it is seamless by construction
    with no keyframe cleverness. The 92% stop is load bearing: it parks a lit
@@ -6416,12 +6391,6 @@ body.demo-signup::before {
     animation: lndMonRoll var(--roll, 9s) linear infinite;
   }
 
-  /* The chyron runs on the SAME clock as the picture but deliberately off the
-     cut: it arrives 1.4s after the shot changes and clears 0.5s before the
-     next one. That lag is the single strongest realism cue here. */
-  .lnd-mon.is-aim .lnd-mon-line {
-    animation: lndMonChyron var(--cut, 21s) ease-out infinite;
-  }
 }
 
 /* Phone: the previews hold their cut and lose the roll, and the dead strip
@@ -6456,17 +6425,6 @@ body.demo-signup::before {
   to   { transform: translateY(100%); }
 }
 
-@keyframes lndMonChyron {
-  0%    { opacity: 1; transform: translateY(0); }
-  50%   { opacity: 1; transform: translateY(0); }
-  53.5% { opacity: 0; transform: translateY(6px); }
-  56%   { opacity: 1; transform: translateY(0); }
-  92%   { opacity: 1; transform: translateY(0); }
-  95%   { opacity: 0; transform: translateY(6px); }
-  98%   { opacity: 1; transform: translateY(0); }
-  100%  { opacity: 1; transform: translateY(0); }
-}
-
 /* ==========================================================================
    THE DRAWN MONITOR. Shared by the hero's docked strip and the Release edge
    wall below, so the two are literally the same component.
@@ -6493,9 +6451,10 @@ body.demo-signup::before {
   .lnd-mon-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
-/* The tile is decorative here: no picker, no play button, nothing to click. */
+/* The tile PLAYS now: data-channel plus the shipped playMonitor handler, the
+   same path as the desk's F7. The poster is drawn; the stream is real. */
 .lnd-mon.bb-mon {
-  cursor: default;
+  cursor: pointer;
 }
 
 .lnd-mon .bb-mon-h {
@@ -6519,8 +6478,31 @@ body.demo-signup::before {
   padding: 0;
   border: 0;
   background: var(--term-well);
-  cursor: default;
+  cursor: pointer;
   overflow: hidden;
+}
+.lnd-mon .bb-mon-screen:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* The press play affordance: quiet at rest so the poster reads as footage,
+   unmistakable on hover and on touch. */
+.lnd-mon-go {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--tp-text);
+  font-size: 26px;
+  opacity: 0.4;
+  text-shadow: 0 1px 8px rgb(0 0 0 / 0.6);
+  transition: opacity 140ms var(--ease-out), transform 140ms var(--ease-out);
+}
+.lnd-mon .bb-mon-screen:hover .lnd-mon-go,
+.lnd-mon .bb-mon-screen:focus-visible .lnd-mon-go {
+  opacity: 1;
+  transform: scale(1.12);
+}
+@media (hover: none), (pointer: coarse) {
+  .lnd-mon-go { opacity: 0.85; }
 }
 
 /* --- The picture. Four drawn scenes, each a flat gradient stack on the
@@ -6539,22 +6521,19 @@ body.demo-signup::before {
    is therefore small and repeated, with structure behind it: a backdrop grid,
    a horizon, a desk slab. Scale independent by construction. */
 
-/* A news desk: video wall behind, desk slab across the lower third, two
-   presenters behind it. */
+/* A news desk: video wall behind, desk slab across the lower third. No
+   figures: drawn people read as grey lumps at program size. */
 .lnd-mon-scene.is-studio {
   background:
-    radial-gradient(9% 15% at 41% 46%, var(--tp-line2) 0 70%, transparent 71%),
-    radial-gradient(9% 15% at 59% 46%, var(--tp-line2) 0 70%, transparent 71%),
     linear-gradient(180deg, transparent 0 61%, var(--tp-s2) 61% 100%),
     repeating-linear-gradient(90deg, transparent 0 6.5%, rgb(255 255 255 / 0.028) 6.5% 7%),
     linear-gradient(180deg, transparent 0 22%, rgb(255 255 255 / 0.022) 22% 24%, transparent 24%),
     linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
 }
 
-/* Cut to a single wider desk: one presenter, camera further back. */
+/* Cut to a wider framing of the same set. */
 .lnd-mon-scene.is-studio::before {
   background:
-    radial-gradient(7% 13% at 50% 48%, var(--tp-line2) 0 70%, transparent 71%),
     linear-gradient(180deg, transparent 0 64%, var(--tp-s2) 64% 100%),
     repeating-linear-gradient(90deg, transparent 0 9%, rgb(255 255 255 / 0.03) 9% 9.6%),
     linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
@@ -6579,21 +6558,18 @@ body.demo-signup::before {
     linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
 }
 
-/* A lectern under lights, press wall behind. */
+/* A briefing room: press wall, riser line, floor. */
 .lnd-mon-scene.is-podium {
   background:
-    radial-gradient(5.5% 11% at 50% 44%, var(--tp-line2) 0 72%, transparent 73%),
     linear-gradient(180deg, transparent 0 56%, var(--tp-line2) 56% 58%, transparent 58%),
     linear-gradient(180deg, transparent 0 70%, var(--tp-s2) 70% 100%),
     repeating-linear-gradient(90deg, transparent 0 11%, rgb(255 255 255 / 0.026) 11% 11.8%),
     linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
 }
 
-/* Cut to the two flag stands either side. */
+/* Cut to a tighter framing of the wall. */
 .lnd-mon-scene.is-podium::before {
   background:
-    radial-gradient(4% 9% at 37% 46%, var(--tp-line2) 0 72%, transparent 73%),
-    radial-gradient(4% 9% at 63% 46%, var(--tp-line2) 0 72%, transparent 73%),
     linear-gradient(180deg, transparent 0 72%, var(--tp-s2) 72% 100%),
     repeating-linear-gradient(90deg, transparent 0 8%, rgb(255 255 255 / 0.026) 8% 8.7%),
     linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
@@ -6653,11 +6629,6 @@ body.demo-signup::before {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-/* THE ONE THAT SAYS NOTHING. A channel with no read is the same refusal the
-   desk is built on, and it is what stops the wall reading as decoration. */
-.lnd-mon.is-dark .lnd-mon-third b { color: var(--tp-faint); }
-.lnd-mon.is-dark .bb-mon-screen { opacity: 0.72; }
 
 /* --- The wall at full size, in the Release edge section. -------------------
    Same .bb-mon tiles as the strip docked in the hero, one size up. */
@@ -6733,9 +6704,6 @@ body.demo-signup::before {
   color: var(--tp-acc);
   font-style: normal;
 }
-
-.lnd-mon.is-dark .lnd-mon-f b,
-.lnd-mon.is-dark .lnd-mon-f em { color: var(--tp-faint); }
 
 /* --- Phone. ----------------------------------------------------------------
    The teaser wall drops to two across; the tiles keep their 16:9. */
@@ -9402,6 +9370,111 @@ body.auth-ready .lnd-tape-list .lnd-row {
   transition: width 240ms var(--ease-out);
 }
 
+/* --- 5. Ledger + stamp scenes ---------------------------------------------
+   Scene 3 reuses the dashboard's metric-card grammar at demo scale. Tiles
+   hold their grid slot while invisible, so the stage height never jumps as
+   they pop in. */
+.lnd-demo-ledger {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lnd-demo-ledger .metric-card {
+  min-height: 78px;
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-snap);
+}
+
+.lnd-demo-ledger .metric-card.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+.lnd-demo-ledger .metric-value {
+  font-size: 20px;
+}
+
+/* Scene 4: wire rows in the pressed-well grammar the frame already speaks. */
+.lnd-demo-wire {
+  display: grid;
+  gap: 8px;
+}
+
+.lnd-demo-wire-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-clay-sm);
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+  font: 600 12.5px/1.2 var(--font-mono);
+  color: var(--text-soft);
+  transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+}
+
+.lnd-demo-wire-head {
+  padding: 0 14px;
+  background: none;
+  box-shadow: none;
+  font-size: var(--fs-micro);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.lnd-demo-wire-t {
+  flex: none;
+  color: var(--text-faint);
+}
+
+.lnd-demo-wire-s {
+  flex: none;
+  font-weight: 700;
+}
+
+.lnd-demo-wire-h {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lnd-demo-wire-x {
+  margin-left: auto;
+  flex: none;
+  color: var(--text-faint);
+}
+
+.lnd-demo-wire-row.is-stamped {
+  background: var(--accent-muted);
+  color: var(--accent-strong);
+}
+
+.lnd-demo-wire-row.is-stamped .lnd-demo-wire-t,
+.lnd-demo-wire-row.is-stamped .lnd-demo-wire-x {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+/* Never colour alone (WCAG 1.4.1): the stamp gets the toast's check glyph. */
+.lnd-demo-wire-row.is-stamped .lnd-demo-wire-x::before {
+  content: "\2713\00a0";
+}
+
+.lnd-demo-stamp-note {
+  margin: var(--space-2) 0 0;
+  font: 500 12.5px/1.5 var(--font-mono);
+  color: var(--text-soft);
+  animation: chipIn var(--dur-base) var(--ease-snap);
+}
+
+.lnd-demo-stamp-note[hidden] {
+  display: none;
+}
+
 /* ═══ TERMINAL — SCALE AND SPACE ══════════════════════════════════════════
    On plain :root, not inside the term block: #deskRail speaks this language
    while the mode is OFF, so the numbers have to exist unconditionally. Only
@@ -10303,6 +10376,122 @@ body.auth-locked {
 .bb-row[data-phase="imminent"] .bb-cd { color: var(--bb-oxide); animation: bbUrgent 1s steps(2, end) infinite; }
 .bb-row[data-phase="live"] .bb-cd { color: var(--bb-oxide); }
 
+/* --- THE SCHEDULE RAIL --------------------------------------------------- */
+/* The wire pane spans two grid rows from 900 up, and with a short calendar the
+   space under the rows was raw pane. This is that space, spent on the feed the
+   rows already carry: a fixed 24h UTC axis, hour grid, the session windows,
+   every print inside 24h as a tick, and a now line driven by --now from the
+   shipped 1s tick. Phone widths cap the wire at 320px and have no dead space,
+   so the base state is hidden and only the desk layout shows it. */
+.bb-rail { display: none; }
+
+@media (min-width: 900px) {
+  #bbWire { display: flex; flex-direction: column; }
+  #bbWire .bb-row,
+  #bbWire .bb-note { flex: none; }
+
+  .bb-rail {
+    position: relative;
+    display: block;
+    flex: 1;
+    min-height: 220px;
+    margin-top: var(--space-2);
+    overflow: hidden;
+    box-shadow: inset 0 1px 0 var(--bb-grid);
+    background: repeating-linear-gradient(
+      180deg,
+      var(--bb-grid) 0 1px,
+      transparent 1px calc(100% / 24)
+    );
+  }
+
+  .bb-rail-t {
+    position: absolute;
+    top: 6px;
+    left: var(--space-3);
+    color: var(--bb-faint);
+    font: 600 var(--fs-micro)/1 var(--font-mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .bb-rail-h {
+    position: absolute;
+    left: var(--space-3);
+    transform: translateY(-50%);
+    color: var(--bb-faint);
+    font: 600 var(--fs-micro)/1 var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.06em;
+  }
+
+  /* Session windows sit BELOW their boundary line: the label names the window
+     that starts there, right-aligned so the plot area stays clear. */
+  .bb-rail > em {
+    position: absolute;
+    right: var(--space-3);
+    margin-top: 3px;
+    color: var(--bb-faint);
+    font: 400 var(--fs-micro)/1 var(--font-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* One tick per release minute: a hairline out of the gutter, the time, and
+     every currency printing at that minute. Oxide for a High batch, the same
+     rank voice as the ccy chip above it. */
+  .bb-rail-ev {
+    position: absolute;
+    left: 52px;
+    padding-left: 14px;
+    transform: translateY(-50%);
+    color: var(--bb-soft);
+    font: 500 var(--fs-micro)/1 var(--font-mono);
+    white-space: nowrap;
+  }
+
+  .bb-rail-ev::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 10px;
+    height: 1px;
+    background: var(--bb-soft);
+  }
+
+  .bb-rail-ev b {
+    color: var(--bb-ink);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bb-rail-ev.is-high,
+  .bb-rail-ev.is-high b { color: var(--bb-oxide); }
+  .bb-rail-ev.is-high::before { background: var(--bb-oxide); }
+
+  /* The now line. --now is 0..1 through the UTC day, written once a second by
+     renderTerminalClock(): position is data, so it moves under reduced motion
+     exactly as the playhead does. */
+  .bb-rail-now {
+    position: absolute;
+    top: calc(var(--now, 0) * 100%);
+    right: 0;
+    left: 0;
+    height: 1px;
+    background: var(--bb-oxide);
+  }
+
+  .bb-rail-now::after {
+    content: "";
+    position: absolute;
+    top: -4px;
+    left: 0;
+    border: 4px solid transparent;
+    border-left-color: var(--bb-oxide);
+  }
+}
+
 /* --- F2 THE APPROACH, the signature ------------------------------------- */
 .bb-appr { display: grid; gap: var(--space-3); }
 
@@ -10464,11 +10653,38 @@ body.auth-locked {
 .bb-band[data-thin="true"] .bb-well i { opacity: 0.45; }
 
 /* A signed well: the bar grows out of a zero rule in the direction of its
-   sign, so the sign is carried by position as well as by colour. */
+   sign, so the sign is carried by position as well as by colour.
+   The caliper ticks are the well's own scale: half-scale marks at 25% and 75%
+   on both edges, drawn as background so they cost no markup and sit behind a
+   bar exactly as they sit behind a refusal. An empty well is then a measuring
+   instrument at rest rather than a void. */
 .bb-well {
   position: relative;
   height: 56px;
+  background:
+    linear-gradient(var(--bb-grid), var(--bb-grid)) left 0 top 25% / 6px 1px no-repeat,
+    linear-gradient(var(--bb-grid), var(--bb-grid)) left 0 top 75% / 6px 1px no-repeat,
+    linear-gradient(var(--bb-grid), var(--bb-grid)) right 0 top 25% / 6px 1px no-repeat,
+    linear-gradient(var(--bb-grid), var(--bb-grid)) right 0 top 75% / 6px 1px no-repeat;
+  background-color: var(--bb-void);
+}
+
+/* The annotated minimum. bbWell() prints it only at n = 0: a dashed chip on
+   the zero rule naming the sample floor, the same dashed voice as the news
+   pane's "no call issued". A threshold, never a figure. */
+.bb-well > b {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 3px 6px;
+  border: 1px dashed var(--bb-grid);
+  border-radius: 4px;
   background: var(--bb-void);
+  color: var(--bb-faint);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
 }
 
 .bb-well::after {

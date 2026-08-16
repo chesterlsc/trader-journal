@@ -301,6 +301,93 @@
                   <span class="sheet-submit lnd-demo-save" id="lndDemoSave">Save &amp; close</span>
                 </div>
               </div>
+
+              <!-- Scene 3: the ledger. What save DOES. The four tiles are the
+                   dashboard's own metric-card grammar, and every figure is
+                   arithmetic on the one scripted trade: +$40 on the labelled
+                   $10,000 account, $20 risked, 10 pip stop, 20 pip target.
+                   No win rate and no expectancy here: one trade has not
+                   earned them, and this product does not print unearned
+                   numbers. -->
+              <div class="lnd-demo-scene" data-demo-scene="ledger">
+                <header class="jrn-head">
+                  <div class="jrn-id">
+                    <p class="jrn-kicker">Saved &middot; the ledger</p>
+                    <h3 class="jrn-symbol">$10,040.00 <span class="jrn-meta">was $10,000.00</span></h3>
+                  </div>
+                  <div class="jrn-result">
+                    <p class="jrn-net is-pos">+$40.00</p>
+                    <p class="jrn-sub">net today &middot; demo</p>
+                  </div>
+                </header>
+                <div class="lnd-demo-ledger">
+                  <article class="metric-card is-pos">
+                    <p class="metric-label">R multiple</p>
+                    <p class="metric-value">+2.0R</p>
+                    <span class="metric-delta">$20 risked</span>
+                  </article>
+                  <article class="metric-card is-pos">
+                    <p class="metric-label">Account return</p>
+                    <p class="metric-value">+0.4%</p>
+                    <span class="metric-delta">risk was 0.2%</span>
+                  </article>
+                  <article class="metric-card is-pos">
+                    <p class="metric-label">Pips</p>
+                    <p class="metric-value">+20.0</p>
+                    <span class="metric-delta">10.0 risked</span>
+                  </article>
+                  <article class="metric-card">
+                    <p class="metric-label">Realized R:R</p>
+                    <p class="metric-value">2.00</p>
+                    <span class="metric-delta">planned 2.00</span>
+                  </article>
+                </div>
+              </div>
+
+              <!-- Scene 4: the stamp. The release edge files the trade under
+                   the calendar event that was live when it opened. The YOU
+                   column and the floors are the real board's contract:
+                   EDGE_MIN_LOG 5, EDGE_MIN_VERDICT 10 (src/lib/eventEdge.js),
+                   so one print stays a print, never a percentage. -->
+              <div class="lnd-demo-scene" data-demo-scene="stamp">
+                <header class="jrn-head">
+                  <div class="jrn-id">
+                    <p class="jrn-kicker">Filed &middot; release edge</p>
+                    <h3 class="jrn-symbol">The stamp <span class="jrn-meta">automatic</span></h3>
+                  </div>
+                </header>
+                <div class="jrn-block">
+                  <div class="lnd-demo-wire">
+                    <div class="lnd-demo-wire-row lnd-demo-wire-head" aria-hidden="true">
+                      <span class="lnd-demo-wire-t">UTC</span>
+                      <span class="lnd-demo-wire-s">cur</span>
+                      <span class="lnd-demo-wire-h">release</span>
+                      <span class="lnd-demo-wire-x">you</span>
+                    </div>
+                    <div class="lnd-demo-wire-row" id="lndDemoStampRow">
+                      <span class="lnd-demo-wire-t">13:30</span>
+                      <span class="lnd-demo-wire-s">USD</span>
+                      <span class="lnd-demo-wire-h">CPI m/m</span>
+                      <span class="lnd-demo-wire-x" id="lndDemoStampYou">no file</span>
+                    </div>
+                    <div class="lnd-demo-wire-row">
+                      <span class="lnd-demo-wire-t">15:30</span>
+                      <span class="lnd-demo-wire-s">USD</span>
+                      <span class="lnd-demo-wire-h">Unemployment Claims</span>
+                      <span class="lnd-demo-wire-x">no file</span>
+                    </div>
+                    <div class="lnd-demo-wire-row">
+                      <span class="lnd-demo-wire-t">18:00</span>
+                      <span class="lnd-demo-wire-s">USD</span>
+                      <span class="lnd-demo-wire-h">FOMC Member Speaks</span>
+                      <span class="lnd-demo-wire-x">no file</span>
+                    </div>
+                  </div>
+                  <p class="lnd-demo-stamp-note" id="lndDemoStampFloor" hidden>
+                    XAUUSD short filed under CPI m/m. 5 prints buy a rate. 10 buy a verdict.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -718,19 +805,19 @@
                The fourth screen has NO READ on purpose: the demo journal has 0
                stamped trades, so the honest output is no call.
                ═══════════════════════════════════════════════════════════ -->
-          <figure class="lnd-tp-frame lnd-wall" aria-label="The wall: four sample news screens drawn in the browser, nothing streaming">
+          <figure class="lnd-tp-frame lnd-wall" aria-label="The wall: four news monitors, each plays the broadcaster&#39;s own public stream on click">
             <figcaption class="lnd-tp-chrome">
               <span class="lnd-tp-dot" aria-hidden="true"></span>
               <span class="lnd-tp-title">F7&nbsp;the wall</span>
-              <span class="lnd-tp-tag">sample screens</span>
+              <span class="lnd-tp-tag">streams on click</span>
             </figcaption>
-            <div class="lnd-wall-screen" aria-hidden="true">
-              <p class="lnd-wall-rail">
+            <div class="lnd-wall-screen">
+              <p class="lnd-wall-rail" aria-hidden="true">
                 <span class="lnd-wall-size is-on">band</span>
                 <span class="lnd-wall-size">half</span>
                 <span class="lnd-wall-size">max</span>
                 <span class="lnd-wall-n">16 channels &middot; 4 monitors</span>
-                <em>on the desk, a click plays one</em>
+                <em>a click plays one, right here</em>
               </p>
 
               <!-- THE GALLERY. Not four equal tiles: a broadcast gallery.
@@ -743,67 +830,79 @@
                    unison and no loop has a seam to hide. 21, 13 and 17 are
                    pairwise coprime on purpose: round 21 to 20 and the whole
                    wall starts visibly beating together. -->
+              <!-- THE GALLERY, LIVE. Four real channels from the desk's own
+                   roster. NOTHING LOADS UNTIL A CLICK: each screen is a drawn
+                   poster until the trader presses play, and then the shipped
+                   playMonitor handler swaps it for the broadcaster's own
+                   public stream, embedded unmodified, exactly as F7 does on
+                   the desk. data-channel is a roster id, so the src is built
+                   by the same allowlisted wallEmbedUrl path as everywhere
+                   else.
+
+                   The posters keep the gallery motion: cuts on pairwise
+                   COPRIME periods (21s, 13s, 17s), no animation-delay, so the
+                   wall never pulses in unison and no loop has a seam. -->
               <div class="lnd-mon-grid lnd-wall-grid">
-                <article class="bb-mon lnd-mon is-aim" style="--cut:21s;--roll:6.5s">
+                <article class="bb-mon lnd-mon is-aim" style="--cut:21s;--roll:6.5s" data-channel="UChqUTb7kYRX8-EiaN3XFrSQ">
                   <p class="bb-mon-h"><span class="bb-mon-dot"></span>markets<em>13:32:0</em></p>
-                  <span class="bb-mon-screen">
-                    <span class="lnd-mon-scene is-studio"></span>
-                    <span class="lnd-mon-roll"></span>
-                    <span class="bb-mon-scan"></span>
-                    <span class="lnd-mon-badge">sample</span>
-                    <span class="lnd-mon-third">
-                      <i class="lnd-mon-line is-a"><b>DOLLAR BID INTO THE PRINT</b><u>USD &middot; CPI m/m T&minus;47m</u></i>
+                  <button class="bb-mon-screen" type="button" aria-label="Play the Reuters live stream">
+                    <span class="lnd-mon-scene is-studio" aria-hidden="true"></span>
+                    <span class="lnd-mon-roll" aria-hidden="true"></span>
+                    <span class="bb-mon-scan" aria-hidden="true"></span>
+                    <span class="lnd-mon-badge" aria-hidden="true">stream</span>
+                    <span class="lnd-mon-go" aria-hidden="true">&#9654;</span>
+                    <span class="lnd-mon-third" aria-hidden="true">
+                      <i class="lnd-mon-line is-a"><b>REUTERS</b><u>plays the live stream</u></i>
                     </span>
-                  </span>
+                  </button>
                   <p class="lnd-mon-f"><span>coverage</span><b>gold 2.41x</b><em>elevated</em></p>
                 </article>
-                <article class="bb-mon lnd-mon " style="--cut:13s;--roll:8s">
+                <article class="bb-mon lnd-mon " style="--cut:13s;--roll:8s" data-channel="UCqoSrYgusd8ZddtMoWhjHYA">
                   <p class="bb-mon-h"><span class="bb-mon-dot"></span>macro<em>13:32:04</em></p>
-                  <span class="bb-mon-screen">
-                    <span class="lnd-mon-scene is-chart"></span>
-                    <span class="lnd-mon-roll"></span>
-                    <span class="bb-mon-scan"></span>
-                    <span class="lnd-mon-badge">sample</span>
-                    <span class="lnd-mon-third">
-                      <i class="lnd-mon-line is-a"><b>COVERAGE OFF ITS MEDIAN</b><u>7 day hourly window</u></i>
+                  <button class="bb-mon-screen" type="button" aria-label="Play the Real Vision live stream">
+                    <span class="lnd-mon-scene is-chart" aria-hidden="true"></span>
+                    <span class="lnd-mon-roll" aria-hidden="true"></span>
+                    <span class="bb-mon-scan" aria-hidden="true"></span>
+                    <span class="lnd-mon-badge" aria-hidden="true">stream</span>
+                    <span class="lnd-mon-go" aria-hidden="true">&#9654;</span>
+                    <span class="lnd-mon-third" aria-hidden="true">
+                      <i class="lnd-mon-line is-a"><b>REAL VISION</b><u>plays the live stream</u></i>
                     </span>
-                  </span>
+                  </button>
                   <p class="lnd-mon-f"><span>coverage</span><b>bitcoin 1.04x</b><em>normal</em></p>
                 </article>
-                <article class="bb-mon lnd-mon " style="--cut:17s;--roll:9.5s">
+                <article class="bb-mon lnd-mon " style="--cut:17s;--roll:9.5s" data-channel="UCvJJ_dzjViJCoLf5uKUTwoA">
                   <p class="bb-mon-h"><span class="bb-mon-dot"></span>US markets<em>13:32:03</em></p>
-                  <span class="bb-mon-screen">
-                    <span class="lnd-mon-scene is-podium"></span>
-                    <span class="lnd-mon-roll"></span>
-                    <span class="bb-mon-scan"></span>
-                    <span class="lnd-mon-badge">sample</span>
-                    <span class="lnd-mon-third">
-                      <i class="lnd-mon-line is-a"><b>CPI M/M IN 47 MINUTES</b><u>High impact &middot; USD</u></i>
+                  <button class="bb-mon-screen" type="button" aria-label="Play the CNBC live stream">
+                    <span class="lnd-mon-scene is-podium" aria-hidden="true"></span>
+                    <span class="lnd-mon-roll" aria-hidden="true"></span>
+                    <span class="bb-mon-scan" aria-hidden="true"></span>
+                    <span class="lnd-mon-badge" aria-hidden="true">stream</span>
+                    <span class="lnd-mon-go" aria-hidden="true">&#9654;</span>
+                    <span class="lnd-mon-third" aria-hidden="true">
+                      <i class="lnd-mon-line is-a"><b>CNBC</b><u>plays the live stream</u></i>
                     </span>
-                  </span>
+                  </button>
                   <p class="lnd-mon-f"><span>wire</span><b>USD T&minus;47m</b><em>high</em></p>
                 </article>
-                <!-- The one that says nothing. It does not cut, because it
-                     has nothing to cut to. The demo journal has 0 stamped
-                     trades, so the honest output is no call. -->
-                <article class="bb-mon lnd-mon is-wide is-dark" style="--roll:12s">
+                <article class="bb-mon lnd-mon is-wide" style="--roll:12s" data-channel="UCSyUeVzpYW6VYv0EpNRxVAA">
                   <p class="bb-mon-h"><span class="bb-mon-dot"></span>prop<em>13:32:03</em></p>
-                  <span class="bb-mon-screen">
-                    <span class="lnd-mon-scene is-floor"></span>
-                    <span class="lnd-mon-roll"></span>
-                    <span class="bb-mon-scan"></span>
-                    <span class="lnd-mon-badge">sample</span>
-                    <span class="lnd-mon-third">
-                      <i class="lnd-mon-line is-a"><b>NO READ</b><u>16 closed &middot; 0 stamped</u></i>
+                  <button class="bb-mon-screen" type="button" aria-label="Play the Topstep live stream">
+                    <span class="lnd-mon-scene is-floor" aria-hidden="true"></span>
+                    <span class="lnd-mon-roll" aria-hidden="true"></span>
+                    <span class="bb-mon-scan" aria-hidden="true"></span>
+                    <span class="lnd-mon-badge" aria-hidden="true">stream</span>
+                    <span class="lnd-mon-go" aria-hidden="true">&#9654;</span>
+                    <span class="lnd-mon-third" aria-hidden="true">
+                      <i class="lnd-mon-line is-a"><b>TOPSTEP</b><u>plays the live stream</u></i>
                     </span>
-                  </span>
+                  </button>
                   <p class="lnd-mon-f"><span>your file</span><b>no prints</b><em>no call</em></p>
                 </article>
               </div>
 
               <!-- The crawl runs under the whole gallery, not per panel. Two
-                   identical halves and the SHIPPED lndMarquee, which is already
-                   translateX(0) to translateX(-50%): no new keyframe. -->
+                   identical halves and the SHIPPED lndMarquee: no new keyframe. -->
               <div class="lnd-wall-crawl" aria-hidden="true">
                 <span class="lnd-wall-crawl-run">
                   <b>gold 2.41x over 166 buckets &middot; bitcoin 1.04x over 165 &middot; CPI m/m T&minus;47m high &middot; closed 16 &middot; stamped 0 &middot; rate floor 5 &middot; verdict floor 10 &middot;&nbsp;</b>
@@ -819,8 +918,8 @@
             </div>
           </figure>
           <p class="lnd-tp-fine">
-            On the desk these four are the broadcasters&rsquo; own public streams, embedded unmodified when you click one.
-            Nothing is stored and nothing is rebroadcast. The screens above are drawn.
+            Click a monitor and it plays the broadcaster&rsquo;s own public stream, embedded unmodified.
+            Nothing loads until you click. Nothing is stored and nothing is rebroadcast.
           </p>
 
           <ul class="lnd-tp-legend">

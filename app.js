@@ -13202,10 +13202,11 @@ function renderTickerPair(options = {}) {
 }
 
 /* ── Scripted product demo ─────────────────────────────────────────────────
-   Replays the two real flows (command-bar open, close-and-journal) inside a
-   device frame built from the live component markup. Every frame is derived
-   from one small state object, so animated playback and the reduced-motion
-   step-through render pixel-identical frames. */
+   Replays four real flows (command-bar open, close-and-journal, the ledger
+   recompute, the release-edge stamp) inside a device frame built from the
+   live component markup. Every frame is derived from one small state object,
+   so animated playback and the reduced-motion step-through render
+   pixel-identical frames. */
 function lndDemoState(overrides) {
   return {
     scene: "capture",
@@ -13216,6 +13217,8 @@ function lndDemoState(overrides) {
     grade: false,
     note: 0,
     saved: false,
+    ledger: 0,
+    stamped: false,
     ...overrides
   };
 }
@@ -13262,7 +13265,29 @@ function buildLndDemoTimeline() {
   key(s7, "One honest sentence.", 900);
 
   const s8 = lndDemoState({ scene: "close", mood: true, grade: true, note: noteLen, saved: true });
-  key(s8, "Saved. That is the whole loop.", 2600);
+  key(s8, "Saved. The journal goes to work.", 1300);
+
+  // The close sheet stays composed under the crossfade out of it.
+  const closed = { mood: true, grade: true, note: noteLen, saved: true };
+
+  const s9 = lndDemoState({ ...closed, scene: "ledger", ledger: 1 });
+  key(s9, "The ledger recomputes on save.", 900);
+
+  tween(s9, "ledger", 4, 360);
+  const s10 = lndDemoState({ ...closed, scene: "ledger", ledger: 4 });
+  key(s10, "$40 won on $20 risked. That is +2.0R.", 1900);
+
+  const s11 = lndDemoState({ ...closed, scene: "ledger", ledger: 4 });
+  key(s11, "Risk 0.2%, return 0.4%. R is the number that compounds.", 2100);
+
+  const s12 = lndDemoState({ ...closed, scene: "stamp", ledger: 4 });
+  key(s12, "The release edge reads the calendar. CPI was live at entry.", 1600);
+
+  const s13 = lndDemoState({ ...closed, scene: "stamp", ledger: 4, stamped: true });
+  key(s13, "Stamped under CPI, no tagging. Your file there: 1 print.", 1800);
+
+  const s14 = lndDemoState({ ...closed, scene: "stamp", ledger: 4, stamped: true });
+  key(s14, "5 prints buy a rate. 10 buy a verdict. That is the whole loop.", 2800);
 
   return { keyframes, steps };
 }
@@ -13310,6 +13335,18 @@ function renderLndDemoFrame(frame) {
   d.noteCaret.hidden = !(frame.scene === "close" && frame.note > 0 && !frame.saved);
   d.save.classList.toggle("is-pressed", frame.saved);
   d.frame.classList.toggle("is-saved", frame.saved);
+
+  // Scene 3 — the ledger. Tiles pop in one per beat; hidden tiles keep their
+  // slot so the stage never changes height.
+  d.ledgerTiles.forEach((tile, i) => {
+    tile.classList.toggle("is-in", frame.ledger > i);
+  });
+
+  // Scene 4 — the stamp. The YOU cell is the count: one saved trade under
+  // this release is "1 print", and the floors line only appears once it is.
+  d.stampRow.classList.toggle("is-stamped", frame.stamped);
+  d.stampYou.textContent = frame.stamped ? "1 print" : "no file";
+  d.stampFloor.hidden = !frame.stamped;
 }
 
 function setupLandingDemo() {
@@ -13334,6 +13371,10 @@ function setupLandingDemo() {
     note: document.getElementById("lndDemoNote"),
     noteCaret: document.getElementById("lndDemoNoteCaret"),
     save: document.getElementById("lndDemoSave"),
+    ledgerTiles: Array.from(frame.querySelectorAll(".lnd-demo-ledger .metric-card")),
+    stampRow: document.getElementById("lndDemoStampRow"),
+    stampYou: document.getElementById("lndDemoStampYou"),
+    stampFloor: document.getElementById("lndDemoStampFloor"),
     caption,
     progress: document.getElementById("lndDemoProgress"),
     button
@@ -13830,6 +13871,16 @@ function renderTerminalClock() {
       cell.textContent = phase.text;
     }
   });
+  // The schedule rail's now line: same tick, same clock, one property write.
+  // Re-stamped within the same render pass after a repaint, because
+  // renderEdgeBoard ends by calling this function.
+  const rail = document.getElementById("bbRail");
+  if (rail) {
+    rail.style.setProperty(
+      "--now",
+      ((now.getUTCHours() * 60 + now.getUTCMinutes()) / 1440).toFixed(4)
+    );
+  }
 }
 
 function syncTerminalAccess() {
@@ -13945,10 +13996,14 @@ function renderEdgeBoard() {
   }
   setText(document.getElementById("bbWireCount"), wire.length === 0 ? "" : `${wire.length} ahead`);
 
+  // The session slots serve two panes now: the schedule rail below plots their
+  // windows on its axis, and F4 wells them. One computation, above both.
+  const slots = releaseClockEdge(closed);
+
   paint(
     document.getElementById("bbWire"),
     "wire",
-    wire.length === 0
+    (wire.length === 0
       ? `<p class="bb-note">${
           terminal.asOf === null
             ? "No calendar link. The desk runs on your own record alone."
@@ -13983,7 +14038,7 @@ function renderEdgeBoard() {
                 <span class="bb-you">${you}</span>
               </button>`;
           })
-          .join("")
+          .join("")) + bbRailHtml(wire, slots, now)
   );
 
   // ---- what the desk is aimed at -----------------------------------------
@@ -14029,7 +14084,7 @@ function renderEdgeBoard() {
   paint(document.getElementById("bbReck"), "reck", bbReckHtml(closed, file, baseline));
 
   // ---- F4 THE SESSION CLOCK: day one, needs no stamps --------------------
-  const slots = releaseClockEdge(closed);
+  // `slots` is computed once, above F1, because the schedule rail shares it.
   const slotPeak = Math.max(1, ...slots.map((slot) => Math.abs(slot.netPnl)));
   paint(
     document.getElementById("bbClock"),
@@ -14222,10 +14277,15 @@ function bbLadder(impact) {
 
 /* A signed bar growing out of a zero rule, so the sign is carried by position
    as well as by colour. --h is a percentage of the well: half its height is
-   the full scale, hence the 46 cap. */
-function bbWell(value, peak, n, index) {
+   the full scale, hence the 46 cap.
+   An empty well is a REFUSAL, not a void: the CSS draws its scale ticks
+   regardless, and `floor` (optional) names the sample floor the bar is waiting
+   on, in a dashed chip on the zero rule. Never a figure, never a ghost bar. */
+function bbWell(value, peak, n, index, floor) {
   if (n === 0) {
-    return `<span class="bb-well" aria-hidden="true"></span>`;
+    return `<span class="bb-well" aria-hidden="true">${
+      floor ? `<b>${escapeHtml(floor)}</b>` : ""
+    }</span>`;
   }
   const h = Math.max(4, Math.round((Math.abs(value) / peak) * 46));
   return `<span class="bb-well" aria-hidden="true"><i class="${
@@ -14233,12 +14293,76 @@ function bbWell(value, peak, n, index) {
   }" style="--h:${h}%; --i:${index}"></i></span>`;
 }
 
+/* THE SCHEDULE RAIL. The wire's surplus height at desk widths, spent on the
+   same feed the rows already carry: every print inside 24h plotted on a fixed
+   UTC day axis, the session windows the session clock buckets by, and a now line the shipped
+   tick keeps honest via --now on #bbRail.
+   The axis is the FIXED day, not "now to now+24h", on purpose: tick positions
+   then depend only on the event list, so the pane's paint() signature stays
+   stable all day and the row entrance animations are not restarted by a moving
+   scale. Exact-minute batches (12:30z is a crowd) group into one tick. */
+function bbRailHtml(wire, slots, now) {
+  const horizon = now.getTime() + 86400000;
+  const byMinute = new Map();
+  wire.forEach((event) => {
+    const at = Date.parse(event.startsAt ?? "");
+    if (Number.isNaN(at) || at > horizon) {
+      return;
+    }
+    const hhmm = new Date(at).toISOString().slice(11, 16);
+    const tick = byMinute.get(hhmm) || { hhmm, high: false, ccys: [] };
+    tick.high = tick.high || event.impact === "High";
+    if (!tick.ccys.includes(event.currency)) {
+      tick.ccys.push(event.currency);
+    }
+    byMinute.set(hhmm, tick);
+  });
+  // 3.5 floors the FIRST label too: a release just after 00:00z otherwise
+  // lands its label under the rail's own title. Same legibility trade as the
+  // 4.5% stacking push below.
+  let cursor = 3.5;
+  const ticks = [...byMinute.values()]
+    .map((tick) => ({
+      tick,
+      pct: ((Number(tick.hhmm.slice(0, 2)) * 60 + Number(tick.hhmm.slice(3, 5))) / 1440) * 100,
+    }))
+    .sort((a, b) => a.pct - b.pct)
+    .map(({ tick, pct }) => {
+      // ponytail: 4.5% is one label height on the shortest rail; the push keeps
+      // stacked labels apart at the cost of a few px of true position.
+      const top = Math.min(96, Math.max(pct, cursor + 4.5));
+      cursor = top;
+      return `<i class="bb-rail-ev${tick.high ? " is-high" : ""}" style="top:${top.toFixed(2)}%"><b>${escapeHtml(
+        tick.hhmm
+      )}z</b> ${escapeHtml(tick.ccys.join(" "))}</i>`;
+    })
+    .join("");
+  const sessions = slots
+    .map(
+      (slot) =>
+        `<em style="top:${((Number(slot.slot.slice(0, 2)) / 24) * 100).toFixed(2)}%">${escapeHtml(
+          slot.label
+        )}</em>`
+    )
+    .join("");
+  const hours = [6, 12, 18]
+    .map((hour) => `<span class="bb-rail-h" style="top:${((hour / 24) * 100).toFixed(2)}%">${String(hour).padStart(2, "0")}00</span>`)
+    .join("");
+  return `<div class="bb-rail" id="bbRail" aria-hidden="true">
+      <span class="bb-rail-t">schedule 24h utc</span>
+      ${hours}${sessions}${ticks}
+      <b class="bb-rail-now"></b>
+    </div>`;
+}
+
 /* THE APPROACH's body. The axis is drawn from the trader's own buckets whether
    or not a calendar event is aimed at, because the buckets are their record and
    that exists offline. Only the countdown, the ladder, the fuse and the
    playhead need an event; without one they are withheld rather than faked. */
 function bbApproachHtml(closed, event, name) {
-  const buckets = terminal.selectedKey ? windowBuckets(closed, terminal.selectedKey) : [];
+  // The empty key draws the same four windows with zero prints, so the axis is
+  // a scaffold from the first second rather than a bare seam.
+  const buckets = windowBuckets(closed, terminal.selectedKey || "");
   const total = buckets.reduce((sum, bucket) => sum + bucket.n, 0);
   const peak = Math.max(1, ...buckets.map((bucket) => Math.abs(bucket.avgPnl)));
 
@@ -14248,7 +14372,7 @@ function bbApproachHtml(closed, event, name) {
       <div class="bb-band" data-band="${escapeHtml(bucket.label)}" data-thin="${
         bucket.n > 0 && bucket.n < WINDOW_MIN
       }">
-        ${bbWell(bucket.avgPnl, peak, bucket.n, index)}
+        ${bbWell(bucket.avgPnl, peak, bucket.n, index, `needs ${WINDOW_MIN}`)}
         <span class="bb-band-l">${escapeHtml(bucket.label)}</span>
         <span class="bb-band-n">${bucket.n === 0 ? "0 prints" : `${bucket.n} print${bucket.n === 1 ? "" : "s"}`}</span>
         <span class="bb-band-v ${
