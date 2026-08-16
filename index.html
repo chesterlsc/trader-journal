@@ -26,14 +26,16 @@
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://www.traderjournal.space/" />
     <meta property="og:site_name" content="Trader Journal" />
-    <meta property="og:image" content="https://www.traderjournal.space/apple-touch-icon.png" />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:image" content="https://www.traderjournal.space/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Trader Journal: the trading journal that does the arithmetic" />
     <meta
       name="twitter:description"
       content="Log a position in eight seconds. Pips, expectancy per setup, loss budgets that lock the desk, prop-account tracking. Free forever; no card."
     />
-    <meta name="twitter:image" content="https://www.traderjournal.space/apple-touch-icon.png" />
+    <meta name="twitter:image" content="https://www.traderjournal.space/og-image.png" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -44,6 +46,48 @@
         "operatingSystem": "Web",
         "description": "A trading journal for forex, gold, crypto and prop-firm accounts: eight-second trade logging with pips, expectancy per setup, risk budgets, psychology tracking and execution analytics.",
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Trader Journal",
+        "url": "https://www.traderjournal.space/",
+        "logo": "https://www.traderjournal.space/apple-touch-icon.png"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Trader Journal free?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. No card and no tier. Export your trades to CSV or JSON any time." }
+          },
+          {
+            "@type": "Question",
+            "name": "What can I journal?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Forex, gold, futures, crypto and prop firm accounts. One line logs a trade." }
+          },
+          {
+            "@type": "Question",
+            "name": "What does it track?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Pips, R multiples, expectancy per setup, win rate, risk budgets and psychology." }
+          },
+          {
+            "@type": "Question",
+            "name": "Does it work for prop firm evaluations?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. Daily loss budgets and account rules are built in, including TopstepX imports." }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the release edge?",
+            "acceptedAnswer": { "@type": "Answer", "text": "It reads the economic calendar against your own record on each release, and most of the time it tells you to sit it out." }
+          }
+        ]
       }
     </script>
     <script>
@@ -941,10 +985,36 @@
             </li>
           </ul>
           <p class="lnd-tp-fine">
-            The screen replays the shipped desk on the demo journal's sample data.
-            Open the sample journal and it is the same desk. Journalling stays free.
+            Open the journal and it is the same desk. Journalling stays free.
           </p>
         </div>
+      </section>
+
+      <section class="lnd-faq" data-landing-reveal aria-labelledby="lndFaqHeading">
+        <p class="lnd-kicker">Questions</p>
+        <h2 id="lndFaqHeading" class="lnd-faq-title">Short answers.</h2>
+        <dl class="lnd-faq-list">
+          <div class="lnd-faq-item">
+            <dt>Is Trader Journal free?</dt>
+            <dd>Yes. No card and no tier. Export your trades to CSV or JSON any time.</dd>
+          </div>
+          <div class="lnd-faq-item">
+            <dt>What can I journal?</dt>
+            <dd>Forex, gold, futures, crypto and prop firm accounts. One line logs a trade.</dd>
+          </div>
+          <div class="lnd-faq-item">
+            <dt>What does it track?</dt>
+            <dd>Pips, R multiples, expectancy per setup, win rate, risk budgets and psychology.</dd>
+          </div>
+          <div class="lnd-faq-item">
+            <dt>Does it work for prop firm evaluations?</dt>
+            <dd>Yes. Daily loss budgets and account rules are built in, including TopstepX imports.</dd>
+          </div>
+          <div class="lnd-faq-item">
+            <dt>What is the release edge?</dt>
+            <dd>It reads the economic calendar against your own record on each release, and most of the time it tells you to sit it out.</dd>
+          </div>
+        </dl>
       </section>
 
       <section class="lnd-close" data-landing-reveal>

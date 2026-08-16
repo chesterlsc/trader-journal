@@ -6737,6 +6737,49 @@ body.demo-signup::before {
   }
 }
 
+/* --- The FAQ. Crawlable answers for a one page site; same quiet voice. --- */
+.lnd-faq {
+  margin-top: var(--space-12);
+}
+
+.lnd-faq-title {
+  margin: 0 0 var(--space-6);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  letter-spacing: -0.02em;
+}
+
+.lnd-faq-list {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+}
+
+@media (min-width: 860px) {
+  .lnd-faq-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.lnd-faq-item {
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-clay-lg, 14px);
+  background: var(--surface-1);
+  box-shadow: var(--clay-raised);
+}
+
+.lnd-faq-item dt {
+  margin: 0 0 6px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.lnd-faq-item dd {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  max-width: 52ch;
+}
+
 /* --- What you get back --------------------------------------------------- */
 .lnd-value {
   display: grid;
