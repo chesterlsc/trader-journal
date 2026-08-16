@@ -6296,6 +6296,18 @@ body.demo-signup::before {
   opacity: 0;
 }
 
+/* THE TAPE. Five seconds of public domain footage on loop, object fit cover
+   so every panel is full bleed at any tile size. It sits over the drawn scene
+   (the poster and the fallback) and under the roll, scan, badge and chyron,
+   so the broadcast chrome stays on top of real pictures. */
+.lnd-mon .lnd-mon-tape {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* The luma band rolling down the tube. Tiled at exactly one screen height and
    translated by exactly one tile per cycle, so it is seamless by construction
    with no keyframe cleverness. The 92% stop is load bearing: it parks a lit

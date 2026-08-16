@@ -13459,7 +13459,40 @@ function setupLandingWall() {
     }
   };
 
+  // THE TAPES. preload none, so the footage costs nothing until the wall is
+  // actually approached; the observer starts the loops in view and pauses
+  // them out of it. Under reduced motion they never run on their own.
+  const tapes = Array.from(wall.querySelectorAll(".lnd-mon-tape"));
+  tapes.forEach((tape) => {
+    tape.muted = true;
+  });
+  const rollTapes = (on) => {
+    tapes.forEach((tape) => {
+      if (on) {
+        tape.play().catch(() => {});
+      } else {
+        tape.pause();
+      }
+    });
+  };
+  if (!still && tapes.length) {
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(
+        (entries) => entries.forEach((entry) => rollTapes(entry.isIntersecting)),
+        { threshold: 0.15 }
+      ).observe(wall);
+    } else {
+      rollTapes(true);
+    }
+  }
+
   document.getElementById("lndWallReplay")?.addEventListener("click", () => {
+    tapes.forEach((tape) => {
+      tape.currentTime = 0;
+    });
+    if (!still) {
+      rollTapes(true);
+    }
     if (still) {
       // Reduced motion: the reel advances one beat per press instead of
       // running on its own. Nothing moves that was not asked to.
