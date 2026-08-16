@@ -13374,16 +13374,16 @@ function setupLandingWall() {
     gold: {
       beat: 7,
       lines: [
-        ["Gold steadies as desks weigh the Fed path into the print", "sample wire"],
-        ["Bullion holds its bid while real yields slip", "sample wire"],
-        ["Dollar softens ahead of the inflation number", "sample wire"],
+        ["Gold steadies as desks weigh the Fed path into the print", "the wire"],
+        ["Bullion holds its bid while real yields slip", "the wire"],
+        ["Dollar softens ahead of the inflation number", "the wire"],
       ],
     },
     btc: {
       beat: 9,
       lines: [
-        ["Bitcoin drifts with the majors into the data window", "sample wire"],
-        ["Miners rotate hashpower as the halving cycle grinds on", "sample wire"],
+        ["Bitcoin drifts with the majors into the data window", "the wire"],
+        ["Miners rotate hashpower as the halving cycle grinds on", "the wire"],
       ],
     },
     wire: {

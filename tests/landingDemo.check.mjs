@@ -66,17 +66,16 @@ for (const claim of [
 }
 for (const claim of [
   "0.02 lots at risk $20",
-  "$10,000 demo account",
+
   "Short &middot; 0.02 lots",
   "+$40.00",
-  "+20.0 pips &middot; demo"
+  "+20.0 pips"
 ]) {
   assert.ok(html.includes(claim), `demo frame claim "${claim}" missing from index.html`);
 }
-// The frame must still SAY it is a demo — one quiet chip, but present, and
-// the winning close is tagged demo where the money number is printed.
+// The player keeps its name. The sample and demo chips were removed on an
+// explicit request (2026-08-17): the figures stay scripted, the labels do not.
 assert.ok(html.includes("Product demo"), "the demo section lost its 'Product demo' label");
-assert.ok(/lnd-demo-chrome-tag">demo</.test(html), "the demo frame chrome lost its demo tag");
 
 // --- 2. Ticker strips match the polled symbols, and say live · 5s ----------
 const symbolsMatch = /const TICKER_SYMBOLS = \[([^\]]+)\];/.exec(appJs);
