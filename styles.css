@@ -6305,8 +6305,8 @@ body.demo-signup::before {
   background: linear-gradient(
     180deg,
     transparent 0 78%,
-    rgb(255 255 255 / 0.05) 86%,
-    rgb(255 255 255 / 0.08) 92%,
+    rgb(255 255 255 / 0.09) 86%,
+    rgb(255 255 255 / 0.14) 92%,
     transparent 100%
   );
   background-size: 100% 100%;
@@ -6492,72 +6492,81 @@ body.demo-signup::before {
 /* THE FOUR SCENES. Flat gradient stacks on the terminal ramp, no photograph
    and nothing that could be mistaken for footage.
 
-   THEY MUST READ AT BOTH SIZES. A preview tile is 175px wide on a phone and
-   the program monitor is 700px on a desktop, so anything sized as a large
-   percentage becomes a pair of grey lumps at the big size. Every figure below
-   is therefore small and repeated, with structure behind it: a backdrop grid,
-   a horizon, a desk slab. Scale independent by construction. */
+   THEY MUST READ AS A LIVE SET, NOT A DEAD MONITOR. The first pass drew its
+   structure at 2 to 3% white over near black, and at real scale the picture
+   area read as a screen that is off, which the user reported as "the panel is
+   down". Structure now sits at 6 to 12% with lit set pieces, and the ground
+   stays dark, so the screens keep their own light on the light theme. */
 
-/* A news desk: video wall behind, desk slab across the lower third. No
-   figures: drawn people read as grey lumps at program size. */
+/* A newsroom: a glowing video wall in panels, a lit desk slab with a bright
+   working edge. */
 .lnd-mon-scene.is-studio {
   background:
-    linear-gradient(180deg, transparent 0 61%, var(--tp-s2) 61% 100%),
-    repeating-linear-gradient(90deg, transparent 0 6.5%, rgb(255 255 255 / 0.028) 6.5% 7%),
-    linear-gradient(180deg, transparent 0 22%, rgb(255 255 255 / 0.022) 22% 24%, transparent 24%),
+    linear-gradient(180deg, transparent 0 60%, rgb(255 255 255 / 0.14) 60% 60.6%, var(--tp-s2) 60.6% 100%),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.09) 0 1px, transparent 1px 12.5%),
+    repeating-linear-gradient(180deg, rgb(255 255 255 / 0.07) 0 1px, transparent 1px 30%),
+    linear-gradient(90deg, transparent 0 12.5%, rgb(216 130 60 / 0.10) 12.5% 25%, transparent 25% 62.5%, rgb(255 255 255 / 0.06) 62.5% 75%, transparent 75%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.05), transparent 55%),
     linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
 }
 
-/* Cut to a wider framing of the same set. */
+/* Cut to the wall itself, full frame: bigger panels, one lit hot. */
 .lnd-mon-scene.is-studio::before {
   background:
-    linear-gradient(180deg, transparent 0 64%, var(--tp-s2) 64% 100%),
-    repeating-linear-gradient(90deg, transparent 0 9%, rgb(255 255 255 / 0.03) 9% 9.6%),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.10) 0 1px, transparent 1px 25%),
+    repeating-linear-gradient(180deg, rgb(255 255 255 / 0.08) 0 1px, transparent 1px 50%),
+    linear-gradient(90deg, transparent 0 25%, rgb(216 130 60 / 0.14) 25% 50%, transparent 50%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.06), transparent 60%),
     linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
 }
 
-/* A chart wall: gridlines and a stepped trace. */
+/* A price wall: bright grid, an accent trace with an area wash under it, and
+   a lit last print line. */
 .lnd-mon-scene.is-chart {
   background:
-    linear-gradient(180deg, transparent 0 62%, var(--tp-acc-soft) 62% 63.4%, transparent 63.4%) 0 0 / 12% 100% repeat-x,
-    linear-gradient(180deg, transparent 0 48%, var(--tp-acc-soft) 48% 49.4%, transparent 49.4%) 6% 0 / 24% 100% repeat-x,
-    repeating-linear-gradient(90deg, transparent 0 7.5%, rgb(255 255 255 / 0.03) 7.5% 8%),
-    repeating-linear-gradient(180deg, transparent 0 16%, rgb(255 255 255 / 0.025) 16% 16.6%),
+    linear-gradient(180deg, transparent 0 37%, var(--tp-acc) 37% 38.6%, transparent 38.6%) 0 0 / 25% 100% repeat-x,
+    linear-gradient(180deg, transparent 0 52%, var(--tp-acc-soft) 52% 53.4%, transparent 53.4%) 12% 0 / 25% 100% repeat-x,
+    linear-gradient(180deg, transparent 0 53%, rgb(216 130 60 / 0.12) 53% 78%, transparent 78%),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.07) 0 1px, transparent 1px 12.5%),
+    repeating-linear-gradient(180deg, rgb(255 255 255 / 0.06) 0 1px, transparent 1px 20%),
     linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
 }
 
-/* Cut to the same trace at a different scale. */
+/* Cut to the same book zoomed: fewer, brighter levels. */
 .lnd-mon-scene.is-chart::before {
   background:
-    linear-gradient(180deg, transparent 0 38%, var(--tp-acc-soft) 38% 39.6%, transparent 39.6%) 0 0 / 9% 100% repeat-x,
-    repeating-linear-gradient(90deg, transparent 0 5%, rgb(255 255 255 / 0.03) 5% 5.5%),
-    repeating-linear-gradient(180deg, transparent 0 12%, rgb(255 255 255 / 0.025) 12% 12.5%),
+    linear-gradient(180deg, transparent 0 30%, var(--tp-acc) 30% 32%, transparent 32%) 0 0 / 50% 100% repeat-x,
+    linear-gradient(180deg, transparent 0 32%, rgb(216 130 60 / 0.14) 32% 66%, transparent 66%),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.08) 0 1px, transparent 1px 25%),
+    repeating-linear-gradient(180deg, rgb(255 255 255 / 0.07) 0 1px, transparent 1px 33%),
     linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
 }
 
-/* A briefing room: press wall, riser line, floor. */
+/* A briefing room: lit backdrop band, riser line, dark floor. */
 .lnd-mon-scene.is-podium {
   background:
-    linear-gradient(180deg, transparent 0 56%, var(--tp-line2) 56% 58%, transparent 58%),
-    linear-gradient(180deg, transparent 0 70%, var(--tp-s2) 70% 100%),
-    repeating-linear-gradient(90deg, transparent 0 11%, rgb(255 255 255 / 0.026) 11% 11.8%),
+    linear-gradient(180deg, transparent 0 68%, rgb(255 255 255 / 0.12) 68% 68.6%, var(--tp-s2) 68.6% 100%),
+    linear-gradient(180deg, transparent 0 26%, rgb(255 255 255 / 0.09) 26% 44%, transparent 44%),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.06) 0 1px, transparent 1px 10%),
     linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
 }
 
-/* Cut to a tighter framing of the wall. */
+/* Cut tighter on the backdrop: the band fills the frame. */
 .lnd-mon-scene.is-podium::before {
   background:
-    linear-gradient(180deg, transparent 0 72%, var(--tp-s2) 72% 100%),
-    repeating-linear-gradient(90deg, transparent 0 8%, rgb(255 255 255 / 0.026) 8% 8.7%),
+    linear-gradient(180deg, transparent 0 16%, rgb(255 255 255 / 0.11) 16% 52%, transparent 52%),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.07) 0 1px, transparent 1px 16.6%),
+    linear-gradient(180deg, transparent 0 78%, var(--tp-s2) 78% 100%),
     linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
 }
 
-/* A dark trading floor: desks in rows, nothing lit. No cut, it has nothing to
-   cut to. */
+/* A trading floor after hours: rows of monitors as lit cells, dimmer than the
+   live rooms on purpose. This channel has no read. */
 .lnd-mon-scene.is-floor {
   background:
-    repeating-linear-gradient(90deg, transparent 0 5%, rgb(255 255 255 / 0.02) 5% 5.4%),
-    repeating-linear-gradient(180deg, transparent 0 19%, rgb(255 255 255 / 0.018) 19% 19.6%),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.055) 0 7%, transparent 7% 12.5%),
+    repeating-linear-gradient(180deg, transparent 0 22%, rgb(10 12 16 / 0.9) 22% 26%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.03), transparent 50%),
     linear-gradient(180deg, var(--tp-s1), var(--tp-s0));
 }
 
@@ -6582,8 +6591,9 @@ body.demo-signup::before {
   right: 0;
   bottom: 0;
   left: 0;
-  padding: 5px 7px;
-  background: linear-gradient(180deg, transparent, var(--tp-s0) 62%);
+  padding: 6px 8px;
+  border-top: 1px solid var(--tp-acc);
+  background: linear-gradient(180deg, rgb(7 9 12 / 0.55), var(--tp-s0) 45%);
   color: var(--tp-text);
 }
 
