@@ -6451,10 +6451,10 @@ body.demo-signup::before {
   .lnd-mon-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
-/* The tile PLAYS now: data-channel plus the shipped playMonitor handler, the
-   same path as the desk's F7. The poster is drawn; the stream is real. */
+/* The tile is a replay, not a stream: nothing here is clickable. The desk's
+   F7 is where a click plays the real channel. */
 .lnd-mon.bb-mon {
-  cursor: pointer;
+  cursor: default;
 }
 
 .lnd-mon .bb-mon-h {
@@ -6478,31 +6478,8 @@ body.demo-signup::before {
   padding: 0;
   border: 0;
   background: var(--term-well);
-  cursor: pointer;
+  cursor: default;
   overflow: hidden;
-}
-.lnd-mon .bb-mon-screen:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-
-/* The press play affordance: quiet at rest so the poster reads as footage,
-   unmistakable on hover and on touch. */
-.lnd-mon-go {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: var(--tp-text);
-  font-size: 26px;
-  opacity: 0.4;
-  text-shadow: 0 1px 8px rgb(0 0 0 / 0.6);
-  transition: opacity 140ms var(--ease-out), transform 140ms var(--ease-out);
-}
-.lnd-mon .bb-mon-screen:hover .lnd-mon-go,
-.lnd-mon .bb-mon-screen:focus-visible .lnd-mon-go {
-  opacity: 1;
-  transform: scale(1.12);
-}
-@media (hover: none), (pointer: coarse) {
-  .lnd-mon-go { opacity: 0.85; }
 }
 
 /* --- The picture. Four drawn scenes, each a flat gradient stack on the
@@ -6667,8 +6644,27 @@ body.demo-signup::before {
 
 .lnd-wall-n { margin-left: 4px; }
 
-.lnd-wall-rail em {
+/* The reel's one control. Same chrome as the size tokens, but real. */
+.lnd-wall-replay {
   margin-left: auto;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid var(--tp-acc);
+  border-radius: 3px;
+  background: none;
+  color: var(--tp-acc);
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.lnd-wall-replay:hover { background: var(--tp-s2); }
+.lnd-wall-replay:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+@media (hover: none), (pointer: coarse) {
+  .lnd-wall-replay { min-height: 44px; min-width: 44px; }
+}
+
+.lnd-wall-rail em {
   font-style: normal;
   letter-spacing: 0.06em;
   text-transform: none;

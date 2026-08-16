@@ -805,19 +805,20 @@
                The fourth screen has NO READ on purpose: the demo journal has 0
                stamped trades, so the honest output is no call.
                ═══════════════════════════════════════════════════════════ -->
-          <figure class="lnd-tp-frame lnd-wall" aria-label="The wall: four news monitors, each plays the broadcaster&#39;s own public stream on click">
+          <figure class="lnd-tp-frame lnd-wall" aria-label="The wall: four drawn screens replaying the sample wire, nothing streaming">
             <figcaption class="lnd-tp-chrome">
               <span class="lnd-tp-dot" aria-hidden="true"></span>
               <span class="lnd-tp-title">F7&nbsp;the wall</span>
-              <span class="lnd-tp-tag">streams on click</span>
+              <span class="lnd-tp-tag">sample replay</span>
             </figcaption>
             <div class="lnd-wall-screen">
-              <p class="lnd-wall-rail" aria-hidden="true">
+              <p class="lnd-wall-rail">
                 <span class="lnd-wall-size is-on">band</span>
                 <span class="lnd-wall-size">half</span>
                 <span class="lnd-wall-size">max</span>
                 <span class="lnd-wall-n">16 channels &middot; 4 monitors</span>
-                <em>a click plays one, right here</em>
+                <button class="lnd-wall-replay" id="lndWallReplay" type="button">replay</button>
+                <em>on the desk, a click plays one</em>
               </p>
 
               <!-- THE GALLERY. Not four equal tiles: a broadcast gallery.
@@ -842,61 +843,67 @@
                    The posters keep the gallery motion: cuts on pairwise
                    COPRIME periods (21s, 13s, 17s), no animation-delay, so the
                    wall never pulses in unison and no loop has a seam. -->
-              <div class="lnd-mon-grid lnd-wall-grid">
-                <article class="bb-mon lnd-mon is-aim" style="--cut:21s;--roll:6.5s" data-channel="UChqUTb7kYRX8-EiaN3XFrSQ">
-                  <p class="bb-mon-h"><span class="bb-mon-dot"></span>markets<em>13:32:0</em></p>
-                  <button class="bb-mon-screen" type="button" aria-label="Play the Reuters live stream">
-                    <span class="lnd-mon-scene is-studio" aria-hidden="true"></span>
-                    <span class="lnd-mon-roll" aria-hidden="true"></span>
-                    <span class="bb-mon-scan" aria-hidden="true"></span>
-                    <span class="lnd-mon-badge" aria-hidden="true">stream</span>
-                    <span class="lnd-mon-go" aria-hidden="true">&#9654;</span>
-                    <span class="lnd-mon-third" aria-hidden="true">
-                      <i class="lnd-mon-line is-a"><b>REUTERS</b><u>plays the live stream</u></i>
+              <!-- THE GALLERY, ON REPLAY. Four drawn screens replaying the
+                   wire: setupLandingWall() cycles each panel's lower third on
+                   its own beat, ticks the timecodes, and the replay control
+                   restarts the reel. The lines are the SAMPLE WIRE headlines
+                   the demo desk already carries, labelled as such, because a
+                   real outlet's name never goes over an invented sentence and
+                   the live headline feed is auth gated on purpose. Nothing
+                   streams, nothing loads, nothing is stored: the whole
+                   broadcast is text and CSS. On the desk these same four
+                   slots play the broadcasters' own public streams. -->
+              <div class="lnd-mon-grid lnd-wall-grid" aria-hidden="true">
+                <article class="bb-mon lnd-mon is-aim" style="--cut:21s;--roll:6.5s" data-wall-panel="gold">
+                  <p class="bb-mon-h"><span class="bb-mon-dot"></span>markets<em data-wall-tc>13:32:05</em></p>
+                  <span class="bb-mon-screen">
+                    <span class="lnd-mon-scene is-studio"></span>
+                    <span class="lnd-mon-roll"></span>
+                    <span class="bb-mon-scan"></span>
+                    <span class="lnd-mon-badge">replay</span>
+                    <span class="lnd-mon-third">
+                      <i class="lnd-mon-line is-a"><b data-wall-head></b><u data-wall-sub></u></i>
                     </span>
-                  </button>
+                  </span>
                   <p class="lnd-mon-f"><span>coverage</span><b>gold 2.41x</b><em>elevated</em></p>
                 </article>
-                <article class="bb-mon lnd-mon " style="--cut:13s;--roll:8s" data-channel="UCqoSrYgusd8ZddtMoWhjHYA">
-                  <p class="bb-mon-h"><span class="bb-mon-dot"></span>macro<em>13:32:04</em></p>
-                  <button class="bb-mon-screen" type="button" aria-label="Play the Real Vision live stream">
-                    <span class="lnd-mon-scene is-chart" aria-hidden="true"></span>
-                    <span class="lnd-mon-roll" aria-hidden="true"></span>
-                    <span class="bb-mon-scan" aria-hidden="true"></span>
-                    <span class="lnd-mon-badge" aria-hidden="true">stream</span>
-                    <span class="lnd-mon-go" aria-hidden="true">&#9654;</span>
-                    <span class="lnd-mon-third" aria-hidden="true">
-                      <i class="lnd-mon-line is-a"><b>REAL VISION</b><u>plays the live stream</u></i>
+                <article class="bb-mon lnd-mon " style="--cut:13s;--roll:8s" data-wall-panel="btc">
+                  <p class="bb-mon-h"><span class="bb-mon-dot"></span>macro<em data-wall-tc>13:32:05</em></p>
+                  <span class="bb-mon-screen">
+                    <span class="lnd-mon-scene is-chart"></span>
+                    <span class="lnd-mon-roll"></span>
+                    <span class="bb-mon-scan"></span>
+                    <span class="lnd-mon-badge">replay</span>
+                    <span class="lnd-mon-third">
+                      <i class="lnd-mon-line is-a"><b data-wall-head></b><u data-wall-sub></u></i>
                     </span>
-                  </button>
+                  </span>
                   <p class="lnd-mon-f"><span>coverage</span><b>bitcoin 1.04x</b><em>normal</em></p>
                 </article>
-                <article class="bb-mon lnd-mon " style="--cut:17s;--roll:9.5s" data-channel="UCvJJ_dzjViJCoLf5uKUTwoA">
-                  <p class="bb-mon-h"><span class="bb-mon-dot"></span>US markets<em>13:32:03</em></p>
-                  <button class="bb-mon-screen" type="button" aria-label="Play the CNBC live stream">
-                    <span class="lnd-mon-scene is-podium" aria-hidden="true"></span>
-                    <span class="lnd-mon-roll" aria-hidden="true"></span>
-                    <span class="bb-mon-scan" aria-hidden="true"></span>
-                    <span class="lnd-mon-badge" aria-hidden="true">stream</span>
-                    <span class="lnd-mon-go" aria-hidden="true">&#9654;</span>
-                    <span class="lnd-mon-third" aria-hidden="true">
-                      <i class="lnd-mon-line is-a"><b>CNBC</b><u>plays the live stream</u></i>
+                <article class="bb-mon lnd-mon " style="--cut:17s;--roll:9.5s" data-wall-panel="wire">
+                  <p class="bb-mon-h"><span class="bb-mon-dot"></span>US markets<em data-wall-tc>13:32:05</em></p>
+                  <span class="bb-mon-screen">
+                    <span class="lnd-mon-scene is-podium"></span>
+                    <span class="lnd-mon-roll"></span>
+                    <span class="bb-mon-scan"></span>
+                    <span class="lnd-mon-badge">replay</span>
+                    <span class="lnd-mon-third">
+                      <i class="lnd-mon-line is-a"><b data-wall-head></b><u data-wall-sub></u></i>
                     </span>
-                  </button>
+                  </span>
                   <p class="lnd-mon-f"><span>wire</span><b>USD T&minus;47m</b><em>high</em></p>
                 </article>
-                <article class="bb-mon lnd-mon is-wide" style="--roll:12s" data-channel="UCSyUeVzpYW6VYv0EpNRxVAA">
-                  <p class="bb-mon-h"><span class="bb-mon-dot"></span>prop<em>13:32:03</em></p>
-                  <button class="bb-mon-screen" type="button" aria-label="Play the Topstep live stream">
-                    <span class="lnd-mon-scene is-floor" aria-hidden="true"></span>
-                    <span class="lnd-mon-roll" aria-hidden="true"></span>
-                    <span class="bb-mon-scan" aria-hidden="true"></span>
-                    <span class="lnd-mon-badge" aria-hidden="true">stream</span>
-                    <span class="lnd-mon-go" aria-hidden="true">&#9654;</span>
-                    <span class="lnd-mon-third" aria-hidden="true">
-                      <i class="lnd-mon-line is-a"><b>TOPSTEP</b><u>plays the live stream</u></i>
+                <article class="bb-mon lnd-mon is-wide" style="--roll:12s" data-wall-panel="prop">
+                  <p class="bb-mon-h"><span class="bb-mon-dot"></span>prop<em data-wall-tc>13:32:05</em></p>
+                  <span class="bb-mon-screen">
+                    <span class="lnd-mon-scene is-floor"></span>
+                    <span class="lnd-mon-roll"></span>
+                    <span class="bb-mon-scan"></span>
+                    <span class="lnd-mon-badge">replay</span>
+                    <span class="lnd-mon-third">
+                      <i class="lnd-mon-line is-a"><b data-wall-head></b><u data-wall-sub></u></i>
                     </span>
-                  </button>
+                  </span>
                   <p class="lnd-mon-f"><span>your file</span><b>no prints</b><em>no call</em></p>
                 </article>
               </div>
@@ -918,8 +925,8 @@
             </div>
           </figure>
           <p class="lnd-tp-fine">
-            Click a monitor and it plays the broadcaster&rsquo;s own public stream, embedded unmodified.
-            Nothing loads until you click. Nothing is stored and nothing is rebroadcast.
+            A replay of the sample wire, drawn in the browser. Nothing streams here and nothing is stored.
+            On the desk these four slots play the broadcasters&rsquo; own public streams, on a click.
           </p>
 
           <ul class="lnd-tp-legend">

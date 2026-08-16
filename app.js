@@ -1197,6 +1197,7 @@ function init() {
   setupShowcaseChooser();
   setupTerminal();
   setupLandingDemo();
+  setupLandingWall();
   startLivePriceLoop();
   // Hash router: restore the deep-linked view for preview sessions; the
   // authenticated flow restores in checkAuthSession once the gate opens.
@@ -13347,6 +13348,131 @@ function renderLndDemoFrame(frame) {
   d.stampRow.classList.toggle("is-stamped", frame.stamped);
   d.stampYou.textContent = frame.stamped ? "1 print" : "no file";
   d.stampFloor.hidden = !frame.stamped;
+}
+
+/* THE WALL'S REPLAY REEL. The landing's four monitors replay the wire as a
+   broadcast: each panel cycles its lower third on its own beat, the timecodes
+   tick, and the replay control restarts the reel from the top.
+
+   The lines are the SAMPLE WIRE set, labelled as such: a real outlet's name
+   never goes over an invented sentence, and the live headline feed is auth
+   gated on purpose (it protects the shared egress IP on GDELT's limiter).
+   Nothing streams and nothing loads; the whole broadcast is text.
+
+   Function declaration, so it hoists above the init() call and adds no
+   module level binding below it. */
+function setupLandingWall() {
+  const wall = document.querySelector(".lnd-wall");
+  if (!wall) {
+    return;
+  }
+
+  // Per panel playlists. Beats are seconds between line changes, pairwise
+  // different so the wall never changes in unison, matching the cut rhythm's
+  // coprime idea without trying to sync to the CSS clock.
+  const REEL = {
+    gold: {
+      beat: 7,
+      lines: [
+        ["Gold steadies as desks weigh the Fed path into the print", "sample wire"],
+        ["Bullion holds its bid while real yields slip", "sample wire"],
+        ["Dollar softens ahead of the inflation number", "sample wire"],
+      ],
+    },
+    btc: {
+      beat: 9,
+      lines: [
+        ["Bitcoin drifts with the majors into the data window", "sample wire"],
+        ["Miners rotate hashpower as the halving cycle grinds on", "sample wire"],
+      ],
+    },
+    wire: {
+      beat: 6,
+      lines: [
+        ["CPI m/m in 47 minutes", "USD \u00b7 high impact"],
+        ["Unemployment Claims 15:30z", "USD \u00b7 medium impact"],
+        ["FOMC Member Speaks 18:00z", "USD \u00b7 high impact"],
+        ["Flash GDP q/q tomorrow", "EUR \u00b7 medium impact"],
+      ],
+    },
+    prop: {
+      beat: 11,
+      lines: [
+        ["NO READ", "16 closed \u00b7 0 stamped"],
+        ["rate floor 5 \u00b7 verdict floor 10", "your file"],
+        ["no call issued", "the honest common case"],
+      ],
+    },
+  };
+
+  const panels = Array.from(wall.querySelectorAll("[data-wall-panel]"))
+    .map((node) => ({
+      node,
+      reel: REEL[node.dataset.wallPanel],
+      head: node.querySelector("[data-wall-head]"),
+      sub: node.querySelector("[data-wall-sub]"),
+      tc: node.querySelector("[data-wall-tc]"),
+      index: 0,
+    }))
+    .filter((panel) => panel.reel && panel.head && panel.sub);
+
+  const show = (panel) => {
+    const [head, sub] = panel.reel.lines[panel.index % panel.reel.lines.length];
+    panel.head.textContent = head;
+    panel.sub.textContent = sub;
+  };
+
+  panels.forEach(show);
+
+  const still = prefersReducedMotion();
+  let tick = 0;
+  let timer = 0;
+
+  const beatAll = () => {
+    tick += 1;
+    panels.forEach((panel) => {
+      if (tick % panel.reel.beat === 0) {
+        panel.index += 1;
+        show(panel);
+      }
+      if (panel.tc) {
+        // A replay counter, not a wall clock: it counts the reel, so it never
+        // claims a live time it does not have.
+        const t = tick;
+        panel.tc.textContent = `00:${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+      }
+    });
+  };
+
+  const start = () => {
+    window.clearInterval(timer);
+    tick = 0;
+    panels.forEach((panel) => {
+      panel.index = 0;
+      show(panel);
+      if (panel.tc) {
+        panel.tc.textContent = "00:00:00";
+      }
+    });
+    if (!still) {
+      timer = window.setInterval(beatAll, 1000);
+    }
+  };
+
+  document.getElementById("lndWallReplay")?.addEventListener("click", () => {
+    if (still) {
+      // Reduced motion: the reel advances one beat per press instead of
+      // running on its own. Nothing moves that was not asked to.
+      panels.forEach((panel) => {
+        panel.index += 1;
+        show(panel);
+      });
+      return;
+    }
+    start();
+  });
+
+  start();
 }
 
 function setupLandingDemo() {
