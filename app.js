@@ -15056,6 +15056,20 @@ function syncChromeHeight() {
     }, 0);
     if (bottom > 0) {
       root.style.setProperty("--chrome-h", `${bottom}px`);
+    } else if (document.querySelector(".rail")?.getBoundingClientRect().width > 0) {
+      // THE RAIL IS SIDE CHROME AND MEASURES ZERO AT THE TOP, ON PURPOSE.
+      // It is deliberately absent from the bar list above, because this
+      // function publishes a bar's BOTTOM edge and a full height left rail's
+      // bottom edge is the bottom of the window: listing it would pin every
+      // view's top to roughly 100vh.
+      //
+      // But with the top nav gone there is genuinely nothing above the page on
+      // desktop, and the old else branch's removeProperty() would drop
+      // --chrome-h to its 86px stylesheet fallback, leaving an 86px dead band
+      // above every pinned view. So: zero, explicitly. The width test is what
+      // separates "the rail is on screen" from the locked session screen,
+      // where it is display none.
+      root.style.setProperty("--chrome-h", "0px");
     } else {
       // Both hidden: the locked-session screen, where nothing is pinned.
       // Clearing lets the stylesheet fall back to its own number rather than

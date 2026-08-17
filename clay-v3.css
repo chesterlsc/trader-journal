@@ -677,3 +677,136 @@
        #dashboard .metric-card.dash-hero { padding-bottom: 126px; }
      }
    The desktop pass above does not touch the phone well, so it stays a note. */
+
+/* ==========================================================================
+   THE RACK, PART 1: THE SPINE.
+
+   The nav stops being a bar across the top and becomes a fixed left rail.
+   Collapsed to 56px of icons by default, expanding to 210px as an OVERLAY on
+   hover or keyboard focus. Overlay is the whole point: the layout only ever
+   reserves 56px, so expanding costs the dashboard nothing and reflows
+   nothing, which is what makes it feel like chrome rather than a panel.
+
+   Desktop only, behind the same 1025px seam the top bar used, because below
+   it the sidebar drawer and the bottom tab bar already own navigation and a
+   third nav on a phone is how you lose the content.
+
+   Every child class is still topnav-*, inherited verbatim from clay-v2. Only
+   geometry is written here.
+   ========================================================================== */
+:root {
+  /* Reserved gutter. Zero everywhere by default so no other breakpoint has
+     to know the rail exists; the desktop block below is the only writer. */
+  --rail-w: 0px;
+}
+
+.rail { display: none; }
+
+@media (min-width: 1025px) {
+  :root { --rail-w: 56px; }
+
+  .rail {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: var(--z-nav);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+    width: var(--rail-w);
+    padding: 12px 8px;
+    border-right: 1px solid var(--line);
+    border-radius: 0;
+    background: var(--surface-2);
+    box-shadow: none;
+    overflow: hidden;
+    transition: width 160ms var(--ease-out);
+  }
+
+  /* THE OVERLAY. Width grows, the reserved gutter does not, so the rail
+     floats over the page instead of pushing it. */
+  .rail:hover,
+  .rail:focus-within {
+    width: 210px;
+    box-shadow: var(--clay-float);
+  }
+
+  /* The bottom cluster sinks: destinations at the top, utilities at the
+     foot, which is what makes a spine read as a spine. */
+  .rail-spacer { flex: 1 1 auto; }
+
+  /* Rows, not a row. Each key is a full width target with its icon locked in
+     the 40px collapsed column so nothing shifts sideways as labels arrive. */
+  .rail .topnav-btn,
+  .rail .topnav-icon-btn,
+  .rail .topnav-mark,
+  .rail .topnav-more > summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 40px;
+    padding: 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    justify-content: flex-start;
+  }
+
+  .rail .topnav-links {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .rail .topnav-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    width: 100%;
+  }
+
+  /* Labels are present for the accessibility tree at all times and revealed
+     with the rail, so nothing is hidden from a screen reader by collapsing.
+     Opacity, not display, for exactly that reason. */
+  .rail .topnav-label {
+    opacity: 0;
+    transition: opacity 120ms var(--ease-out);
+  }
+  .rail:hover .topnav-label,
+  .rail:focus-within .topnav-label { opacity: 1; }
+
+  /* The unjournalled badge must stay legible while collapsed: it is the one
+     thing on the rail that is a number rather than a destination. */
+  .rail .topnav-badge {
+    margin-left: auto;
+    opacity: 1;
+  }
+
+  /* The overflow menu opens beside the rail, not under it. */
+  .rail .topnav-menu {
+    position: fixed;
+    left: calc(var(--rail-w) + 8px);
+    bottom: 12px;
+    min-width: 220px;
+  }
+
+  /* THE PAGE MOVES OVER. Every pinned view starts after the gutter, and the
+     shell's centring math works inside what is left. */
+  .app-layout,
+  .content { padding-left: var(--rail-w); }
+
+  .view.is-active { left: var(--rail-w); }
+
+  /* Fixed furniture that was centred on the VIEWPORT has to re-centre on the
+     content column, or it sits half a rail to the left of the thing it
+     belongs to. */
+  .dash-ticker-dock { left: calc(50% + (var(--rail-w) / 2)); }
+}
+
+/* Locked session: same contract the top bar had. */
+body.auth-locked .rail { display: none !important; }

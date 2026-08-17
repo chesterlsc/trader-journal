@@ -1283,94 +1283,6 @@
       </aside>
 
       <main class="content">
-        <!-- 1a: the six-item text nav is gone. A compact icon bar — TJ mark,
-             five destinations, a moon toggle and an overflow menu. Every
-             button still carries .nav-btn + data-target, so switchView(), the
-             hash router, aria-current and the auth gate need no changes.
-             RULES is an ACTION (jump to Risk Controls), not a view, so it is
-             deliberately not a .nav-btn — it must never claim aria-current. -->
-        <nav class="topnav" aria-label="Main sections">
-          <button class="topnav-mark nav-btn" type="button" data-target="dashboard" data-nav-silent aria-label="Trader Journal dashboard">TJ</button>
-          <span class="topnav-rule" aria-hidden="true"></span>
-          <div class="topnav-links">
-            <button class="nav-btn topnav-btn is-active" type="button" data-target="dashboard" aria-current="page">
-              <span class="topnav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 19.25v-6.5M9.75 19.25V6.75M14.25 19.25v-9.5M19.25 19.25v-14.5" /></svg>
-              </span>
-              <span class="topnav-label">Dash</span>
-            </button>
-            <button class="nav-btn topnav-btn" type="button" data-target="journal">
-              <span class="topnav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 5.75h14.5v12.5H4.75zM4.75 10h14.5M4.75 14.25h14.5M10 10v8.25" /></svg>
-              </span>
-              <span class="topnav-label">Trades</span>
-              <!-- Count of closed trades with no note. Lives on Trades because
-                   that is the view where the note gets written. -->
-              <span class="topnav-badge" id="navUnjournalledBadge" hidden></span>
-            </button>
-            <button class="nav-btn topnav-btn" type="button" data-target="calendar">
-              <span class="topnav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 6.75h14.5v12.5H4.75zM4.75 11h14.5M8.75 4v4M15.25 4v4" /></svg>
-              </span>
-              <span class="topnav-label">Cal</span>
-            </button>
-            <button class="nav-btn topnav-btn" type="button" data-target="reflections">
-              <span class="topnav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 5.75h14.5v10.5h-8.5l-4.5 3.5v-3.5h-1.5z" /></svg>
-              </span>
-              <span class="topnav-label">Journal</span>
-            </button>
-            <!-- Terminal Pro is a destination, not an overflow item. It lived in
-                 the "..." menu, which is why a granted user reported they could
-                 not see it at all. Still gated by [data-terminal-nav]. -->
-            <button class="nav-btn topnav-btn" type="button" data-target="terminal" data-terminal-nav hidden>
-              <span class="topnav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 5.75h14.5v12.5H4.75zM8 10l2.5 2L8 14M12.75 14.5h3.5" /></svg>
-              </span>
-              <span class="topnav-label">Edge</span>
-            </button>
-            <button class="topnav-btn topnav-btn-action" type="button" id="riskRulesBtn">
-              <span class="topnav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false"><path d="M12 4.75 5 8v5c0 4 3 7.3 7 8.2 4-.9 7-4.2 7-8.2V8z" /><path d="M9.3 12.2l2 2 3.4-3.8" /></svg>
-              </span>
-              <span class="topnav-label">Rules</span>
-            </button>
-          </div>
-          <div class="topnav-actions">
-            <!-- The account switcher. Everything on every screen is scoped to
-                 whatever this says, so it sits in the top bar rather than in a
-                 settings page. A native <select> on purpose: it is keyboard
-                 reachable, screen-reader correct and uses the platform picker
-                 on a phone, none of which a div would be for free. Hidden
-                 while there is only one account (app.js renderAccountSwitcher). -->
-            <div class="account-switch" data-account-switch-wrap hidden>
-              <label class="account-switch-label" for="accountSwitchTop">Account</label>
-              <select id="accountSwitchTop" class="account-switch-select" data-account-switch></select>
-            </div>
-            <button
-              class="topnav-icon-btn"
-              type="button"
-              data-theme-toggle
-              data-theme-glyph
-              aria-label="Switch to dark theme"
-            >
-              <span aria-hidden="true">&#9790;</span>
-            </button>
-            <details class="topnav-more" id="topnavMore">
-              <summary class="topnav-icon-btn" aria-label="More menu"><span aria-hidden="true">&#8943;</span></summary>
-              <div class="topnav-menu">
-                <button class="topnav-menu-item nav-btn" type="button" data-target="trade-entry">Trade entry</button>
-                <button class="topnav-menu-item nav-btn" type="button" data-target="monthly">Monthly review</button>
-                <button id="exportCsvBtn" class="topnav-menu-item" type="button">Export CSV</button>
-                <button id="previewLandingBtnDesktop" class="topnav-menu-item nav-preview-landing" type="button" data-preview-landing hidden>
-                  <span class="dev-chip-tag">dev</span>
-                  <span>Preview landing</span>
-                </button>
-                <button id="desktopLogoutBtn" class="topnav-menu-item topnav-menu-item-danger" type="button" hidden>Logout</button>
-              </div>
-            </details>
-          </div>
-        </nav>
 
 
         <!-- Demo notice. Sits outside every .view, so it is honest on all six
@@ -2972,6 +2884,102 @@
          "5 of 5, tab". 1b route 3: it no longer navigates to the form view —
          it expands in place into the five-field #tradeSheet. The full form
          stays reachable from the sheet's "Add detail" and from Edit. -->
+    <!-- THE RACK'S SPINE. Desktop chrome at 1025px and up, replacing the top
+         bar one for one. A BODY child, not a .content child, and class="rail"
+         not class="topnav": syncChromeHeight() measures a bar's BOTTOM edge
+         from the list [.topnav, #sidebar, #demoBanner, .tabbar], and a full
+         height left rail's bottom edge is the bottom of the window, so
+         matching that selector would pin every view to roughly 100vh.
+
+         Every CHILD class stays topnav-* verbatim. Those rules are all bare
+         class selectors, never descendant scoped under .topnav, so the rail
+         inherits the whole shipped icon, label, badge, menu and focus ring
+         skin for free and needs geometry only. It also keeps
+         tests/mobileFloors OFF_PHONE matching .topnav-label by exact name. -->
+        <nav class="rail" aria-label="Main sections">
+          <button class="topnav-mark nav-btn" type="button" data-target="dashboard" data-nav-silent aria-label="Trader Journal dashboard">TJ</button>
+          <span class="topnav-rule" aria-hidden="true"></span>
+          <div class="topnav-links">
+            <button class="nav-btn topnav-btn is-active" type="button" data-target="dashboard" aria-current="page">
+              <span class="topnav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 19.25v-6.5M9.75 19.25V6.75M14.25 19.25v-9.5M19.25 19.25v-14.5" /></svg>
+              </span>
+              <span class="topnav-label">Dash</span>
+            </button>
+            <button class="nav-btn topnav-btn" type="button" data-target="journal">
+              <span class="topnav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 5.75h14.5v12.5H4.75zM4.75 10h14.5M4.75 14.25h14.5M10 10v8.25" /></svg>
+              </span>
+              <span class="topnav-label">Trades</span>
+              <!-- Count of closed trades with no note. Lives on Trades because
+                   that is the view where the note gets written. -->
+              <span class="topnav-badge" id="navUnjournalledBadge" hidden></span>
+            </button>
+            <button class="nav-btn topnav-btn" type="button" data-target="calendar">
+              <span class="topnav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 6.75h14.5v12.5H4.75zM4.75 11h14.5M8.75 4v4M15.25 4v4" /></svg>
+              </span>
+              <span class="topnav-label">Cal</span>
+            </button>
+            <button class="nav-btn topnav-btn" type="button" data-target="reflections">
+              <span class="topnav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 5.75h14.5v10.5h-8.5l-4.5 3.5v-3.5h-1.5z" /></svg>
+              </span>
+              <span class="topnav-label">Journal</span>
+            </button>
+            <!-- Terminal Pro is a destination, not an overflow item. It lived in
+                 the "..." menu, which is why a granted user reported they could
+                 not see it at all. Still gated by [data-terminal-nav]. -->
+            <button class="nav-btn topnav-btn" type="button" data-target="terminal" data-terminal-nav hidden>
+              <span class="topnav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 5.75h14.5v12.5H4.75zM8 10l2.5 2L8 14M12.75 14.5h3.5" /></svg>
+              </span>
+              <span class="topnav-label">Edge</span>
+            </button>
+            <button class="topnav-btn topnav-btn-action" type="button" id="riskRulesBtn">
+              <span class="topnav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false"><path d="M12 4.75 5 8v5c0 4 3 7.3 7 8.2 4-.9 7-4.2 7-8.2V8z" /><path d="M9.3 12.2l2 2 3.4-3.8" /></svg>
+              </span>
+              <span class="topnav-label">Rules</span>
+            </button>
+          </div>
+          <span class="rail-spacer" aria-hidden="true"></span>
+          <div class="topnav-actions">
+            <!-- The account switcher. Everything on every screen is scoped to
+                 whatever this says, so it sits in the top bar rather than in a
+                 settings page. A native <select> on purpose: it is keyboard
+                 reachable, screen-reader correct and uses the platform picker
+                 on a phone, none of which a div would be for free. Hidden
+                 while there is only one account (app.js renderAccountSwitcher). -->
+            <div class="account-switch" data-account-switch-wrap hidden>
+              <label class="account-switch-label" for="accountSwitchTop">Account</label>
+              <select id="accountSwitchTop" class="account-switch-select" data-account-switch></select>
+            </div>
+            <button
+              class="topnav-icon-btn"
+              type="button"
+              data-theme-toggle
+              data-theme-glyph
+              aria-label="Switch to dark theme"
+            >
+              <span aria-hidden="true">&#9790;</span>
+            </button>
+            <details class="topnav-more" id="topnavMore">
+              <summary class="topnav-icon-btn" aria-label="More menu"><span aria-hidden="true">&#8943;</span></summary>
+              <div class="topnav-menu">
+                <button class="topnav-menu-item nav-btn" type="button" data-target="trade-entry">Trade entry</button>
+                <button class="topnav-menu-item nav-btn" type="button" data-target="monthly">Monthly review</button>
+                <button id="exportCsvBtn" class="topnav-menu-item" type="button">Export CSV</button>
+                <button id="previewLandingBtnDesktop" class="topnav-menu-item nav-preview-landing" type="button" data-preview-landing hidden>
+                  <span class="dev-chip-tag">dev</span>
+                  <span>Preview landing</span>
+                </button>
+                <button id="desktopLogoutBtn" class="topnav-menu-item topnav-menu-item-danger" type="button" hidden>Logout</button>
+              </div>
+            </details>
+          </div>
+        </nav>
+
     <nav class="tabbar" id="tabBar" aria-label="Primary sections">
       <button class="nav-btn tabbar-btn is-active" type="button" data-target="dashboard" aria-current="page">
         <span class="tabbar-icon" aria-hidden="true">

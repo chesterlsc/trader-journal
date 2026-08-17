@@ -582,33 +582,12 @@ textarea {
    are the clay shadow recipes, which are theme-scoped like §3/§4 above.
    ========================================================================== */
 
-/* --- 10a. Compact top bar -------------------------------------------------
-   Replaces the six-item text nav. Desktop only: below 1025px the sidebar
-   drawer + the bottom tab bar already own navigation, and stacking a third
-   nav on a 375px screen is how you lose the content. */
-.topnav {
-  display: none;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-clay-lg);
-  background: var(--surface-2);
-  box-shadow: inset 0 1px 0 var(--clay-edge), var(--clay-raised);
-  position: sticky;
-  top: 18px;
-  z-index: var(--z-nav);
-}
-
-@media (min-width: 1025px) {
-  .topnav {
-    display: flex;
-  }
-}
-
-/* Locked session: same contract the deleted .desktop-nav had. */
-body.auth-locked .topnav {
-  display: none !important;
-}
+/* --- 10a. The nav container moved to clay-v3 as .rail ----------------------
+   This was the compact top bar. It is a left spine now, and its three
+   container rules live in clay-v3.css beside the rest of the rack. Every
+   .topnav-* CHILD rule below is untouched and still applies: they are bare
+   class selectors, never descendant scoped, which is exactly why the rail
+   could inherit the whole skin by renaming one element. */
 
 .topnav-mark {
   flex: 0 0 auto;
