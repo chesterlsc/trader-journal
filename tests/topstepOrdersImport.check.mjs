@@ -370,8 +370,12 @@ expectFailure(
   /Row 2: .*TradeDay must be a valid date with an explicit UTC offset/,
   "TradeDay without source offset"
 );
-expectFailure(
-  [
+// An Opening fill on the opposite side is a REVERSAL, not a malformed file.
+// It used to fail closed here; it is split now, and the full arithmetic is
+// pinned in the reversal block below. Size 1 against an open 1 offsets exactly,
+// so this yields one closed episode and nothing left open.
+{
+  const offset = parseTopstepOrdersCsv(makeCsv([
     pair()[0],
     order({
       Id: "SANITIZED-WRONG-OPEN",
@@ -379,10 +383,11 @@ expectFailure(
       CreatedAt: "08/13/2026 09:01:00 +08:00",
       FilledAt: "08/13/2026 09:01:00 +08:00"
     })
-  ],
-  /Row 3: Opening fill is on the wrong side and would reverse/,
-  "wrong-side opening reversal"
-);
+  ]));
+  assert.deepEqual(offset.errors, [], "a reversing fill is split, not rejected");
+  assert.equal(offset.trades.length, 1);
+  assert.equal(offset.openPositions.length, 0);
+}
 expectFailure(
   [pair()[0], order({
     Id: "SANITIZED-WRONG-CLOSE",
@@ -483,6 +488,67 @@ assert.match(
   /^topstepx-orders:fingerprint:tso_[0-9a-f]{16}$/,
   "hashed account and order provenance remains usable without raw identifiers"
 );
+
+// --- THE REVERSAL. One fill, long straight to short. -----------------------
+// Topstep marks the flip as Opening because from its side that is what it is.
+// It used to fail the whole file with "Opening fill is on the wrong side",
+// which is what blocked a real 50k live account's export: 136 filled orders
+// and one reversal killed all 32 episodes. The split is arithmetically
+// determined, so it is split rather than refused.
+{
+  const rev = parseTopstepOrdersCsv(makeCsv([
+    order({ Id: "SANITIZED-REV-1", Size: "1", ExecutePrice: "4443.400000000" }),
+    // sell 5 while long 1: closes the long, opens a short 4, at one price
+    order({
+      Id: "SANITIZED-REV-2", Size: "5", Side: "Ask", ExecutePrice: "4438.100000000",
+      PositionDisposition: "Opening",
+      CreatedAt: "08/13/2026 09:05:00 +08:00", FilledAt: "08/13/2026 09:05:00 +08:00"
+    }),
+    order({
+      Id: "SANITIZED-REV-3", Size: "4", Side: "Bid", ExecutePrice: "4430.000000000",
+      PositionDisposition: "Closing", CreationDisposition: "ClosePosition",
+      CreatedAt: "08/13/2026 09:10:00 +08:00", FilledAt: "08/13/2026 09:10:00 +08:00"
+    })
+  ]));
+  assert.deepEqual(rev.errors, [], "a reversal is split, not refused");
+  assert.equal(rev.trades.length, 2, "one reversal yields two episodes");
+
+  const [long, short] = rev.trades;
+  assert.equal(long.direction, "Buy");
+  assert.equal(long.roundTurnQuantity, 1);
+  assert.equal(long.entryPrice, 4443.4);
+  assert.equal(long.exitPrice, 4438.1, "the long closes AT the reversing fill's price");
+  assert.equal(long.calculatedGrossPnl, -53, "(4438.1 - 4443.4) * 1 * 10");
+
+  assert.equal(short.direction, "Sell");
+  assert.equal(short.roundTurnQuantity, 4, "the remainder opens the new side");
+  assert.equal(short.entryPrice, 4438.1);
+  assert.equal(short.exitPrice, 4430);
+  assert.equal(short.calculatedGrossPnl, 324, "(4438.1 - 4430) * 4 * 10");
+
+  // The reversing fill did two things, so it is in both episodes' provenance.
+  assert.ok(long.sourceOrderIds.includes("SANITIZED-REV-2"));
+  assert.ok(short.sourceOrderIds.includes("SANITIZED-REV-2"));
+  assert.notEqual(long.externalFingerprint, short.externalFingerprint,
+    "the two episodes stay distinct for dedupe");
+}
+
+// An Opening fill that exactly matches the open position closes it flat, and
+// opens nothing: the remainder is zero.
+{
+  const flat = parseTopstepOrdersCsv(makeCsv([
+    order({ Id: "SANITIZED-FLAT-1", Size: "2", ExecutePrice: "4400.000000000" }),
+    order({
+      Id: "SANITIZED-FLAT-2", Size: "2", Side: "Ask", ExecutePrice: "4410.000000000",
+      PositionDisposition: "Opening",
+      CreatedAt: "08/13/2026 09:05:00 +08:00", FilledAt: "08/13/2026 09:05:00 +08:00"
+    })
+  ]));
+  assert.deepEqual(flat.errors, []);
+  assert.equal(flat.trades.length, 1);
+  assert.equal(flat.openPositions.length, 0, "an exact offset leaves nothing open");
+  assert.equal(flat.trades[0].calculatedGrossPnl, 200, "(4410 - 4400) * 2 * 10");
+}
 
 // --- The mid session export: one fill in, bracket resting. -----------------
 // The exact shape a live TopstepX account exports during the day: a Filled

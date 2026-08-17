@@ -134,22 +134,34 @@ export function createRecentTradesView(deps) {
     return { key: "flat", label: "Flat" };
   }
 
-  // THE VERIFIED CHECK. A row that came out of a TopstepX export wears the
-  // blue check: a filled scalloped disc with a white tick, the shape people
-  // already read as "verified" without being told. It is a claim about SOURCE
-  // and nothing more, which the tooltip and the screen reader label both say
-  // in words: the broker's own file produced this row rather than typing.
+  // TWO KINDS OF PROVENANCE, and the difference is the point.
+  //
+  // A row a BROKER EXPORT produced wears the blue check: the fills, prices and
+  // sizes came out of TopstepX, so the numbers are not this trader's word.
+  // The label names the source rather than saying "verified" on its own,
+  // because what is verified is WHERE IT CAME FROM.
+  //
+  // A row the trader JOURNALLED THEMSELVES wears a quieter pen mark. It is
+  // still their real record, and the tape says so, but it is self reported
+  // and must never borrow the check that means a broker file said it.
   function renderTapeMark(trade) {
-    if (!String(trade.importSource || "").toLowerCase().startsWith("topstepx")) {
-      return "";
+    if (String(trade.importSource || "").toLowerCase().startsWith("topstepx")) {
+      return `<span class="lnd-row-mark is-broker" title="From a TopstepX export: fills, prices and sizes came from the broker">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path class="lnd-row-mark-disc" d="M12 1.5l2.6 2 3.2-.3 1 3.1 2.7 1.8-1.2 3 1.2 3-2.7 1.8-1 3.1-3.2-.3-2.6 2-2.6-2-3.2.3-1-3.1L2.5 15l1.2-3-1.2-3 2.7-1.8 1-3.1 3.2.3z"/>
+            <path class="lnd-row-mark-tick" d="M8.2 12.3l2.6 2.6 5-5.2"/>
+          </svg>
+          <i>Topstep import</i>
+          <span class="visually-hidden">Verified from a TopstepX broker export</span>
+        </span>`;
     }
-    return `<span class="lnd-row-mark" title="Broker verified: reconstructed from a TopstepX export">
+    return `<span class="lnd-row-mark is-self" title="Journalled by hand in Trader Journal">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path class="lnd-row-mark-disc" d="M12 1.5l2.6 2 3.2-.3 1 3.1 2.7 1.8-1.2 3 1.2 3-2.7 1.8-1 3.1-3.2-.3-2.6 2-2.6-2-3.2.3-1-3.1L2.5 15l1.2-3-1.2-3 2.7-1.8 1-3.1 3.2.3z"/>
-          <path class="lnd-row-mark-tick" d="M8.2 12.3l2.6 2.6 5-5.2"/>
+          <path class="lnd-row-mark-pen" d="M4.5 19.5l1-3.6L15.2 6.2l2.6 2.6-9.7 9.7z"/>
+          <path class="lnd-row-mark-pen" d="M14.9 4.4l2.1-2.1 4.7 4.7-2.1 2.1"/>
         </svg>
-        <i>Verified</i>
-        <span class="visually-hidden">Broker verified, reconstructed from a TopstepX export</span>
+        <i>Journalled</i>
+        <span class="visually-hidden">Journalled by hand</span>
       </span>`;
   }
 

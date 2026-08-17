@@ -393,11 +393,49 @@ function reconstructGroup(input) {
 
   for (const order of orders) {
     if (order.disposition === "Opening") {
+      // A REVERSAL. Topstep marks the flip as Opening because from its side
+      // that is what it is: one fill that takes a long straight to a short
+      // without passing through flat. The arithmetic is not ambiguous, so it
+      // is split rather than refused. The open lots close at this fill's
+      // price, and the remainder opens the new position at the same price.
+      // The fill contributes to BOTH episodes and appears in both source
+      // order id lists, which is the truth: it did two things.
+      if (position !== 0 && Math.sign(order.signedSize) !== Math.sign(position)) {
+        const closeQuantity = Math.min(Math.abs(order.signedSize), Math.abs(position));
+        const openQuantity = Math.abs(order.signedSize) - closeQuantity;
+
+        const closingLeg = {
+          ...order,
+          size: closeQuantity,
+          signedSize: Math.sign(order.signedSize) * closeQuantity,
+          disposition: "Closing"
+        };
+        episode.orders.push(closingLeg);
+        episode.closings.push(closingLeg);
+        position += closingLeg.signedSize;
+
+        if (position === 0) {
+          trades.push(buildEpisodeTrade(episode));
+          episode = null;
+        }
+
+        if (openQuantity > 0) {
+          const openingLeg = {
+            ...order,
+            size: openQuantity,
+            signedSize: Math.sign(order.signedSize) * openQuantity
+          };
+          episode = { orders: [], openings: [], closings: [], peakPositionSize: 0 };
+          episode.orders.push(openingLeg);
+          episode.openings.push(openingLeg);
+          position += openingLeg.signedSize;
+          episode.peakPositionSize = Math.abs(position);
+        }
+        continue;
+      }
+
       if (position === 0) {
         episode = { orders: [], openings: [], closings: [], peakPositionSize: 0 };
-      } else if (Math.sign(order.signedSize) !== Math.sign(position)) {
-        errors.push(`Row ${order.rowNumber}: Opening fill is on the wrong side and would reverse the position.`);
-        break;
       }
 
       episode.orders.push(order);

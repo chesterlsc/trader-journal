@@ -1326,7 +1326,8 @@ body.is-guest:not(.demo-signup) .auth-shell {
   width: 100%;
 }
 
-.lnd-soon-chip {
+.lnd-soon-chip,
+.lnd-live-chip {
   display: inline-block;
   margin-left: 4px;
   padding: 3px 8px;
@@ -1336,6 +1337,13 @@ body.is-guest:not(.demo-signup) .auth-shell {
   font: 700 var(--fs-micro)/1 var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+/* The release edge shipped. The chip stops promising and starts stating, so
+   it reads as a live instrument rather than a roadmap item. */
+.lnd-live-chip {
+  border-color: var(--pnl-pos);
+  color: var(--pnl-pos);
 }
 
 .lnd-term-link {
@@ -6797,7 +6805,30 @@ body.demo-signup::before {
   gap: 4px;
   margin-left: 6px;
   vertical-align: -1px;
+}
+
+/* THE BROKER CHECK. Blue, filled, loud: a broker file produced this row and
+   that is the strongest thing the tape can say. Pinned rather than tokenised
+   so it is the same blue on either theme, and never the oxide accent, which
+   would read as "profit" beside a win row. */
+.lnd-row-mark.is-broker {
   color: #2f9bf5;
+}
+
+/* THE SELF JOURNALLED MARK. A pen, in the tape's own faint ink. Deliberately
+   quieter than the check: this row is the trader's real record but it is
+   their word for it, and borrowing the blue would erase the distinction the
+   check exists to make. */
+.lnd-row-mark.is-self {
+  color: var(--text-faint);
+}
+
+.lnd-row-mark-pen {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .lnd-row-mark svg {
@@ -6831,16 +6862,26 @@ body.demo-signup::before {
    which is what makes it read as a stamp being applied. Finite, and its final
    frame is the resting state, so reduced motion lands on the composed check. */
 @media (prefers-reduced-motion: no-preference) {
-  body.auth-ready .lnd-row-mark svg {
-    animation: lndVerifyPop 420ms var(--ease-snap) backwards;
-    animation-delay: calc(260ms + var(--row-order, 0) * 60ms);
+  /* NO backwards fill and no delay, deliberately. A backwards filled entrance
+     renders its 0% frame during the delay, and 0% here is opacity 0: any
+     condition that stops animations (a background tab, a throttled renderer)
+     would leave the check INVISIBLE rather than merely unanimated. Without
+     the fill the element rests in its natural state, so the worst case is a
+     check that simply does not pop. */
+  body.auth-ready .lnd-row-mark.is-broker svg {
+    animation: lndVerifyPop 420ms var(--ease-snap);
   }
 }
 
+/* SCALE ONLY, never opacity. A running animation applies its 0% frame even
+   with no fill mode, so animating opacity from 0 means any renderer that
+   stalls the animation (background tab, throttled pane) leaves the check
+   INVISIBLE. Starting at 0.7 scale means the worst case is a slightly small
+   check rather than a missing one, and the claim is never silently dropped. */
 @keyframes lndVerifyPop {
-  0% { opacity: 0; transform: scale(0.4) rotate(-12deg); }
-  60% { opacity: 1; transform: scale(1.15) rotate(3deg); }
-  100% { opacity: 1; transform: none; }
+  0% { transform: scale(0.7) rotate(-10deg); }
+  60% { transform: scale(1.15) rotate(3deg); }
+  100% { transform: none; }
 }
 
 /* On a phone the disc carries it alone: the word costs a line break beside a
