@@ -3818,7 +3818,15 @@ function buildTradeRecord(tradeInput, options = {}) {
       ? existingTrade.eventContext
       : !existingId && !tradeInput.importSource && !tradeInput.importBatchId && tradeInput.date === toDateInputValue(new Date())
         ? stampFromEvents(terminal.events, new Date(), 120)
-        : [],
+        // The import guard above exists because a historical import's only
+        // timestamp is the paste time, and stamping against that fabricates
+        // correlations. An imported OPEN position is the honest exception:
+        // enteredAt is the broker's own fill time for a position that is live
+        // right now, so stamping at that moment is the same truth the capture
+        // path records.
+        : isImportedOpenPosition && !existingId && tradeInput.enteredAt
+          ? stampFromEvents(terminal.events, new Date(tradeInput.enteredAt), 120)
+          : [],
     // 1b: the pre-trade rules the trader ticked in the sheet. The full form
     // does not ask for them, so an edit through it must CARRY them, not wipe
     // them — an empty array from readTradeForm is absence, not a de-tick.
@@ -3859,13 +3867,20 @@ function buildTradeRecord(tradeInput, options = {}) {
       : reportedPnl !== null
         ? reportedPnl
         : metrics.netPnl,
-    riskAmount: isTopstep ? 0 : metrics.riskAmount,
+    // Closed Topstep imports keep these unknown on purpose: the broker's P&L
+    // is the record and inventing per pip figures around it would be
+    // fabrication. An imported OPEN position is the opposite case: there is
+    // no broker P&L yet, the entry, stop, target and size are all real, and
+    // the app's own arithmetic on them is exactly what it computes for a
+    // trade captured at the command bar. Risk in dollars, R:R and the pip
+    // scale are detected, not invented.
+    riskAmount: isImportedOpenPosition ? metrics.riskAmount : isTopstep ? 0 : metrics.riskAmount,
     rMultiple: status === "open" ? 0 : isTopstep ? null : metrics.rMultiple,
-    rrRatio: isTopstep ? null : metrics.rrRatio,
+    rrRatio: isImportedOpenPosition ? metrics.rrRatio : isTopstep ? null : metrics.rrRatio,
     pips: status === "open" ? 0 : isTopstep ? null : metrics.pips,
-    pipSize: isTopstep ? null : metrics.pipSize,
-    pipValuePerLot: isTopstep ? null : metrics.pipValuePerLot,
-    dollarPerPip: isTopstep ? null : metrics.dollarPerPip
+    pipSize: isImportedOpenPosition ? metrics.pipSize : isTopstep ? null : metrics.pipSize,
+    pipValuePerLot: isImportedOpenPosition ? metrics.pipValuePerLot : isTopstep ? null : metrics.pipValuePerLot,
+    dollarPerPip: isImportedOpenPosition ? metrics.dollarPerPip : isTopstep ? null : metrics.dollarPerPip
   };
 }
 

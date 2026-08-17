@@ -448,6 +448,13 @@ assert.equal(openPosition.stopLoss, 4430.9, "the resting stop survives to the jo
 assert.equal(openPosition.takeProfit, 4444.4, "the resting target survives to the journal");
 assert.deepEqual(openPosition.sourceOrderFingerprints, ["tsi_openfill1"],
   "the per order fingerprints survive so a later closed import can supersede this row");
+// The derived information is DETECTED, not nulled like a closed import: the
+// stubbed metrics values must flow straight through to the open record.
+assert.equal(openPosition.riskAmount, 100, "risk in dollars is derived from the bracket");
+assert.equal(openPosition.rrRatio, 4, "R:R is derived from stop and target");
+assert.equal(openPosition.pipSize, 0.25, "the pip scale is the app's own");
+assert.equal(openPosition.pipValuePerLot, 5);
+assert.equal(openPosition.dollarPerPip, 10);
 
 // The supersede rule exists in the commit path and keys on those fingerprints.
 const commitSrc = appSrc;
