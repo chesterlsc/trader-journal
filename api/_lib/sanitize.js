@@ -290,6 +290,10 @@ export function toRecentTradeRow(trade) {
     profit_loss: toFloat(trade.netPnl),
     pips: toFloat(trade.pips),
     status: normalizeTradeStatus(trade.status ?? 'closed'),
+    // Where the row came from, so the public tape can mark a broker sourced
+    // trade. A label, never a number: it exposes nothing the whitelist below
+    // does not already publish.
+    import_source: str(trade.importSource ?? ''),
     created_at: str(trade.createdAt ?? ''),
     closed_at: str(trade.closedAt ?? ''),
   };

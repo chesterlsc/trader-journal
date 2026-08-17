@@ -665,6 +665,10 @@ const actions = {
         entry_price: trade.entry_price,
         stop_loss: trade.stop_loss,
         take_profit: trade.take_profit,
+        // The provenance label only. It says a broker export produced the row,
+        // which is the claim the tape's Topstep mark makes, and it carries no
+        // account, order or size information.
+        import_source: trade.import_source,
         result: trade.status === 'closed'
           ? (trade.profit_loss > 0 ? 'win' : (trade.profit_loss < 0 ? 'loss' : 'flat'))
           : '',

@@ -134,6 +134,18 @@ export function createRecentTradesView(deps) {
     return { key: "flat", label: "Flat" };
   }
 
+  // A row that came out of a TopstepX export wears the mark. It is a
+  // provenance claim and nothing more: this row was reconstructed from a
+  // broker file rather than typed, which is exactly what the export proves.
+  function renderTapeMark(trade) {
+    return String(trade.importSource || "").toLowerCase().startsWith("topstepx")
+      ? `<span class="lnd-row-mark" title="Reconstructed from a TopstepX export">
+          <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M6 .8 1.4 2.9v3.2c0 2.6 1.9 4.4 4.6 5.1 2.7-.7 4.6-2.5 4.6-5.1V2.9Z"/><path class="lnd-row-mark-tick" d="M3.9 6.1 5.3 7.5 8.2 4.4"/></svg>
+          <i>Topstep</i>
+        </span>`
+      : "";
+  }
+
   function renderTapeRow(trade, order = 0) {
     const isSell = String(trade.direction || "").toLowerCase() === "sell";
     const outcome = trade.status === "open" ? { key: "open", label: "Open" } : getTradeOutcome(trade);
@@ -141,7 +153,7 @@ export function createRecentTradesView(deps) {
 
     return `
       <button class="lnd-row is-${outcome.key}" type="button" data-trade-id="${escapeHtml(String(trade.id || ""))}" style="--row-order:${Number(order)};">
-        <span class="lnd-row-symbol">${escapeHtml(trade.asset)}</span>
+        <span class="lnd-row-symbol">${escapeHtml(trade.asset)}${renderTapeMark(trade)}</span>
         <span class="lnd-row-meta">${escapeHtml(meta)}</span>
         <span class="lnd-row-result">${outcome.label}</span>
         ${renderTapePrices(trade)}
@@ -166,6 +178,7 @@ export function createRecentTradesView(deps) {
         takeProfit: ensurePositiveNumber(item.take_profit ?? item.takeProfit, 0),
         exitPrice: ensurePositiveNumber(item.exit_price ?? item.exitPrice, 0),
         status: item.status === "open" ? "open" : "closed",
+        importSource: String(item.import_source ?? item.importSource ?? ""),
         result: String(item.result || ""),
         netPnl: ensureNumber(item.profit_loss ?? item.profitLoss, 0),
         pips: ensureNumber(item.pips, 0),
@@ -209,7 +222,7 @@ export function createRecentTradesView(deps) {
 
     return `
       <div class="lnd-row is-${outcome.key}" style="--row-order:${Number(order)};">
-        <span class="lnd-row-symbol">${escapeHtml(trade.asset)}</span>
+        <span class="lnd-row-symbol">${escapeHtml(trade.asset)}${renderTapeMark(trade)}</span>
         <span class="lnd-row-meta">${escapeHtml(meta)}</span>
         <span class="lnd-row-result">${outcome.label}</span>
         ${renderTapePrices(trade)}

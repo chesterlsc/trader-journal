@@ -462,7 +462,10 @@ const sensitiveTrade = (index) => ({
 
   // The whitelist, built by hand. Entry/stop/target are published by the
   // feed owner's choice — it is their own journal on display.
-  const allowed = ['symbol', 'date', 'direction', 'status', 'result', 'entry_price', 'stop_loss', 'take_profit'];
+  // import_source joined deliberately: it is a provenance LABEL that lets the
+  // landing tape mark a broker sourced row, and it carries no account, order,
+  // size or money information. Everything still excluded below stays excluded.
+  const allowed = ['symbol', 'date', 'direction', 'status', 'result', 'entry_price', 'stop_loss', 'take_profit', 'import_source'];
   for (const trade of trades) {
     assert.deepStrictEqual(Object.keys(trade).sort(), [...allowed].sort(), 'only whitelisted fields may appear');
   }
