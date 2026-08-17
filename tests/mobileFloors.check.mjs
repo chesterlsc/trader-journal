@@ -61,7 +61,11 @@ function parse(file) {
   return rules;
 }
 
-const rules = [...parse("styles.css"), ...parse("clay-v2.css")];
+// clay-v3.css was outside this scan, so every rule written there was exempt
+// from the floors this file exists to enforce. The dashboard density pass
+// lives in clay-v3, which made the exemption load bearing rather than
+// theoretical: a font-size below 11px there would have shipped unseen.
+const rules = [...parse("styles.css"), ...parse("clay-v2.css"), ...parse("clay-v3.css")];
 
 // Does this rule's media context apply to a 375px phone?
 const appliesOnPhone = (media) =>
