@@ -607,4 +607,73 @@
   }
 
   #dashboard .panel-trader-score .trader-score-foot { padding-top: 8px; }
+
+  /* --- PHASE 2: the deck, 345 -> ~191 ------------------------------------
+     BOTH CARDS OR NEITHER. The deck is a grid row, so it is as tall as its
+     TALLER card, and that card is the risk meter at 343px natural, not the
+     balance hero at 320. The design claimed shrinking the hero alone saves
+     177px; it saves 2. This is the corrected phase.
+
+     Specificity note: .metric-card.dash-hero, not a bare .dash-hero, because
+     styles.css has `.metric-card:not(.dash-rail-item)` at (0,2,0) and a
+     single class loses to it. */
+
+  /* The hero reserved 132px of bottom padding for a 118px decorative well
+     under a 50px number. The sparkline keeps every pixel of DATA at 56px
+     because it never had an axis. .dash-spark-wrap is absolutely positioned,
+     so the padding-bottom IS that reserve: both move together or the well
+     tears away from its card. */
+  #dashboard .metric-card.dash-hero {
+    padding: 12px 16px 12px;
+    min-height: 0;
+    border-radius: 14px;
+  }
+  #dashboard .dash-hero-top { gap: 8px; }
+  #dashboard .dash-hero-value {
+    font-size: 44px;   /* still the biggest number on the page, by design */
+    margin-top: 2px;
+  }
+  #dashboard .dash-hero-meta { margin-top: 6px; min-height: 0; }
+  #dashboard .dash-spark-wrap {
+    height: 56px;
+    border-radius: 0 0 14px 14px;
+  }
+
+  /* The dial was never the tall thing on the risk card: the two stacked
+     meters beside it were, at 150px. They go two up and the dial drops to
+     64. Same figures, half the height. The SVG arc is computed in JS from
+     r="48" against a viewBox, so scaling the box in CSS alone keeps the arc
+     correct with no JS change. */
+  #dashboard .dash-risk {
+    padding: 12px 16px;
+    gap: 8px;
+    min-height: 0;
+    border-radius: 14px;
+  }
+  #dashboard .dash-risk-body { gap: 12px; align-items: center; }
+  #dashboard .dash-dial,
+  #dashboard .dash-dial svg { width: 64px; height: 64px; }
+  #dashboard .dash-dial-value { font-size: 20px; }
+  #dashboard .dash-risk-figures {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-content: start;
+  }
+  #dashboard .dash-risk .risk-strip-item { gap: 2px; }
+  #dashboard .dash-risk-consequence {
+    padding: 6px 8px;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  #dashboard .dash-stats { gap: 8px; }
 }
+
+/* The phone hero still reserves 126px for an unchanged 118px well, which is
+   correct. If anyone ever shrinks the phone sparkline, this must be beaten at
+   equal specificity here, or 126px of padding becomes a crater under it:
+     @media (max-width: 720px) {
+       #dashboard .metric-card.dash-hero { padding-bottom: 126px; }
+     }
+   The desktop pass above does not touch the phone well, so it stays a note. */
