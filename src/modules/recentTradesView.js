@@ -134,16 +134,23 @@ export function createRecentTradesView(deps) {
     return { key: "flat", label: "Flat" };
   }
 
-  // A row that came out of a TopstepX export wears the mark. It is a
-  // provenance claim and nothing more: this row was reconstructed from a
-  // broker file rather than typed, which is exactly what the export proves.
+  // THE VERIFIED CHECK. A row that came out of a TopstepX export wears the
+  // blue check: a filled scalloped disc with a white tick, the shape people
+  // already read as "verified" without being told. It is a claim about SOURCE
+  // and nothing more, which the tooltip and the screen reader label both say
+  // in words: the broker's own file produced this row rather than typing.
   function renderTapeMark(trade) {
-    return String(trade.importSource || "").toLowerCase().startsWith("topstepx")
-      ? `<span class="lnd-row-mark" title="Reconstructed from a TopstepX export">
-          <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M6 .8 1.4 2.9v3.2c0 2.6 1.9 4.4 4.6 5.1 2.7-.7 4.6-2.5 4.6-5.1V2.9Z"/><path class="lnd-row-mark-tick" d="M3.9 6.1 5.3 7.5 8.2 4.4"/></svg>
-          <i>Topstep</i>
-        </span>`
-      : "";
+    if (!String(trade.importSource || "").toLowerCase().startsWith("topstepx")) {
+      return "";
+    }
+    return `<span class="lnd-row-mark" title="Broker verified: reconstructed from a TopstepX export">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path class="lnd-row-mark-disc" d="M12 1.5l2.6 2 3.2-.3 1 3.1 2.7 1.8-1.2 3 1.2 3-2.7 1.8-1 3.1-3.2-.3-2.6 2-2.6-2-3.2.3-1-3.1L2.5 15l1.2-3-1.2-3 2.7-1.8 1-3.1 3.2.3z"/>
+          <path class="lnd-row-mark-tick" d="M8.2 12.3l2.6 2.6 5-5.2"/>
+        </svg>
+        <i>Verified</i>
+        <span class="visually-hidden">Broker verified, reconstructed from a TopstepX export</span>
+      </span>`;
   }
 
   function renderTapeRow(trade, order = 0) {

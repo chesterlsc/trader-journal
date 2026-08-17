@@ -6780,45 +6780,74 @@ body.demo-signup::before {
   max-width: 52ch;
 }
 
-/* --- The provenance mark on the tape --------------------------------------
-   A shield and tick beside the symbol on any row reconstructed from a
-   TopstepX export. It is a claim about SOURCE, not about profit, so it stays
-   quiet: line weight, not a badge colour. */
+/* --- THE VERIFIED CHECK ----------------------------------------------------
+   The blue check on a tape row a TopstepX export produced. It POPS: this is
+   the one place on the tape allowed a saturated colour, because it is the
+   only element making a provenance claim and a claim nobody notices is not
+   worth making. A dedicated blue, not the oxide accent, so it never reads as
+   "profit" next to a win row or as chrome next to the accent.
+
+   The blue is pinned rather than tokenised: it must be the same blue on the
+   concrete theme and the gunmetal one, exactly like a verified badge is the
+   same blue everywhere it appears. Contrast is carried by the WHITE tick on
+   a filled disc, which holds on either ground. */
 .lnd-row-mark {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   margin-left: 6px;
-  vertical-align: 1px;
-  color: var(--text-faint);
+  vertical-align: -1px;
+  color: #2f9bf5;
 }
 
 .lnd-row-mark svg {
-  width: 11px;
-  height: 11px;
+  width: 15px;
+  height: 15px;
   flex: 0 0 auto;
+  display: block;
+}
+
+.lnd-row-mark-disc {
+  fill: currentColor;
+  stroke: none;
+}
+
+.lnd-row-mark-tick {
   fill: none;
-  stroke: currentColor;
-  stroke-width: 1.1;
+  stroke: #fff;
+  stroke-width: 2.4;
+  stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-.lnd-row-mark .lnd-row-mark-tick {
-  stroke-width: 1.4;
-  stroke-linecap: round;
-}
-
 .lnd-row-mark i {
-  font: 600 10px/1 var(--font-mono);
+  font: 700 10px/1 var(--font-mono);
   font-style: normal;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-/* On a phone the shield carries it alone: the word costs a line break next
-   to a symbol that already wraps tight. */
+/* It arrives rather than appearing: a quick pop on the row's own entrance,
+   which is what makes it read as a stamp being applied. Finite, and its final
+   frame is the resting state, so reduced motion lands on the composed check. */
+@media (prefers-reduced-motion: no-preference) {
+  body.auth-ready .lnd-row-mark svg {
+    animation: lndVerifyPop 420ms var(--ease-snap) backwards;
+    animation-delay: calc(260ms + var(--row-order, 0) * 60ms);
+  }
+}
+
+@keyframes lndVerifyPop {
+  0% { opacity: 0; transform: scale(0.4) rotate(-12deg); }
+  60% { opacity: 1; transform: scale(1.15) rotate(3deg); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* On a phone the disc carries it alone: the word costs a line break beside a
+   symbol that already wraps tight. */
 @media (max-width: 560px) {
   .lnd-row-mark i { display: none; }
+  .lnd-row-mark svg { width: 14px; height: 14px; }
 }
 
 /* --- What you get back --------------------------------------------------- */
@@ -8539,6 +8568,99 @@ body:has(.tabbar .nav-btn[data-target="terminal"]:not([hidden])) .main-nav .shee
   display: block;
   width: 28px;
   height: 28px;
+}
+
+/* --- QUICK IMPORT --------------------------------------------------------
+   The second way a trade enters the journal, placed beside the first.
+   DESKTOP: a quiet sibling of Log a trade in the dashboard header, secondary
+   by weight so the primary action still leads. */
+.dash-import-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.dash-import-btn .journal-action-icon svg {
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+/* The header holds both actions. Match the primary's height so the two read
+   as one control group rather than a button with something stuck beside it:
+   the log button is 60px tall and a default .btn is 44. */
+.dash-log-btn + .dash-import-btn {
+  margin-left: 8px;
+  min-height: 60px;
+  align-self: center;
+}
+
+/* Below the tabbar breakpoint the FAB satellite is the import affordance, so
+   the header button stands down rather than offering the same action twice. */
+@media (max-width: 899px) {
+  .dash-import-btn { display: none; }
+}
+
+/* MOBILE: the FAB's satellite. Same vertical line as the plus, offset right,
+   sized as a real 44px target and deliberately smaller than the plus so the
+   primary action still wins the thumb. Hidden until the app is on screen,
+   exactly like the FAB it sits beside. */
+.tabbar-import {
+  display: none;
+}
+
+.tabbar-import-glyph {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.tabbar-import-glyph svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+@media (max-width: 899px) {
+  body.is-authenticated .tabbar-import,
+  body.is-preview .tabbar-import,
+  body.is-guest:not(.demo-signup) .tabbar-import {
+    position: fixed;
+    display: grid;
+    place-items: center;
+    left: 50%;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 54px);
+    translate: 46px 0;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    background: var(--surface-1);
+    color: var(--text);
+    cursor: pointer;
+    box-shadow: var(--clay-raised);
+    z-index: var(--z-nav);
+    transition: transform var(--dur-squish) var(--ease-squish);
+  }
+
+  .tabbar-import:active {
+    transform: scale(0.92);
+    box-shadow: var(--clay-pressed);
+  }
+
+  .tabbar-import:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
 }
 
 .tabbar-fab-glyph svg {

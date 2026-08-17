@@ -1531,6 +1531,10 @@ function bindEvents() {
     ui.bulkPreviewBtn.addEventListener("click", handleBulkPreview);
   }
   ui.reviewImportBtn?.addEventListener("click", openTradeImport);
+  // The two quick entry points, desktop and mobile, on the one handler that
+  // already opens the dialog: no second import path to keep in step.
+  document.getElementById("dashQuickImportBtn")?.addEventListener("click", openTradeImport);
+  document.getElementById("tabBarImportBtn")?.addEventListener("click", openTradeImport);
   ui.tradeImportCloseBtn?.addEventListener("click", closeTradeImport);
   ui.tradeImportDialog?.addEventListener("click", (event) => {
     if (event.target === ui.tradeImportDialog) closeTradeImport();
