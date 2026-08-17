@@ -3978,7 +3978,6 @@ function applyTopstepOrdersCostEstimate(trade) {
     estimatedCosts,
     estimatedNetPnl: round(trade.calculatedGrossPnl - estimatedCosts),
     pnlIsEstimated: true,
-    analyticsExcluded: true,
     costProvenance: "estimated-topstep-round-turn-schedule",
     costScheduleEffectiveFrom: schedule.effectiveFrom,
     costScheduleVerifiedThrough: schedule.verifiedThrough,
@@ -4089,7 +4088,6 @@ function parseSelectedBulkTrades() {
               ...sourceTrade,
               pnlProvenance: "calculated-from-filled-orders",
               pnlIsEstimated: true,
-              analyticsExcluded: true,
               reconstructionMethod: "flat-to-flat-v1",
               reconstructedDuration,
               tradeDuration: ""
@@ -4249,9 +4247,11 @@ function handleBulkImport() {
       Array.isArray(tradeInput.sourceOrderFingerprints)
     ) {
       const incoming = new Set(tradeInput.sourceOrderFingerprints.map(String));
+      // Matched on the ROW being an open position import, not on its current
+      // status: a normalizer bug once closed such a row at price zero, and
+      // status gating would have left that phantom in the journal forever.
       state.trades = state.trades.filter((existing) =>
-        !(existing.status === "open" &&
-          existing.reconstructionMethod === "open-position-v1" &&
+        !(existing.reconstructionMethod === "open-position-v1" &&
           isTopstepOrdersImport(existing) &&
           Array.isArray(existing.sourceOrderFingerprints) &&
           existing.sourceOrderFingerprints.some((fp) => incoming.has(String(fp)))));
@@ -7973,15 +7973,14 @@ function handleProgressTradeDetailsToggle(event) {
 }
 
 function getClosedTrades(trades = state.trades) {
-  // Orders episodes carry calculated/estimated dollars rather than a broker
-  // trade P&L. They stay fully visible in Trade Review, but do not silently
-  // move verified equity, win rate, calendars, playbooks, prop rules or edge
-  // reports. Native Topstep Trades and manual rows remain in this population.
-  return trades.filter((trade) =>
-    trade.status !== "open" &&
-      !trade.analyticsExcluded &&
-      String(trade.importSource || "").toLowerCase() !== "topstepx-orders"
-  );
+  // Reconstructed Orders episodes COUNT. Their P&L is arithmetic on the
+  // broker's own fill prices, which is exact; only the fees ride a published
+  // schedule as estimates, and the provenance fields say so on every row.
+  // The original design quarantined them behind "import Topstep Trades for
+  // verified P&L", but Topstep only offers the Trades export on SIM accounts,
+  // so a live account could never leave the quarantine. Excluding a trader's
+  // real, calculated results forever is a worse lie than an estimated fee.
+  return trades.filter((trade) => trade.status !== "open" && !trade.analyticsExcluded);
 }
 
 function renderEstimatedAnalyticsBoundary() {
@@ -7989,19 +7988,22 @@ function renderEstimatedAnalyticsBoundary() {
   if (ui.estimatedAnalyticsNotice) {
     ui.estimatedAnalyticsNotice.hidden = count === 0;
     ui.estimatedAnalyticsNotice.textContent = count
-      ? `${count} Topstep Orders journal episode${count === 1 ? "" : "s"} use calculated or estimated P&L. They remain in Trade Review and are excluded from verified dashboard, calendar, playbook, prop-rule and report figures.`
+      ? `${count} Topstep Orders episode${count === 1 ? "" : "s"} in these figures: P&L calculated from fill prices, fees estimated from Topstep's published schedule.`
       : "";
   }
 
-  const hasVerifiedTrades = getClosedTrades().length > 0;
+  const hasClosedTrades = getClosedTrades().length > 0;
+  const openImports = state.trades.filter(
+    (trade) => trade.status === "open" && trade.reconstructionMethod === "open-position-v1"
+  ).length;
   if (ui.dashboardEmptyHeading) {
-    ui.dashboardEmptyHeading.textContent = count > 0 && !hasVerifiedTrades
-      ? "No broker-verified trades yet"
+    ui.dashboardEmptyHeading.textContent = !hasClosedTrades && openImports > 0
+      ? "No closed trades yet"
       : "No trades yet";
   }
   if (ui.dashboardEmptyCopy) {
-    ui.dashboardEmptyCopy.textContent = count > 0 && !hasVerifiedTrades
-      ? `${count} reconstructed Orders episode${count === 1 ? " is" : "s are"} in Trade Review. Import Topstep Trades when available to include broker P&L in performance analytics.`
+    ui.dashboardEmptyCopy.textContent = !hasClosedTrades && openImports > 0
+      ? `Your imported open position${openImports === 1 ? " is" : "s are"} live on the dashboard. Closed trades build these curves.`
       : "Log your first trade to unlock your equity curve, edge metrics, and discipline scores.";
   }
 }
@@ -12476,7 +12478,12 @@ function normalizeTrades(input) {
         tradeResult: String(item.tradeResult || "Auto"),
         // A Topstep Trades row is an already-paired round trip. Repair any
         // legacy/edit-corrupted open status while normalizing stored data.
-        status: isTopstepImport(item) ? "closed" : item.status === "open" ? "open" : "closed",
+        // Topstep imports are closed round trips, EXCEPT an imported open
+        // position, which is genuinely live. Forcing it closed here is what
+        // minted a phantom close at price zero on the first reload.
+        status: item.reconstructionMethod === "open-position-v1" && item.status === "open"
+          ? "open"
+          : isTopstepImport(item) ? "closed" : item.status === "open" ? "open" : "closed",
         setupType: String(item.setupType || "Custom"),
         timeframe: String(item.timeframe || "M15"),
         psychology: String(item.psychology || "Focused"),
@@ -12531,7 +12538,10 @@ function normalizeTrades(input) {
         sourceFullDayConfirmedAt: String(item.sourceFullDayConfirmedAt || ""),
         pnlProvenance: String(item.pnlProvenance || ""),
         pnlIsEstimated: Boolean(item.pnlIsEstimated || isTopstepOrdersImport(item)),
-        analyticsExcluded: Boolean(item.analyticsExcluded || isTopstepOrdersImport(item)),
+        // No longer forced on for Orders imports: reconstructed episodes are
+        // included in analytics, and re-locking stored rows here was what made
+        // the old quarantine permanent.
+        analyticsExcluded: Boolean(item.analyticsExcluded),
         costProvenance: String(item.costProvenance || ""),
         costScheduleUrl: String(item.costScheduleUrl || ""),
         costScheduleAsOf: String(item.costScheduleAsOf || ""),

@@ -460,6 +460,22 @@ assert.equal(openPosition.dollarPerPip, 10);
 const commitSrc = appSrc;
 assert.match(commitSrc, /supersedes the open import/i, "the commit loop documents the supersede rule");
 assert.match(commitSrc, /reconstructionMethod === "open-position-v1"/, "the supersede filter targets only open imports");
+// Two regressions that shipped together on day one, pinned at the source:
+// the load normalizer force closed an imported open position on the first
+// reload (a phantom close at price zero, minus 88,720 dollars on a 2 lot MGC
+// long), and the supersede filter then skipped the phantom because it gated
+// on the row still being open.
+const normalizerSrc = takeFunction(appSrc, "normalizeTrades");
+assert.match(
+  normalizerSrc,
+  /reconstructionMethod === "open-position-v1" && item\.status === "open"\s*\?\s*"open"/,
+  "the load normalizer must not force an imported open position closed"
+);
+assert.doesNotMatch(
+  commitSrc,
+  /existing\.status === "open" &&\s*existing\.reconstructionMethod === "open-position-v1"/,
+  "the supersede filter must match the row kind, not its current status"
+);
 
 const loadTradeIntoFormSrc = takeFunction(appSrc, "loadTradeIntoForm");
 assert.match(loadTradeIntoFormSrc, /const isTopstep = isTopstepImport\(trade\)/);
