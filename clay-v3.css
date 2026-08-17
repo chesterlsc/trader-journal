@@ -497,3 +497,114 @@
   --term-pos:   #3ecf8e;   /* the shipped dark --pnl-pos, verbatim */
   --term-neg:   #f7758d;   /* the shipped dark --pnl-neg, verbatim */
 }
+
+/* ==========================================================================
+   THE DESK COMES UPSTAIRS — dashboard density pass.
+
+   The dashboard was measured at 2,354px of stack below the header at 1440,
+   and the trader's own complaint was that everything is about 65% bigger
+   than it needs to be. It is: a 34px corner radius cannot read small, so
+   every card was sized to justify its own corners.
+
+   Desktop only, behind the same 1025px seam the topnav switches on, and
+   every rule is #dashboard scoped so the journal, review and desk views keep
+   their clay untouched. tests/mobileFloors.check.mjs parses styles.css and
+   clay-v2.css at 375px, so nothing here is in its field of view, and nothing
+   here applies to a phone either way. The 11px floor is still honoured by
+   hand: nothing user facing goes below it at any width.
+   ========================================================================== */
+@media (min-width: 1025px) {
+  /* --- PHASE 1: the analytics grid, 1291 -> 922 -------------------------
+     A pane head is ONE line now: the h3 and its subtitle sit on a baseline
+     row instead of stacking. That stacking is where the trader score row's
+     94px of chrome lived, because the info button was wrapping onto a line
+     of its own under the title block. Nothing is removed; it is folded. */
+  #dashboard .panel-grid-analytics { gap: 8px; }
+
+  #dashboard .panel-grid-analytics .panel { padding: 12px; }
+
+  #dashboard .panel-grid-analytics .panel-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+
+  #dashboard .panel-grid-analytics .panel-head > div {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  /* The pane title takes the desk's own voice: mono, uppercase, tracked.
+     This is the density pass earning its name rather than just shrinking. */
+  #dashboard .panel-grid-analytics .panel-head h3 {
+    font-size: 13px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  #dashboard .panel-grid-analytics .panel-head p {
+    margin: 0;
+    font-size: 11px;   /* --fs-micro, the floor, exactly */
+  }
+
+  /* The info button was taking a whole 42px line to itself. */
+  #dashboard .panel-grid-analytics .panel-head-inline {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+  }
+  #dashboard .panel-grid-analytics .panel-head-inline > div {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  #dashboard .panel-grid-analytics .panel-head-inline > .info-btn {
+    flex: 0 0 auto;
+  }
+
+  /* Two stacked toggle groups become one row: 88px of head becomes 38. */
+  #dashboard .strategy-performance-toolbar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+  }
+
+  /* Two toggle GROUPS side by side, not stacked. Setting the toolbar to row
+     was not enough: its own children were wrapping inside the width the head
+     left them, so the row was two rows wearing one flex-direction. */
+  /* The toolbar needs 318px for its two groups and the head was leaving it
+     249, so it wrapped no matter what flex-direction said. The fix is width,
+     not wrapping: the toolbar takes what it needs and the TITLE shrinks,
+     because a truncated subtitle costs less than a second row of chrome. */
+  /* NOTE THE SELECTOR. The generic `.panel-head-inline > div` rule above is
+     (1,2,1) because of its element selector, and the toolbar IS a div, so a
+     (1,2,0) rule here loses to my own rule and the toolbar keeps flex 1 1
+     auto and wrap. Matching .panel-grid-analytics makes this (1,3,0). */
+  #dashboard .panel-grid-analytics .panel-head-inline > .strategy-performance-toolbar {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+  }
+  #dashboard .panel-grid-analytics .strategy-toggle-group { flex: 0 0 auto; }
+
+  /* The panes whose head has a bare h3 and p (no wrapper div) were still
+     wrapping to two lines. They are the same baseline row as the others; the
+     subtitle simply takes what is left and ellipsizes rather than pushing the
+     head to a second line. */
+  #dashboard .panel-grid-analytics .panel-head > h3 { flex: 0 0 auto; }
+  #dashboard .panel-grid-analytics .panel-head > p,
+  #dashboard .panel-grid-analytics .panel-head > div > p {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #dashboard .panel-trader-score .trader-score-foot { padding-top: 8px; }
+}
