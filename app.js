@@ -1182,6 +1182,7 @@ function init() {
   syncTradeProgressState();
   bindEvents();
   syncMobileNavState();
+  setupRailPin();
   syncChromeHeight();
   renderLoginLogs();
   renderAdminUsers();
@@ -15019,6 +15020,30 @@ function getWallSize() {
    A ResizeObserver rather than a pile of call sites: the bar changes height for
    reasons scattered all over this file (auth state, account count, the badge,
    a window resize) and observing the element catches all of them at once. */
+/* The rail pin. The rail used to grow on hover, which meant brushing past the
+   left edge covered the page with nav; now labels are a choice that widens the
+   reserved gutter, so the content moves over instead of hiding under it. The
+   preference is per browser, not per account: it describes this screen and
+   this pointer, not the trader. */
+function setupRailPin() {
+  const pin = document.getElementById("railPinBtn");
+  if (!pin) return;
+  const apply = (on) => {
+    document.body.classList.toggle("rail-pinned", on);
+    pin.setAttribute("aria-pressed", on ? "true" : "false");
+    pin.title = on ? "Collapse to icons" : "Keep labels open";
+  };
+  let saved = false;
+  try { saved = window.localStorage.getItem("tj.rail.pinned") === "1"; } catch (error) { saved = false; }
+  apply(saved);
+  pin.addEventListener("click", () => {
+    const next = !document.body.classList.contains("rail-pinned");
+    apply(next);
+    try { window.localStorage.setItem("tj.rail.pinned", next ? "1" : "0"); } catch (error) { /* private mode */ }
+    syncChromeHeight();
+  });
+}
+
 function syncChromeHeight() {
   // Which bar is on screen depends on the width: .topnav from 1025 up, the
   // sticky #sidebar header below it. The views are pinned from 900 up, so

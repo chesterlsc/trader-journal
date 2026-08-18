@@ -725,13 +725,49 @@
     transition: width 160ms var(--ease-out);
   }
 
-  /* THE OVERLAY. Width grows, the reserved gutter does not, so the rail
-     floats over the page instead of pushing it. */
-  .rail:hover,
+  /* NO HOVER EXPANSION. The overlay was a mistake in use: sweeping the
+     pointer past the left edge on the way to anything grew the rail to 210px
+     ON TOP of the page, so a Save button or the first word of every heading
+     sat under it, silently, for as long as the pointer lingered. Reaching for
+     content is not a request to read the nav.
+
+     Labels arrive by intent instead, via the pin at the foot, and pinning
+     widens the RESERVED gutter so the page moves over rather than hides. The
+     one thing that still expands on its own is keyboard focus, where the
+     pointer is nowhere near the content and the label is the only way to know
+     what is selected. */
   .rail:focus-within {
     width: 210px;
     box-shadow: var(--clay-float);
   }
+
+  /* PINNED. --rail-w is what the page reserves, so widening it here is what
+     makes the content move instead of being covered. */
+  body.rail-pinned { --rail-w: 210px; }
+  body.rail-pinned .rail { width: var(--rail-w); }
+
+  .rail-pin {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 9px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-faint);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+  }
+  .rail-pin:hover { color: var(--text); background: var(--surface-3); }
+  .rail-pin svg { flex: 0 0 auto; width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.9; }
+  body.rail-pinned .rail-pin { color: var(--accent); }
+  .rail-pin .topnav-label { opacity: 0; transition: opacity 120ms var(--ease-out); }
+  .rail:focus-within .rail-pin .topnav-label,
+  body.rail-pinned .rail-pin .topnav-label { opacity: 1; }
 
   /* The bottom cluster sinks: destinations at the top, utilities at the
      foot, which is what makes a spine read as a spine. */
@@ -784,8 +820,8 @@
     transition: opacity 120ms var(--ease-out);
   }
 
-  .rail:hover .account-switch,
-  .rail:focus-within .account-switch { opacity: 1; }
+  .rail:focus-within .account-switch,
+  body.rail-pinned .account-switch { opacity: 1; }
 
   .rail .account-switch-select {
     max-width: none;
@@ -799,8 +835,8 @@
     opacity: 0;
     transition: opacity 120ms var(--ease-out);
   }
-  .rail:hover .topnav-label,
-  .rail:focus-within .topnav-label { opacity: 1; }
+  .rail:focus-within .topnav-label,
+  body.rail-pinned .topnav-label { opacity: 1; }
 
   /* The unjournalled badge must stay legible while collapsed: it is the one
      thing on the rail that is a number rather than a destination. */
@@ -882,4 +918,29 @@ body.auth-locked .rail { display: none !important; }
     border-top: 1px solid var(--line);
     padding-top: var(--space-2);
   }
+}
+
+/* ==========================================================================
+   THE CONSEQUENCE LINE STOPS EATING ITSELF.
+
+   One paragraph carried two type sizes and two leadings: a 12px sentence at
+   16.8px, with a 13px inline-block link setting its own 19.5px. An
+   inline-block whose box is taller than the line box it sits in grows UPWARD
+   into the line above, so the moment the sentence wrapped to two lines, the
+   link printed on top of the words above it. Nothing was clipped and no
+   height was wrong, which is why it read as a rendering glitch rather than a
+   type bug.
+
+   One leading owns the block, and nothing inside it sets its own. The rule is
+   general on purpose: any future chip or link dropped into this sentence
+   inherits the line box instead of fighting it.
+   ========================================================================== */
+.dash-risk-consequence {
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.dash-risk-consequence > * {
+  line-height: inherit;
+  vertical-align: baseline;
 }
