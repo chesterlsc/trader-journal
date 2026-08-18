@@ -770,6 +770,28 @@
     width: 100%;
   }
 
+  /* The account switcher was inheriting the top bar's horizontal label/select
+     pair: a 190px control in a 56px rail, clipped to "ACCOUN" against the
+     content edge, and still overflowing at the expanded 210px. It stacks like
+     the mobile copy and fades with the labels. Opacity, not display, so it
+     stays tabbable and its own focus is what expands the rail. */
+  .rail .account-switch {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding: 4px 8px;
+    opacity: 0;
+    transition: opacity 120ms var(--ease-out);
+  }
+
+  .rail:hover .account-switch,
+  .rail:focus-within .account-switch { opacity: 1; }
+
+  .rail .account-switch-select {
+    max-width: none;
+    width: 100%;
+  }
+
   /* Labels are present for the accessibility tree at all times and revealed
      with the rail, so nothing is hidden from a screen reader by collapsing.
      Opacity, not display, for exactly that reason. */
@@ -810,3 +832,54 @@
 
 /* Locked session: same contract the top bar had. */
 body.auth-locked .rail { display: none !important; }
+
+/* ==========================================================================
+   THE RACK, PART 1B: THE SEAM AND THE DRESSING.
+
+   Two complaints from the first day with the spine, both earned.
+
+   ONE, the overlap. The views learned to start after the gutter, but the
+   desk's own fixed furniture never did: the terminal page, the maximised
+   tape, both wall sizes and the wall command sheet all pin left: 0 in
+   styles.css, so the rail sat on top of the wire timers. Same offset the
+   views got, applied to every fixed box the desk owns. Selector-for-selector
+   with styles.css so file order is the only tiebreak needed.
+
+   TWO, the dressing. A 21px glyph in a 40px row with 8px padding sits at 18
+   and change, two points shy of centre, which is exactly the kind of almost
+   that reads as unfinished. Padding does the centring so the glyph never
+   shifts when the rail expands and the labels arrive. The lit key drops the
+   pressed-clay shadow, which turned to mud at 56px, for an accent tint that
+   reads from the corner of an eye. Hairlines split mark, destinations and
+   utilities so the spine has joints instead of a pile.
+   ========================================================================== */
+@media (min-width: 1025px) {
+  #terminal.is-active { left: var(--rail-w); }
+  #terminal:has(.bb-wall[data-size="max"]) .bb-tape { left: var(--rail-w); }
+  .bb-wall[data-size="max"] { left: var(--rail-w); }
+  .bb-wall[data-size="half"] { left: var(--rail-w); }
+  .wcmd { left: var(--rail-w); width: auto; }
+
+  .rail .topnav-btn,
+  .rail .topnav-icon-btn,
+  .rail .topnav-more > summary {
+    padding: 8px 9px;
+  }
+
+  .rail .topnav-btn.is-active {
+    background: var(--accent-muted);
+    box-shadow: none;
+  }
+
+  .rail .topnav-mark { margin-bottom: var(--space-2); }
+
+  .rail .topnav-links {
+    border-top: 1px solid var(--line);
+    padding-top: var(--space-2);
+  }
+
+  .rail .topnav-actions {
+    border-top: 1px solid var(--line);
+    padding-top: var(--space-2);
+  }
+}
