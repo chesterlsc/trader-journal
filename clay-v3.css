@@ -1313,6 +1313,26 @@ body.auth-locked .rail { display: none !important; }
      only this one grid item is offset. Lands the panel 9px off the edge. */
   #dashboard .dash-edge-mini { margin-right: -16px; }
 
+  /* CORRECTION, because -16px only worked at one window width. The view's
+     gutter is not a constant: .view.is-active:not(#terminal) sets
+     padding-inline: max(--space-6, (100% - --shell-w) / 2), and because the
+     view is POSITION FIXED that 100% resolves against the viewport rather
+     than the element. So the gutter is 24.8px at a 1240 window and 60px at
+     1600, and a fixed negative margin closed it at exactly one size and left
+     44px of dead margin at the other, which is precisely what "still not
+     occupying the margin" looked like.
+
+     Restating the same expression in viewport units tracks it at every width:
+     the panel lands 9px off the edge whether the window is 1240 or 2560.
+     Scoped to 1240 and up, where the rail actually sits in column 2; below
+     that it spans the full width and a one sided bleed would read as a
+     mistake. */
+  @media (min-width: 1240px) {
+    #dashboard .dash-edge-mini {
+      margin-right: calc(9px - max(var(--space-6), (100vw - min(1480px, 96vw)) / 2));
+    }
+  }
+
   /* 3. THE ACCOUNT CHIP IS A DOOR, NOT A LABEL.
 
      Clicking it did nothing whenever there was one account, because there was

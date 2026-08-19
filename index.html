@@ -470,150 +470,6 @@
            sessionStorage so a revisit paints instantly, and a failed poll
            keeps the last known price with a "stale" marker — never a blank.
            the 5s cadence is printed because it is true. -->
-      <div class="lnd-ticker" data-ticker-strip aria-label="Live futures and spot prices: Micro S&amp;P, Nasdaq, Dow, Russell, Gold, Crude and Euro FX, plus Bitcoin, spot gold, Ether and euro-dollar. Refreshed every 5 seconds.">
-        <div class="lnd-ticker-track">
-          <div class="lnd-ticker-group">
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">MES</span>
-              <span class="lnd-ticker-name">S&amp;P 500</span>
-              <span class="lnd-ticker-price" data-ticker-price="MES">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="MES"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">MNQ</span>
-              <span class="lnd-ticker-name">Nasdaq</span>
-              <span class="lnd-ticker-price" data-ticker-price="MNQ">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="MNQ"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">MYM</span>
-              <span class="lnd-ticker-name">Dow</span>
-              <span class="lnd-ticker-price" data-ticker-price="MYM">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="MYM"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">M2K</span>
-              <span class="lnd-ticker-name">Russell</span>
-              <span class="lnd-ticker-price" data-ticker-price="M2K">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="M2K"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">MGC</span>
-              <span class="lnd-ticker-name">Gold</span>
-              <span class="lnd-ticker-price" data-ticker-price="MGC">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="MGC"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">MCL</span>
-              <span class="lnd-ticker-name">Crude</span>
-              <span class="lnd-ticker-price" data-ticker-price="MCL">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="MCL"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">M6E</span>
-              <span class="lnd-ticker-name">Euro FX</span>
-              <span class="lnd-ticker-price" data-ticker-price="M6E">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="M6E"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">BTCUSDT</span>
-              <span class="lnd-ticker-name">Bitcoin</span>
-              <span class="lnd-ticker-price" data-ticker-price="BTCUSDT">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="BTCUSDT"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">XAUUSD</span>
-              <span class="lnd-ticker-name">Spot gold</span>
-              <span class="lnd-ticker-price" data-ticker-price="XAUUSD">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="XAUUSD"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">ETHUSDT</span>
-              <span class="lnd-ticker-name">Ether</span>
-              <span class="lnd-ticker-price" data-ticker-price="ETHUSDT">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="ETHUSDT"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">EURUSD</span>
-              <span class="lnd-ticker-name">EUR/USD</span>
-              <span class="lnd-ticker-price" data-ticker-price="EURUSD">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="EURUSD"></span>
-            </span>
-            <span class="lnd-ticker-tag">live &middot; 5s</span>
-            <span class="lnd-ticker-tag lnd-ticker-stale">stale &middot; last known</span>
-          </div>
-          <div class="lnd-ticker-group" aria-hidden="true">
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">MES</span>
-              <span class="lnd-ticker-name">S&amp;P 500</span>
-              <span class="lnd-ticker-price" data-ticker-price="MES">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="MES"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">MNQ</span>
-              <span class="lnd-ticker-name">Nasdaq</span>
-              <span class="lnd-ticker-price" data-ticker-price="MNQ">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="MNQ"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">MYM</span>
-              <span class="lnd-ticker-name">Dow</span>
-              <span class="lnd-ticker-price" data-ticker-price="MYM">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="MYM"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">M2K</span>
-              <span class="lnd-ticker-name">Russell</span>
-              <span class="lnd-ticker-price" data-ticker-price="M2K">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="M2K"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">MGC</span>
-              <span class="lnd-ticker-name">Gold</span>
-              <span class="lnd-ticker-price" data-ticker-price="MGC">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="MGC"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">MCL</span>
-              <span class="lnd-ticker-name">Crude</span>
-              <span class="lnd-ticker-price" data-ticker-price="MCL">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="MCL"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">M6E</span>
-              <span class="lnd-ticker-name">Euro FX</span>
-              <span class="lnd-ticker-price" data-ticker-price="M6E">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="M6E"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">BTCUSDT</span>
-              <span class="lnd-ticker-name">Bitcoin</span>
-              <span class="lnd-ticker-price" data-ticker-price="BTCUSDT">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="BTCUSDT"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">XAUUSD</span>
-              <span class="lnd-ticker-name">Spot gold</span>
-              <span class="lnd-ticker-price" data-ticker-price="XAUUSD">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="XAUUSD"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">ETHUSDT</span>
-              <span class="lnd-ticker-name">Ether</span>
-              <span class="lnd-ticker-price" data-ticker-price="ETHUSDT">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="ETHUSDT"></span>
-            </span>
-            <span class="lnd-ticker-item">
-              <span class="lnd-ticker-sym">EURUSD</span>
-              <span class="lnd-ticker-name">EUR/USD</span>
-              <span class="lnd-ticker-price" data-ticker-price="EURUSD">&mdash;</span>
-              <span class="lnd-ticker-delta" data-ticker-delta="EURUSD"></span>
-            </span>
-            <span class="lnd-ticker-tag">live &middot; 5s</span>
-            <span class="lnd-ticker-tag lnd-ticker-stale">stale &middot; last known</span>
-          </div>
-        </div>
-      </div>
 
       <!-- Showcase: three looping SAMPLE frames in real component styles —
            the phone dashboard, the calendar, the analytics. CSS-only loops
@@ -1357,7 +1213,6 @@
 
       <main class="content">
 
-
         <!-- Demo notice. Sits outside every .view, so it is honest on all six
              screens. Dismiss hides it for the current view only — navigating
              or hitting a moment where saving would have mattered brings it
@@ -1395,7 +1250,6 @@
             <!-- Compact live pair — patched by the SAME 5s loop that feeds the
                  open-position ticker (renderTickerPair runs off
                  refreshLivePrices); no second poll. 5s cadence, and it says so. -->
-
 
             <article id="progressTradeSummary" class="dash-live" hidden aria-label="Open positions">
               <p id="progressTradeLabel" class="visually-hidden">Open position</p>
@@ -2780,7 +2634,6 @@
             <div class="bb-tape-run" id="bbTapeRun"></div>
             <div class="bb-tape-run" id="bbTapeRun2" aria-hidden="true"></div>
           </div>
-
 
 
           <section class="bb-desk" id="bbDesk" data-feed="stale">

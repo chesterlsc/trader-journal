@@ -86,25 +86,24 @@ assert.ok(symbols.length >= 2, "ticker pair shrank below two symbols");
 for (const symbol of symbols) {
   const prices = html.split(`data-ticker-price="${symbol}"`).length - 1;
   const deltas = html.split(`data-ticker-delta="${symbol}"`).length - 1;
-  // TWO TAPES, TWO HALVES EACH, so every polled symbol carries exactly four
-  // nodes. The tapes are the landing marquee and the app's own board; each is
-  // duplicated because the marquee animates by translating -50% onto an
-  // identical second half. There is no longer a per-symbol exception: the
-  // compact dashboard pair and its sticky dock are gone, replaced by the
-  // board, so the first three symbols no longer carry extra nodes.
-  const expected = 4;
+  // ONE TAPE, TWO HALVES, so every polled symbol carries exactly two nodes.
+  // The landing marquee is gone: a price crawl is what the owner watches while
+  // working, not something a first time visitor needs above the pitch, and it
+  // was the loudest thing on a page whose job is to explain journalling. What
+  // remains is the app's own board, still duplicated because the marquee
+  // animates by translating -50% onto an identical second half.
+  const expected = 2;
   assert.equal(prices, expected, `${symbol}: expected ${expected} price nodes, found ${prices}`);
   assert.equal(deltas, expected, `${symbol}: expected ${expected} delta nodes, found ${deltas}`);
 }
 const strips = html.split("data-ticker-strip").length - 1;
-assert.equal(strips, 2, `expected the landing tape + the app board, found ${strips} [data-ticker-strip]`);
+assert.equal(strips, 1, `expected the app board only, found ${strips} [data-ticker-strip]`);
 
 // "live · 5s" may only be printed while it is true: one shared loop at 5s,
-// no skip-every-other-tick branch for the landing.
-// Both tapes carry it — the app board reuses .lnd-ticker-tag rather than
-// minting a second class for the same sentence, so one count covers both.
+// no skip-every-other-tick branch. With the landing marquee retired only the
+// app board carries the tag, once per half.
 const liveTags = html.split('lnd-ticker-tag">live').length - 1;
-assert.equal(liveTags, 4, `expected 'live · 5s' on both halves of both tapes, found ${liveTags}`);
+assert.equal(liveTags, 2, `expected 'live · 5s' on both halves of the board, found ${liveTags}`);
 assert.ok(!/delayed/i.test(html), "a leftover 'delayed' label still in index.html");
 assert.ok(/const LIVE_PRICE_REFRESH_MS = 5000;/.test(appJs), "the poll cadence moved off 5s — relabel the strips");
 assert.ok(!appJs.includes("livePriceTickCount"), "the landing skip-tick branch is back — that makes 'live · 5s' a lie");
