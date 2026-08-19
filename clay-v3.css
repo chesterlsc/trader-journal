@@ -1070,6 +1070,15 @@
 /* Locked session: same contract the top bar had. */
 body.auth-locked .rail { display: none !important; }
 
+/* The board tape is desk furniture, and a visitor reading the pitch has no
+   desk. It is a body level fixed strip rather than a child of any view, so
+   hiding the landing's own marquee left this one still spanning the top of
+   the page: the crawl the owner asked to be rid of was this, not the hero
+   tape that went with the last change. Same condition as the rail, because
+   they are the same idea: chrome for someone who is working, absent for
+   someone who is deciding. */
+body.auth-locked .app-ticker { display: none !important; }
+
 /* ==========================================================================
    THE RACK, PART 1B: THE SEAM AND THE DRESSING.
 
