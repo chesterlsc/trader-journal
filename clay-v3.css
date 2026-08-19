@@ -1125,3 +1125,153 @@ body.auth-locked .rail { display: none !important; }
   line-height: inherit;
   vertical-align: baseline;
 }
+
+/* ==========================================================================
+   FOUR REPAIRS, DIAGNOSED THE HARD WAY.
+
+   These shipped to the desk app first and were held there by an app only
+   instruction, which was my misreading: the faults are the product's, so they
+   belong here. Each was diagnosed against the rendered page and then
+   adversarially refuted before shipping, and two of the first diagnoses did
+   not survive that. What follows is what actually holds.
+   ========================================================================== */
+
+/* 1. THE COOLDOWN LINK FALLS BACK INTO ITS SENTENCE.
+
+   styles.css gives EVERY <button> a 42px min-height as a global touch floor,
+   and .dash-risk-link is a button that never overrides it, so a 42px box sat
+   inside a 16.8px line box. It never printed over the line above, whatever it
+   looked like: an oversized inline-block cannot, because the line box grows
+   around it. What it did was inflate that line, shoving the sentence's last
+   line about 16px DOWN and padding the card with ~21px of dead height, which
+   is the hole in the middle of "the desk locks until / tomorrow".
+
+   This is why the earlier leading fix changed nothing visible. A min-height is
+   not a leading value, so normalising the leading answered a question nobody
+   had asked.
+
+   min-height 0 returns the link to one line box; font-size inherit makes that
+   box exactly the paragraph's, so the three lines sit on a uniform rhythm.
+   Verified at every card width from 240px to 760px.
+
+   Desktop only, so the coarse pointer 44px touch target on phones survives. */
+@media (min-width: 1025px) {
+  .dash-risk-link {
+    min-height: 0;
+    font-size: inherit;
+    line-height: inherit;
+  }
+}
+
+/* 2. THE TRADER SCORE PANEL STOPS ESCAPING ITS OWN CARD.
+
+   .panel-trader-score is display:grid and declares grid-template-ROWS only.
+   Nothing anywhere declares its columns, so it lays out in one IMPLICIT column
+   from grid-auto-columns:auto, and an auto track's base size is its items'
+   min-content, a value that is never clamped to the panel's content box.
+
+   The density pass made that min-content bigger than the card: the subtitle is
+   nowrap, so its min-content is the entire string. Measured at 1240px, the
+   track pinned at 349.8px inside a 240.1px content box, so the head, the radar
+   canvas and the score footer all rendered 349.8px wide and 110px of them sat
+   outside the card. That is the border line crossing the content. The canvas
+   then ratcheted it in, because it writes its bitmap from its own overflowed
+   clientWidth on every redraw.
+
+   minmax(0, 1fr) gives the track a floor of zero, so no child's min-content
+   can inflate it again. The subtitle then drops to its own line and reads,
+   instead of truncating to "Composite read on win quality, rec...". Both
+   declarations or neither: white-space alone would wrap it into a sliver. */
+#dashboard .panel-grid-analytics .panel-trader-score {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+#dashboard .panel-grid-analytics .panel-trader-score .panel-head > div > p {
+  flex: 1 1 100%;
+  white-space: normal;
+}
+
+/* 3. THE TAPES SLOW DOWN.
+
+   Two strips, not one, and slowing either alone leaves the other fast: the
+   board marquee (.lnd-ticker-track, 32s) and the Release Edge tape
+   (.bb-tape-run, 42s). animation-duration only, never the shorthand, so the
+   hover park and the reduced-motion stops both survive. Set on the class and
+   never per element, because .bb-tape-run is two elements whose halves would
+   tear at the seam if their durations disagreed. */
+@media (prefers-reduced-motion: no-preference) {
+  .lnd-ticker-track { animation-duration: 76s; }
+  .bb-tape-run { animation-duration: 100s; }
+}
+
+/* 4. THE RAIL LOSES A LEFTOVER AND FINDS ITS ACCOUNT.
+
+   .topnav-rule is still the OLD horizontal bar's divider: a 1px by 26px
+   vertical tick. Stacked into a column rail it is a sliver hugging the left
+   padding edge, spending itself plus two flex gaps saying nothing, which is
+   the unexplained space under the mark. The rail draws its joints as hairlines
+   on .topnav-links and .topnav-actions now, so the tick has no job left.
+
+   The ACCOUNT kicker separately inherits an 11px bottom margin from the bare
+   label rule, which .account-switch-label never resets, so the 4px column gap
+   the rail intends is really 15px. */
+@media (min-width: 1025px) {
+  .rail .topnav-rule { display: none; }
+  .rail .account-switch-label { margin: 0; }
+
+  /* The account chip, painted by setupRailAccount() from the switcher's own
+     selected option so the two can never disagree. The site hides that
+     switcher below two accounts, which is right for a visitor and wrong for
+     the owner: with one account the rail carried no account identity at all.
+     Collapsed it is an initial in a tile; pinned, the name arrives on the same
+     reveal as every other label. */
+  .rail-account {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 40px;
+    margin-bottom: var(--space-2);
+    padding: 8px 9px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-soft);
+    font: inherit;
+    text-align: left;
+    cursor: default;
+    transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+  }
+
+  .rail-account.is-switchable { cursor: pointer; }
+  .rail-account.is-switchable:hover { color: var(--text); background: var(--surface-3); }
+
+  /* The tile sits in the same 21px optical column as the nav glyphs, so the
+     account reads as the rail's first row rather than a stray badge. */
+  .rail-account-mark {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--line-strong);
+    border-radius: 7px;
+    background: var(--surface-inset);
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .rail-account-name {
+    overflow: hidden;
+    font-size: 12px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 1024px) {
+  .rail-account { display: none; }
+}

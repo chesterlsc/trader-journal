@@ -1210,6 +1210,7 @@ function init() {
   bindEvents();
   syncMobileNavState();
   setupRailPin();
+  setupRailAccount();
   setupListClamps();
   syncChromeHeight();
   renderLoginLogs();
@@ -15109,6 +15110,54 @@ function setupListClamps() {
     toggle.setAttribute("aria-expanded", clamped ? "false" : "true");
     toggle.textContent = clamped ? "show all" : "show less";
   });
+}
+
+/* The active account, visible in the rail. The switcher itself is hidden
+   below two accounts, which is right for a visitor and wrong for the owner:
+   with a single account the rail carried no account identity at all. This
+   paints from that switcher's own selected option rather than from state, so
+   the two can never drift apart, and it re-paints whenever the option list or
+   the selection changes. Collapsed it is an initial; pinned, the name. */
+function setupRailAccount() {
+  const select = document.querySelector(".rail [data-account-switch]");
+  const rail = document.querySelector(".rail");
+  if (!select || !rail) return;
+
+  const paint = () => {
+    const option = select.options[select.selectedIndex] || select.options[0];
+    const name = option ? option.text.trim() : "";
+    let chip = document.getElementById("railAccount");
+    if (!name) {
+      if (chip) chip.hidden = true;
+      return;
+    }
+    if (!chip) {
+      chip = document.createElement("button");
+      chip.id = "railAccount";
+      chip.className = "rail-account";
+      chip.type = "button";
+      chip.innerHTML = '<span class="rail-account-mark" aria-hidden="true"></span><span class="rail-account-name topnav-label"></span>';
+      chip.addEventListener("click", () => {
+        if (select.options.length > 1) {
+          select.focus();
+          select.click();
+        }
+      });
+      const mark = rail.querySelector(".topnav-mark");
+      rail.insertBefore(chip, mark && mark.parentNode === rail ? mark.nextSibling : rail.firstChild);
+    }
+    chip.hidden = false;
+    chip.querySelector(".rail-account-mark").textContent = name.charAt(0).toUpperCase();
+    chip.querySelector(".rail-account-name").textContent = name;
+    const switchable = select.options.length > 1;
+    chip.classList.toggle("is-switchable", switchable);
+    chip.title = switchable ? `${name} (switch account)` : name;
+    chip.setAttribute("aria-label", switchable ? `Account ${name}, switch account` : `Account ${name}`);
+  };
+
+  paint();
+  select.addEventListener("change", paint);
+  new MutationObserver(paint).observe(select, { childList: true, subtree: true });
 }
 
 function setupRailPin() {
