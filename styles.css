@@ -9926,13 +9926,19 @@ body.auth-locked {
    The tile is 16:9 and full bleed. It reuses .bb-mon wholesale, so everything
    below is a size and a frame override, never a second monitor implementation:
    the standby state, the picker and the click-to-play path are the desk's. */
+/* THE TV SITS INSIDE THE PANEL'S GUTTER, not across it. Full bleed put the
+   picture hard against both edges while .dem-news below it insets 11px, so the
+   one element with a hard rectangular edge was also the one ignoring the
+   panel's own margin — and its square corners fought the panel's radius at the
+   top. Same 11px as the news, and the picture keeps the corner. */
 .dem-tv {
-  border-bottom: 1px solid var(--term-line);
-  background: #000;
+  padding: 11px 11px 0;
+  background: transparent;
 }
 .dem-tv .bb-mon {
   padding: 0;
   border: 0;
+  border-radius: var(--radius-sm);
   background: #000;
   overflow: hidden;
   grid-template-rows: minmax(0, 1fr);

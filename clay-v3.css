@@ -843,22 +843,96 @@
   .rail:has(:focus-visible) .topnav-label,
   body.rail-pinned .topnav-label { opacity: 1; }
 
-  /* The unjournalled badge must stay legible while collapsed: it is the one
-     thing on the rail that is a number rather than a destination. */
-  .rail .topnav-badge {
-    margin-left: auto;
-    opacity: 1;
+  /* THE BADGE, INSIDE THE RAIL. The base rule anchors it `right: 4px` against
+     the BUTTON, and a rail row is 62px of intrinsic content inside a 40px
+     column — flex items refuse to shrink below min-content — so the badge
+     landed at x=49..66 against a 56px rail and `overflow: hidden` sliced it
+     down the middle. Collapsed, it belongs to the ICON, as a corner count.
+     Pinned there is a real row to sit at the end of, so the base rule stands.
+     margin-left is meaningless on an absolutely positioned box; it was doing
+     nothing here and is gone. */
+  .rail .topnav-badge { opacity: 1; }
+
+  body:not(.rail-pinned) .rail .topnav-badge {
+    right: auto;
+    left: 21px;
+    top: 3px;
   }
 
-  /* The overflow menu opens beside the rail, not under it. */
-  /* right:0 and z-index:2 are inherited from the top bar's absolute menu in
-     clay-v2. Switching to fixed re-anchors right:0 to the VIEWPORT, so the
-     panel stretched from the rail to the window edge — 1216px at vw 1280 —
-     and sat under the rail's own z-index. Both have to be undone here. */
+  /* ONE LANGUAGE IN ONE COLUMN. The rail inherited three different treatments
+     from the horizontal bar it replaced: a white stamp for the mark, raised
+     #2a3038 chips for the utilities, and transparent rows for the
+     destinations — at 46px, 46px and 40px. Stacked in a 56px column that
+     reads as clutter rather than hierarchy. Everything is a row now: same
+     height, same radius, transparent until hovered.
+
+     The mark keeps its identity in the ACCENT, not in a slab of --text. A
+     near-white block was the single heaviest object on a dark rail and it was
+     carrying the least information on the page. */
+  .rail .topnav-mark {
+    min-height: 40px;
+    height: auto;
+    background: transparent;
+    color: var(--accent);
+    box-shadow: none;
+    font: 700 15px/1 var(--font-ui);
+    letter-spacing: 0.02em;
+  }
+  .rail .topnav-mark:hover { background: var(--surface-3); }
+
+  .rail .topnav-icon-btn,
+  .rail .topnav-more > summary {
+    min-height: 40px;
+    height: auto;
+    background: transparent;
+    color: var(--text-faint);
+    box-shadow: none;
+  }
+  .rail .topnav-icon-btn:hover,
+  .rail .topnav-more > summary:hover {
+    background: var(--surface-3);
+    color: var(--text);
+  }
+
+  /* The active destination has to read at a glance with no label on screen,
+     so it gets an edge marker as well as the tint — colour alone is the one
+     signal a collapsed rail cannot afford to lean on. */
+  .rail .topnav-btn.is-active {
+    position: relative;
+  }
+  .rail .topnav-btn.is-active::before {
+    content: "";
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    width: 3px;
+    height: 20px;
+    transform: translateY(-50%);
+    border-radius: 0 2px 2px 0;
+    background: var(--accent);
+  }
+
+  /* The overflow menu opens beside the rail, not under it.
+
+     THE BASE RULE SETS THREE OFFSETS, AND ALL THREE HAVE TO GO. clay-v2's
+     .topnav-menu is `position: absolute; right: 0; top: calc(100% + 8px);
+     z-index: 2`, sized and placed against the top bar it hangs from. Switching
+     to fixed re-anchors every one of them to the VIEWPORT:
+       right: 0   -> the panel stretched from the rail to the window edge,
+                     1216px at vw 1280.
+       top: 100%  -> percentages resolve against viewport HEIGHT, so top became
+                     908px on a 900px window: the menu opened below the bottom
+                     edge. Worse, top and bottom together stretch a height:auto
+                     box between them, so it also collapsed to 16px and every
+                     item inside it was unreachable.
+       z-index: 2 -> under the rail's own z-index.
+     Reset all three explicitly rather than relying on the shorthand-free base
+     changing; a future offset added there will need the same treatment. */
   .rail .topnav-menu {
     position: fixed;
     left: calc(var(--rail-w) + 8px);
     right: auto;
+    top: auto;
     bottom: 12px;
     min-width: 220px;
     z-index: calc(var(--z-nav) + 1);
