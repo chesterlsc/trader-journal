@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trader Journal — v3 concept preview</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" href="/favicon.svg" />
+    <!-- The v3 app is built ALONGSIDE the shipping app, never in place of it.
+         It borrows the token layers so the palette cannot drift, and adds one
+         sheet of its own. Nothing here is linked from the website. -->
+    <link rel="stylesheet" href="/styles.css?v=20260819-board" />
+    <link rel="stylesheet" href="/clay-v2.css?v=20260819-board" />
+    <link rel="stylesheet" href="/clay-v3.css?v=20260819-board" />
+    <link rel="stylesheet" href="./v3.css?v=1" />
+    <!-- BOOT TRAP, IN THE HEAD ON PURPOSE. The browser-pane console attaches
+         after load, so a module that throws while evaluating leaves no trace
+         there and the page just looks blank. This catches it into an array the
+         verifier can read. It has caught a TDZ crash four times in this repo. -->
+    <script>
+      window.__v3boot = [];
+      addEventListener("error", (e) => window.__v3boot.push(String(e.message || e.error)));
+      addEventListener("unhandledrejection", (e) => window.__v3boot.push("promise: " + String(e.reason)));
+    </script>
+  </head>
+  <body class="v3">
+<main class="v3" id="v3Desk" aria-label="Settlement desk">
+
+  <!-- ═══ COMMAND BAR ═══════════════════════════════════════════════════ -->
+  <header class="v3-cmd">
+    <span class="v3-dot" aria-hidden="true"></span>
+    <span class="v3-prompt">tj://desk/settlement<i class="v3-caret" aria-hidden="true"></i></span>
+    <span class="v3-acct">TOPSTEP 50K &middot; EVAL D14 &middot; 1 BAD DAY FROM THE ACCOUNT</span>
+    <span class="v3-cmd-gap"></span>
+    <span class="v3-chip" id="v3Feed">SAMPLE DATA</span>
+    <span class="v3-asof" id="v3FeedAsOf"></span>
+    <time class="v3-clock" id="v3Clock">--:--:--Z</time>
+  </header>
+
+  <!-- ═══ PANE KEYS ═════════════════════════════════════════════════════ -->
+  <nav class="v3-keys" aria-label="Panes">
+    <a class="v3-key" href="#v3PUns"><b>F1</b>UNSETTLED</a>
+    <a class="v3-key" href="#v3PGov"><b>F2</b>GOVERNOR</a>
+    <a class="v3-key" href="#v3PRat"><b>F3</b>SEAL RATE</a>
+    <a class="v3-key" href="#v3PSpn"><b>F4</b>SPINE</a>
+    <a class="v3-key" href="#v3PEch"><b>F5</b>REASON ECHO</a>
+    <a class="v3-key" href="#v3PTap"><b>F6</b>SETTLED TAPE</a>
+    <span class="v3-keys-hint"><kbd>/</kbd> jump to the seal line</span>
+  </nav>
+
+
+  <!-- ═══ THE PERMIT PLATE ══════════════════════════════════════════════
+       The governor was a side pane; the thing this product is most famous
+       for was not the thing you saw first. It is a full-width band now: one
+       conductor, one state word, and the strikes left today as discrete
+       cells rather than a percentage — because the count is the integer the
+       app already computes, and a percent is the lossy version of it.
+       ═════════════════════════════════════════════════════════════════ -->
+  <section class="v3-plate" id="v3Plate" aria-labelledby="v3PlateH" data-state="armed">
+    <h2 class="v3-vh" id="v3PlateH">Today's permit</h2>
+
+    <!-- The permit as a live conductor across the whole instrument. -->
+    <div class="v3-bus" role="presentation"><span class="v3-bus-live" id="v3Bus"></span></div>
+
+    <div class="v3-plate-grid">
+      <div class="v3-state">
+        <p class="v3-state-word" id="v3StateWord">ARMED</p>
+        <p class="v3-state-meta">
+          ISSUED 07:00 &middot; EXPIRES 23:59 LOCAL<br />
+          <span id="v3StateLine">Cleared to work. The governor is watching.</span>
+        </p>
+      </div>
+
+      <div class="v3-strikes">
+        <div class="v3-strikes-head">
+          <span class="v3-k">PRINTS LEFT TODAY</span>
+          <span class="v3-strikes-count"><b id="v3StrikeLeft">3</b>&thinsp;/&thinsp;<span id="v3StrikeTotal">6</span></span>
+        </div>
+        <ol class="v3-cells" id="v3Cells" aria-describedby="v3StrikeSay"></ol>
+        <p class="v3-strikes-say" id="v3StrikeSay">Budget divided by your median loser, not a flat risk unit.</p>
+        <dl class="v3-budgets">
+          <div class="v3-budget is-governing" id="v3BudgetDay">
+            <dt>DAY</dt>
+            <dd><b id="v3DayUsed">$188</b> <span>/ $600</span> <em class="v3-gov">GOVERNS</em></dd>
+            <div class="v3-track" aria-hidden="true"><span id="v3DayFill" style="--w:31%"></span></div>
+          </div>
+          <div class="v3-budget" id="v3BudgetWeek">
+            <dt>WEEK</dt>
+            <dd><b id="v3WeekUsed">$820</b> <span>/ $1,800</span></dd>
+            <div class="v3-track" aria-hidden="true"><span id="v3WeekFill" style="--w:46%"></span></div>
+          </div>
+        </dl>
+      </div>
+
+      <dl class="v3-kv v3-plate-kv">
+        <div><dt>MAX LOSS LIMIT</dt><dd>$2,000.00</dd></div>
+        <div><dt>EQUITY TO LIMIT</dt><dd class="is-pos">$3,412.00</dd></div>
+        <div><dt>CONSEC. LOSSES</dt><dd>2 of 3</dd></div>
+        <div><dt>ON BREACH</dt><dd id="v3Conseq">Desk locks. One question first.</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ═══ WORKSPACE ═════════════════════════════════════════════════════ -->
+  <div class="v3-work">
+
+
+    <!-- F1 UNSETTLED ─────────────────────────────────────────────────── -->
+    <section class="v3-pane v3-a-uns" id="v3PUns" aria-labelledby="v3PUnsH">
+      <h2 class="v3-pane-h" id="v3PUnsH">
+        <b>F1</b>UNSETTLED
+        <span class="v3-pane-count" id="v3UnsCount">0 UNSEALED</span>
+        <em>closed &middot; price filled &middot; reason missing</em>
+      </h2>
+      <div class="v3-ladder" id="v3Ladder" role="img" aria-label="Aging of unsealed trades"></div>
+      <div class="v3-pane-b v3-pane-b-flush" id="v3Unsettled"></div>
+      <p class="v3-pane-f">
+        A trade with no reason is a half fill. The price leg settled at the broker.
+        The reason leg settles here.
+      </p>
+    </section>
+
+    <!-- F4 SPINE ─────────────────────────────────────────────────────── -->
+    <section class="v3-pane v3-a-spn" id="v3PSpn" aria-labelledby="v3PSpnH">
+      <h2 class="v3-pane-h" id="v3PSpnH"><b>F4</b>STREAK SPINE<em>a day counts only if every trade is sealed</em></h2>
+      <div class="v3-pane-b">
+        <p class="v3-spine-top">
+          <b id="v3Streak">0</b><span>DAY STREAK</span>
+          <span class="v3-hold is-risk" id="v3SpineHold">AT RISK</span>
+        </p>
+        <div class="v3-spine" id="v3Spine" role="img" aria-label="Journal streak by day"></div>
+        <p class="v3-break" id="v3BreakRisk">
+          <span class="v3-break-k">BREAK RISK</span>
+          <span id="v3BreakOpen">0</span> trades today have no reason.
+          The streak breaks in <b id="v3BreakClock">00:00:00</b>.
+        </p>
+      </div>
+    </section>
+
+    <!-- F3 SEAL RATE ─────────────────────────────────────────────────── -->
+    <section class="v3-pane v3-a-rat" id="v3PRat" aria-labelledby="v3PRatH">
+      <h2 class="v3-pane-h" id="v3PRatH"><b>F3</b>SEAL RATE<em>recall decay</em></h2>
+      <div class="v3-pane-b">
+        <p class="v3-big" id="v3Rate">0.0%</p>
+        <div class="v3-track"><span class="v3-track-fill is-pos" id="v3RateBar" style="width:0%"></span></div>
+        <dl class="v3-kv">
+          <div><dt>MEDIAN TIME TO SEAL</dt><dd id="v3Median">&mdash;</dd></div>
+          <div><dt>RECALL INDEX, OPEN</dt><dd id="v3Recall">100</dd></div>
+        </dl>
+        <p class="v3-decay-l">RECALL DECAY &mdash; modelled, not measured</p>
+        <svg class="v3-decay" viewBox="0 0 200 46" preserveAspectRatio="none" role="img" aria-label="Recall falls from 100 at close to about 30 after 24 hours">
+          <polyline points="0,4 26,10 52,17 78,23 104,28 130,32 156,36 182,39 200,41" />
+        </svg>
+        <p class="v3-decay-x"><span>T+0</span><span>T+6h</span><span>T+24h</span></p>
+      </div>
+    </section>
+
+    <!-- F5 REASON ECHO ───────────────────────────────────────────────── -->
+    <section class="v3-pane v3-a-ech" id="v3PEch" aria-labelledby="v3PEchH">
+      <h2 class="v3-pane-h" id="v3PEchH"><b>F5</b>REASON ECHO<em>what this sentence has earned before</em></h2>
+      <div class="v3-pane-b v3-pane-b-flush" id="v3EchoBook"></div>
+      <p class="v3-pane-f">Sorted worst first. A reason you keep writing is a setup you keep taking.</p>
+    </section>
+
+    <!-- F6 SETTLED TAPE ──────────────────────────────────────────────── -->
+    <section class="v3-pane v3-a-tap" id="v3PTap" aria-labelledby="v3PTapH">
+      <h2 class="v3-pane-h" id="v3PTapH"><b>F6</b>SETTLED TAPE<em>finished trades, reason printed inline</em></h2>
+      <div class="v3-pane-b v3-pane-b-flush" id="v3Tape"></div>
+      <div class="v3-public" id="v3Public" hidden aria-label="Public book">
+        <p class="v3-public-h">PUBLIC BOOK &mdash; another trader&rsquo;s published journal, not yours</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══ THE SEAL LINE — the primary action of the whole app ═══════════ -->
+  <form class="v3-seal" id="v3SealForm" autocomplete="off">
+    <label class="v3-visually-hidden" for="v3SealInput">Reason this trade was taken</label>
+    <span class="v3-seal-k" aria-hidden="true">seal</span>
+    <span class="v3-seal-target is-idle" id="v3SealTarget">no trade</span>
+    <input class="v3-seal-input" id="v3SealInput" type="text" maxlength="140"
+           placeholder="why did you take it?" disabled />
+    <button class="v3-seal-go" type="submit">SEAL <span aria-hidden="true">&crarr;</span></button>
+    <p class="v3-strip" id="v3EchoStrip" hidden role="status"></p>
+  </form>
+
+  <!-- ═══ STATUS BAR ════════════════════════════════════════════════════ -->
+  <footer class="v3-status">
+    <span><b id="v3StatUnsealed">0</b> UNSEALED</span>
+    <span><b id="v3StatSealed">0</b> SEALED</span>
+    <span class="v3-status-note">SAMPLE DATA &mdash; figures are illustrative. Last-price cells go live only if a quote returns.</span>
+  </footer>
+
+  <noscript><p class="v3-pane-f">The settlement desk needs JavaScript to run its clocks.</p></noscript>
+</main>
+    <script type="module" src="./v3.js?v=1"></script>
+  </body>
+</html>
