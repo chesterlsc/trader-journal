@@ -1275,3 +1275,49 @@ body.auth-locked .rail { display: none !important; }
 @media (max-width: 1024px) {
   .rail-account { display: none; }
 }
+
+/* ==========================================================================
+   THREE ADJUSTMENTS FROM USE.
+   ========================================================================== */
+
+@media (min-width: 1025px) {
+  /* 1. THE DIAL STOPS CROWDING ITS OWN RING.
+
+     The density pass took the dial from 118px to 64px but left the ring at
+     stroke-width 13, which is a viewBox unit: at 64px that stroke scales to
+     about 7px a side, so 14px of a 64px circle is ring and only ~50px is
+     usable. "100%" sets 20px digits beside a 14px percent sign, about 44px
+     wide, which leaves ~3px a side and reads as the number touching the ring.
+
+     Thinning the ring buys the room back without giving up the density: at
+     stroke 9 the usable width is ~57px against a ~39px number. The arc math
+     is untouched because stroke-width does not change a circle's
+     circumference, and the dasharray JS writes is computed from r=48. */
+  #dashboard .dash-dial,
+  #dashboard .dash-dial svg { width: 68px; height: 68px; }
+
+  #dashboard .dash-dial-track,
+  #dashboard .dash-dial-fill { stroke-width: 9; }
+
+  #dashboard .dash-dial-value { font-size: 18px; }
+  #dashboard .dash-dial-value span { font-size: 11px; }
+  #dashboard .dash-dial-label { font-size: 8px; }
+
+  /* 2. THE MONITOR TAKES THE RIGHT MARGIN.
+
+     The edge rail sat 25px off the window edge because it inherits the view's
+     own horizontal padding, which is right for reading columns of text and
+     wasteful for a video tile: those 25px are the difference between a legible
+     stream and a thumbnail. Pulling the panel into that padding gives the
+     picture the width without moving anything else on the dashboard, since
+     only this one grid item is offset. Lands the panel 9px off the edge. */
+  #dashboard .dash-edge-mini { margin-right: -16px; }
+
+  /* 3. THE ACCOUNT CHIP IS A DOOR, NOT A LABEL.
+
+     Clicking it did nothing whenever there was one account, because there was
+     nothing to switch to, and a native select cannot be opened by script
+     anyway. It now goes where accounts are actually managed. */
+  .rail-account { cursor: pointer; }
+  .rail-account:hover { color: var(--text); background: var(--surface-3); }
+}

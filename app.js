@@ -15137,10 +15137,23 @@ function setupRailAccount() {
       chip.className = "rail-account";
       chip.type = "button";
       chip.innerHTML = '<span class="rail-account-mark" aria-hidden="true"></span><span class="rail-account-name topnav-label"></span>';
+      // A native <select> cannot be opened by script, so clicking the chip
+      // never dropped a menu, and with a single account there was nothing to
+      // drop anyway. It goes to where accounts are actually managed instead:
+      // the accounts panel, which both switches and adds.
       chip.addEventListener("click", () => {
-        if (select.options.length > 1) {
+        const panel = document.getElementById("accountsPanel");
+        if (!panel) {
           select.focus();
-          select.click();
+          return;
+        }
+        if (panel.hidden) panel.hidden = false;
+        panel.classList.remove("is-clamped");
+        panel.scrollIntoView({ behavior: "smooth", block: "center" });
+        const target = document.getElementById("accountList") || panel;
+        if (typeof target.focus === "function") {
+          target.setAttribute("tabindex", "-1");
+          target.focus({ preventScroll: true });
         }
       });
       const mark = rail.querySelector(".topnav-mark");
@@ -15151,8 +15164,8 @@ function setupRailAccount() {
     chip.querySelector(".rail-account-name").textContent = name;
     const switchable = select.options.length > 1;
     chip.classList.toggle("is-switchable", switchable);
-    chip.title = switchable ? `${name} (switch account)` : name;
-    chip.setAttribute("aria-label", switchable ? `Account ${name}, switch account` : `Account ${name}`);
+    chip.title = switchable ? `${name}. Manage accounts` : `${name}. Add an account`;
+    chip.setAttribute("aria-label", `Account ${name}. Manage accounts`);
   };
 
   paint();
