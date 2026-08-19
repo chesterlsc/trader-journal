@@ -83,7 +83,13 @@ export function resolveLivePriceSource(symbol) {
   // a spot 4410, a 56 point gap. Pricing a futures position off spot is not a
   // rounding error, it is the wrong instrument, and it is what made a stop that
   // the market never traded through look breached.
-  if (normalized === 'MGC' || normalized === 'GC') {
+  // THE TOPSTEP BOARD. Every root a funded trader actually works is a CME
+  // future, and Yahoo serves them all off the same chart endpoint MGC already
+  // used, so this is one allowlist rather than seven integrations. An explicit
+  // Set, never a pattern: the root is interpolated into a URL, so the only
+  // safe input is one we named ourselves.
+  //   micros  MES MNQ MYM M2K MGC MCL M6E MBT   full  ES NQ YM RTY CL GC
+  if (CME_FUTURES_ROOTS.has(normalized)) {
     return {
       key: `yahoo:${normalized}=F`,
       url: `https://query1.finance.yahoo.com/v8/finance/chart/${normalized}%3DF?interval=1m&range=1d`,
@@ -115,6 +121,13 @@ export function resolveLivePriceSource(symbol) {
   return null;
 }
 
+// Roots quoted as continuous front-month futures on Yahoo (`<root>=F`).
+// Confirmed returning a live regularMarketPrice before shipping.
+const CME_FUTURES_ROOTS = new Set([
+  'MES', 'MNQ', 'MYM', 'M2K', 'MGC', 'MCL', 'M6E', 'MBT',
+  'ES', 'NQ', 'YM', 'RTY', 'CL', 'GC',
+]);
+
 function positivePrice(value) {
   const price = Number(value);
   return Number.isFinite(price) && price > 0 ? price : null;
@@ -132,7 +145,34 @@ export function buildLivePriceRequests(symbols) {
   return [...requests.values()].map((request) => ({ ...request, aliases: [...request.aliases] }));
 }
 
+/* UPSTREAM LOAD IS PER-INSTANCE, NOT PER-TAB. Every open tab polls this
+   endpoint on a 5s timer, and the Topstep board is one upstream request per
+   ROOT — so without this, ten tabs on a warm instance meant sixty Yahoo
+   requests every five seconds and a rate limit within the hour.
+
+   A short memo on the raw response bounds that: the upstream is asked at most
+   once per URL per window however many tabs are watching. It is deliberately
+   the RESPONSE that is memoised, not a derived price, so each quote keeps the
+   upstream's own timestamp — the freshness rule that decides whether a quote
+   may close a trade reads that stamp, and must never see a fresh-looking one
+   we minted ourselves. A memo hit is therefore indistinguishable from asking
+   again and getting the same 30s-old quote, which is exactly what it is. */
+const REMOTE_MEMO_MS = 10000;
+const remoteMemo = new Map();
+
 async function fetchRemoteJson(url, fetchImpl) {
+  const now = Date.now();
+  const memo = remoteMemo.get(url);
+  if (memo && now - memo.at < REMOTE_MEMO_MS) return memo.body;
+  // Bound the map so a long-lived instance cannot grow one entry per URL for
+  // every symbol ever requested.
+  if (remoteMemo.size > 64) remoteMemo.clear();
+  const body = await fetchRemoteJsonUncached(url, fetchImpl);
+  remoteMemo.set(url, { at: now, body });
+  return body;
+}
+
+async function fetchRemoteJsonUncached(url, fetchImpl) {
   try {
     const response = await fetchImpl(url, {
       headers: { Accept: 'application/json', 'User-Agent': 'TraderJournal/1.0' },

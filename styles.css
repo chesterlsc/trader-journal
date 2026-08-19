@@ -9248,6 +9248,15 @@ body.auth-ready .lnd-tape-list .lnd-row {
   color: var(--text-faint);
 }
 
+/* The plain-English name beside the root. A futures root is not
+   self-describing — "M2K" is only obvious to someone who already trades it —
+   and the tape is read by people deciding whether they want to. */
+.lnd-ticker-name {
+  font: 500 var(--fs-micro)/1 var(--font-ui);
+  color: var(--text-faint);
+  opacity: 0.75;
+}
+
 .lnd-ticker-price {
   font: 700 17px/1 var(--font-mono);
   font-feature-settings: "tnum";

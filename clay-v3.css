@@ -880,6 +880,29 @@
   }
   .rail .topnav-mark:hover { background: var(--surface-3); }
 
+  /* CENTRED WHILE COLLAPSED. Every other row is an icon in a fixed 21px box,
+     so they line up down the rail whatever their label; the mark is bare text
+     and left-aligning it put "TJ" a few pixels off that column, which reads as
+     a misplaced element rather than a logo. It only takes the shared
+     flex-start once there is a row to be the start of. */
+  body:not(.rail-pinned) .rail .topnav-mark {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  /* THE ACCOUNT, COLLAPSED. A 190px select cannot live in a 40px column, so
+     the rail shows the account as a rule under the mark and nothing more —
+     the switcher itself arrives with the labels. Not display:none: the select
+     stays in the tree and stays tabbable, and its own focus is what opens the
+     rail to reveal it. */
+  body:not(.rail-pinned) .rail .account-switch {
+    height: 0;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+
   .rail .topnav-icon-btn,
   .rail .topnav-more > summary {
     min-height: 40px;
@@ -936,6 +959,71 @@
     bottom: 12px;
     min-width: 220px;
     z-index: calc(var(--z-nav) + 1);
+  }
+
+  /* ==========================================================================
+     THE BOARD. A wireframe tape across the top edge: hairline rule, mono
+     figures, no fill. It is a reference instrument, not a card — the moment it
+     carries a surface and a shadow it competes with the money below it, and
+     the one thing a price strip must never do is look more important than the
+     balance.
+
+     Fixed, and offset by the rail rather than sitting over it, so the two
+     pieces of desk furniture meet at a corner instead of overlapping.
+     ========================================================================== */
+  .app-ticker {
+    position: fixed;
+    top: 0;
+    left: var(--rail-w);
+    right: 0;
+    z-index: calc(var(--z-nav) - 1);
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-0);
+    overflow: hidden;
+  }
+
+  /* The seam at each end: the tape reads as passing THROUGH the window rather
+     than starting and stopping at its edges. */
+  .app-ticker::before,
+  .app-ticker::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 2;
+    width: 48px;
+    pointer-events: none;
+  }
+  .app-ticker::before { left: 0; background: linear-gradient(90deg, var(--surface-0), transparent); }
+  .app-ticker::after { right: 0; background: linear-gradient(270deg, var(--surface-0), transparent); }
+
+  .app-ticker .lnd-ticker-item {
+    gap: 8px;
+    padding: 0 18px;
+    border-right: 1px solid var(--line);
+  }
+
+  /* The root is the instrument; the name is the translation. Nobody should
+     have to already know what M2K means to read the board. */
+  .app-ticker .lnd-ticker-sym {
+    color: var(--text);
+    font: 700 11px/1 var(--font-mono);
+    letter-spacing: 0.1em;
+  }
+  .app-ticker .lnd-ticker-name {
+    color: var(--text-faint);
+    font: 500 10.5px/1 var(--font-ui);
+    letter-spacing: 0.02em;
+  }
+  .app-ticker .lnd-ticker-price {
+    color: var(--text);
+    font: 600 12px/1 var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .app-ticker .lnd-ticker-delta {
+    font: 600 10.5px/1 var(--font-mono);
+    font-variant-numeric: tabular-nums;
   }
 
   /* THE PAGE MOVES OVER. Every pinned view starts after the gutter, and the

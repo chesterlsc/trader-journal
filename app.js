@@ -1039,7 +1039,34 @@ const terminal = { events: [], asOf: null, stale: true, skewMs: 0, selectedKey: 
 // a prop account, not only while a position is open. Spot XAUUSD stays
 // alongside it: the basis between futures and spot is real, and seeing both
 // is what makes it obvious which one a stop is being measured against.
-const TICKER_SYMBOLS = ["BTCUSDT", "XAUUSD", "MGC", "ETHUSDT", "SOLUSDT", "XAGUSD", "EURUSD"];
+// THE TOPSTEP BOARD LEADS. The instruments a funded trader actually works are
+// the CME micros, so they are the marquee — MGC was already here alone, which
+// made the strip read as a crypto ticker that happened to carry gold. Every
+// root below returned a live quote from the same Yahoo endpoint MGC uses
+// before it was added; nothing here is priced from a proxy or invented.
+// Crypto and spot stay on the tail: they are the reference, not the desk.
+const TICKER_SYMBOLS = [
+  "MES", "MNQ", "MYM", "M2K", "MGC", "MCL", "M6E",
+  "BTCUSDT", "XAUUSD", "ETHUSDT", "EURUSD"
+];
+
+// What each root is called on the board, and how many decimals it quotes in.
+// A futures root is not self-describing: "MES" means nothing to a reader who
+// has not traded it, and rounding M6E to two places would show 1.16 for an
+// instrument that moves in the fourth decimal.
+const TICKER_META = {
+  MES: { name: "S&P 500", dp: 2 },
+  MNQ: { name: "Nasdaq", dp: 2 },
+  MYM: { name: "Dow", dp: 0 },
+  M2K: { name: "Russell", dp: 2 },
+  MGC: { name: "Gold", dp: 1 },
+  MCL: { name: "Crude", dp: 2 },
+  M6E: { name: "Euro FX", dp: 4 },
+  BTCUSDT: { name: "Bitcoin", dp: 0 },
+  XAUUSD: { name: "Spot gold", dp: 2 },
+  ETHUSDT: { name: "Ether", dp: 2 },
+  EURUSD: { name: "EUR/USD", dp: 4 }
+};
 
 /* THE WALL. Every channel here runs an OFFICIAL free 24/7 live stream and is
    embedded by CHANNEL id rather than video id, so a nightly stream restart does
@@ -15102,6 +15129,11 @@ function syncChromeHeight() {
     document.querySelector(".topnav"),
     document.getElementById("sidebar"),
     document.getElementById("demoBanner"),
+    // The board. Fixed to the top edge like the bar it replaced, so its bottom
+    // is the first free pixel and every pinned view has to start under it.
+    // Measured rather than stated: it is one row on a desk and two on a narrow
+    // window, and a hard-coded height would clip it at the second.
+    document.getElementById("appTicker"),
     // The phone dock, for the other end. .tabbar is bottom:
     // calc(env(safe-area-inset-bottom) + 12px) with height 64, so it owns
     // env + 76 of the bottom edge, and the Edge page reserved a flat 64.
