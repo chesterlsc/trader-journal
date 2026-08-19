@@ -13,3 +13,11 @@ tests/
 MVP.md
 README.md
 .claude/
+
+# The v3 concept preview is REPO-ONLY. It was built alongside the shipping app
+# so the app and website could stay untouched while a redesign was tried, and a
+# concept carrying invented sample figures has no business being reachable on
+# the live marketing domain — noindex kept it out of search, but the URL still
+# answered 200 to anyone who typed it. The source stays in git; it just stops
+# being part of the deployment.
+v3/
