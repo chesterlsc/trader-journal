@@ -742,13 +742,21 @@
      of the session. :focus-visible is the browser's own "this focus came from
      the keyboard" heuristic, which is exactly the case the expansion is for. */
   .rail:has(:focus-visible) {
-    width: 210px;
+    width: 84px;
     box-shadow: var(--clay-float);
   }
 
   /* PINNED. --rail-w is what the page reserves, so widening it here is what
      makes the content move instead of being covered. */
-  body.rail-pinned { --rail-w: 210px; }
+  /* THE STAMP RAIL. 84px, not 210px. The labelled layout was never the
+     problem: clay-v2's .topnav-btn is already a stamp, a 21px glyph stacked
+     over a 9px mono label, and it is the rail override BELOW that flattened
+     rows into icon-beside-label, which is the shape that needs 210px to hold
+     a word. Standing the rows back up costs 28px instead of 154px, an 82% cut
+     to what the open state charges the page, and every label still fits by
+     arithmetic: 8px rail padding and 4px row padding leave 60px, against
+     JOURNAL at ~47px in 10px mono, the widest of the six. */
+  body.rail-pinned { --rail-w: 84px; }
   body.rail-pinned .rail { width: var(--rail-w); }
 
   .rail-pin {
@@ -783,17 +791,23 @@
   .rail .topnav-btn,
   .rail .topnav-icon-btn,
   .rail .topnav-mark,
-  .rail .topnav-more > summary {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  .rail .topnav-more > summary,
+  .rail .rail-account,
+  .rail .rail-pin {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 4px;
     width: 100%;
-    min-height: 40px;
-    padding: 8px;
+    min-height: 52px;
+    padding: 6px 4px;
     border-radius: 10px;
     white-space: nowrap;
-    justify-content: flex-start;
   }
+
+  /* Collapsed and open are now the SAME layout: only the rail's width and the
+     label's opacity differ, so nothing reflows, nothing shifts vertically, and
+     no element changes display mode between states. */
 
   .rail .topnav-links {
     display: flex;
@@ -837,11 +851,19 @@
      with the rail, so nothing is hidden from a screen reader by collapsing.
      Opacity, not display, for exactly that reason. */
   .rail .topnav-label {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 10px;
+    letter-spacing: .07em;
+    text-overflow: ellipsis;
     opacity: 0;
     transition: opacity 120ms var(--ease-out);
   }
   .rail:has(:focus-visible) .topnav-label,
-  body.rail-pinned .topnav-label { opacity: 1; }
+  body.rail-pinned .topnav-label {
+    opacity: 1;
+    transition-delay: 60ms;
+  }
 
   /* THE BADGE, INSIDE THE RAIL. The base rule anchors it `right: 4px` against
      the BUTTON, and a rail row is 62px of intrinsic content inside a 40px
@@ -853,10 +875,10 @@
      nothing here and is gone. */
   .rail .topnav-badge { opacity: 1; }
 
-  body:not(.rail-pinned) .rail .topnav-badge {
+  .rail .topnav-badge {
     right: auto;
-    left: 21px;
-    top: 3px;
+    left: calc(50% + 4px);
+    top: 4px;
   }
 
   /* ONE LANGUAGE IN ONE COLUMN. The rail inherited three different treatments
@@ -1080,7 +1102,7 @@ body.auth-locked .rail { display: none !important; }
   .rail .topnav-btn,
   .rail .topnav-icon-btn,
   .rail .topnav-more > summary {
-    padding: 8px 9px;
+    padding: 6px 4px;
   }
 
   .rail .topnav-btn.is-active {
@@ -1340,4 +1362,86 @@ body.auth-locked .rail { display: none !important; }
      anyway. It now goes where accounts are actually managed. */
   .rail-account { cursor: pointer; }
   .rail-account:hover { color: var(--text); background: var(--surface-3); }
+}
+
+/* ==========================================================================
+   THE ACCOUNT PICKER.
+
+   The chip used to send you to a panel on the dashboard, which is not
+   choosing an account, it is being told where to go and do it yourself. It is
+   a flyout now, riding the same contract the overflow menu already has in
+   this rail: click invoked, closes on Escape with focus returned, closes on
+   an outside click. That contract is why this is not the hover overlay that
+   was rejected. Hover expansion was silent and unasked for and it covered
+   what you were reading; a menu you opened is a menu you wanted.
+
+   It is positioned from --rail-w, so it lands beside the rail identically at
+   56px and at 84px, and escapes the rail's overflow:hidden by being fixed.
+   ========================================================================== */
+@media (min-width: 1025px) {
+  .rail .rail-account-more { position: static; width: 100%; }
+
+  .rail .rail-account-more > summary {
+    list-style: none;
+    cursor: pointer;
+  }
+  .rail .rail-account-more > summary::-webkit-details-marker { display: none; }
+
+  .rail .rail-account-more .topnav-menu {
+    top: 76px;
+    bottom: auto;
+    min-width: 220px;
+  }
+
+  .rail-account-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 40px;
+    padding: 6px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-soft);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .rail-account-row:hover { color: var(--text); background: var(--surface-3); }
+  .rail-account-row.is-active { color: var(--text); }
+  .rail-account-row .rail-account-check { margin-left: auto; color: var(--accent); }
+  .rail-account-row.is-add {
+    margin-top: 4px;
+    border-top: 1px solid var(--line);
+    border-radius: 0 0 8px 8px;
+    color: var(--accent);
+  }
+
+  /* The mark leans in while its menu is out. */
+  .rail .rail-account-more[open] .rail-account-mark { transform: scale(1.12); }
+  .rail .rail-account-mark { transition: transform 140ms var(--ease-out), border-color 140ms var(--ease-out); }
+}
+
+/* The switch itself: the new initial stamps in with an accent flash, which is
+   the moment the owner asked to be able to see. Replayed by removing and
+   re-adding the class, so a repeat switch to the same account still reads. */
+@media (min-width: 1025px) and (prefers-reduced-motion: no-preference) {
+  @keyframes railAcctPop {
+    0%   { transform: scale(0.6); border-color: var(--accent); }
+    70%  { transform: scale(1.08); border-color: var(--accent); }
+    100% { transform: scale(1); }
+  }
+  .rail-account-mark.is-popping { animation: railAcctPop 240ms var(--ease-out); }
+
+  @keyframes railMenuIn {
+    from { opacity: 0; transform: translateX(-8px) scale(0.97); }
+    to   { opacity: 1; transform: none; }
+  }
+  .rail .topnav-more[open] > .topnav-menu,
+  .rail .rail-account-more[open] > .topnav-menu {
+    transform-origin: left center;
+    animation: railMenuIn 150ms var(--ease-out);
+  }
 }

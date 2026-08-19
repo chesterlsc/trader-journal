@@ -1785,24 +1785,29 @@ function bindEvents() {
     openJournalSheet(pending[pending.length - 1]?.id);
   });
   // Overflow menu is a <details>; close it on outside click and on Escape.
-  if (ui.topnavMore) {
-    document.addEventListener("click", (event) => {
-      if (ui.topnavMore.open && !ui.topnavMore.contains(event.target)) {
-        ui.topnavMore.open = false;
-      }
+  // Every flyout in the rail shares one dismissal contract: outside click,
+  // Escape with focus returned to the summary, and close on choosing. Bound
+  // by delegation rather than per element, because the account picker is
+  // built after boot and would otherwise open with no way to close it, which
+  // is exactly how it first shipped.
+  document.addEventListener("click", (event) => {
+    document.querySelectorAll("details.topnav-more[open]").forEach((menu) => {
+      if (!menu.contains(event.target)) menu.open = false;
     });
-    ui.topnavMore.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") {
-        ui.topnavMore.open = false;
-        ui.topnavMore.querySelector("summary")?.focus();
-      }
-    });
-    ui.topnavMore.addEventListener("click", (event) => {
-      if (event.target.closest(".topnav-menu-item")) {
-        ui.topnavMore.open = false;
-      }
-    });
-  }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    const open = event.target.closest?.("details.topnav-more[open]")
+      || document.querySelector("details.topnav-more[open]");
+    if (!open) return;
+    open.open = false;
+    open.querySelector("summary")?.focus();
+  });
+  document.addEventListener("click", (event) => {
+    const item = event.target.closest(".topnav-menu-item, .rail-account-row");
+    if (!item) return;
+    item.closest("details.topnav-more")?.removeAttribute("open");
+  });
   // The greeting carries a live session countdown; a minute tick is enough.
   window.setInterval(renderGreeting, 60000);
   ui.backupJsonBtn.addEventListener("click", exportBackupJson);
@@ -15123,49 +15128,78 @@ function setupRailAccount() {
   const rail = document.querySelector(".rail");
   if (!select || !rail) return;
 
+  // The native select stays in the DOM as the single source of truth and the
+  // one thing that actually switches: every row below writes to it and fires
+  // its change event, so switchAccount runs untouched and the chip can never
+  // disagree with the app. It is just not the thing you look at any more.
+  select.setAttribute("tabindex", "-1");
+  select.setAttribute("aria-hidden", "true");
+
+  let shown = select.value;
+
   const paint = () => {
     const option = select.options[select.selectedIndex] || select.options[0];
     const name = option ? option.text.trim() : "";
-    let chip = document.getElementById("railAccount");
+    let wrap = document.getElementById("railAccountMore");
     if (!name) {
-      if (chip) chip.hidden = true;
+      if (wrap) wrap.hidden = true;
       return;
     }
-    if (!chip) {
-      chip = document.createElement("button");
-      chip.id = "railAccount";
-      chip.className = "rail-account";
-      chip.type = "button";
-      chip.innerHTML = '<span class="rail-account-mark" aria-hidden="true"></span><span class="rail-account-name topnav-label"></span>';
-      // A native <select> cannot be opened by script, so clicking the chip
-      // never dropped a menu, and with a single account there was nothing to
-      // drop anyway. It goes to where accounts are actually managed instead:
-      // the accounts panel, which both switches and adds.
-      chip.addEventListener("click", () => {
-        const panel = document.getElementById("accountsPanel");
-        if (!panel) {
-          select.focus();
+    if (!wrap) {
+      wrap = document.createElement("details");
+      wrap.className = "topnav-more rail-account-more";
+      wrap.id = "railAccountMore";
+      wrap.innerHTML =
+        '<summary class="rail-account" id="railAccount" aria-haspopup="menu">' +
+          '<span class="rail-account-mark" aria-hidden="true"></span>' +
+          '<span class="rail-account-name topnav-label"></span>' +
+        '</summary>' +
+        '<div class="topnav-menu" role="menu" aria-label="Accounts"></div>';
+      const mark = rail.querySelector(".topnav-mark");
+      rail.insertBefore(wrap, mark && mark.parentNode === rail ? mark.nextSibling : rail.firstChild);
+      wrap.querySelector(".topnav-menu").addEventListener("click", (event) => {
+        const row = event.target.closest("[data-account-id], [data-account-add]");
+        if (!row) return;
+        wrap.open = false;
+        if (row.hasAttribute("data-account-add")) {
+          if (typeof openAccountDialog === "function") openAccountDialog("");
           return;
         }
-        if (panel.hidden) panel.hidden = false;
-        panel.classList.remove("is-clamped");
-        panel.scrollIntoView({ behavior: "smooth", block: "center" });
-        const target = document.getElementById("accountList") || panel;
-        if (typeof target.focus === "function") {
-          target.setAttribute("tabindex", "-1");
-          target.focus({ preventScroll: true });
-        }
+        select.value = row.getAttribute("data-account-id");
+        select.dispatchEvent(new Event("change", { bubbles: true }));
       });
-      const mark = rail.querySelector(".topnav-mark");
-      rail.insertBefore(chip, mark && mark.parentNode === rail ? mark.nextSibling : rail.firstChild);
     }
-    chip.hidden = false;
-    chip.querySelector(".rail-account-mark").textContent = name.charAt(0).toUpperCase();
-    chip.querySelector(".rail-account-name").textContent = name;
-    const switchable = select.options.length > 1;
-    chip.classList.toggle("is-switchable", switchable);
-    chip.title = switchable ? `${name}. Manage accounts` : `${name}. Add an account`;
-    chip.setAttribute("aria-label", `Account ${name}. Manage accounts`);
+    wrap.hidden = false;
+
+    const markEl = wrap.querySelector(".rail-account-mark");
+    markEl.textContent = name.charAt(0).toUpperCase();
+    wrap.querySelector(".rail-account-name").textContent = name;
+    const summary = wrap.querySelector("summary");
+    summary.title = name;
+    summary.setAttribute("aria-label", `Account ${name}. Choose account`);
+
+    // One row per account plus the way to make another, rebuilt on every
+    // paint so a renamed or added account cannot leave a stale row behind.
+    const menu = wrap.querySelector(".topnav-menu");
+    const rows = Array.from(select.options).map((opt) => {
+      const active = opt.value === select.value;
+      return `<button class="rail-account-row${active ? " is-active" : ""}" type="button" role="menuitem" data-account-id="${escapeHtml(opt.value)}">` +
+        `<span class="rail-account-mark" aria-hidden="true">${escapeHtml(opt.text.trim().charAt(0).toUpperCase())}</span>` +
+        `<span>${escapeHtml(opt.text.trim())}</span>` +
+        (active ? '<span class="rail-account-check" aria-hidden="true">&#10003;</span>' : "") +
+        "</button>";
+    });
+    rows.push('<button class="rail-account-row is-add" type="button" role="menuitem" data-account-add>+ Add account</button>');
+    menu.innerHTML = rows.join("");
+
+    // The switch is the moment worth seeing, so it only replays when the
+    // account actually changed, never on an incidental repaint.
+    if (select.value !== shown) {
+      shown = select.value;
+      markEl.classList.remove("is-popping");
+      void markEl.offsetWidth;
+      markEl.classList.add("is-popping");
+    }
   };
 
   paint();
