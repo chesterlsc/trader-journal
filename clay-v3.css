@@ -984,7 +984,9 @@ body.auth-locked .rail { display: none !important; }
   #terminal.is-active { left: var(--rail-w); }
   #terminal:has(.bb-wall[data-size="max"]) .bb-tape { left: var(--rail-w); }
   .bb-wall[data-size="max"] { left: var(--rail-w); }
-  .bb-wall[data-size="half"] { left: var(--rail-w); }
+  /* half is a RIGHT-hand split now, not a full-width band, so it needs no
+     rail gutter — and must not be given a left offset, which would stretch it
+     across the desk. Its own rule sets left: auto for exactly that reason. */
   .wcmd { left: var(--rail-w); width: auto; }
 
   .rail .topnav-btn,
