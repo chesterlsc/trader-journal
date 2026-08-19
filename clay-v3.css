@@ -736,7 +736,12 @@
      one thing that still expands on its own is keyboard focus, where the
      pointer is nowhere near the content and the label is the only way to know
      what is selected. */
-  .rail:focus-within {
+  /* :has(:focus-visible), not :focus-within. A mouse click on a nav button
+     leaves DOM focus parked on it — nothing in app.js blurs it — so
+     :focus-within latched the rail open at 210px over the view for the rest
+     of the session. :focus-visible is the browser's own "this focus came from
+     the keyboard" heuristic, which is exactly the case the expansion is for. */
+  .rail:has(:focus-visible) {
     width: 210px;
     box-shadow: var(--clay-float);
   }
@@ -766,7 +771,7 @@
   .rail-pin svg { flex: 0 0 auto; width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.9; }
   body.rail-pinned .rail-pin { color: var(--accent); }
   .rail-pin .topnav-label { opacity: 0; transition: opacity 120ms var(--ease-out); }
-  .rail:focus-within .rail-pin .topnav-label,
+  .rail:has(:focus-visible) .rail-pin .topnav-label,
   body.rail-pinned .rail-pin .topnav-label { opacity: 1; }
 
   /* The bottom cluster sinks: destinations at the top, utilities at the
@@ -820,7 +825,7 @@
     transition: opacity 120ms var(--ease-out);
   }
 
-  .rail:focus-within .account-switch,
+  .rail:has(:focus-visible) .account-switch,
   body.rail-pinned .account-switch { opacity: 1; }
 
   .rail .account-switch-select {
@@ -835,7 +840,7 @@
     opacity: 0;
     transition: opacity 120ms var(--ease-out);
   }
-  .rail:focus-within .topnav-label,
+  .rail:has(:focus-visible) .topnav-label,
   body.rail-pinned .topnav-label { opacity: 1; }
 
   /* The unjournalled badge must stay legible while collapsed: it is the one
@@ -846,11 +851,17 @@
   }
 
   /* The overflow menu opens beside the rail, not under it. */
+  /* right:0 and z-index:2 are inherited from the top bar's absolute menu in
+     clay-v2. Switching to fixed re-anchors right:0 to the VIEWPORT, so the
+     panel stretched from the rail to the window edge — 1216px at vw 1280 —
+     and sat under the rail's own z-index. Both have to be undone here. */
   .rail .topnav-menu {
     position: fixed;
     left: calc(var(--rail-w) + 8px);
+    right: auto;
     bottom: 12px;
     min-width: 220px;
+    z-index: calc(var(--z-nav) + 1);
   }
 
   /* THE PAGE MOVES OVER. Every pinned view starts after the gutter, and the
@@ -864,6 +875,12 @@
      content column, or it sits half a rail to the left of the thing it
      belongs to. */
   .dash-ticker-dock { left: calc(50% + (var(--rail-w) / 2)); }
+
+  /* The last fixed box still centred on the VIEWPORT rather than the content
+     column, so it sat --rail-w/2 to the left of the thing it belongs to —
+     28px collapsed, 105px pinned. It carries the UNDO for the one
+     irreversible action in the app, so it is worth the line. */
+  .capture-toast { left: var(--rail-w); }
 }
 
 /* Locked session: same contract the top bar had. */

@@ -62,7 +62,9 @@ for (const button of menu.match(/<button[^>]*>/g) || []) {
 // --- the two breakpoints must agree ----------------------------------------
 // Both are re-read from the sheets. A single literal moving on one side and not
 // the other is exactly how destinations get stranded.
-const dockGate = /@media\s*\(max-width:\s*(\d+)px\)\s*\{[^@]*?body\.is-authenticated\s+\.tabbar\b/s.exec(
+// body.app-on is the surface switch (see the convention block in styles.css);
+// it replaced the is-authenticated/is-preview/is-guest triple this used to read.
+const dockGate = /@media\s*\(max-width:\s*(\d+)px\)\s*\{[^@]*?body\.app-on\s+\.tabbar\b/s.exec(
   read("styles.css")
 );
 assert.ok(dockGate, "could not find the .tabbar visibility media query in styles.css");

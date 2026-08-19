@@ -1071,7 +1071,15 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
   }
 
   function drawBarChart(canvas, entries, options, progress = 1) {
-    const ctxData = getCanvasContext(canvas);
+    // padTop 18 + padBottom 28 + 34 per row. Capped by data-height so a long
+    // list still scrolls inside the panel it was designed for, and floored so
+    // an empty chart keeps room for its "no data" line.
+    const rowCount = Array.isArray(entries) ? entries.length : 0;
+    const authoredHeight = Number(canvas && canvas.dataset.height) || 280;
+    const fitHeight = rowCount
+      ? Math.min(authoredHeight, 46 + rowCount * 34)
+      : authoredHeight;
+    const ctxData = getCanvasContext(canvas, fitHeight);
     if (!ctxData) {
       return;
     }
@@ -1456,7 +1464,11 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
 
     const centerX = width / 2;
     const centerY = height / 2 - 2;
-    const radius = Math.max(Math.min((width - 150) / 2, (height - 120) / 2), 46);
+    // 90, not 120. The reserve is for the six metric labels top and bottom;
+    // 120 was tuned when this canvas was data-height 300, and after the
+    // density pass cut it to 170 the expression went negative and the radar
+    // sat permanently on its 46px floor — a 92px circle in a 350px box.
+    const radius = Math.max(Math.min((width - 150) / 2, (height - 90) / 2), 46);
     const rings = 5;
     const angleStep = (Math.PI * 2) / metrics.length;
     const at = (index, distance) => {
@@ -1607,14 +1619,18 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
 
   /* ====================================================================== */
 
-  function getCanvasContext(canvas) {
+  // heightOverride lets a chart size itself to its own content. data-height is
+  // a fixed attribute, which is right for a curve (the shape needs the room
+  // whatever the sample count) and wrong for a bar chart, where one row in a
+  // 180px box is a 24px bar swimming in 55px of empty lane above and below.
+  function getCanvasContext(canvas, heightOverride) {
     if (!canvas) {
       return null;
     }
 
     const ratio = window.devicePixelRatio || 1;
     const width = canvas.clientWidth || 900;
-    const height = Number(canvas.dataset.height || 280);
+    const height = Number(heightOverride || canvas.dataset.height || 280);
 
     canvas.width = Math.floor(width * ratio);
     canvas.height = Math.floor(height * ratio);

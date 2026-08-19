@@ -113,13 +113,13 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260814-topstep1" />
+    <link rel="stylesheet" href="styles.css?v=20260819-reno" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260813-edge2" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260819-reno" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260813-edge2" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260819-reno" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -705,7 +705,20 @@
            nothing live" inside the frame and in the fine print. All figures
            invented; category monograms, never brands. The screen pins Clay V3
            gunmetal inside .lnd-tp-frame so it stays a dark instrument on the
-           concrete theme (a screen has its own light). -->
+           concrete theme (a screen has its own light).
+
+           FROZEN, ON PURPOSE. This is a hand-typed tableau of the desk, not a
+           second renderer for it: the `> edge --link journal` prompt is typed
+           here, in the dashboard rail and in the real desk, three literals
+           that are ALLOWED to drift. It is a marketing screenshot, so it shows
+           the product at its best rather than whatever the roster holds today,
+           and it must keep working with no data, no auth and no network.
+
+           So: desk changes do NOT propagate here, and nobody should feel a
+           duty to make them. If this ever needs to be live instead, the way in
+           already exists — the landing wall embeds the REAL component as
+           `class="bb-mon lnd-mon"` further up this file, and that is the
+           pattern to copy rather than wiring this replica to state. -->
       <section class="lnd-tp" id="terminalPro" data-landing-reveal aria-labelledby="lndTermHeading">
         <div class="lnd-tp-air" aria-hidden="true">
           <span class="lnd-tp-floor"></span>
@@ -1399,7 +1412,7 @@
                  export is the other way a trade enters the journal, so it sits
                  next to Log a trade rather than being buried in Trade Review.
                  Same dialog, one shared handler. -->
-            <button id="dashQuickImportBtn" class="btn dash-import-btn" type="button">
+            <button id="dashQuickImportBtn" class="btn dash-import-btn" type="button" aria-label="Quick import">
               <span class="journal-action-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false">
                   <path d="M12 15.25V4.75M8.25 11.5 12 15.25l3.75-3.75M4.75 15.75v2.5h14.5v-2.5" />
@@ -1730,11 +1743,18 @@
                are not buttons here: these are Leon's entries, not links into
                this user's own journal. Hidden until the feed has rows, so a
                demo or preview journal can never masquerade as Leon's. -->
-          <section class="panel dash-leon" id="dashLeonTape" hidden aria-labelledby="dashLeonHeading">
+          <section class="panel dash-leon is-clamped" id="dashLeonTape" hidden aria-labelledby="dashLeonHeading">
             <div class="lnd-tape-head">
               <span class="live-pulse-dot" aria-hidden="true"></span>
               <h3 id="dashLeonHeading" class="lnd-tape-title">Leon trades &middot; live tape</h3>
               <span class="lnd-tape-delay">public feed &middot; 60s</span>
+              <button
+                class="list-clamp-toggle"
+                type="button"
+                data-clamp-toggle
+                aria-controls="dashLeonTapeList"
+                aria-expanded="false"
+              >show all</button>
             </div>
             <div class="lnd-tape-list" id="dashLeonTapeList"></div>
             <p class="lnd-tape-note">Leon&rsquo;s public feed: open positions first, then closed trades. The same rows the landing page shows.</p>
@@ -1800,9 +1820,9 @@
                 id="drawdownChart"
                 width="900"
                 height="280"
-                data-height="180" <!-- density pass: was 240 -->
+                data-height="180"
                 aria-label="Drawdown curve chart"
-              ></canvas>
+              ></canvas> <!-- density pass: was 240 -->
             </article>
             <article class="panel panel-chart panel-strategy-performance panel-span-8">
               <div class="panel-head panel-head-inline">
@@ -1828,9 +1848,9 @@
                 id="strategyPerformanceChart"
                 width="900"
                 height="320"
-                data-height="200" <!-- density pass: was 280 -->
+                data-height="200"
                 aria-label="Strategy performance chart"
-              ></canvas>
+              ></canvas> <!-- density pass: was 280 -->
             </article>
             <article class="panel panel-chart panel-trader-score panel-span-4">
               <div class="panel-head panel-head-inline">
@@ -1840,7 +1860,7 @@
                 </div>
                 <button class="info-btn" type="button" data-score-info aria-label="How the scores are calculated">&#9432;</button>
               </div>
-              <canvas id="traderScoreChart" width="900" height="320" data-height="170" aria-label="Trader score radar chart"></canvas> <!-- density pass: was 300 -->
+              <canvas id="traderScoreChart" width="900" height="320" data-height="240" aria-label="Trader score radar chart"></canvas> <!-- 240: the density pass cut this to 170, which pinned the radar on its 46px floor. Half the height back, and charts.js trims its own reserve to 90 for the rest. -->
               <div class="trader-score-foot">
                 <div class="trader-score-value-wrap">
                   <p class="metric-label">Trader Score</p>
@@ -1858,9 +1878,9 @@
                 id="psychologyChart"
                 width="900"
                 height="280"
-                data-height="180" <!-- density pass: was 240 -->
+                data-height="180"
                 aria-label="P&L and win rate by psychology rating chart"
-              ></canvas>
+              ></canvas> <!-- density pass: was 240 -->
             </article>
             <article class="panel panel-chart panel-span-4">
               <div class="panel-head">
@@ -1871,9 +1891,9 @@
                 id="sessionChart"
                 width="900"
                 height="280"
-                data-height="180" <!-- density pass: was 240 -->
+                data-height="180"
                 aria-label="P&L by trading session chart"
-              ></canvas>
+              ></canvas> <!-- density pass: was 240 -->
             </article>
             <article class="panel panel-chart panel-span-4">
               <div class="panel-head">
@@ -1884,9 +1904,9 @@
                 id="rMultipleChart"
                 width="900"
                 height="280"
-                data-height="180" <!-- density pass: was 240 -->
+                data-height="180"
                 aria-label="R-multiple distribution histogram"
-              ></canvas>
+              ></canvas> <!-- density pass: was 240 -->
             </article>
           </section>
 
@@ -1956,12 +1976,25 @@
                together: the budgets below apply to whichever account is
                active here. Archive, never delete — the trades under an account
                have nowhere else to live. -->
-          <section class="panel" id="accountsPanel">
-            <div class="panel-head">
-              <h3>Accounts</h3>
-              <p>
-                One equity curve per account. Everything on every screen is scoped to the active one: dashboard, review, calendar, exports.
-              </p>
+          <!-- is-clamped in the ATTRIBUTE, not applied by JS, so the list is
+               short on first paint with no flash of a long one. The class must
+               live on the SECTION: renderAccountsPanel() replaces the <ul>'s
+               innerHTML on every call and would take the state with it. -->
+          <section class="panel is-clamped" id="accountsPanel">
+            <div class="panel-head panel-head-inline">
+              <div>
+                <h3>Accounts</h3>
+                <p>
+                  One equity curve per account. Everything on every screen is scoped to the active one: dashboard, review, calendar, exports.
+                </p>
+              </div>
+              <button
+                class="list-clamp-toggle"
+                type="button"
+                data-clamp-toggle
+                aria-controls="accountList"
+                aria-expanded="false"
+              >show all</button>
             </div>
             <ul class="account-list" id="accountList"></ul>
             <div class="form-actions">
@@ -3699,7 +3732,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260814-topstep1"></script>
-    </div>
+    <script type="module" src="app.js?v=20260819-reno"></script>
   </body>
 </html>

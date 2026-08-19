@@ -1183,6 +1183,7 @@ function init() {
   bindEvents();
   syncMobileNavState();
   setupRailPin();
+  setupListClamps();
   syncChromeHeight();
   renderLoginLogs();
   renderAdminUsers();
@@ -2614,7 +2615,13 @@ function updateAccessGate() {
   document.body.classList.toggle("is-guest", guestMode);
   // Demo visitor reaching for the account form: show the landing shell over
   // the demo instead of tearing it down, so nothing they logged is lost.
-  document.body.classList.toggle("demo-signup", guestMode && state.auth.mobileAuthVisible);
+  const demoSignup = guestMode && state.auth.mobileAuthVisible;
+  document.body.classList.toggle("demo-signup", demoSignup);
+  // THE SURFACE SWITCH. One class answers "is the app on screen, or the
+  // marketing site?" for every rule in every sheet. It is the exact
+  // complement of the two display rules in styles.css, computed once here
+  // rather than re-spelled as a four-clause selector at each call site.
+  document.body.classList.toggle("app-on", (authenticated || previewMode || guestMode) && !demoSignup);
   syncDemoNotice();
 
   ui.navButtons.forEach((btn) => {
@@ -13805,6 +13812,22 @@ function setupTerminal() {
   // to a detached node, AND there is now a second tile on the dashboard rail.
   // One binding for both, because a monitor is a monitor.
   document.addEventListener("click", (event) => {
+    // Fullscreen first: .bb-mon-full sits inside the masthead scrim that
+    // overlays the screen button, so testing the screen first would swallow it.
+    // The native API on purpose — the browser owns Escape, and the iframe node
+    // is never re-created, so a playing stream survives both directions. A
+    // re-render would not: setHtml is innerHTML and would drop the stream.
+    const full = event.target.closest(".bb-mon-full");
+    if (full) {
+      const tile = full.closest(".bb-mon");
+      const request = document.fullscreenElement
+        ? document.exitFullscreen()
+        : tile?.requestFullscreen();
+      Promise.resolve(request).catch(() => {
+        /* denied by permissions policy, or already exited */
+      });
+      return;
+    }
     const button = event.target.closest(".bb-mon-screen");
     if (button) {
       playMonitor(button.closest(".bb-mon"));
@@ -14992,6 +15015,8 @@ function monitorTile(slotValue, index) {
           <em>${escapeHtml(label)}</em>
           <button class="bb-mon-link" type="button" data-wall-link="${index}"
             aria-label="Paste a YouTube link into monitor ${index + 1}">link</button>
+          <button class="bb-mon-full" type="button"
+            aria-label="Maximize monitor ${index + 1}">max</button>
         </p>
         <button class="bb-mon-screen" type="button" aria-label="Play ${escapeHtml(playLabel)} live">
           <span class="bb-mon-scan" aria-hidden="true"></span>
@@ -15025,6 +15050,24 @@ function getWallSize() {
    reserved gutter, so the content moves over instead of hiding under it. The
    preference is per browser, not per account: it describes this screen and
    this pointer, not the trader. */
+/* The two dashboard lists that grow without bound show two rows until asked.
+   ONE delegated listener on the document rather than a binding per button:
+   both lists are rebuilt with innerHTML on every render, and the heads that
+   carry the buttons sit inside panels that JS also touches, so a direct
+   binding would need re-attaching on every repaint. The clamp itself is CSS
+   (see LIST CLAMP in styles.css) — this only flips the class. */
+function setupListClamps() {
+  document.addEventListener("click", (event) => {
+    const toggle = event.target.closest("[data-clamp-toggle]");
+    if (!toggle) return;
+    const panel = toggle.closest(".panel");
+    if (!panel) return;
+    const clamped = panel.classList.toggle("is-clamped");
+    toggle.setAttribute("aria-expanded", clamped ? "false" : "true");
+    toggle.textContent = clamped ? "show all" : "show less";
+  });
+}
+
 function setupRailPin() {
   const pin = document.getElementById("railPinBtn");
   if (!pin) return;

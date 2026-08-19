@@ -165,18 +165,31 @@ export function createRecentTradesView(deps) {
       </span>`;
   }
 
-  function renderTapeRow(trade, order = 0) {
+  /* ONE row, two surfaces. The website's hero tape and the app's Leon panel
+     render the same four children from the same data; they differed only in
+     the wrapper — a <button> that opens the trade on the landing, an inert
+     <div> on the dashboard where there is nothing to open. That is a single
+     branch, not a reason for a second template, and keeping two meant every
+     change to a tape row was a change in two places.
+
+     interactive is the surface switch: true for the website's clickable rows
+     (handleRecentTradesClick reads data-trade-id), false for the app's. */
+  function renderTapeRow(trade, order = 0, { interactive = true } = {}) {
     const isSell = String(trade.direction || "").toLowerCase() === "sell";
     const outcome = trade.status === "open" ? { key: "open", label: "Open" } : getTradeOutcome(trade);
     const meta = `${isSell ? "Short" : "Long"} · ${formatCompactTradeDate(trade)}`;
+    const tag = interactive ? "button" : "div";
+    const attrs = interactive
+      ? ` type="button" data-trade-id="${escapeHtml(String(trade.id || ""))}"`
+      : "";
 
     return `
-      <button class="lnd-row is-${outcome.key}" type="button" data-trade-id="${escapeHtml(String(trade.id || ""))}" style="--row-order:${Number(order)};">
+      <${tag} class="lnd-row is-${outcome.key}"${attrs} style="--row-order:${Number(order)};">
         <span class="lnd-row-symbol">${escapeHtml(trade.asset)}${renderTapeMark(trade)}</span>
         <span class="lnd-row-meta">${escapeHtml(meta)}</span>
         <span class="lnd-row-result">${outcome.label}</span>
         ${renderTapePrices(trade)}
-      </button>
+      </${tag}>
     `;
   }
 
@@ -229,24 +242,8 @@ export function createRecentTradesView(deps) {
     const closed = rows.filter((trade) => trade.status !== "open");
     ui.dashLeonTapeList.innerHTML = [...open, ...closed]
       .slice(0, TAPE_ROW_LIMIT)
-      .map((trade, order) => renderLeonRow(trade, order))
+      .map((trade, order) => renderTapeRow(trade, order, { interactive: false }))
       .join("");
-  }
-
-  function renderLeonRow(trade, order) {
-    const isSell = String(trade.direction || "").toLowerCase() === "sell";
-    const isOpen = trade.status === "open";
-    const outcome = isOpen ? { key: "open", label: "Open" } : getTradeOutcome(trade);
-    const meta = `${isSell ? "Short" : "Long"} · ${formatCompactTradeDate(trade)}`;
-
-    return `
-      <div class="lnd-row is-${outcome.key}" style="--row-order:${Number(order)};">
-        <span class="lnd-row-symbol">${escapeHtml(trade.asset)}${renderTapeMark(trade)}</span>
-        <span class="lnd-row-meta">${escapeHtml(meta)}</span>
-        <span class="lnd-row-result">${outcome.label}</span>
-        ${renderTapePrices(trade)}
-      </div>
-    `;
   }
 
   return {

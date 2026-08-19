@@ -529,18 +529,37 @@ td,
   margin: 18px auto;
 }
 
-/* .is-guest (demo mode) joins .is-authenticated/.is-preview everywhere the CSS
-   decides "the app shell is on screen". body.demo-signup is the one exception:
-   a demo visitor reaching for the account form gets the landing back WITHOUT
-   the demo being torn down, so nothing they logged is lost. */
-body:not(.is-authenticated):not(.is-preview):not(.is-guest) .app-layout,
-body.demo-signup .app-layout {
+/* ==========================================================================
+   THE SURFACE CONVENTION. This file serves two products out of one document:
+   the marketing website (lnd-* markup) and the logged-in app (.view sections).
+   body.app-on, written once in updateAccessGate(), says which is on screen.
+
+     .thing                    -> BOTH surfaces. The default. Write this
+                                  unless there is a reason not to.
+     .app-on .thing            -> APP ONLY.
+     body:not(.app-on) .thing  -> WEBSITE ONLY.
+
+   Containment cannot express this and must not be used for it: the landing
+   owns .trust-row and .site-footer OUTSIDE #authShell, and the app owns
+   .tabbar, .capture-toast and seven dialogs OUTSIDE .app-layout.
+
+   File placement stays decided by LAYER, never by surface — styles.css is
+   structure, clay-v2.css is the clay retone, clay-v3.css is the gunmetal and
+   oxide tokens. Do not split this file per surface: shipped rules depend on
+   source order (see the note at the .lnd-mon block), and tokens live at
+   :root only.
+
+   .is-guest (demo mode) joins .is-authenticated/.is-preview in saying the app
+   shell is on screen. body.demo-signup is the one exception: a demo visitor
+   reaching for the account form gets the landing back WITHOUT the demo being
+   torn down, so nothing they logged is lost — which is why .app-on subtracts
+   it rather than adding a second class everywhere.
+   ========================================================================== */
+body:not(.app-on) .app-layout {
   display: none;
 }
 
-body.is-authenticated .auth-shell,
-body.is-preview .auth-shell,
-body.is-guest:not(.demo-signup) .auth-shell {
+body.app-on .auth-shell {
   display: none;
 }
 
@@ -3802,13 +3821,12 @@ body.auth-locked .view {
   text-transform: lowercase;
 }
 
-body.is-authenticated .trust-row {
-  display: none;
-}
-
+/* WEBSITE ONLY, plus the locked state. .is-authenticated stays spelled out
+   beside .app-on because it is the one case .app-on deliberately subtracts:
+   a real account mid demo-signup still must not see the landing's trust row. */
+body.app-on .trust-row,
 body.auth-locked .trust-row,
-body.is-preview .trust-row,
-body.is-guest:not(.demo-signup) .trust-row {
+body.is-authenticated .trust-row {
   display: none;
 }
 
@@ -5156,8 +5174,7 @@ th[aria-sort] {
 
 /* The page dot-grid steps back: the landing is clay on bone now, and a grid
    showing through the shadows kills the moulded read. */
-body:not(.is-authenticated):not(.is-preview):not(.is-guest)::before,
-body.demo-signup::before {
+body:not(.app-on)::before {
   opacity: 0.22;
 }
 
@@ -6012,6 +6029,49 @@ body.demo-signup::before {
   background: var(--tp-s2);
   color: var(--tp-faint);
   font: 400 12px/1.45 var(--font-ui);
+}
+
+/* --- LIST CLAMP ------------------------------------------------------------
+   Two dashboard lists that grow without bound — the accounts panel and the
+   Leon tape — show two rows until asked for the rest.
+
+   Clamped by ROW COUNT, not by a measured max-height. An account row is 65px
+   and a tape row is 48 or 81 depending on whether it carries prices, so any
+   pixel constant here would be three constants that rot the moment a row
+   gains a line. nth-child is exact and needs no measurement.
+
+   The state class lives on the SECTION because both lists are rebuilt with
+   innerHTML on every render — renderAccountsPanel() and renderDashLeonTape() —
+   which would take a class on the list itself with it. */
+#accountsPanel.is-clamped .account-list > *:nth-child(n + 3),
+.dash-leon.is-clamped .lnd-tape-list > *:nth-child(n + 3) {
+  display: none;
+}
+
+.list-clamp-toggle {
+  flex: 0 0 auto;
+  align-self: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-faint);
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.list-clamp-toggle:hover { color: var(--text); border-color: var(--accent); }
+.list-clamp-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Nothing to expand: two rows IS the whole list, so the control would be a
+   lie. :has() is already load bearing elsewhere in this sheet. */
+#accountsPanel:not(:has(.account-list > *:nth-child(3))) .list-clamp-toggle,
+.dash-leon:not(:has(.lnd-tape-list > *:nth-child(3))) .list-clamp-toggle {
+  display: none;
 }
 
 .lnd-hero-tape .lnd-tape-list {
@@ -8436,15 +8496,11 @@ summary:focus-visible {
 }
 
 @media (max-width: 899px) {
-  body.is-authenticated .tabbar,
-  body.is-preview .tabbar,
-  body.is-guest:not(.demo-signup) .tabbar {
+  body.app-on .tabbar {
     display: grid;
   }
 
-  body.is-authenticated .tabbar-fab,
-  body.is-preview .tabbar-fab,
-  body.is-guest:not(.demo-signup) .tabbar-fab {
+  body.app-on .tabbar-fab {
     display: grid;
   }
 }
@@ -8631,12 +8687,26 @@ body:has(.tabbar .nav-btn[data-target="terminal"]:not([hidden])) .main-nav .shee
 }
 
 /* The header holds both actions. Match the primary's height so the two read
-   as one control group rather than a button with something stuck beside it:
-   the log button is 60px tall and a default .btn is 44. */
+   as one control group rather than a button with something stuck beside it. */
 .dash-log-btn + .dash-import-btn {
   margin-left: 8px;
-  min-height: 60px;
+  min-height: 52px;
   align-self: center;
+}
+
+/* COOLDOWN COSTS THE LABEL, NOT THE ROW. In breach the primary grows by ~145px
+   to carry its flag inline ("weekly budget gone") — the words are the signal
+   and must not be truncated — which pushed Quick import onto a second line and
+   put the dead band straight back. The secondary action gives up its label
+   instead: still a 52px target, still the same handler, and its aria-label
+   already carries the name for anyone who cannot see the icon.
+   A sibling selector, so it tracks the cooldown state exactly with no
+   breakpoint and no measured threshold. */
+.dash-log-btn.is-cooldown + .dash-import-btn > span:not(.journal-action-icon) {
+  display: none;
+}
+.dash-log-btn.is-cooldown + .dash-import-btn {
+  padding-inline: 14px;
 }
 
 /* Below the tabbar breakpoint the FAB satellite is the import affordance, so
@@ -8671,9 +8741,7 @@ body:has(.tabbar .nav-btn[data-target="terminal"]:not([hidden])) .main-nav .shee
 }
 
 @media (max-width: 899px) {
-  body.is-authenticated .tabbar-import,
-  body.is-preview .tabbar-import,
-  body.is-guest:not(.demo-signup) .tabbar-import {
+  body.app-on .tabbar-import {
     position: fixed;
     display: grid;
     place-items: center;
@@ -8748,9 +8816,7 @@ body:has(textarea:focus) .tabbar-fab {
    so body padding-bottom would land at the 100vh mark rather than after the
    overflowing content. Footer padding always grows the document. */
 @media (max-width: 899px) {
-  body.is-authenticated .site-footer,
-  body.is-preview .site-footer,
-  body.is-guest:not(.demo-signup) .site-footer {
+  body.app-on .site-footer {
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 124px);
   }
 
@@ -8796,9 +8862,7 @@ body:has(textarea:focus) .tabbar-fab {
     bottom: calc(env(safe-area-inset-bottom, 0px) + 38px);
   }
 
-  body.is-authenticated .site-footer,
-  body.is-preview .site-footer,
-  body.is-guest:not(.demo-signup) .site-footer {
+  body.app-on .site-footer {
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 108px);
   }
 
@@ -9226,7 +9290,13 @@ body.auth-ready .lnd-tape-list .lnd-row {
   align-items: baseline;
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-4);
-  flex: 0 1 auto;
+  /* 1 1 160px, not 0 1 auto. Flex line-BREAKING measures base sizes and
+     ignores shrink factors, so at `auto` the strip claimed its 332px
+     max-content base, the line needed ~995px against an 913px header column,
+     and Quick import wrapped to a second 60px line inside a 76px dead band.
+     With a 160px base the strip folds internally to 2-3 rows instead — both
+     shorter than the 60px buttons, so the header height never changes. */
+  flex: 1 1 160px;
   min-width: 0;
 }
 
@@ -10161,14 +10231,31 @@ body.auth-locked {
      scrollHeight 5144 against a 900px viewport with only #terminal active. */
   #dashboard.is-active {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 300px;
-    gap: var(--space-5);
+    /* The rail tile is width-bound — it already carries aspect-ratio 16/9, so
+       the COLUMN is the only lever on the resting picture size. A flat 360
+       was wrong: it takes 60px off the header at every width, and at 1280
+       that is exactly enough to push Quick import onto a second row again.
+       It scales instead, so the extra width is only spent where there is
+       width to spend. Fullscreen covers actually watching it. */
+    grid-template-columns: minmax(0, 1fr) clamp(300px, 23vw, 360px);
+    /* ROW-GAP ZERO, ON PURPOSE. .dash-edge-mini spans grid-row 1/30 to get its
+       sticky column, which forces 29 implicit rows; the trailing ~21 are 0px
+       tall but the row gap still applies BETWEEN each of them, so the
+       dashboard carried 400px of dead scroll below its last panel at 1512 and
+       420px at 1280. The gap moves onto the children instead, where it only
+       exists between things that are actually there. */
+    column-gap: var(--space-5);
+    row-gap: 0;
     align-items: start;
   }
   /* Load bearing: without an explicit column every other dashboard child flows
      into the 300px rail and the most-viewed screen breaks at exactly the width
      most desktop users sit at. */
   #dashboard > *:not(.dash-edge-mini) { grid-column: 1; }
+  /* :not(:last-child) is load bearing — these same declarations apply below
+     1240px, where .dash-edge-mini goes full width and the order rules
+     reshuffle which child is last. */
+  #dashboard.is-active > *:not(:last-child) { margin-bottom: var(--space-5); }
   .dash-edge-mini {
     grid-column: 2;
     grid-row: 1 / 30;
@@ -11600,7 +11687,43 @@ body.auth-locked {
    dead the same way. */
 .bb-mon-h { pointer-events: none; }
 .bb-mon-pick,
-.bb-mon-link { pointer-events: auto; }
+.bb-mon-link,
+.bb-mon-full { pointer-events: auto; }
+/* The maximize key. Same skin as .bb-mon-link beside it — this row is a pair
+   of verbs, not a control and an afterthought. */
+.bb-mon-full {
+  min-height: 0;
+  padding: 2px 7px;
+  border: 1px solid var(--term-line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--term-faint);
+  /* 11px is the repo's type floor at phone widths (tests/mobileFloors) — the
+     10px this wanted to be is exactly what that guard exists to catch. */
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+  cursor: pointer;
+}
+.bb-mon-full:hover { color: var(--term-ink); border-color: var(--term-acc); }
+.bb-mon-full:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* FULLSCREEN RELEASES THE RATIO. The tile is aspect-ratio 16/9 so it fits its
+   column; in fullscreen the column is the screen, and holding the ratio would
+   letterbox inside a box that is already the right shape. Same release the
+   wall performs at data-size="max". */
+.bb-mon:fullscreen {
+  aspect-ratio: auto;
+  width: 100%;
+  height: 100%;
+}
+.bb-mon:fullscreen .bb-mon-screen,
+.bb-mon:fullscreen iframe {
+  aspect-ratio: auto;
+  max-height: none;
+  height: 100%;
+}
+
 .bb-mon-dot {
   width: 6px;
   height: 6px;
@@ -12351,9 +12474,7 @@ body.auth-locked {
      were written for. The selector triple is the one .auth-shell already uses
      for "the app is showing". Below 900 the views are still in flow and the
      footer sits after them correctly, so this is desktop only. */
-  body.is-authenticated .site-footer,
-  body.is-preview .site-footer,
-  body.is-guest:not(.demo-signup) .site-footer {
+  body.app-on .site-footer {
     display: none;
   }
 }

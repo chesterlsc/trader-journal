@@ -414,9 +414,11 @@ button.calendar-cell.calendar-cell-negative:hover {
    it; here it is physically the biggest control on the page and it is the
    only violet object in the command bar.
    ========================================================================== */
+/* 52px, not 60. An ID beats the .dash-log-btn class rule below, so this is
+   the one that decides the header's height — change both or neither. */
 #journalNewTradeBtn {
-  min-height: 60px;
-  padding: 0 26px;
+  min-height: 52px;
+  padding: 0 20px 0 16px;
   gap: 11px;
   font-size: 15px;
   font-family: var(--font-ui);
@@ -981,8 +983,8 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 11px;
-  min-height: 60px;
-  padding: 0 26px 0 22px;
+  min-height: 52px;
+  padding: 0 20px 0 16px;
   border-radius: var(--radius-pill);
   font: 700 15px/1 var(--font-ui);
   letter-spacing: -0.01em;
@@ -5905,9 +5907,7 @@ textarea {
      bar top edge = safe + 12 + 64 = safe + 76   -> scrim stops at safe + 88
      FAB top      = safe + 46 + 60 = safe + 106  -> sheet stops at safe + 114 */
 @media (max-width: 899px) {
-  body.is-authenticated .sidebar,
-  body.is-preview .sidebar,
-  body.is-guest:not(.demo-signup) .sidebar {
+  body.app-on .sidebar {
     --sheet-bottom: calc(env(safe-area-inset-bottom, 0px) + 114px);
     --scrim-bottom: calc(env(safe-area-inset-bottom, 0px) + 88px);
   }
