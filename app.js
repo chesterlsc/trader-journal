@@ -1972,6 +1972,22 @@ function switchView(id) {
     view.classList.toggle("is-active", view.id === id);
   });
 
+  // A DESTINATION OPENS AT ITS TOP. Since the views became position:fixed with
+  // their own overflow, each one keeps its scrollTop for the life of the page
+  // and nothing ever cleared it: scroll the dashboard down, go to Trades, come
+  // back, and you land 900px in — the view HAS switched but you are staring at
+  // the middle of it, which reads as the nav doing nothing. Measured on
+  // production before this: dashboard scrollTop 900 on return.
+  // Both scrollers, because which one moves depends on width — the views are
+  // pinned from 900px up and in normal page flow below it.
+  const opened = ui.views.find((view) => view.id === id);
+  if (opened && opened.scrollTop) {
+    opened.scrollTop = 0;
+  }
+  if (window.scrollY) {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
   // 1f #04: the playbook page IS its data, so render before it is shown — and
   // force a chart repaint, because its canvas had no layout width while the
   // view was hidden and would otherwise paint at the 900px fallback. Runs
