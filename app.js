@@ -15135,7 +15135,14 @@ function setupRailAccount() {
   select.setAttribute("tabindex", "-1");
   select.setAttribute("aria-hidden", "true");
 
-  let shown = select.value;
+  // Null, not the current value: at boot the select has no options yet, so
+  // seeding this with "" made the first populate look like a switch and the
+  // mark popped on every page load. It also mattered more than it looked:
+  // the pop starts at scale(0.6), and a keyframe's first frame is where a
+  // stalled renderer parks, so a boot-time animation can leave the mark
+  // permanently undersized. Same trap as the provenance check that shipped
+  // frozen at opacity 0. The first paint now only records the account.
+  let shown = null;
 
   const paint = () => {
     const option = select.options[select.selectedIndex] || select.options[0];
@@ -15194,12 +15201,12 @@ function setupRailAccount() {
 
     // The switch is the moment worth seeing, so it only replays when the
     // account actually changed, never on an incidental repaint.
-    if (select.value !== shown) {
-      shown = select.value;
+    if (shown !== null && select.value !== shown) {
       markEl.classList.remove("is-popping");
       void markEl.offsetWidth;
       markEl.classList.add("is-popping");
     }
+    shown = select.value;
   };
 
   paint();

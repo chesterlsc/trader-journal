@@ -799,6 +799,13 @@
     align-content: center;
     gap: 4px;
     width: 100%;
+    /* Inheriting the stamp means inheriting its FLOOR: clay-v2 gives
+       .topnav-btn min-width 62px, which the horizontal bar wanted and a 39px
+       rail column cannot give. The row rendered 62px wide inside 39px and the
+       rail's overflow:hidden sheared the right 23px off, which is the lit pill
+       running off the edge and the count badge losing its second digit. A rail
+       row is as wide as the rail, and no wider. */
+    min-width: 0;
     min-height: 52px;
     padding: 6px 4px;
     border-radius: 10px;
