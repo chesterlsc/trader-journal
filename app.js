@@ -21,7 +21,7 @@
   debounce,
   openTradeTriggerLevel
 } from "./src/lib/core.js";
-import { formatCurrency, formatCompactCurrency } from "./src/lib/format.js";
+import { formatCurrency, formatCompactCurrency, formatStatMoney, formatChartDateLabel } from "./src/lib/format.js";
 import { getNextSessionOpen, formatCountdown } from "./src/lib/sessions.js";
 import {
   buildSessionTimingReport,
@@ -9383,7 +9383,15 @@ function renderDashboardMetrics(analytics) {
   // needed and never had for Orders imports.
   const avgWinLossNode = document.querySelector('[data-metric="avgWinLoss"]');
   if (avgWinLossNode) {
-    avgWinLossNode.textContent = `${formatCompactCurrency(analytics.avgWin || 0)} / ${formatCompactCurrency(Math.abs(analytics.avgLoss || 0))}`;
+    const avgWin = analytics.avgWin || 0;
+    const avgLoss = Math.abs(analytics.avgLoss || 0);
+    // A month with no losses prints a brag, never a broken-looking $0. A month
+    // with no wins states it plainly for the same reason.
+    avgWinLossNode.textContent = avgLoss === 0 && avgWin > 0
+      ? `${formatStatMoney(avgWin)} · no losses`
+      : avgWin === 0 && avgLoss > 0
+        ? `no wins · ${formatStatMoney(avgLoss)}`
+        : `${formatStatMoney(avgWin)} / ${formatStatMoney(avgLoss)}`;
   }
   if (ui.metricGrid && ui.dashboardEmptyState) {
     ui.metricGrid.hidden = !hasTrades;
@@ -9469,7 +9477,7 @@ function renderDashboardMetrics(analytics) {
     const node = document.querySelector(`[data-metric-sub="${key}"]`);
     if (node) {
       node.hidden = !day || day === "-";
-      node.textContent = node.hidden ? "" : day;
+      node.textContent = node.hidden ? "" : formatChartDateLabel(day).toUpperCase();
     }
   });
 
@@ -11862,6 +11870,13 @@ function renderDashMiniCal() {
   if (ui.miniCalMonth) {
     ui.miniCalMonth.textContent = monthName.toUpperCase();
   }
+  // The card's own dateline, so a crop of just the card still says when it
+  // was taken.
+  const cardDate = document.getElementById("dashCardDate");
+  if (cardDate) {
+    cardDate.textContent = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" })
+      .format(now).toUpperCase().replace(",", " ·");
+  }
   if (ui.miniCalNet) {
     ui.miniCalNet.textContent = net === 0 ? formatCurrency(0) : formatSignedCurrency(net);
     toneBySign(ui.miniCalNet, net);
@@ -11899,7 +11914,7 @@ function renderDashMiniCal() {
 
   if (ui.miniCalFoot) {
     ui.miniCalFoot.textContent = dayStats.size
-      ? `${dayStats.size} TRADED · ${green} GREEN · BEST ${best > 0 ? "+" : ""}${formatCompactCurrency(best)}`
+      ? `${green} GREEN · BEST ${best > 0 ? "+" : ""}${formatStatMoney(best)}`
       : "AWAITING FIRST TRADE";
   }
 
@@ -12082,7 +12097,7 @@ function renderCalendarView() {
         if (stats.pnl > best) best = stats.pnl;
       });
       const winDays = Math.round((green / dayStats.size) * 100);
-      ui.calendarStrip.textContent = `GREEN ${green} · RED ${red} · BEST ${best > 0 ? "+" : ""}${formatCompactCurrency(best)} · WIN DAYS ${winDays}%`;
+      ui.calendarStrip.textContent = `GREEN ${green} · RED ${red} · BEST ${best > 0 ? "+" : ""}${formatStatMoney(best)} · WIN DAYS ${winDays}%`;
       ui.calendarStrip.hidden = false;
     } else {
       ui.calendarStrip.hidden = true;

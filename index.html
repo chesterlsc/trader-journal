@@ -113,13 +113,13 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260821-session2" />
+    <link rel="stylesheet" href="styles.css?v=20260821-session4" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260821-session2" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260821-session4" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260821-session2" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260821-session4" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -1352,6 +1352,7 @@
             <section class="dash-month-card">
               <article class="metric-card metric-card-balance dash-hero dash-reveal" style="--i: 0">
                 <div class="dash-hero-top">
+                  <span class="dash-card-date" id="dashCardDate" aria-hidden="true"></span>
                   <p class="metric-label" id="dashBalanceLabel">Account balance</p>
                   <span class="dash-est-chip" id="dashEstChip" hidden>EST</span>
                   <div class="dash-range" role="group" aria-label="Balance range">
@@ -1391,9 +1392,11 @@
                   <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
                 </div>
                 <div class="mini-cal-grid" id="miniCalGrid"></div>
-                <button type="button" class="mini-cal-foot" id="miniCalFoot">AWAITING FIRST TRADE</button>
+                <div class="mini-cal-footrow">
+                  <button type="button" class="mini-cal-foot" id="miniCalFoot">AWAITING FIRST TRADE</button>
+                  <p class="metric-label month-card-mark" aria-hidden="true">TJ &middot; traderjournal.space</p>
+                </div>
               </div>
-              <p class="metric-label month-card-mark" aria-hidden="true">TJ &middot; traderjournal.space</p>
             </section>
             <aside id="estimatedAnalyticsNotice" class="estimated-analytics-notice" role="note" hidden></aside>
 
@@ -4078,6 +4081,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260821-session2"></script>
+    <script type="module" src="app.js?v=20260821-session4"></script>
   </body>
 </html>
