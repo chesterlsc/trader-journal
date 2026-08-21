@@ -138,7 +138,6 @@ assert.deepEqual(
 const CONTROLS = [
   ".dash-range-btn",
   ".dash-live-close",
-  ".dash-risk-link", // #cooldownRulesBtn
   ".info-btn",
   ".trade-status-toggle", // wraps #tradeInProgress
   ".tag-set label", // wraps the five reflection checkboxes

@@ -143,10 +143,10 @@ const digest = api.buildWeeklyDigest("2026-07-29");
 assert.equal(digest.count, 4, "open trades are not closed trades");
 assert.equal(digest.net, 200);
 assert.match(digest.wentWell, /4 closed trades, \+\$200\.00 net across 3 trading days\./);
-assert.match(digest.wentWell, /1 win, 2 losses, 1 scratch — a 25\.0% win rate\./);
+assert.match(digest.wentWell, /1 win, 2 losses, 1 scratch, a 25\.0% win rate\./);
 assert.match(digest.wentWell, /Expectancy ran \+\$50\.00 per trade\./);
 assert.match(digest.wentWell, /Best trade: EURUSD \+\$400\.00 on Breakout/);
-assert.match(digest.wentWell, /week before was 1 trade for \+\$90\.00 — up \$110\.00 on that\./);
+assert.match(digest.wentWell, /week before was 1 trade for \+\$90\.00, up \$110\.00 on that\./);
 assert.match(digest.wentWell, /All 4 carry a journal note\./);
 assert.match(digest.mistake, /Worst trade: EURUSD -\$150\.00 on Reversal/);
 // No hedging vocabulary anywhere in the draft.
@@ -234,8 +234,8 @@ state.trades = [
 ];
 state.reflections = [];
 const seed = api.buildMonthlySeed("2026-07");
-assert.match(seed, /Week of Jun 29 – Jul 05/);
-assert.match(seed, /Week of Jul 27 – Aug 02/);
+assert.match(seed, /Week of Jun 29 to Jul 05/);
+assert.match(seed, /Week of Jul 27 to Aug 02/);
 assert.doesNotMatch(seed, /Aug 03 – Aug 09/, "a week outside the month must not be seeded");
 assert.equal(api.buildMonthlySeed("2026-09"), "", "a month with no trades seeds nothing");
 
@@ -249,7 +249,7 @@ state.reflections = [
   }
 ];
 const seeded = api.buildMonthlySeed("2026-07");
-assert.match(seeded, /Week of Jul 27 – Aug 02 \(your saved digest\)\nMY OWN EDIT/);
+assert.match(seeded, /Week of Jul 27 to Aug 02 \(your saved digest\)\nMY OWN EDIT/);
 assert.doesNotMatch(seeded.split("\n\n").pop(), /Expectancy ran/, "the saved edit replaces the draft, it does not append to it");
 
 // --- 9. the wiring the harness cannot see ---------------------------------

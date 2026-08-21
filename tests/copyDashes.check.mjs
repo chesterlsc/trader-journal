@@ -27,7 +27,11 @@ const ROOT = new URL("..", import.meta.url).pathname;
 // index.html writes &mdash; rather than the literal character, so a scanner
 // looking only for [—–] read the landing page as clean while 31 of them sat in
 // the copy. Same character, same reader, same complaint.
-const PROSE_DASH = /[\w%)\]][ \t]*(?:&mdash;|&ndash;|[—–])[ \t]*[\w(\[$]/;
+// The leading class also admits } so a dash straight after a template
+// interpolation boundary is caught: `${net} — review` shipped through the
+// old scanner because } was not a "word end".
+const PROSE_DASH = /[\w%)\]}][ \t]*(?:&mdash;|&ndash;|[—–])[ \t]*[\w(\[$]/;
+assert.ok(PROSE_DASH.test("${net} \u2014 review"), "the scanner must catch a dash after an interpolation");
 
 /** Blank out comment bodies, preserving every newline so line numbers survive. */
 function blankJsComments(src) {

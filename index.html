@@ -113,13 +113,13 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260819-board2" />
+    <link rel="stylesheet" href="styles.css?v=20260821-session2" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260819-board2" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260821-session2" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260819-board2" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260821-session2" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -1130,6 +1130,14 @@
                 </span>
                 Dashboard
               </button>
+              <button class="nav-btn sheet-tile sheet-tile-dock" type="button" data-target="session-intelligence">
+                <span class="sheet-tile-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M5 18.75V13.5M9.75 18.75V8.75M14.5 18.75v-7.5M19 18.75V5.25M4.5 18.75h15" />
+                  </svg>
+                </span>
+                Session Intelligence
+              </button>
               <button class="nav-btn sheet-tile sheet-tile-dock" type="button" data-target="journal">
                 <span class="sheet-tile-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" focusable="false">
@@ -1282,9 +1290,12 @@
               </span>
               <span>Quick import</span>
             </button>
+
+            <button class="nav-btn dash-session-link" id="dashSessionIntelligenceLink" type="button" data-target="session-intelligence">
+              Session intelligence <span aria-hidden="true">&rarr;</span>
+            </button>
           </header>
 
-          <aside id="estimatedAnalyticsNotice" class="estimated-analytics-notice" role="note" hidden></aside>
 
           <!-- Bento stats: command deck (balance hero + risk meters), edge quad,
                dense rail. #dashboardMetricGrid stays the id JS toggles against
@@ -1338,10 +1349,11 @@
           </aside>
 
           <div class="dash-stats" id="dashboardMetricGrid" aria-label="Performance metrics">
-            <section class="dash-deck">
-              <article class="metric-card metric-card-balance dash-hero dash-reveal" data-tilt style="--i: 0">
+            <section class="dash-month-card">
+              <article class="metric-card metric-card-balance dash-hero dash-reveal" style="--i: 0">
                 <div class="dash-hero-top">
                   <p class="metric-label" id="dashBalanceLabel">Account balance</p>
+                  <span class="dash-est-chip" id="dashEstChip" hidden>EST</span>
                   <div class="dash-range" role="group" aria-label="Balance range">
                     <button class="dash-range-btn is-active" type="button" data-balance-range="1m" aria-pressed="true">1M</button>
                     <button class="dash-range-btn" type="button" data-balance-range="3m" aria-pressed="false">3M</button>
@@ -1370,44 +1382,20 @@
                 </div>
               </article>
 
-              <section class="risk-strip dash-risk dash-reveal" id="riskStrip" data-tilt style="--i: 1" hidden aria-label="Risk left today">
-                <div class="dash-risk-head">
-                  <p class="metric-label">Risk left today</p>
-                  <span class="dash-risk-state" id="riskState">SAFE</span>
+              <div class="mini-cal" id="dashMiniCal">
+                <button type="button" class="mini-cal-open" id="miniCalOpenBtn" aria-label="Opens the calendar">
+                  <span class="mini-cal-month" id="miniCalMonth">MONTH</span>
+                  <span class="mini-cal-net" id="miniCalNet">$0.00</span>
+                </button>
+                <div class="mini-cal-weekdays" aria-hidden="true">
+                  <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
                 </div>
-                <div class="dash-risk-body">
-                  <div class="dash-dial" id="riskDial">
-                    <svg viewBox="0 0 118 118" aria-hidden="true" focusable="false">
-                      <circle class="dash-dial-track" cx="59" cy="59" r="48" />
-                      <circle class="dash-dial-fill" id="riskDialArc" cx="59" cy="59" r="48" />
-                    </svg>
-                    <p class="dash-dial-copy">
-                      <strong class="dash-dial-value" id="riskDialValue">100<span>%</span></strong>
-                      <span class="dash-dial-label">LEFT</span>
-                    </p>
-                  </div>
-                  <div class="dash-risk-figures">
-                    <div class="risk-strip-item" data-risk-strip="day">
-                      <span class="risk-strip-label">Daily</span>
-                      <span class="risk-strip-value">$0.00 / $0.00</span>
-                      <div class="risk-strip-track" aria-hidden="true"><span class="risk-strip-fill"></span></div>
-                    </div>
-                    <div class="risk-strip-item" data-risk-strip="week">
-                      <span class="risk-strip-label">Weekly</span>
-                      <span class="risk-strip-value">$0.00 / $0.00</span>
-                      <div class="risk-strip-track" aria-hidden="true"><span class="risk-strip-fill"></span></div>
-                    </div>
-                  </div>
-                </div>
-                <p class="dash-risk-consequence">
-                  <span id="riskConsequence"></span>
-                  <!-- 1f #03: now a real destination — the cooldown settings
-                       that decide when this budget stops being a colour and
-                       starts asking a question. -->
-                  <button class="dash-risk-link" type="button" id="cooldownRulesBtn">Cooldown rules &rarr;</button>
-                </p>
-              </section>
+                <div class="mini-cal-grid" id="miniCalGrid"></div>
+                <button type="button" class="mini-cal-foot" id="miniCalFoot">AWAITING FIRST TRADE</button>
+              </div>
+              <p class="metric-label month-card-mark" aria-hidden="true">TJ &middot; traderjournal.space</p>
             </section>
+            <aside id="estimatedAnalyticsNotice" class="estimated-analytics-notice" role="note" hidden></aside>
 
             <!-- ══ PROP-FIRM TRACKER ══════════════════════════════════════
                  Shown only when the ACTIVE account has prop rules switched on
@@ -1500,16 +1488,27 @@
                 <span class="metric-delta" data-metric-delta="expectancy" hidden></span>
               </article>
               <article class="metric-card dash-quad-card dash-reveal" data-tilt style="--i: 5">
-                <p class="metric-label">Avg R:R</p>
-                <p class="metric-value" data-metric="avgRR">0.00</p>
-                <span class="metric-delta" data-metric-delta="avgRR" hidden></span>
+                <p class="metric-label">Avg win / loss</p>
+                <p class="metric-value" data-metric="avgWinLoss">$0.00 / $0.00</p>
+              </article>
+              <article class="metric-card dash-quad-card dash-reveal" data-tilt style="--i: 6">
+                <p class="metric-label">Best Day</p>
+                <p class="metric-value" data-metric="bestDay">$0.00</p>
+                <span class="metric-sub" data-metric-sub="bestDay" hidden></span>
+                <span class="metric-delta" data-metric-delta="bestDay" hidden></span>
+              </article>
+              <article class="metric-card dash-quad-card dash-reveal" data-tilt style="--i: 7">
+                <p class="metric-label">Worst Day</p>
+                <p class="metric-value" data-metric="worstDay">$0.00</p>
+                <span class="metric-sub" data-metric-sub="worstDay" hidden></span>
+                <span class="metric-delta" data-metric-delta="worstDay" hidden></span>
               </article>
             </section>
 
-            <!-- 1a boards: playbook (expectancy per setup, raised = positive)
-                 and the unjournalled queue. Both render from real state and
-                 hide themselves when there is nothing honest to show. -->
-            <div class="dash-boards">
+            <!-- 1a board: the playbook now owns the full dashboard row. The
+                 unjournalled work queue lives in Trade Review, where the notes
+                 are actually completed. -->
+            <div class="dash-boards dash-boards-playbook">
               
               <section class="dash-board dash-playbook" id="dashPlaybook" hidden aria-labelledby="dashPlaybookHeading">
                 <div class="dash-board-head">
@@ -1526,76 +1525,9 @@
                 </div>
               </section>
 
-              <section class="dash-board dash-unjournalled" id="dashUnjournalled" hidden aria-labelledby="dashUnjournalledHeading">
-                <div class="dash-board-head">
-                  <h3 id="dashUnjournalledHeading">Unjournalled</h3>
-                  <span class="dash-unj-count" id="dashUnjournalledCount">0 trades</span>
-                </div>
-                <p class="dash-unj-lede">Closed, but you never said why. Two minutes each.</p>
-                <div class="dash-unj-list" id="dashUnjournalledList"></div>
-                <!-- 1c: the mobile route into the close sheet. The row list is
-                     too wide for 375px, so under the breakpoint it is replaced
-                     by this single pill, which opens the sheet for the oldest
-                     trade still waiting. Saving advances the queue. -->
-                <button class="dash-unj-cta" type="button" id="dashJournalCta" hidden>
-                  <span class="dash-unj-cta-count" id="dashJournalCtaCount">0</span>
-                  <span class="dash-unj-cta-label">Trades to journal</span>
-                  <span class="dash-unj-cta-chevron" aria-hidden="true">&rsaquo;</span>
-                </button>
-                <div class="dash-unj-foot">
-                  <div>
-                    <p class="dash-unj-streak-label">Journal streak</p>
-                    <p class="dash-unj-streak" id="dashJournalStreak">0 days</p>
-                  </div>
-                  <div class="dash-unj-bars" id="dashJournalBars" role="img" aria-label="Journalling history"></div>
-                </div>
-                <!-- 1f #01: the streak rule, stated. It counts TRADING days,
-                     not calendar days, so a weekend off never breaks it. -->
-                <p class="dash-unj-rule">
-                  A day counts once every trade you closed that day carries a note. Days you did not trade are skipped.
-                </p>
-              </section>
             </div>
 
-            <section class="dash-rail dash-reveal" style="--i: 6" aria-label="Secondary metrics">
-              <article class="metric-card dash-rail-item">
-                <p class="metric-label">Total Trades</p>
-                <p class="metric-value" data-metric="totalTrades">0</p>
-                <span class="metric-delta" data-metric-delta="totalTrades" hidden></span>
-              </article>
-              <article class="metric-card dash-rail-item">
-                <p class="metric-label">Current Drawdown</p>
-                <p class="metric-value" data-metric="currentDrawdown">$0.00</p>
-                <span class="metric-delta" data-metric-delta="currentDrawdown" hidden></span>
-              </article>
-              <article class="metric-card dash-rail-item">
-                <p class="metric-label">Max Drawdown</p>
-                <p class="metric-value" data-metric="maxDrawdown">$0.00</p>
-                <span class="metric-delta" data-metric-delta="maxDrawdown" hidden></span>
-              </article>
-              <article class="metric-card dash-rail-item">
-                <p class="metric-label">Best Day</p>
-                <p class="metric-value" data-metric="bestDay">$0.00</p>
-                <span class="metric-sub" data-metric-sub="bestDay" hidden></span>
-                <span class="metric-delta" data-metric-delta="bestDay" hidden></span>
-              </article>
-              <article class="metric-card dash-rail-item">
-                <p class="metric-label">Worst Day</p>
-                <p class="metric-value" data-metric="worstDay">$0.00</p>
-                <span class="metric-sub" data-metric-sub="worstDay" hidden></span>
-                <span class="metric-delta" data-metric-delta="worstDay" hidden></span>
-              </article>
-              <article class="metric-card dash-rail-item">
-                <p class="metric-label">Winning Streak</p>
-                <p class="metric-value" data-metric="winningStreak">0</p>
-                <span class="metric-delta" data-metric-delta="winningStreak" hidden></span>
-              </article>
-              <article class="metric-card dash-rail-item">
-                <p class="metric-label">Losing Streak</p>
-                <p class="metric-value" data-metric="losingStreak">0</p>
-                <span class="metric-delta" data-metric-delta="losingStreak" hidden></span>
-              </article>
-            </section>
+
           </div>
 
           <!-- Leon trades on the dashboard: the SAME whitelisted public feed
@@ -1605,22 +1537,7 @@
                are not buttons here: these are Leon's entries, not links into
                this user's own journal. Hidden until the feed has rows, so a
                demo or preview journal can never masquerade as Leon's. -->
-          <section class="panel dash-leon is-clamped" id="dashLeonTape" hidden aria-labelledby="dashLeonHeading">
-            <div class="lnd-tape-head">
-              <span class="live-pulse-dot" aria-hidden="true"></span>
-              <h3 id="dashLeonHeading" class="lnd-tape-title">Leon trades &middot; live tape</h3>
-              <span class="lnd-tape-delay">public feed &middot; 60s</span>
-              <button
-                class="list-clamp-toggle"
-                type="button"
-                data-clamp-toggle
-                aria-controls="dashLeonTapeList"
-                aria-expanded="false"
-              >show all</button>
-            </div>
-            <div class="lnd-tape-list" id="dashLeonTapeList"></div>
-            <p class="lnd-tape-note">Leon&rsquo;s public feed: open positions first, then closed trades. The same rows the landing page shows.</p>
-          </section>
+
 
           <section class="dashboard-empty" id="dashboardEmptyState" hidden aria-label="No verified trades yet">
             <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1662,6 +1579,7 @@
               <div class="eq-scrub" id="equityScrub" hidden>
                 <div class="eq-scrub-body">
                   <p class="eq-scrub-pos" id="equityScrubPos"></p>
+
                   <p class="eq-scrub-head">
                     <span class="eq-scrub-symbol" id="equityScrubSymbol"></span>
                     <span class="eq-scrub-net" id="equityScrubNet"></span>
@@ -1671,6 +1589,33 @@
                 </div>
                 <img class="eq-scrub-shot" id="equityScrubShot" alt="" hidden />
                 <button class="eq-scrub-clear" id="equityScrubClear" type="button">Clear</button>
+              </div>
+              <div class="eq-footnotes">
+                <article class="metric-card">
+                <p class="metric-label">Total Trades</p>
+                <p class="metric-value" data-metric="totalTrades">0</p>
+                <span class="metric-delta" data-metric-delta="totalTrades" hidden></span>
+              </article>
+                <article class="metric-card">
+                <p class="metric-label">Current Drawdown</p>
+                <p class="metric-value" data-metric="currentDrawdown">$0.00</p>
+                <span class="metric-delta" data-metric-delta="currentDrawdown" hidden></span>
+              </article>
+                <article class="metric-card">
+                <p class="metric-label">Max Drawdown</p>
+                <p class="metric-value" data-metric="maxDrawdown">$0.00</p>
+                <span class="metric-delta" data-metric-delta="maxDrawdown" hidden></span>
+              </article>
+                <article class="metric-card">
+                <p class="metric-label">Winning Streak</p>
+                <p class="metric-value" data-metric="winningStreak">0</p>
+                <span class="metric-delta" data-metric-delta="winningStreak" hidden></span>
+              </article>
+                <article class="metric-card">
+                <p class="metric-label">Losing Streak</p>
+                <p class="metric-value" data-metric="losingStreak">0</p>
+                <span class="metric-delta" data-metric-delta="losingStreak" hidden></span>
+              </article>
               </div>
             </article>
             <article class="panel panel-chart panel-span-4">
@@ -1686,94 +1631,14 @@
                 aria-label="Drawdown curve chart"
               ></canvas> <!-- density pass: was 240 -->
             </article>
-            <article class="panel panel-chart panel-strategy-performance panel-span-8">
-              <div class="panel-head panel-head-inline">
-                <div>
-                  <h3>Strategy Performance</h3>
-                  <p>Compare setups, symbols, and trading days by P&amp;L or trade count.</p>
-                </div>
-                <div class="strategy-performance-toolbar">
-                  <div class="strategy-toggle-group" aria-label="Strategy breakdown type">
-                    <button class="strategy-toggle-btn is-active" type="button" data-performance-dimension="setup">
-                      Strategy
-                    </button>
-                    <button class="strategy-toggle-btn" type="button" data-performance-dimension="asset">Symbol</button>
-                    <button class="strategy-toggle-btn" type="button" data-performance-dimension="day">Day</button>
-                  </div>
-                  <div class="strategy-toggle-group" aria-label="Strategy performance metric">
-                    <button class="strategy-toggle-btn is-active" type="button" data-performance-metric="pnl">P&amp;L</button>
-                    <button class="strategy-toggle-btn" type="button" data-performance-metric="count">Count</button>
-                  </div>
-                </div>
-              </div>
-              <canvas
-                id="strategyPerformanceChart"
-                width="900"
-                height="320"
-                data-height="200"
-                aria-label="Strategy performance chart"
-              ></canvas> <!-- density pass: was 280 -->
-            </article>
-            <article class="panel panel-chart panel-trader-score panel-span-4">
-              <div class="panel-head panel-head-inline">
-                <div>
-                  <h3>Trader Score</h3>
-                  <p>Composite read on win quality, recovery, and consistency.</p>
-                </div>
-                <button class="info-btn" type="button" data-score-info aria-label="How the scores are calculated">&#9432;</button>
-              </div>
-              <canvas id="traderScoreChart" width="900" height="320" data-height="240" aria-label="Trader score radar chart"></canvas> <!-- 240: the density pass cut this to 170, which pinned the radar on its 46px floor. Half the height back, and charts.js trims its own reserve to 90 for the rest. -->
-              <div class="trader-score-foot">
-                <div class="trader-score-value-wrap">
-                  <p class="metric-label">Trader Score</p>
-                  <p id="traderScoreValue" class="trader-score-value">0.0</p>
-                </div>
-                <p id="traderScoreCaption" class="trader-score-caption">Add more trade data to build the score.</p>
-              </div>
-            </article>
-            <article class="panel panel-chart panel-span-4">
-              <div class="panel-head">
-                <h3>Psychology Report</h3>
-                <p>P&amp;L and win rate by psychology rating.</p>
-              </div>
-              <canvas
-                id="psychologyChart"
-                width="900"
-                height="280"
-                data-height="180"
-                aria-label="P&L and win rate by psychology rating chart"
-              ></canvas> <!-- density pass: was 240 -->
-            </article>
-            <article class="panel panel-chart panel-span-4">
-              <div class="panel-head">
-                <h3>Session Report</h3>
-                <p>P&amp;L by trading session.</p>
-              </div>
-              <canvas
-                id="sessionChart"
-                width="900"
-                height="280"
-                data-height="180"
-                aria-label="P&L by trading session chart"
-              ></canvas> <!-- density pass: was 240 -->
-            </article>
-            <article class="panel panel-chart panel-span-4">
-              <div class="panel-head">
-                <h3>R-Multiple Distribution</h3>
-                <p>How closed trades spread across R outcomes.</p>
-              </div>
-              <canvas
-                id="rMultipleChart"
-                width="900"
-                height="280"
-                data-height="180"
-                aria-label="R-multiple distribution histogram"
-              ></canvas> <!-- density pass: was 240 -->
-            </article>
+
+
+
+
           </section>
 
           <div class="panel-grid panel-grid-bottom">
-          <section class="panel panel-span-5">
+          <section class="panel panel-span-4">
             <div class="panel-head panel-head-inline">
               <div>
                 <h3>Discipline Monitor</h3>
@@ -1806,43 +1671,7 @@
               <li class="muted">No violations detected.</li>
             </ul>
           </section>
-
-          <section class="panel panel-span-7">
-            <div class="panel-head">
-              <h3>Edge Detection by Setup</h3>
-              <p>Find which setups actually produce positive expectancy.</p>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Setup</th>
-                    <th class="num">Trades</th>
-                    <th class="num">Win Rate</th>
-                    <th class="num">Net P&amp;L</th>
-                    <th class="num">Avg R</th>
-                    <th class="num">Expectancy</th>
-                  </tr>
-                </thead>
-                <tbody id="edgeRows">
-                  <tr class="empty-row"><td colspan="6">No setup data yet.</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          </div>
-
-          <!-- ══ ACCOUNTS ═══════════════════════════════════════════════════
-               Sits directly above Risk Controls because the two are read
-               together: the budgets below apply to whichever account is
-               active here. Archive, never delete — the trades under an account
-               have nowhere else to live. -->
-          <!-- is-clamped in the ATTRIBUTE, not applied by JS, so the list is
-               short on first paint with no flash of a long one. The class must
-               live on the SECTION: renderAccountsPanel() replaces the <ul>'s
-               innerHTML on every call and would take the state with it. -->
-          <section class="panel is-clamped" id="accountsPanel">
+            <section class="panel panel-span-4 is-clamped" id="accountsPanel">
             <div class="panel-head panel-head-inline">
               <div>
                 <h3>Accounts</h3>
@@ -1863,7 +1692,44 @@
               <button id="accountAddBtn" class="btn primary" type="button">+ Add account</button>
             </div>
           </section>
+            <section class="panel panel-span-4 dash-leon is-clamped" id="dashLeonTape" hidden aria-labelledby="dashLeonHeading">
+            <div class="lnd-tape-head">
+              <span class="live-pulse-dot" aria-hidden="true"></span>
+              <h3 id="dashLeonHeading" class="lnd-tape-title">Leon trades &middot; live tape</h3>
+              <span class="lnd-tape-delay">public feed &middot; 60s</span>
+              <button
+                class="list-clamp-toggle"
+                type="button"
+                data-clamp-toggle
+                aria-controls="dashLeonTapeList"
+                aria-expanded="false"
+              >show all</button>
+            </div>
+            <div class="lnd-tape-list" id="dashLeonTapeList"></div>
+            <p class="lnd-tape-note">Leon&rsquo;s public feed: open positions first, then closed trades. The same rows the landing page shows.</p>
+          </section>
 
+
+
+          </div>
+
+          <!-- ══ ACCOUNTS ═══════════════════════════════════════════════════
+               Sits directly above Risk Controls because the two are read
+               together: the budgets below apply to whichever account is
+               active here. Archive, never delete — the trades under an account
+               have nowhere else to live. -->
+          <!-- is-clamped in the ATTRIBUTE, not applied by JS, so the list is
+               short on first paint with no flash of a long one. The class must
+               live on the SECTION: renderAccountsPanel() replaces the <ul>'s
+               innerHTML on every call and would take the state with it. -->
+
+
+          <details class="panel panel-collapsible" id="deskSettings">
+            <summary class="panel-collapse-summary">
+              <div><h3>Desk settings</h3><p>Risk budgets, cooldown, pre-trade checklist</p></div>
+              <span class="panel-collapse-toggle"><span class="toggle-label-closed">Show</span><span class="toggle-label-open">Hide</span></span>
+            </summary>
+            <div class="panel-collapsible-body">
           <section class="panel">
             <div class="panel-head">
               <h3>Risk Controls</h3>
@@ -1928,12 +1794,6 @@
             </form>
             <p id="riskFormMessage" class="form-message" aria-live="polite"></p>
           </section>
-
-          <!-- ══ 1f #02 — PRE-TRADE CHECKLIST ═══════════════════════════════
-               The rules you write once. They render in the New Trade sheet,
-               the ticks are stored on the row, and the Discipline Monitor
-               above reports the money difference between ticking and
-               skipping. RULES in the top bar lands here. -->
           <section class="panel" id="rulesPanel">
             <div class="panel-head">
               <h3>Pre-trade checklist</h3>
@@ -1948,11 +1808,413 @@
             </form>
             <p id="rulesFormMessage" class="form-message" aria-live="polite"></p>
           </section>
+            </div>
+          </details>
+
+          <details class="panel panel-collapsible" id="dashDepth">
+            <summary class="panel-collapse-summary">
+              <div><h3>Locked analytics</h3><p>These charts fill in as you journal.</p></div>
+              <span class="panel-collapse-toggle"><span class="toggle-label-closed">Show</span><span class="toggle-label-open">Hide</span></span>
+            </summary>
+            <div class="panel-collapsible-body">
+              <p class="depth-caption" id="depthCaptionScore"></p>
+          <article class="panel panel-chart panel-trader-score">
+              <div class="panel-head panel-head-inline">
+                <div>
+                  <h3>Trader Score</h3>
+                  <p>Composite read on win quality, recovery, and consistency.</p>
+                </div>
+                <button class="info-btn" type="button" data-score-info aria-label="How the scores are calculated">&#9432;</button>
+              </div>
+              <canvas id="traderScoreChart" width="900" height="320" data-height="240" aria-label="Trader score radar chart"></canvas> <!-- 240: the density pass cut this to 170, which pinned the radar on its 46px floor. Half the height back, and charts.js trims its own reserve to 90 for the rest. -->
+              <div class="trader-score-foot">
+                <div class="trader-score-value-wrap">
+                  <p class="metric-label">Trader Score</p>
+                  <p id="traderScoreValue" class="trader-score-value">0.0</p>
+                </div>
+                <p id="traderScoreCaption" class="trader-score-caption">Add more trade data to build the score.</p>
+              </div>
+            </article>
+              <p class="depth-caption" id="depthCaptionPsych"></p>
+          <article class="panel panel-chart panel-span-6">
+              <div class="panel-head">
+                <h3>Psychology Report</h3>
+                <p>P&amp;L and win rate by psychology rating.</p>
+              </div>
+              <canvas
+                id="psychologyChart"
+                width="900"
+                height="280"
+                data-height="180"
+                aria-label="P&L and win rate by psychology rating chart"
+              ></canvas> <!-- density pass: was 240 -->
+            </article>
+              <p class="depth-caption" id="depthCaptionR"></p>
+          <article class="panel panel-chart panel-span-6">
+              <div class="panel-head">
+                <h3>R-Multiple Distribution</h3>
+                <p>How closed trades spread across R outcomes.</p>
+              </div>
+              <canvas
+                id="rMultipleChart"
+                width="900"
+                height="280"
+                data-height="180"
+                aria-label="R-multiple distribution histogram"
+              ></canvas> <!-- density pass: was 240 -->
+            </article>
+              <article class="metric-card dash-quad-card dash-reveal" data-tilt style="--i: 5">
+                <p class="metric-label">Avg R:R</p>
+                <p class="metric-value" data-metric="avgRR">0.00</p>
+                <span class="metric-delta" data-metric-delta="avgRR" hidden></span>
+              </article>
+            </div>
+          </details>
+
+
+          <!-- ══ 1f #02 — PRE-TRADE CHECKLIST ═══════════════════════════════
+               The rules you write once. They render in the New Trade sheet,
+               the ticks are stored on the row, and the Discipline Monitor
+               above reports the money difference between ticking and
+               skipping. RULES in the top bar lands here. -->
+
 
           <!-- Admin panels are injected here by app.js only when the session
                is an admin (ship-now #12) — the markup never ships publicly. -->
           <div id="adminPanelsMount"></div>
 
+        </section>
+
+        <section class="view session-page" id="session-intelligence" aria-labelledby="sessionTimingHeading">
+          <header class="session-page-head">
+            <div class="session-page-copy">
+              <p class="session-page-kicker">Timing edge</p>
+              <h2 id="sessionTimingHeading">Session intelligence</h2>
+              <p class="session-headline" id="sessionHeadline" aria-live="polite">
+                Import closed trades to reveal when your trading performs best.
+              </p>
+            </div>
+
+            <div class="session-context" aria-label="Session intelligence report settings">
+              <label class="session-context-field">
+                <span>Date range</span>
+                <select id="sessionDateRange">
+                  <option value="all" selected>All closed trades</option>
+                  <option value="30d">Last 30 days</option>
+                  <option value="90d">Last 90 days</option>
+                </select>
+              </label>
+              <label class="session-context-field">
+                <span>Report timezone</span>
+                <select id="sessionReportTimeZone">
+                  <option value="America/New_York" selected>New York (ET)</option>
+                  <option value="America/Chicago">Chicago (CT)</option>
+                  <option value="Asia/Manila">Manila (PHT)</option>
+                </select>
+              </label>
+              <div class="session-context-readout">
+                <span>Imported source</span>
+                <strong id="sessionImportedSource">No imports yet</strong>
+              </div>
+              <div class="session-context-readout">
+                <span>Closed trades</span>
+                <strong id="sessionAnalyzedCount">0 analyzed</strong>
+              </div>
+              <div class="session-context-readout">
+                <span>Confidence</span>
+                <strong class="session-confidence is-early" id="sessionConfidence">Needs trades</strong>
+              </div>
+            </div>
+
+            <span class="visually-hidden" id="sessionTimingSource">Awaiting timestamped imports</span>
+            <span class="visually-hidden" id="sessionTimingCoverage">No settled trades in this account yet</span>
+          </header>
+
+          <nav class="session-tabs" role="tablist" aria-label="Session intelligence views">
+            <button
+              class="session-tab is-active"
+              id="sessionTabSessions"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              aria-controls="sessionPanelSessions"
+              data-session-tab="sessions"
+            >Sessions</button>
+            <button
+              class="session-tab"
+              id="sessionTabEntryTime"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="sessionPanelEntryTime"
+              tabindex="-1"
+              data-session-tab="entry-time"
+            >Entry time</button>
+            <button
+              class="session-tab"
+              id="sessionTabHoldTime"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="sessionPanelHoldTime"
+              tabindex="-1"
+              data-session-tab="hold-time"
+            >Hold time</button>
+            <button
+              class="session-tab"
+              id="sessionTabJournalCoverage"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="sessionPanelJournalCoverage"
+              tabindex="-1"
+              data-session-tab="journal-coverage"
+            >
+              Journal coverage
+              <span class="session-tab-badge" id="sessionCoverageBadge" hidden>0</span>
+            </button>
+          </nav>
+
+          <div class="session-panels" id="sessionTimingPanel">
+            <section
+              class="session-panel"
+              id="sessionPanelSessions"
+              role="tabpanel"
+              aria-labelledby="sessionTabSessions"
+              data-session-panel="sessions"
+            >
+              <header class="session-conclusion">
+                <p>Sessions</p>
+                <h3 id="sessionSessionsConclusion">Import closed trades to compare sessions.</h3>
+                <span id="sessionSessionsConfidence">Add closed trades to build a trustworthy comparison.</span>
+              </header>
+
+              <div class="session-primary-metrics" role="list" aria-label="Best session metrics">
+                <div class="session-primary-metric" role="listitem">
+                  <span id="sessionBestSessionPnlLabel">Net P&amp;L</span>
+                  <strong id="sessionBestSessionPnl">&mdash;</strong>
+                </div>
+                <div class="session-primary-metric" role="listitem">
+                  <span>Expectancy per trade</span>
+                  <strong id="sessionBestSessionExpectancy">&mdash;</strong>
+                </div>
+                <div class="session-primary-metric" role="listitem">
+                  <span>Trades in session</span>
+                  <strong id="sessionBestSessionTrades">0</strong>
+                </div>
+              </div>
+
+              <section class="session-visual" aria-labelledby="sessionComparisonHeading">
+                <header class="session-visual-head">
+                  <div>
+                    <p>Session comparison</p>
+                    <h4 id="sessionComparisonHeading">Net result by entry session</h4>
+                  </div>
+                  <div class="session-chart-legend" aria-label="Performance colors">
+                    <span class="is-positive">Positive</span>
+                    <span class="is-negative">Negative</span>
+                    <span>Insufficient data</span>
+                  </div>
+                </header>
+                <div class="session-scorecard" id="sessionScorecard" role="list" aria-live="polite">
+                  <p class="session-empty-copy">Import timestamped closed trades to compare trading sessions.</p>
+                </div>
+              </section>
+            </section>
+
+            <section
+              class="session-panel"
+              id="sessionPanelEntryTime"
+              role="tabpanel"
+              aria-labelledby="sessionTabEntryTime"
+              data-session-panel="entry-time"
+              hidden
+            >
+              <header class="session-conclusion">
+                <p>Entry time</p>
+                <h3 id="sessionEntryConclusion">Import entry timestamps to reveal your strongest window.</h3>
+                <span>Hours use the first opening fill of each completed trade cycle.</span>
+              </header>
+
+              <div class="session-primary-metrics session-primary-metrics-two" role="list" aria-label="Entry time takeaways">
+                <div class="session-primary-metric" role="listitem">
+                  <span>Best entry window</span>
+                  <strong id="sessionBestHour">&mdash;</strong>
+                  <small id="sessionBestHourMeta">No timestamped entries yet</small>
+                </div>
+                <div class="session-primary-metric" role="listitem">
+                  <span>Weakest entry window</span>
+                  <strong id="sessionWorstHour">&mdash;</strong>
+                  <small id="sessionWorstHourMeta">No timestamped entries yet</small>
+                </div>
+              </div>
+
+              <section class="session-visual" aria-labelledby="sessionProfitClockHeading">
+                <header class="session-visual-head">
+                  <div>
+                    <p>24-hour profit timeline</p>
+                    <h4 id="sessionProfitClockHeading">Performance by entry hour</h4>
+                  </div>
+                  <div class="session-metric-switch" role="group" aria-label="Entry time metric">
+                    <button class="is-active" type="button" data-entry-metric="pnl" aria-pressed="true">Net P&amp;L</button>
+                    <button type="button" data-entry-metric="expectancy" aria-pressed="false">Expectancy</button>
+                    <button type="button" data-entry-metric="winRate" aria-pressed="false">Win rate</button>
+                  </div>
+                </header>
+                <div class="session-hour-viewport" aria-label="Hourly profitability timeline">
+                  <div class="session-hour-rail" id="sessionHourRail" role="list"></div>
+                  <p class="session-hour-empty" id="sessionHourEmpty">
+                    Import trades with entry timestamps to build the hourly view.
+                  </p>
+                </div>
+                <p class="session-visual-note" id="sessionTimingInsight" aria-live="polite">
+                  Each important timing read will include its trade count and confidence.
+                </p>
+              </section>
+
+              <aside class="session-trade-drawer" id="sessionTradeDrawer" aria-labelledby="sessionTradeDrawerTitle" hidden>
+                <header>
+                  <div>
+                    <p>Entry window</p>
+                    <h4 id="sessionTradeDrawerTitle">Trades</h4>
+                  </div>
+                  <button id="sessionTradeDrawerClose" type="button" aria-label="Close trade details">&times;</button>
+                </header>
+                <div id="sessionTradeDrawerBody"></div>
+              </aside>
+            </section>
+
+            <section
+              class="session-panel"
+              id="sessionPanelHoldTime"
+              role="tabpanel"
+              aria-labelledby="sessionTabHoldTime"
+              data-session-panel="hold-time"
+              hidden
+            >
+              <header class="session-conclusion">
+                <p>Hold time</p>
+                <h3 id="sessionHoldConclusion">Import completed trades to compare holding times.</h3>
+                <span>Measured from first entry to final exit for completed trades.</span>
+              </header>
+
+              <div class="session-primary-metrics" role="list" aria-label="Holding time takeaways">
+                <div class="session-primary-metric" role="listitem">
+                  <span>Profitable trades</span>
+                  <strong id="sessionWinningHold">&mdash;</strong>
+                  <small id="sessionWinningHoldMeta">Median hold</small>
+                </div>
+                <div class="session-primary-metric" role="listitem">
+                  <span>Losing trades</span>
+                  <strong id="sessionLosingHold">&mdash;</strong>
+                  <small id="sessionLosingHoldMeta">Median hold</small>
+                </div>
+                <div class="session-primary-metric" role="listitem">
+                  <span>Best duration range</span>
+                  <strong id="sessionBestDuration">&mdash;</strong>
+                  <small id="sessionBestDurationMeta">No measured holds yet</small>
+                </div>
+              </div>
+
+              <section class="session-visual" aria-labelledby="sessionDurationHeading">
+                <header class="session-visual-head">
+                  <div>
+                    <p>Holding duration</p>
+                    <h4 id="sessionDurationHeading">Net result by duration range</h4>
+                  </div>
+                </header>
+                <div class="session-duration-bands" id="sessionDurationBands" role="list" aria-live="polite">
+                  <p class="session-empty-copy">No measured holding-time ranges yet.</p>
+                </div>
+                <p class="session-visual-note session-honesty-note">
+                  Topstep entry and exit data proves total hold duration. It does not prove how long a trade spent above breakeven.
+                </p>
+              </section>
+            </section>
+
+            <section
+              class="session-panel"
+              id="sessionPanelJournalCoverage"
+              role="tabpanel"
+              aria-labelledby="sessionTabJournalCoverage"
+              data-session-panel="journal-coverage"
+              hidden
+            >
+              <header class="session-conclusion">
+                <p>Journal coverage</p>
+                <h3 id="sessionCoverageConclusion">Your journal coverage will appear here.</h3>
+                <span>Complete the story behind imported trades without mixing notes into performance analytics.</span>
+              </header>
+
+              <div class="session-primary-metrics" role="list" aria-label="Journal coverage metrics">
+                <div class="session-primary-metric" role="listitem">
+                  <span>Journaled</span>
+                  <strong id="sessionJournaledCount">0</strong>
+                </div>
+                <div class="session-primary-metric" role="listitem">
+                  <span>Unjournalled</span>
+                  <strong id="sessionUnjournalledCount">0</strong>
+                </div>
+                <div class="session-primary-metric" role="listitem">
+                  <span>Completed</span>
+                  <strong id="sessionCoveragePercent">0%</strong>
+                </div>
+              </div>
+
+              <section class="session-visual session-coverage-visual" aria-labelledby="sessionCoverageHeading">
+                <header class="session-visual-head">
+                  <div>
+                    <p>Completion</p>
+                    <h4 id="sessionCoverageHeading">Imported trade coverage</h4>
+                  </div>
+                  <p><strong id="sessionMissingDataCount">0</strong> missing or incomplete</p>
+                </header>
+                <div
+                  class="session-coverage-bar"
+                  id="sessionCoverageBar"
+                  role="progressbar"
+                  aria-label="Journal completion"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-valuenow="0"
+                >
+                  <span id="sessionCoverageBarFill"></span>
+                </div>
+              </section>
+
+              <section
+                class="dash-board dash-unjournalled session-journal-queue"
+                id="dashUnjournalled"
+                hidden
+                aria-labelledby="dashUnjournalledHeading"
+              >
+                <div class="dash-board-head">
+                  <div>
+                    <p class="session-queue-kicker">Next action</p>
+                    <h3 id="dashUnjournalledHeading">Trades waiting for context</h3>
+                  </div>
+                  <span class="dash-unj-count" id="dashUnjournalledCount">0 trades</span>
+                </div>
+                <p class="dash-unj-lede">Add the setup, execution note, and lesson while the trade is still fresh.</p>
+                <div class="dash-unj-list" id="dashUnjournalledList"></div>
+                <button class="dash-unj-cta" type="button" id="dashJournalCta" hidden>
+                  <span class="dash-unj-cta-count" id="dashJournalCtaCount">0</span>
+                  <span class="dash-unj-cta-label">Journal next trade</span>
+                  <span class="dash-unj-cta-chevron" aria-hidden="true">&rsaquo;</span>
+                </button>
+                <div class="dash-unj-foot">
+                  <div>
+                    <p class="dash-unj-streak-label">Journal streak</p>
+                    <p class="dash-unj-streak" id="dashJournalStreak">0 days</p>
+                  </div>
+                  <div class="dash-unj-bars" id="dashJournalBars" role="img" aria-label="Journalling history"></div>
+                </div>
+                <p class="dash-unj-rule">
+                  A day counts once every trade you closed that day carries a note. Days you did not trade are skipped.
+                </p>
+              </section>
+            </section>
+          </div>
         </section>
 
         <!-- 1f #04 Playbook pages. One page per setup, reached from the
@@ -1982,6 +2244,59 @@
           <p class="pb-note" id="playbookEmpty" hidden></p>
 
           <div class="pb-stats" id="playbookStats"></div>
+          <div class="pb-analytics">
+          <article class="panel panel-chart panel-strategy-performance">
+              <div class="panel-head panel-head-inline">
+                <div>
+                  <h3>Strategy Performance</h3>
+                  <p>Compare setups, symbols, and trading days by P&amp;L or trade count.</p>
+                </div>
+                <div class="strategy-performance-toolbar">
+                  <div class="strategy-toggle-group" aria-label="Strategy breakdown type">
+                    <button class="strategy-toggle-btn is-active" type="button" data-performance-dimension="setup">
+                      Strategy
+                    </button>
+                    <button class="strategy-toggle-btn" type="button" data-performance-dimension="asset">Symbol</button>
+                    <button class="strategy-toggle-btn" type="button" data-performance-dimension="day">Day</button>
+                  </div>
+                  <div class="strategy-toggle-group" aria-label="Strategy performance metric">
+                    <button class="strategy-toggle-btn is-active" type="button" data-performance-metric="pnl">P&amp;L</button>
+                    <button class="strategy-toggle-btn" type="button" data-performance-metric="count">Count</button>
+                  </div>
+                </div>
+              </div>
+              <canvas
+                id="strategyPerformanceChart"
+                width="900"
+                height="320"
+                data-height="200"
+                aria-label="Strategy performance chart"
+              ></canvas> <!-- density pass: was 280 -->
+            </article>
+          <section class="panel">
+            <div class="panel-head">
+              <h3>Edge Detection by Setup</h3>
+              <p>Find which setups actually produce positive expectancy.</p>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Setup</th>
+                    <th class="num">Trades</th>
+                    <th class="num">Win Rate</th>
+                    <th class="num">Net P&amp;L</th>
+                    <th class="num">Avg R</th>
+                    <th class="num">Expectancy</th>
+                  </tr>
+                </thead>
+                <tbody id="edgeRows">
+                  <tr class="empty-row"><td colspan="6">No setup data yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+          </div>
 
           <article class="panel panel-chart pb-chart-panel" id="playbookChartPanel" hidden>
             <div class="panel-head">
@@ -2018,31 +2333,25 @@
               <h2 id="calendarHeading">Calendar</h2>
               <p id="calendarMeta" class="cal-meta" aria-live="polite">No trades this month.</p>
             </div>
-            <div class="cal-head-side">
-              <div class="cal-net">
-                <p class="cal-net-label">Month net</p>
-                <p class="cal-net-value" id="calendarNet">$0.00</p>
-              </div>
-              <div class="cal-nav">
-                <button id="calPrevBtn" class="cal-nav-btn" type="button" aria-label="Previous month">&lsaquo;</button>
-                <button id="calNextBtn" class="cal-nav-btn" type="button" aria-label="Next month">&rsaquo;</button>
-                <!-- Kept from the old header: the arrows walk one month at a
-                     time, this jumps. Label is visually hidden, not removed. -->
-                <label class="cal-jump">
-                  <span class="visually-hidden">Jump to month</span>
-                  <input id="dashboardCalendarMonth" type="month" />
-                </label>
-              </div>
+            <div class="cal-net">
+              <p class="cal-net-label">Month net</p>
+              <p class="cal-net-value" id="calendarNet">$0.00</p>
+            </div>
+            <div class="cal-nav">
+              <button id="calPrevBtn" class="cal-nav-btn" type="button" aria-label="Previous month">&lsaquo;</button>
+              <button id="calNextBtn" class="cal-nav-btn" type="button" aria-label="Next month">&rsaquo;</button>
+              <!-- Kept from the old header: the arrows walk one month at a
+                   time, this jumps. Label is visually hidden, not removed. -->
+              <label class="cal-jump">
+                <span class="visually-hidden">Jump to month</span>
+                <input id="dashboardCalendarMonth" type="month" />
+              </label>
             </div>
           </header>
 
           <div id="calendarGrid" class="calendar-grid" aria-label="Trading calendar"></div>
-
-          <ul class="cal-legend">
-            <li><span class="cal-legend-swatch cal-legend-up" aria-hidden="true"></span>green day: the tile rises</li>
-            <li><span class="cal-legend-swatch cal-legend-down" aria-hidden="true"></span>red day: the tile sinks</li>
-            <li><span class="cal-legend-swatch cal-legend-flat" aria-hidden="true"></span>no trades</li>
-          </ul>
+          <p class="cal-strip" id="calendarStrip" hidden></p>
+          <div id="calendarAgenda" class="cal-agenda" aria-label="Trading days this month"></div>
         </section>
 
         <section class="view" id="trade-entry" aria-labelledby="tradeEntryHeading">
@@ -2960,6 +3269,12 @@
               </span>
               <span class="topnav-label">Dash</span>
             </button>
+            <button class="nav-btn topnav-btn" type="button" data-target="session-intelligence">
+              <span class="topnav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false"><path d="M5 18.75V13.5M9.75 18.75V8.75M14.5 18.75v-7.5M19 18.75V5.25M4.5 18.75h15" /></svg>
+              </span>
+              <span class="topnav-label">Timing</span>
+            </button>
             <button class="nav-btn topnav-btn" type="button" data-target="journal">
               <span class="topnav-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 5.75h14.5v12.5H4.75zM4.75 10h14.5M4.75 14.25h14.5M10 10v8.25" /></svg>
@@ -3065,26 +3380,15 @@
         </span>
         <span class="tabbar-label">Calendar</span>
       </button>
-      <!-- The last dock slot belongs to the Edge when the account has it, and
-           falls back to Reflect when it does not, so the bar is never four
-           buttons and a hole. Only one of these two ever paints: the CSS in
-           styles.css hides Reflect whenever the Edge button is not [hidden].
-           Reflect stays reachable from the MENU sheet in that case. -->
-      <button class="nav-btn tabbar-btn" type="button" data-target="terminal" data-terminal-nav hidden>
+      <!-- Session Intelligence owns the fourth mobile destination. Terminal
+           and Reflections remain available from the navigation sheet. -->
+      <button class="nav-btn tabbar-btn" type="button" data-target="session-intelligence">
         <span class="tabbar-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" focusable="false">
-            <path d="M4.75 5.75h14.5v12.5H4.75zM8 9.5l2.5 2.5L8 14.5M12.75 14.5h3.5" />
+            <path d="M5 18.75V13.5M9.75 18.75V8.75M14.5 18.75v-7.5M19 18.75V5.25M4.5 18.75h15" />
           </svg>
         </span>
-        <span class="tabbar-label">Edge</span>
-      </button>
-      <button class="nav-btn tabbar-btn" type="button" data-target="reflections">
-        <span class="tabbar-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" focusable="false">
-            <path d="M4.75 5.75h14.5v10.5h-8.5l-4.5 3.5v-3.5h-1.5zM8.75 9.5h6.5M8.75 12.75h4" />
-          </svg>
-        </span>
-        <span class="tabbar-label">Reflect</span>
+        <span class="tabbar-label">Timing</span>
       </button>
     </nav>
     <button id="tabBarNewTradeBtn" class="tabbar-fab" type="button">
@@ -3166,6 +3470,31 @@
               </label>
             </div>
           </div>
+
+          <section
+            class="topstep-timezone-confirm"
+            id="topstepTimeZoneConfirm"
+            aria-labelledby="topstepTimeZoneConfirmTitle"
+            hidden
+          >
+            <div>
+              <p class="trade-import-kicker">One-time confirmation</p>
+              <h3 id="topstepTimeZoneConfirmTitle">Which clock does this Topstep export use?</h3>
+              <p id="topstepTimeZoneConfirmHelp">
+                This CSV has timestamps without a timezone. Confirm the source timezone once so daylight saving and session classification stay accurate.
+              </p>
+            </div>
+            <label>
+              Source timezone
+              <select id="topstepImportTimeZone" aria-describedby="topstepTimeZoneConfirmHelp">
+                <option value="" selected>Choose a timezone</option>
+                <option value="America/New_York">New York (ET)</option>
+                <option value="America/Chicago">Chicago (CT)</option>
+                <option value="Asia/Manila">Manila (PHT)</option>
+              </select>
+            </label>
+            <button class="btn" id="topstepImportTimeZoneConfirmBtn" type="button">Use this timezone</button>
+          </section>
 
           <details class="trade-import-paste">
             <summary>Paste CSV or TSV instead</summary>
@@ -3749,6 +4078,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260819-board2"></script>
+    <script type="module" src="app.js?v=20260821-session2"></script>
   </body>
 </html>

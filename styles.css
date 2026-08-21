@@ -858,6 +858,7 @@ body.app-on .auth-shell {
   }
 }
 
+
 @keyframes lndType {
   0% {
     max-width: 0;
@@ -903,6 +904,7 @@ body.app-on .auth-shell {
   }
 }
 
+
 @keyframes lndChipLand {
   0% {
     opacity: 0;
@@ -947,6 +949,7 @@ body.app-on .auth-shell {
     animation-delay: calc(var(--c, 0) * 1.5s);
   }
 }
+
 
 @keyframes lndMoodTurn {
   0%,
@@ -1001,6 +1004,7 @@ body.app-on .auth-shell {
     animation-delay: 1400ms;
   }
 }
+
 
 @keyframes lndNoteWrite {
   0% {
@@ -1080,6 +1084,7 @@ body.app-on .auth-shell {
   }
 }
 
+
 @keyframes lndAcctTurn {
   0%,
   25.1%,
@@ -1154,6 +1159,7 @@ body.app-on .auth-shell {
     animation: lndDraw 7s var(--ease-in-out) infinite;
   }
 }
+
 
 @keyframes lndDraw {
   0% {
@@ -1258,6 +1264,7 @@ body.app-on .auth-shell {
   }
 }
 
+
 @keyframes lndCalBreathe {
   0%,
   100% {
@@ -1314,6 +1321,7 @@ body.app-on .auth-shell {
     animation: lndScoreFill 7s var(--ease-in-out) infinite;
   }
 }
+
 
 @keyframes lndScoreFill {
   0%,
@@ -1434,6 +1442,7 @@ body.app-on .auth-shell {
     animation: lndTpScan 13s linear infinite;
   }
 }
+
 
 @keyframes lndTpFloor {
   to {
@@ -1663,6 +1672,7 @@ body.app-on .auth-shell {
   .lnd-tp-journal { grid-area: journal; }
   .lnd-tp-arm { grid-area: arm; }
 }
+
 
 .lnd-tp-pane {
   min-width: 0;
@@ -3907,6 +3917,7 @@ body.is-authenticated .trust-row {
 
 }
 
+
 @media (max-width: 1300px) {
   .metric-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3924,6 +3935,7 @@ body.is-authenticated .trust-row {
   }
 
 }
+
 
 @media (max-width: 1024px) {
   .content,
@@ -4054,6 +4066,7 @@ body.is-authenticated .trust-row {
   }
 }
 
+
 @media (max-width: 980px) and (min-width: 901px) {
   .table-wrap {
     overflow-x: auto;
@@ -4063,6 +4076,7 @@ body.is-authenticated .trust-row {
     min-width: 900px;
   }
 }
+
 
 @media (max-width: 900px) {
   .table-wrap {
@@ -4148,6 +4162,7 @@ body.is-authenticated .trust-row {
     padding: 12px 4px;
   }
 }
+
 
 @media (max-width: 760px) {
   .metric-grid.compact,
@@ -4418,6 +4433,7 @@ body.is-authenticated .trust-row {
   }
 }
 
+
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -4521,77 +4537,6 @@ body.is-journal-loading #tradesBody td * {
   font: 600 var(--fs-micro)/1.2 var(--font-mono);
   letter-spacing: 0.02em;
   cursor: help;
-}
-
-/* Risk-budget strip: today vs dailyMaxLoss, week vs weeklyMaxLoss.
-   display:grid would defeat the hidden attribute — guard both levels. */
-.risk-strip[hidden],
-.risk-strip-item[hidden] {
-  display: none;
-}
-
-.risk-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--space-3);
-}
-
-.risk-strip-item {
-  display: grid;
-  gap: 7px;
-  padding: var(--space-3) var(--space-4);
-  background: var(--surface-1);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--edge-highlight);
-}
-
-.risk-strip-label {
-  color: var(--text-faint);
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.risk-strip-track {
-  height: 4px;
-  border-radius: var(--radius-pill);
-  background: var(--surface-inset);
-  border: 1px solid var(--line);
-  overflow: hidden;
-}
-
-.risk-strip-fill {
-  display: block;
-  height: 100%;
-  width: 0;
-  background: var(--line-strong);
-  transition: width var(--dur-base) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
-}
-
-.risk-strip-value {
-  color: var(--text-soft);
-  font: 500 var(--fs-label)/1.3 var(--font-mono);
-}
-
-.risk-strip-item.is-warn .risk-strip-fill {
-  background: var(--warn);
-}
-
-.risk-strip-item.is-warn .risk-strip-value {
-  color: var(--warn);
-}
-
-.risk-strip-item.is-breach {
-  border-color: var(--pnl-neg-line);
-}
-
-.risk-strip-item.is-breach .risk-strip-fill {
-  background: var(--pnl-neg);
-}
-
-.risk-strip-item.is-breach .risk-strip-value {
-  color: var(--pnl-neg);
 }
 
 /* Sortable journal headers: mono arrow indicator via aria-sort. */
@@ -4861,49 +4806,6 @@ th[aria-sort] {
   height: 100%;
 }
 
-/* --- Risk meters --------------------------------------------------------- */
-.dash-risk {
-  grid-column: span 4;
-  align-content: start;
-  gap: var(--space-3);
-  padding: var(--space-5);
-  background: var(--surface-1);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--edge-highlight);
-}
-
-.dash-risk-kicker {
-  margin: 0;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.13em;
-  font: 600 var(--fs-micro)/1.2 var(--font-mono);
-}
-
-/* Inside the deck card the items lose their own frame — the card is the frame. */
-.dash-risk .risk-strip-item {
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  gap: var(--space-2);
-}
-
-.dash-risk .risk-strip-track {
-  height: 6px;
-}
-
-.dash-risk .risk-strip-value {
-  font-size: var(--fs-data);
-  color: var(--text);
-}
-
-.dash-risk .risk-strip-item.is-breach {
-  border: 0;
-}
-
 /* --- Tier 2: edge quad --------------------------------------------------- */
 .dash-quad {
   display: grid;
@@ -4993,15 +4895,6 @@ th[aria-sort] {
     min-height: 190px;
   }
 
-  .dash-risk {
-    grid-column: span 12;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  }
-
-  .dash-risk-kicker {
-    grid-column: 1 / -1;
-  }
-
   .panel-grid-analytics,
   .panel-grid-bottom {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5052,6 +4945,7 @@ th[aria-sort] {
   }
 }
 
+
 @media (max-width: 720px) {
 
   .dash-hero {
@@ -5065,10 +4959,6 @@ th[aria-sort] {
 
   .dash-spark-wrap {
     height: 74px;
-  }
-
-  .dash-risk {
-    padding: var(--space-4);
   }
 
   .dash-rail {
@@ -5093,6 +4983,7 @@ th[aria-sort] {
   }
 }
 
+
 /* Rail captions (best/worst-day dates) + rail density: tertiary cells drop
    their delta chips so the rail stays a glance strip, not a third card wall. */
 .metric-sub {
@@ -5108,42 +4999,6 @@ th[aria-sort] {
 
 .dash-rail-item .metric-delta {
   display: none;
-}
-
-/* Risk meters: the remaining budget is the headline numeral; items spread to
-   fill the deck card so it reads as a panel, not a label stack. */
-.dash-risk {
-  align-content: space-between;
-  min-height: 208px;
-}
-
-.dash-risk .risk-strip-item {
-  gap: var(--space-1);
-}
-
-.risk-strip-remain {
-  font: 700 21px/1.15 var(--font-mono);
-  font-feature-settings: "tnum";
-  letter-spacing: -0.01em;
-  color: var(--text);
-}
-
-.risk-strip-item.is-warn .risk-strip-remain {
-  color: var(--warn);
-}
-
-.risk-strip-item.is-breach .risk-strip-remain {
-  color: var(--pnl-neg);
-}
-
-.dash-risk .risk-strip-track {
-  margin-top: var(--space-1);
-}
-
-@media (max-width: 1180px) {
-  .dash-risk {
-    min-height: 0;
-  }
 }
 
 /* ==========================================================================
@@ -5338,6 +5193,7 @@ body:not(.app-on)::before {
   }
 }
 
+
 @keyframes lndGhostIn {
   from { opacity: 0; }
 }
@@ -5426,6 +5282,7 @@ body:not(.app-on)::before {
   .lnd-halo-c { animation: lndHaloC 36s var(--ease-in-out) infinite alternate; }
 
 }
+
 
 @keyframes lndHaloA {
   from { transform: translate3d(0, 0, 0) scale(1); }
@@ -6101,6 +5958,7 @@ body:not(.app-on)::before {
   }
 }
 
+
 /* ==========================================================================
    THE PLAYER. The product demo is the hero: a trade being journalled, start to
    finish, beside the headline.
@@ -6243,6 +6101,7 @@ body:not(.app-on)::before {
      squeezed to nothing between them. */
   .lnd-play-track { flex: 1 0 100%; }
 }
+
 
 /* ==========================================================================
    THE GALLERY. The four drawn screens, laid out and moving.
@@ -6443,6 +6302,7 @@ body:not(.app-on)::before {
   }
 }
 
+
 .lnd-wall-crawl b {
   color: var(--tp-faint);
   font: 600 11px/1 var(--font-mono);
@@ -6530,6 +6390,7 @@ body:not(.app-on)::before {
 @media (min-width: 620px) {
   .lnd-mon-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
 
 /* The tile is a replay, not a stream: nothing here is clickable. The desk's
    F7 is where a click plays the real channel. */
@@ -6754,6 +6615,7 @@ body:not(.app-on)::before {
   .lnd-wall-replay { min-height: 44px; min-width: 44px; }
 }
 
+
 .lnd-wall-rail em {
   font-style: normal;
   letter-spacing: 0.06em;
@@ -6825,6 +6687,7 @@ body:not(.app-on)::before {
 @media (min-width: 860px) {
   .lnd-faq-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
 
 .lnd-faq-item {
   padding: var(--space-5);
@@ -7301,6 +7164,7 @@ body.auth-ready [data-landing-reveal].is-revealed {
   }
 }
 
+
 @media (max-width: 420px) {
   .lnd-brand-name {
     font-size: 17px;
@@ -7331,49 +7195,6 @@ body.auth-ready [data-landing-reveal].is-revealed {
   }
 }
 
-/* ==========================================================================
-   PHASE C — DASHBOARD: DEPTH, TILT, CHOREOGRAPHY
-   The bento stops being flat cards on a flat page. Three additions, in
-   layers:
-     1. surfaces  — every card is a lit gradient plane with an inner top
-                    highlight, a deep drop shadow and an accent wash.
-     2. 3D        — the deck/quad are perspective containers; [data-tilt]
-                    cards rotate a couple of degrees toward the pointer and
-                    carry a specular that tracks it. Bound in app.js behind
-                    (hover: hover) and (pointer: fine) + reduced motion, so
-                    touch and reduced-motion users get a still, flat card.
-     3. motion    — a richer per-tier entrance, meters that fill from zero,
-                    delta chips that pop in, a live pulse on open positions,
-                    and a fatter directional flash on ticking numbers.
-   Every id, [data-*] and class the JS queries is untouched; this file only
-   adds rules and one attribute hook ([data-tilt]) that JS reads, never
-   writes structure into.
-   ========================================================================== */
-
-/* --- 1. Surfaces --------------------------------------------------------- */
-/* One recipe, applied everywhere a card or panel already exists so the whole
-   product gains depth (Monthly Review's .metric-grid.compact included) —
-   only the 3D and hover-lift below are dashboard-scoped. */
-/* :not(.dash-rail-item) is load-bearing, not taste: the rail's cells are
-   panes of one plane and their inset hairline separators (including the
-   nth-child rewrites in the responsive blocks above) would be clobbered by a
-   later box-shadow here. The rail itself takes the surface instead. */
-.panel,
-.metric-card:not(.dash-rail-item),
-.dashboard-empty,
-.dash-risk,
-.dash-rail {
-  background-image: linear-gradient(178deg, var(--deck-top) 0%, var(--deck-bottom) 100%);
-  box-shadow: inset 0 1px 0 var(--deck-edge), var(--deck-shadow);
-}
-
-/* Accent wash at the top of the tall deck cards — the light source. */
-.dash-hero,
-.dash-risk {
-  background-image:
-    radial-gradient(120% 78% at 50% 0%, var(--deck-wash) 0%, transparent 62%),
-    linear-gradient(178deg, var(--deck-top) 0%, var(--deck-bottom) 100%);
-}
 
 /* Hero accent edge: a left-anchored bloom in the day's P&L colour whose
    opacity rides --pl-intensity (the same scalar that widens the hairline).
@@ -7504,49 +7325,12 @@ body.auth-ready [data-landing-reveal].is-revealed {
   animation-delay: calc(var(--i, 0) * var(--stagger-dash));
 }
 
-/* Per-tier timing: the deck lands slow and heavy, the quad snaps, the rail
-   slides in last as one plane. */
-.dash-hero,
-.dash-risk {
-  animation-duration: 760ms;
-}
-
 .dash-quad-card {
   animation-duration: 520ms;
 }
 
 .dash-rail {
   animation-duration: 700ms;
-}
-
-/* --- 3b. Risk meters fill from zero -------------------------------------- */
-.dash-risk .risk-strip-item {
-  --meter: var(--accent);
-}
-
-.dash-risk .risk-strip-item.is-warn {
-  --meter: var(--warn);
-}
-
-.dash-risk .risk-strip-item.is-breach {
-  --meter: var(--pnl-neg);
-}
-
-.dash-risk .risk-strip-item .risk-strip-track {
-  height: 8px;
-  background: var(--surface-inset);
-  border-color: var(--line);
-  box-shadow: inset 0 1px 3px var(--deck-groove);
-}
-
-/* JS keeps writing width; the scaleX keyframe is what fills it from empty, so
-   the meter animates at whatever width the data happens to be. */
-.dash-risk .risk-strip-item .risk-strip-fill {
-  background: var(--meter);
-  background-image: linear-gradient(90deg, color-mix(in srgb, var(--meter) 45%, transparent) 0%, var(--meter) 100%);
-  box-shadow: 0 0 14px -3px var(--meter);
-  transform-origin: left center;
-  animation: riskFill 820ms var(--ease-out) 340ms backwards;
 }
 
 @keyframes riskFill {
@@ -7677,51 +7461,6 @@ summary:focus-visible {
   }
 }
 
-/* ==========================================================================
-   PHASE D — CLAY SYSTEM: SHARED COMPONENTS
-   The token layer at the top of this file is now clay (soft ramp, hue-matched
-   three-shadow stacks, 14/20/26/32 radii). This section spends those tokens on
-   the shared recipes and takes the hairlines back out.
-
-   The split that keeps a trading journal readable — clay is CHROME, flat is
-   CONTENT:
-     clay        panels, cards, buttons, nav, modals, wells, chips
-     flat        table rows, calendar cells, chart interiors — anything that
-                 repeats more than ~6 times. A clay row costs ~28px of padding
-                 and turns a dense table into a bouncy castle.
-
-   Two rules are accessibility, not taste, and must survive any restyle:
-     1. CONTAINERS lose their border (depth is the shadow). CONTROLS keep one
-        1px --control-edge — a soft shadow edge measures ~1.4:1 and WCAG
-        1.4.11 wants 3:1 to identify a control.
-     2. No state is signalled by shadow alone. Every pressed/active state also
-        moves a colour or a fill, because shadow direction is invisible in
-        sunlight, on a dimmed screen, and to a screen reader.
-   ========================================================================== */
-
-/* --- 1. Containers: border out, clay in ---------------------------------- */
-.panel,
-.view-head,
-.dashboard-empty,
-.dash-risk,
-.dash-rail,
-.sidebar,
-.table-wrap,
-.tag-set,
-.reflection-list li {
-  border: 0;
-}
-
-.panel,
-.view-head,
-.dashboard-empty,
-.dash-risk,
-.dash-rail,
-.sidebar {
-  border-radius: var(--radius-clay-lg);
-  box-shadow: inset 0 1px 0 var(--clay-edge), var(--clay-raised);
-}
-
 /* The rail is a strip of seven read-only panes, not a thing you press. Full
    three-shadow clay on it would say "tappable" seven times over, so it gets
    the outer drop alone — this is the rule that stops clay leaking onto
@@ -7816,27 +7555,9 @@ summary:focus-visible {
   padding: var(--space-6) var(--space-6) 0;
 }
 
-.dash-risk {
-  padding: var(--space-6);
-}
-
 .dash-quad-card {
   border-radius: var(--radius-clay-md);
   padding: var(--space-5);
-}
-
-/* Wells inside clay: pressed, never raised. */
-.dash-risk .risk-strip-item .risk-strip-track,
-.risk-strip-track {
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--surface-inset);
-  box-shadow: var(--clay-pressed);
-  overflow: hidden;
-}
-
-.risk-strip-fill {
-  border-radius: var(--radius-pill);
 }
 
 .table-wrap {
@@ -8178,21 +7899,6 @@ summary:focus-visible {
   box-shadow: var(--focus-ring);
 }
 
-/* --- 9. Dark-only soft edge ---------------------------------------------- */
-/* Dark is :root (no attribute), hence :not([data-theme="light"]). In dark the
-   drop shadow is nearly invisible against the page, so the barely-there top
-   edge is what separates surface from background — the one hairline clay is
-   not allowed to delete. */
-:root:not([data-theme="light"]) .panel,
-:root:not([data-theme="light"]) .view-head,
-:root:not([data-theme="light"]) .metric-card:not(.dash-rail-item),
-:root:not([data-theme="light"]) .dash-risk,
-:root:not([data-theme="light"]) .dash-rail,
-:root:not([data-theme="light"]) .dashboard-empty,
-:root:not([data-theme="light"]) .sidebar {
-  border: 1px solid var(--clay-edge);
-}
-
 /* Modals float over a dim overlay with no page behind them to lift off, so
    they take the stronger edge. */
 :root:not([data-theme="light"]) .auth-panel,
@@ -8220,8 +7926,7 @@ summary:focus-visible {
    the padding follows. */
 @media (max-width: 720px) {
   .panel,
-  .view-head,
-  .dash-risk {
+  .view-head {
     padding: var(--space-5);
   }
 
@@ -8231,27 +7936,11 @@ summary:focus-visible {
 }
 
 @media (max-width: 560px) {
-  .panel,
-  .view-head,
-  .dashboard-empty,
-  .dash-risk,
-  .dash-rail,
-  .sidebar {
-    border-radius: var(--radius-clay-md);
-  }
 
   .dash-hero,
   .auth-panel,
   .score-info-dialog {
     border-radius: var(--radius-clay-lg);
-  }
-
-  .panel,
-  .view-head,
-  .dash-risk,
-  .auth-panel,
-  .score-info-dialog {
-    padding: var(--space-4);
   }
 
   .dash-hero {
@@ -8268,6 +7957,7 @@ summary:focus-visible {
     padding: 10px 12px;
   }
 }
+
 
 /* Tone-agnostic: the ring follows whatever colour the chip is wearing. */
 @keyframes livePulse {
@@ -8317,10 +8007,6 @@ summary:focus-visible {
   border: 0;
   padding: 3px 10px;
   background: var(--surface-inset);
-}
-
-.dash-risk {
-  min-height: 216px;
 }
 
 .dash-quad-card {
@@ -8419,11 +8105,6 @@ summary:focus-visible {
   animation-delay: calc(var(--i, 0) * var(--stagger-dash));
 }
 
-.dash-hero,
-.dash-risk {
-  animation-duration: 900ms;
-}
-
 .dash-quad-card {
   animation-duration: 720ms;
 }
@@ -8439,11 +8120,8 @@ summary:focus-visible {
     min-height: 176px;
   }
 
-  .dash-risk {
-    min-height: 0;
-  }
-
 }
+
 
 /* One column at phone width: the actions drop under the price instead of
    squeezing it to four characters. */
@@ -8504,6 +8182,7 @@ summary:focus-visible {
     display: grid;
   }
 }
+
 
 /* --- 2. The bar ----------------------------------------------------------- */
 .tabbar {
@@ -8771,6 +8450,7 @@ body:has(.tabbar .nav-btn[data-target="terminal"]:not([hidden])) .main-nav .shee
     box-shadow: var(--focus-ring);
   }
 }
+
 
 .tabbar-fab-glyph svg {
   display: block;
@@ -9063,6 +8743,7 @@ body:has(textarea:focus) .tabbar-fab {
     flex: 1 1 auto;
   }
 }
+
 
 /* --- 3. Demo sign-up hand-off -------------------------------------------- */
 /* body.demo-signup shows the landing shell OVER a live demo instead of tearing
@@ -9446,11 +9127,13 @@ body.auth-ready .lnd-tape-list .lnd-row {
   }
 }
 
+
 @media (prefers-reduced-motion: reduce) {
   .dash-ticker-dock {
     transition: none;
   }
 }
+
 
 /* The strips align on the text baseline; the pulse dot has no baseline to
    speak of, so centre it by itself. */
@@ -9694,6 +9377,7 @@ body.auth-ready .lnd-tape-list .lnd-row {
   }
 }
 
+
 /* Demo timeline: a thin oxide progress rail under the caption. Width is
    driven by the player (index / steps); the loop wrap snaps it back to zero.
    Purely decorative — the caption narrates for AT — so aria-hidden. */
@@ -9858,6 +9542,7 @@ body.auth-ready .lnd-tape-list .lnd-row {
     }
 }
 
+
 /* The hero's atmosphere is deliberately full bleed (width: 100vw), but 100vw
    counts the scrollbar while the layout box does not, so it runs a few px wider
    than the page and the landing gained a horizontal scroll of exactly that
@@ -9994,6 +9679,7 @@ body.auth-locked {
   .dem-tv .bb-mon-h { transition: none; }
 }
 
+
 /* The reading, under the news. Narrower than F6, so the sentence wraps under
    the figure instead of beside it, and the band chip is the desk's own
    element rather than a second set of colours to keep in sync. */
@@ -10063,6 +9749,7 @@ body.auth-locked {
   /* 44px on a phone, where it is a thumb target rather than a pointer one. */
   .dem-min { min-height: 44px; padding: 0 var(--space-3); }
 }
+
 
 /* --- the command bar ----------------------------------------------------- */
 .dem-cmd {
@@ -10217,6 +9904,7 @@ body.auth-locked {
   .dem-h { font-size: 10.5px; }
 }
 
+
 @keyframes demCaret { 50% { opacity: 0; } }
 @keyframes demSweep { to { top: 100%; } }
 @keyframes demRowIn { from { opacity: 0; transform: translateY(4px); } }
@@ -10225,6 +9913,7 @@ body.auth-locked {
 @media (max-width: 899px) {
   .dem-key { min-height: 44px; }
 }
+
 
 /* The resting state is the finished instrument, so a frozen frame is a working
    screen rather than a half-drawn one. */
@@ -10297,6 +9986,7 @@ body.auth-locked {
   .dash-leon { display: none; }
 }
 
+
 @media (max-width: 1239px) {
   .dash-edge-mini { grid-column: 1 / -1; }
 
@@ -10317,6 +10007,7 @@ body.auth-locked {
   #dashboard.is-active > .dash-stats { order: 1; }
   #dashboard.is-active > .dash-edge-mini { order: 2; }
 }
+
 
 .dash-edge-mini[hidden] { display: none; }
 
@@ -10398,10 +10089,12 @@ body.auth-locked {
 @media (prefers-reduced-motion: no-preference) {
   .bb-sweep { animation: lndTpSweep 9s linear infinite; }
 }
+
 @media (prefers-reduced-motion: reduce) {
   /* A sweep frozen mid-screen would read as a smudge, so it goes entirely. */
   .bb-sweep { display: none; }
 }
+
 
 /* The chrome mark. Static: the feed lamp beside it is the one element allowed
    to breathe, and only while the link is live. */
@@ -10858,6 +10551,7 @@ body.auth-locked {
     border-left-color: var(--bb-oxide);
   }
 }
+
 
 /* --- F2 THE APPROACH, the signature ------------------------------------- */
 .bb-appr { display: grid; gap: var(--space-3); }
@@ -11600,6 +11294,7 @@ body.auth-locked {
   }
 }
 
+
 /* --- THE TAPE ------------------------------------------------------------
    The prices the app already polls, scrolled horizontally. Two identical runs
    side by side and a -50% translate: the loop is seamless because the second
@@ -11678,6 +11373,7 @@ body.auth-locked {
 @media (min-width: 700px) {
   .bb-wall-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
 
 .bb-mon { display: grid; background: var(--term-pane); }
 .bb-mon-h {
@@ -11802,6 +11498,7 @@ body.auth-locked {
   .bb-mon-screen { min-height: 44px; }
 }
 
+
 /* The resting state is the finished screen: a frozen frame still reads every
    price and every channel. */
 @media (prefers-reduced-motion: reduce) {
@@ -11828,6 +11525,7 @@ body.auth-locked {
 @media (max-width: 899px) {
   .bb-mon-pick { min-height: 44px; }
 }
+
 
 /* PASTE A LINK. Sits beside the picker because it does the same job: choose
    what this monitor shows.
@@ -11996,6 +11694,7 @@ body.auth-locked {
      meant to remove, on exactly the laptop widths most people use. */
   .bb-wall-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
 .bb-mon-screen,
 .bb-mon iframe {
   aspect-ratio: 16 / 9;
@@ -12143,6 +11842,7 @@ body.auth-locked {
   .bb-wall-tok { min-height: 44px; }
 }
 
+
 /* ==========================================================================
    THE WALL AT MAX: under the nav, frameless labels, prices on top.
 
@@ -12165,6 +11865,7 @@ body.auth-locked {
   .bb-wall[data-size="max"] { inset: calc(var(--chrome-h, 64px) + var(--tape-h, 34px)) 0 var(--dock-clear-h, 112px) 0; }
 }
 
+
 /* 2. THE TAPE RIDES ABOVE THE NEWS. While the wall is maximised the price
       strip is pinned across the top of it, so the pairs are the thing between
       the nav and the monitors. :has() scopes this to the maximised state only,
@@ -12181,6 +11882,7 @@ body.auth-locked {
 @media (max-width: 899px) {
   #terminal:has(.bb-wall[data-size="max"]) .bb-tape { top: var(--chrome-h, 64px); }
 }
+
 
 /* 3. FRAMELESS LABELS. At max the name stops being a row and becomes a mark on
       the picture: no bar, no border, no reserved height, so the monitor is the
@@ -12210,6 +11912,7 @@ body.auth-locked {
 @media (prefers-reduced-motion: reduce) {
   .bb-wall[data-size="max"] .bb-mon-h { transition: none; }
 }
+
 
 /* --- HALF IS A SPLIT, NOT A STACK ----------------------------------------
    "i want to see the release edge or f1 when i choose half". Stacked below the
@@ -12405,6 +12108,7 @@ body.auth-locked {
     flex: 1 0 100%;
   }
 }
+
 
 /* ==========================================================================
    EVERY TAB IS ITS OWN PAGE.
@@ -12936,11 +12640,13 @@ body.auth-locked {
   }
 }
 
+
 @media (prefers-reduced-motion: reduce) {
   .trade-import-dialog[open] {
     animation: none;
   }
 }
+
 
 .rev-net-basis {
   margin-inline-start: 0.3em;

@@ -639,34 +639,6 @@
     border-radius: 0 0 14px 14px;
   }
 
-  /* The dial was never the tall thing on the risk card: the two stacked
-     meters beside it were, at 150px. They go two up and the dial drops to
-     64. Same figures, half the height. The SVG arc is computed in JS from
-     r="48" against a viewBox, so scaling the box in CSS alone keeps the arc
-     correct with no JS change. */
-  #dashboard .dash-risk {
-    padding: 12px 16px;
-    gap: 8px;
-    min-height: 0;
-    border-radius: 14px;
-  }
-  #dashboard .dash-risk-body { gap: 12px; align-items: center; }
-  #dashboard .dash-dial,
-  #dashboard .dash-dial svg { width: 64px; height: 64px; }
-  #dashboard .dash-dial-value { font-size: 20px; }
-  #dashboard .dash-risk-figures {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    align-content: start;
-  }
-  #dashboard .dash-risk .risk-strip-item { gap: 2px; }
-  #dashboard .dash-risk-consequence {
-    padding: 6px 8px;
-    font-size: 12px;
-    line-height: 1.4;
-  }
-
   #dashboard .dash-stats { gap: 8px; }
 }
 
@@ -1074,6 +1046,7 @@
   .capture-toast { left: var(--rail-w); }
 }
 
+
 /* Locked session: same contract the top bar had. */
 body.auth-locked .rail { display: none !important; }
 
@@ -1136,68 +1109,6 @@ body.auth-locked .app-ticker { display: none !important; }
   .rail .topnav-actions {
     border-top: 1px solid var(--line);
     padding-top: var(--space-2);
-  }
-}
-
-/* ==========================================================================
-   THE CONSEQUENCE LINE STOPS EATING ITSELF.
-
-   One paragraph carried two type sizes and two leadings: a 12px sentence at
-   16.8px, with a 13px inline-block link setting its own 19.5px. An
-   inline-block whose box is taller than the line box it sits in grows UPWARD
-   into the line above, so the moment the sentence wrapped to two lines, the
-   link printed on top of the words above it. Nothing was clipped and no
-   height was wrong, which is why it read as a rendering glitch rather than a
-   type bug.
-
-   One leading owns the block, and nothing inside it sets its own. The rule is
-   general on purpose: any future chip or link dropped into this sentence
-   inherits the line box instead of fighting it.
-   ========================================================================== */
-.dash-risk-consequence {
-  line-height: 1.55;
-  text-wrap: pretty;
-}
-
-.dash-risk-consequence > * {
-  line-height: inherit;
-  vertical-align: baseline;
-}
-
-/* ==========================================================================
-   FOUR REPAIRS, DIAGNOSED THE HARD WAY.
-
-   These shipped to the desk app first and were held there by an app only
-   instruction, which was my misreading: the faults are the product's, so they
-   belong here. Each was diagnosed against the rendered page and then
-   adversarially refuted before shipping, and two of the first diagnoses did
-   not survive that. What follows is what actually holds.
-   ========================================================================== */
-
-/* 1. THE COOLDOWN LINK FALLS BACK INTO ITS SENTENCE.
-
-   styles.css gives EVERY <button> a 42px min-height as a global touch floor,
-   and .dash-risk-link is a button that never overrides it, so a 42px box sat
-   inside a 16.8px line box. It never printed over the line above, whatever it
-   looked like: an oversized inline-block cannot, because the line box grows
-   around it. What it did was inflate that line, shoving the sentence's last
-   line about 16px DOWN and padding the card with ~21px of dead height, which
-   is the hole in the middle of "the desk locks until / tomorrow".
-
-   This is why the earlier leading fix changed nothing visible. A min-height is
-   not a leading value, so normalising the leading answered a question nobody
-   had asked.
-
-   min-height 0 returns the link to one line box; font-size inherit makes that
-   box exactly the paragraph's, so the three lines sit on a uniform rhythm.
-   Verified at every card width from 240px to 760px.
-
-   Desktop only, so the coarse pointer 44px touch target on phones survives. */
-@media (min-width: 1025px) {
-  .dash-risk-link {
-    min-height: 0;
-    font-size: inherit;
-    line-height: inherit;
   }
 }
 
@@ -1314,33 +1225,12 @@ body.auth-locked .app-ticker { display: none !important; }
   .rail-account { display: none; }
 }
 
+
 /* ==========================================================================
    THREE ADJUSTMENTS FROM USE.
    ========================================================================== */
 
 @media (min-width: 1025px) {
-  /* 1. THE DIAL STOPS CROWDING ITS OWN RING.
-
-     The density pass took the dial from 118px to 64px but left the ring at
-     stroke-width 13, which is a viewBox unit: at 64px that stroke scales to
-     about 7px a side, so 14px of a 64px circle is ring and only ~50px is
-     usable. "100%" sets 20px digits beside a 14px percent sign, about 44px
-     wide, which leaves ~3px a side and reads as the number touching the ring.
-
-     Thinning the ring buys the room back without giving up the density: at
-     stroke 9 the usable width is ~57px against a ~39px number. The arc math
-     is untouched because stroke-width does not change a circle's
-     circumference, and the dasharray JS writes is computed from r=48. */
-  #dashboard .dash-dial,
-  #dashboard .dash-dial svg { width: 68px; height: 68px; }
-
-  #dashboard .dash-dial-track,
-  #dashboard .dash-dial-fill { stroke-width: 9; }
-
-  #dashboard .dash-dial-value { font-size: 18px; }
-  #dashboard .dash-dial-value span { font-size: 11px; }
-  #dashboard .dash-dial-label { font-size: 8px; }
-
   /* 2. THE MONITOR TAKES THE RIGHT MARGIN.
 
      The edge rail sat 25px off the window edge because it inherits the view's
@@ -1460,4 +1350,1634 @@ body.auth-locked .app-ticker { display: none !important; }
     transform-origin: left center;
     animation: railMenuIn 150ms var(--ease-out);
   }
+}
+
+/* ==========================================================================
+   SESSION INTELLIGENCE — DEDICATED, ANSWER-FIRST WORKSPACE
+
+   One route, four focused tabs, one conclusion and one visualization per tab.
+   Surfaces stay quiet; green and rose are reserved for signed performance.
+   ========================================================================== */
+
+#dashboard .panel-grid-analytics > .panel-span-6 {
+  grid-column: span 6;
+}
+
+#session-intelligence [hidden],
+#topstepTimeZoneConfirm[hidden],
+#sessionTradeDrawer[hidden],
+#dashUnjournalled[hidden] {
+  display: none;
+}
+
+/* Dashboard keeps only a quiet route into the dedicated analysis page. */
+.dash-session-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  font: 650 12px/1 var(--font-ui);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.dash-session-link:hover {
+  color: var(--text);
+  text-decoration-color: currentColor;
+}
+
+.dash-session-link:focus-visible {
+  outline: none;
+  border-radius: 4px;
+  box-shadow: var(--focus-ring);
+}
+
+/* Dedicated page header --------------------------------------------------- */
+.session-page {
+  width: 100%;
+  min-width: 0;
+  max-width: 1320px;
+  margin-inline: auto;
+  overflow: clip;
+}
+
+.session-page-head {
+  display: grid;
+  gap: clamp(20px, 3vw, 34px);
+  padding: clamp(16px, 2.5vw, 30px) 4px 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.session-page-copy {
+  max-width: 980px;
+}
+
+.session-page-kicker,
+.session-conclusion > p,
+.session-visual-head > div > p,
+.session-queue-kicker {
+  margin: 0;
+  color: var(--text-faint);
+  font: 700 11px/1.2 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.session-page-copy h2 {
+  margin: 7px 0 0;
+  color: var(--text);
+  font: 720 clamp(28px, 4vw, 44px)/1.02 var(--font-ui);
+  letter-spacing: -0.045em;
+}
+
+.session-headline {
+  max-width: 900px;
+  margin: 12px 0 0;
+  color: var(--text-soft);
+  font: 450 clamp(15px, 1.7vw, 19px)/1.55 var(--font-ui);
+  text-wrap: balance;
+}
+
+.session-context {
+  display: grid;
+  grid-template-columns:
+    minmax(150px, 0.9fr)
+    minmax(150px, 0.9fr)
+    minmax(150px, 1fr)
+    minmax(120px, 0.72fr)
+    minmax(120px, 0.72fr);
+  align-items: stretch;
+  min-width: 0;
+  border-block: 1px solid var(--line);
+}
+
+.session-context-field,
+.session-context-readout {
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 62px;
+  margin: 0;
+  padding: 9px 14px;
+  border-right: 1px solid var(--line);
+}
+
+.session-context > :last-child {
+  border-right: 0;
+}
+
+.session-context-field > span,
+.session-context-readout > span {
+  color: var(--text-faint);
+  font: 700 11px/1.1 var(--font-mono);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.session-context-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 30px;
+  padding: 0 24px 0 0;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  color: var(--text);
+  font: 650 12px/1.2 var(--font-ui);
+  box-shadow: none;
+}
+
+.session-context-field select:focus-visible {
+  outline: none;
+  box-shadow: 0 2px 0 var(--accent);
+}
+
+.session-context-readout strong {
+  overflow: hidden;
+  color: var(--text);
+  font: 650 12px/1.25 var(--font-ui);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-confidence {
+  justify-self: start;
+  padding: 4px 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-soft);
+  font: 700 11px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.session-confidence.is-reliable {
+  border-color: var(--pnl-pos-line);
+  color: var(--pnl-pos);
+}
+
+.session-confidence.is-developing {
+  border-color: var(--line-accent);
+  color: var(--accent);
+}
+
+.session-confidence.is-early {
+  color: var(--text-soft);
+}
+
+/* Tabs -------------------------------------------------------------------- */
+.session-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-width: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.session-tab {
+  position: relative;
+  min-width: 0;
+  min-height: 54px;
+  padding: 0 14px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-soft);
+  font: 650 12px/1.2 var(--font-ui);
+  cursor: pointer;
+}
+
+.session-tab:last-child {
+  border-right: 0;
+}
+
+.session-tab:hover {
+  color: var(--text);
+  background: var(--surface-1);
+}
+
+.session-tab.is-active,
+.session-tab[aria-selected="true"] {
+  color: var(--text);
+}
+
+.session-tab.is-active::after,
+.session-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  bottom: -1px;
+  left: 14px;
+  height: 2px;
+  background: var(--accent);
+}
+
+.session-tab:focus-visible {
+  z-index: 1;
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.session-tab-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  margin-left: 6px;
+  padding-inline: 5px;
+  border-radius: var(--radius-pill);
+  background: var(--pnl-neg);
+  color: var(--text-inverse);
+  font: 700 11px/1 var(--font-mono);
+}
+
+/* A single report surface. Everything inside is separated by rhythm and
+   hairlines, never by a wall of nested cards. */
+.session-panels {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-top: 0;
+  border-radius: 0 0 12px 12px;
+  background: var(--surface-1);
+  overflow: hidden;
+}
+
+.session-panel {
+  position: relative;
+  min-width: 0;
+  padding: clamp(22px, 4vw, 46px);
+}
+
+.session-conclusion {
+  max-width: 880px;
+}
+
+.session-conclusion h3 {
+  margin: 8px 0 0;
+  color: var(--text);
+  font: 720 clamp(25px, 3.5vw, 38px)/1.1 var(--font-ui);
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.session-conclusion > span {
+  display: block;
+  margin-top: 10px;
+  color: var(--text-soft);
+  font: 450 13px/1.5 var(--font-ui);
+}
+
+/* No more than three readings. They share one band instead of becoming cards. */
+.session-primary-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
+  margin-top: clamp(24px, 4vw, 42px);
+  border-block: 1px solid var(--line);
+}
+
+.session-primary-metrics-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.session-primary-metric {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 104px;
+  padding: 18px clamp(12px, 2vw, 24px);
+  border-right: 1px solid var(--line);
+}
+
+.session-primary-metric:first-child {
+  padding-left: 0;
+}
+
+.session-primary-metric:last-child {
+  border-right: 0;
+}
+
+.session-primary-metric > span {
+  color: var(--text-faint);
+  font: 700 11px/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.session-primary-metric strong {
+  overflow: hidden;
+  color: var(--text);
+  font: 730 clamp(23px, 3vw, 34px)/1 var(--font-mono);
+  letter-spacing: -0.045em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-primary-metric small {
+  overflow: hidden;
+  color: var(--text-soft);
+  font: 500 11px/1.35 var(--font-ui);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-primary-metric strong.is-positive,
+.session-score-pnl.is-positive,
+.session-score-row.is-positive .session-score-pnl,
+.session-duration-band.is-positive .session-duration-band-head > span,
+.session-hour-cell.is-positive .session-hour-value,
+.session-hour-cell.is-profitable .session-hour-value {
+  color: var(--pnl-pos);
+}
+
+.session-primary-metric strong.is-negative,
+.session-score-pnl.is-negative,
+.session-score-row.is-negative .session-score-pnl,
+.session-duration-band.is-negative .session-duration-band-head > span,
+.session-hour-cell.is-negative .session-hour-value,
+.session-hour-cell.is-losing .session-hour-value {
+  color: var(--pnl-neg);
+}
+
+/* Shared visualization frame --------------------------------------------- */
+.session-visual {
+  min-width: 0;
+  margin-top: clamp(26px, 4vw, 44px);
+}
+
+.session-visual-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 24px;
+  margin-bottom: 18px;
+}
+
+.session-visual-head h4 {
+  margin: 6px 0 0;
+  color: var(--text);
+  font: 700 16px/1.25 var(--font-ui);
+  letter-spacing: -0.015em;
+}
+
+.session-visual-head > p {
+  margin: 0;
+  color: var(--text-soft);
+  font: 500 11.5px/1.4 var(--font-ui);
+}
+
+.session-visual-note,
+.session-honesty-note {
+  margin: 14px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--line-strong);
+  color: var(--text-soft);
+  font: 500 11.5px/1.5 var(--font-ui);
+}
+
+.session-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 14px;
+  color: var(--text-faint);
+  font: 650 11px/1 var(--font-mono);
+}
+
+.session-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.session-chart-legend span::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--line-strong);
+}
+
+.session-chart-legend .is-positive::before {
+  background: var(--pnl-pos);
+}
+
+.session-chart-legend .is-negative::before {
+  background: var(--pnl-neg);
+}
+
+.session-empty-copy {
+  margin: 0;
+  padding: 34px 16px;
+  color: var(--text-faint);
+  font: 500 12px/1.5 var(--font-ui);
+  text-align: center;
+}
+
+/* Sessions: one horizontal comparison ----------------------------------- */
+.session-scorecard {
+  display: grid;
+  min-width: 0;
+  border-top: 1px solid var(--line);
+}
+
+.session-score-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.72fr) minmax(180px, 1.6fr) minmax(155px, auto);
+  grid-template-areas: "score-main score-track score-meta";
+  align-items: center;
+  gap: 14px 24px;
+  min-width: 0;
+  padding: 17px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.session-score-main {
+  grid-area: score-main;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.session-score-name {
+  overflow: hidden;
+  color: var(--text);
+  font: 700 13px/1.2 var(--font-ui);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-score-pnl,
+.session-score-value {
+  color: var(--text);
+  font: 700 12px/1 var(--font-mono);
+  white-space: nowrap;
+}
+
+.session-score-meta {
+  grid-area: score-meta;
+  margin: 0;
+  color: var(--text-faint);
+  font: 600 11px/1.35 var(--font-mono);
+  text-align: right;
+}
+
+.session-score-track {
+  grid-area: score-track;
+  display: block;
+  height: 9px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+}
+
+.session-score-fill {
+  display: block;
+  width: calc(var(--session-score-size, 0) * 100%);
+  min-width: 2px;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--line-strong);
+}
+
+.session-score-row.is-positive .session-score-fill {
+  background: var(--pnl-pos);
+}
+
+.session-score-row.is-negative .session-score-fill {
+  background: var(--pnl-neg);
+}
+
+.session-score-row.is-early .session-score-fill,
+.session-score-row.is-empty .session-score-fill {
+  background: var(--line-strong);
+}
+
+/* Entry time: compact timeline, never a 24-card horizontal scroller. */
+.session-metric-switch {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+}
+
+.session-metric-switch button {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-soft);
+  font: 650 11px/1 var(--font-ui);
+  cursor: pointer;
+}
+
+.session-metric-switch button:hover {
+  color: var(--text);
+}
+
+.session-metric-switch button.is-active,
+.session-metric-switch button[aria-pressed="true"] {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.session-metric-switch button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.session-hour-viewport {
+  min-width: 0;
+  overflow: hidden;
+  border-block: 1px solid var(--line);
+}
+
+.session-hour-rail {
+  display: grid;
+  grid-template-columns: repeat(24, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.session-hour-cell {
+  display: grid;
+  grid-template-rows: minmax(102px, 1fr) auto auto;
+  gap: 5px;
+  min-width: 0;
+  min-height: 170px;
+  padding: 10px 2px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: center;
+}
+
+button.session-hour-cell {
+  width: 100%;
+  cursor: pointer;
+}
+
+.session-hour-cell:last-child {
+  border-right: 0;
+}
+
+.session-hour-cell:hover,
+.session-hour-cell[aria-selected="true"] {
+  background: var(--surface-2);
+}
+
+.session-hour-cell:focus-visible {
+  z-index: 1;
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.session-hour-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 102px;
+  padding: 3px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.session-hour-fill {
+  display: block;
+  width: min(70%, 14px);
+  min-height: 2px;
+  height: calc(var(--session-hour-size, 0) * 100%);
+  border-radius: 3px 3px 0 0;
+  background: var(--line-strong);
+}
+
+.session-hour-cell.is-positive .session-hour-fill,
+.session-hour-cell.is-profitable .session-hour-fill {
+  background: var(--pnl-pos);
+}
+
+.session-hour-cell.is-negative .session-hour-fill,
+.session-hour-cell.is-losing .session-hour-fill {
+  background: var(--pnl-neg);
+}
+
+.session-hour-label,
+.session-hour-time {
+  overflow: hidden;
+  color: var(--text-soft);
+  font: 700 11px/1 var(--font-mono);
+  text-overflow: ellipsis;
+}
+
+.session-hour-value,
+.session-hour-pnl {
+  overflow: hidden;
+  color: var(--text);
+  font: 700 11px/1 var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-hour-count,
+.session-hour-meta {
+  display: none;
+}
+
+.session-hour-cell.is-empty {
+  opacity: 0.48;
+}
+
+.session-hour-empty {
+  display: grid;
+  place-items: center;
+  min-height: 170px;
+  margin: 0;
+  padding: 30px 16px;
+  color: var(--text-faint);
+  font: 500 12px/1.5 var(--font-ui);
+  text-align: center;
+}
+
+/* One details panel at a time, opened only after an hour is selected. */
+.session-trade-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: calc(var(--z-modal) + 1);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(440px, 100vw);
+  height: 100dvh;
+  padding: 24px;
+  border-left: 1px solid var(--line-strong);
+  background: var(--surface-1);
+  box-shadow: -24px 0 50px rgba(0, 0, 0, 0.35);
+}
+
+.session-trade-drawer > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.session-trade-drawer > header p {
+  margin: 0;
+  color: var(--text-faint);
+  font: 700 11px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.session-trade-drawer > header h4 {
+  margin: 7px 0 0;
+  color: var(--text);
+  font: 700 21px/1.15 var(--font-ui);
+}
+
+.session-trade-drawer > header button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-soft);
+  font: 400 23px/1 var(--font-ui);
+  cursor: pointer;
+}
+
+#sessionTradeDrawerBody {
+  min-width: 0;
+  overflow-y: auto;
+  padding-top: 12px;
+}
+
+.session-drawer-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "drawer-main drawer-pnl drawer-action"
+    "drawer-meta drawer-pnl drawer-action";
+  align-items: center;
+  gap: 5px 14px;
+  min-width: 0;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.session-drawer-main {
+  grid-area: drawer-main;
+  min-width: 0;
+  color: var(--text);
+  font: 700 12.5px/1.3 var(--font-ui);
+}
+
+.session-drawer-meta {
+  grid-area: drawer-meta;
+  min-width: 0;
+  margin: 0;
+  color: var(--text-faint);
+  font: 600 11px/1.35 var(--font-mono);
+}
+
+.session-drawer-pnl {
+  grid-area: drawer-pnl;
+  color: var(--text);
+  font: 700 12px/1 var(--font-mono);
+  white-space: nowrap;
+}
+
+.session-drawer-pnl.is-positive {
+  color: var(--pnl-pos);
+}
+
+.session-drawer-pnl.is-negative {
+  color: var(--pnl-neg);
+}
+
+.session-drawer-action {
+  grid-area: drawer-action;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-soft);
+  font: 650 11px/1 var(--font-ui);
+  cursor: pointer;
+}
+
+.session-drawer-action:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.session-drawer-action:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.session-drawer-empty {
+  margin: 0;
+  padding: 32px 4px;
+  color: var(--text-faint);
+  font: 500 12px/1.5 var(--font-ui);
+}
+
+/* Hold time: one stacked duration comparison ----------------------------- */
+.session-duration-bands {
+  display: grid;
+  min-width: 0;
+  border-top: 1px solid var(--line);
+}
+
+.session-duration-band {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(220px, 1.45fr) minmax(160px, auto);
+  grid-template-areas: "duration-head duration-track duration-meta";
+  align-items: center;
+  gap: 14px 24px;
+  min-width: 0;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.session-duration-band-head {
+  grid-area: duration-head;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.session-duration-band-head strong {
+  overflow: hidden;
+  color: var(--text);
+  font: 700 12.5px/1.2 var(--font-ui);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-duration-band-head > span {
+  color: var(--text);
+  font: 700 11.5px/1 var(--font-mono);
+  white-space: nowrap;
+}
+
+.session-duration-track,
+.session-duration-band-track {
+  grid-area: duration-track;
+  display: block;
+  height: 9px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+}
+
+.session-duration-track > span,
+.session-duration-band-track > span,
+.session-duration-fill,
+.session-duration-band-fill {
+  display: block;
+  width: calc(var(--session-duration-size, 0) * 100%);
+  min-width: 2px;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--line-strong);
+}
+
+.session-duration-band.is-positive .session-duration-track > span,
+.session-duration-band.is-positive .session-duration-band-track > span,
+.session-duration-band.is-positive .session-duration-fill,
+.session-duration-band.is-positive .session-duration-band-fill {
+  background: var(--pnl-pos);
+}
+
+.session-duration-band.is-negative .session-duration-track > span,
+.session-duration-band.is-negative .session-duration-band-track > span,
+.session-duration-band.is-negative .session-duration-fill,
+.session-duration-band.is-negative .session-duration-band-fill {
+  background: var(--pnl-neg);
+}
+
+.session-duration-band-meta {
+  grid-area: duration-meta;
+  margin: 0;
+  color: var(--text-faint);
+  font: 600 11px/1.35 var(--font-mono);
+  text-align: right;
+}
+
+/* Coverage stays operational and separate from performance analytics. */
+.session-coverage-visual {
+  margin-top: 28px;
+}
+
+.session-coverage-bar {
+  height: 11px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+}
+
+.session-coverage-bar > span {
+  display: block;
+  width: var(--session-coverage, 0%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--pnl-pos);
+}
+
+.session-journal-queue {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 1.45fr);
+  grid-template-areas:
+    "queue-head queue-list"
+    "queue-lede queue-list"
+    "queue-action queue-list"
+    "queue-foot queue-rule";
+  align-items: start;
+  gap: 12px 34px;
+  margin-top: 30px;
+  padding: 28px 0 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.session-journal-queue .dash-board-head {
+  grid-area: queue-head;
+  align-items: flex-start;
+  margin: 0;
+}
+
+.session-journal-queue .dash-board-head h3 {
+  margin-top: 6px;
+  font-size: 18px;
+}
+
+.session-journal-queue .dash-unj-count {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.session-journal-queue .dash-unj-lede {
+  grid-area: queue-lede;
+  max-width: 45ch;
+}
+
+.session-journal-queue .dash-unj-list {
+  grid-area: queue-list;
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+
+.session-journal-queue .dash-unj-row {
+  min-height: 50px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.session-journal-queue .dash-unj-row:hover {
+  background: transparent;
+  color: var(--accent);
+}
+
+.session-journal-queue .dash-unj-cta:not([hidden]) {
+  grid-area: queue-action;
+  display: flex;
+  max-width: 240px;
+  margin-top: 4px;
+}
+
+.session-journal-queue .dash-unj-foot {
+  grid-area: queue-foot;
+  margin: 8px 0 0;
+  padding-top: 18px;
+}
+
+.session-journal-queue .dash-unj-rule {
+  grid-area: queue-rule;
+  align-self: end;
+  margin: 0;
+  color: var(--text-faint);
+  font: 500 11px/1.45 var(--font-ui);
+}
+
+.session-queue-kicker {
+  margin-bottom: 0;
+}
+
+/* One-time Topstep source-timezone confirmation lives in Import, not report. */
+.topstep-timezone-confirm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 0.55fr) auto;
+  align-items: end;
+  gap: 14px 20px;
+  padding: 16px 0;
+  border-block: 1px solid var(--line);
+}
+
+.topstep-timezone-confirm h3 {
+  margin: 5px 0 0;
+  color: var(--text);
+  font: 700 15px/1.25 var(--font-ui);
+}
+
+.topstep-timezone-confirm p:last-child {
+  max-width: 68ch;
+  margin: 7px 0 0;
+  color: var(--text-soft);
+  font: 450 11.5px/1.45 var(--font-ui);
+}
+
+.topstep-timezone-confirm label {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  color: var(--text-faint);
+  font: 700 11px/1.2 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.topstep-timezone-confirm select {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  color: var(--text);
+  font: 600 12px/1 var(--font-ui);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Responsive composition ------------------------------------------------- */
+@media (max-width: 1180px) {
+  #dashboard .panel-grid-analytics > .panel-span-6 {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 900px) {
+  #dashboard .panel-grid-analytics > .panel-span-6 {
+    grid-column: 1 / -1;
+  }
+
+  .session-context {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .session-context > * {
+    border-top: 1px solid var(--line);
+  }
+
+  .session-context > :nth-child(-n + 2) {
+    border-top: 0;
+  }
+
+  .session-context > :nth-child(even) {
+    border-right: 0;
+  }
+
+  .session-context > :nth-child(3),
+  .session-context > :nth-child(4),
+  .session-context > :nth-child(5) {
+    grid-column: auto;
+  }
+
+  .session-context > :nth-child(5) {
+    grid-column: 1 / -1;
+    border-right: 0;
+  }
+
+  .session-score-row,
+  .session-duration-band {
+    grid-template-columns: minmax(135px, 0.75fr) minmax(160px, 1.4fr);
+  }
+
+  .session-score-row {
+    grid-template-areas:
+      "score-main score-meta"
+      "score-track score-track";
+  }
+
+  .session-duration-band {
+    grid-template-areas:
+      "duration-head duration-meta"
+      "duration-track duration-track";
+  }
+
+  .session-journal-queue {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "queue-head"
+      "queue-lede"
+      "queue-action"
+      "queue-list"
+      "queue-foot"
+      "queue-rule";
+  }
+}
+
+
+@media (max-width: 720px) {
+  .session-page-head {
+    padding-inline: 0;
+  }
+
+  .session-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-top: 1px solid var(--line);
+  }
+
+  .session-tab:nth-child(2) {
+    border-right: 0;
+  }
+
+  .session-tab:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
+
+  .session-tab.is-active::after,
+  .session-tab[aria-selected="true"]::after {
+    right: 10px;
+    left: 10px;
+  }
+
+  .session-panel {
+    padding: 24px 18px 30px;
+  }
+
+  .session-primary-metric {
+    min-height: 92px;
+    padding-inline: 10px;
+  }
+
+  .session-primary-metric:first-child {
+    padding-left: 0;
+  }
+
+  .session-primary-metric strong {
+    font-size: clamp(19px, 6vw, 26px);
+  }
+
+  .session-primary-metric small {
+    white-space: normal;
+  }
+
+  .session-visual-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .session-chart-legend {
+    justify-content: flex-start;
+  }
+
+  .session-hour-rail {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .session-hour-cell {
+    min-height: 132px;
+    padding-block: 7px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .session-hour-cell:nth-child(12) {
+    border-right: 0;
+  }
+
+  .session-hour-cell:nth-child(n + 13) {
+    border-bottom: 0;
+  }
+
+  .session-hour-bar {
+    min-height: 72px;
+  }
+
+  .session-hour-value {
+    display: none;
+  }
+
+  .session-score-row,
+  .session-duration-band {
+    gap: 10px 14px;
+  }
+
+  .session-score-meta,
+  .session-duration-band-meta {
+    font-size: 11px;
+  }
+
+  .topstep-timezone-confirm {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .topstep-timezone-confirm .btn {
+    width: 100%;
+  }
+}
+
+
+@media (max-width: 520px) {
+  .session-context {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .session-context > *,
+  .session-context > :nth-child(-n + 2),
+  .session-context > :nth-child(even),
+  .session-context > :nth-child(5) {
+    grid-column: auto;
+    border-top: 1px solid var(--line);
+    border-right: 0;
+  }
+
+  .session-context > :first-child {
+    border-top: 0;
+  }
+
+  .session-context-field,
+  .session-context-readout {
+    min-height: 56px;
+    padding-inline: 10px;
+  }
+
+  .session-primary-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .session-primary-metrics-two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .session-primary-metric {
+    min-height: 86px;
+    padding: 14px 7px;
+  }
+
+  .session-primary-metric > span {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+  }
+
+  .session-primary-metric strong {
+    font-size: clamp(17px, 5.4vw, 22px);
+  }
+
+  .session-score-row,
+  .session-duration-band {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .session-score-row {
+    grid-template-areas:
+      "score-main"
+      "score-track"
+      "score-meta";
+  }
+
+  .session-duration-band {
+    grid-template-areas:
+      "duration-head"
+      "duration-track"
+      "duration-meta";
+  }
+
+  .session-score-meta,
+  .session-duration-band-meta {
+    text-align: left;
+  }
+
+  .session-metric-switch {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .session-metric-switch button {
+    min-width: 0;
+    padding-inline: 5px;
+  }
+
+  .session-journal-queue .dash-board-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .session-journal-queue .dash-unj-list {
+    display: none;
+  }
+
+  .session-journal-queue .dash-unj-cta:not([hidden]) {
+    max-width: none;
+  }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .session-tab,
+  .session-hour-cell,
+  .dash-session-link {
+    transition: none;
+  }
+}
+
+
+/* ==========================================================================
+   THE CALENDAR, RECUT.
+
+   The legend is gone: three swatches explaining that green means green were
+   the least trusting sentence on the page. Its pixels now hold real figures,
+   a strip of GREEN/RED/BEST/WIN DAYS under the grid and a weekly spine of
+   signed nets in an 8th column. Empty days stop announcing themselves: a
+   quiet day is a number, not 25 repetitions of "no trades" with a dash. On
+   the phone the grid becomes pure tone at mini-cal grammar and the agenda
+   rows underneath are the touch path.
+   ========================================================================== */
+#calendar .cal-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-4);
+}
+#calendar #calendarHeading { font-size: 24px; font-weight: 700; }
+#calendar .cal-meta { font-size: 12px; color: var(--text-faint); }
+#calendar .cal-net { text-align: right; }
+#calendar .cal-net-label {
+  margin: 0;
+  font: 600 11px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+}
+#calendar .cal-net-value { margin: 0; font: 700 32px/1 var(--font-mono); }
+
+#calendar .calendar-grid {
+  grid-template-columns: repeat(7, minmax(0, 1fr)) minmax(88px, 0.6fr);
+}
+#calendar .calendar-week-net {
+  background: var(--surface-inset);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+}
+#calendar .calendar-week-net span {
+  font: 600 11px/1 var(--font-mono);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+#calendar .calendar-week-net b { font: 700 13px/1 var(--font-mono); }
+
+#calendar .calendar-cell-flat .calendar-cell-day { color: var(--text-faint); }
+
+#calendar .cal-strip {
+  margin: var(--space-3) 0 0;
+  text-align: center;
+  font: 600 11px/1.4 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+#calendar .cal-agenda-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  background: var(--surface-inset);
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-top: 6px;
+  cursor: pointer;
+  color: inherit;
+  font-size: 13px;
+  text-align: left;
+}
+#calendar .cal-agenda-net { font: 700 14px/1 var(--font-mono); }
+#calendar .calendar-agenda-note { color: var(--text-faint); font-size: 13px; padding: var(--space-3) 0; }
+
+@media (min-width: 900px) {
+  #calendar .cal-agenda { display: none; }
+}
+
+
+@media (max-width: 899px) {
+  #calendar .cal-head { grid-template-columns: minmax(0, 1fr) auto; }
+  #calendar .cal-nav { grid-column: 1 / -1; }
+  #calendar .calendar-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+  #calendar .calendar-weekday-net,
+  #calendar .calendar-week-net { display: none; }
+  #calendar .calendar-cell { min-height: 44px; padding: 6px; }
+  #calendar .calendar-cell-pnl,
+  #calendar .calendar-cell-pnl-compact,
+  #calendar .calendar-cell-meta { display: none; }
+  #calendar .cal-net-value { font-size: 24px; }
+}
+
+
+/* ==========================================================================
+   THE MONTH CARD.
+
+   The balance and the month, fused into one instrument at OG proportions
+   (1200/630), designed to be screenshot-cropped on purpose: big signed
+   balance on the left, the month's tone grid on the right, the sparkline
+   fading under the tiles, the TJ mark in the corner. A green month earns a
+   1px pnl ring on this card and nowhere else. The risk card that used to sit
+   here is dead; its engine survives in the rail groove, the log button flag
+   and the cooldown interlock.
+   ========================================================================== */
+#dashboard .dash-month-card {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: var(--space-5);
+  aspect-ratio: 1200 / 630;
+  min-height: 300px;
+  overflow: hidden;
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  background: var(--surface-1);
+  box-shadow: var(--clay-raised);
+}
+#dashboard .dash-month-card.is-pos { box-shadow: var(--clay-raised), 0 0 0 1px var(--pnl-pos-line); }
+#dashboard .dash-month-card.is-neg { box-shadow: var(--clay-raised), 0 0 0 1px var(--pnl-neg-line); }
+#dashboard .dash-month-card.is-pos .mini-cal-grid { background: var(--pnl-pos-soft); border-radius: 8px; }
+#dashboard .dash-month-card.is-neg .mini-cal-grid { background: var(--pnl-neg-soft); border-radius: 8px; }
+
+#dashboard .dash-month-card .dash-hero {
+  /* The hero still carries grid-column: span 8 from the old 12 column stats
+     grid; inside this 2 column card that span would mint six phantom tracks
+     and shove the calendar to the next row. One column each, no spans. */
+  grid-column: auto;
+  position: static;            /* the absolute spark resolves to the card */
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-3);
+  min-width: 0;
+  overflow: visible;
+}
+#dashboard .dash-month-card .mini-cal { grid-column: auto; }
+#dashboard .dash-month-card .dash-hero-value {
+  font-size: clamp(44px, 4.5vw, 64px);
+  letter-spacing: -0.025em;
+}
+#dashboard .dash-month-card .dash-spark-wrap {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 96px;
+  z-index: -1;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, black 55%, transparent 92%);
+  mask-image: linear-gradient(to right, black 55%, transparent 92%);
+}
+#dashboard .dash-month-card .dash-spark-wrap canvas { width: 100%; height: 100%; }
+#dashboard .month-card-mark {
+  position: absolute;
+  right: var(--space-5);
+  bottom: var(--space-4);
+  opacity: 0.7;
+  margin: 0;
+}
+#dashboard .dash-est-chip {
+  font: 600 11px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  border: 1px solid var(--pnl-pos-line);
+  border-radius: 4px;
+  padding: 2px 5px;
+}
+
+/* THE MINI CALENDAR. No money text on tiles; the tone ramp is the density. */
+#dashboard .mini-cal { display: flex; flex-direction: column; gap: 6px; min-width: 0; align-self: center; }
+#dashboard .mini-cal-open {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+}
+#dashboard .mini-cal-month {
+  font: 600 11px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-faint);
+}
+#dashboard .mini-cal-net { font: 700 20px/1 var(--font-mono); }
+#dashboard .mini-cal-weekdays,
+#dashboard .mini-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+#dashboard .mini-cal-weekdays span {
+  font: 600 11px/1 var(--font-mono);
+  color: var(--text-faint);
+  text-align: center;
+}
+#dashboard .mini-cal-day {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  border: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font: 400 11px/1 var(--font-mono);
+  color: var(--text-faint);
+  background: var(--surface-inset);
+}
+#dashboard .mini-cal-day.is-blank { background: none; }
+#dashboard .mini-cal-day.is-trade { font-weight: 600; color: var(--text); cursor: pointer; }
+#dashboard .mini-cal-day.is-trade.pnl-positive {
+  background: color-mix(in srgb, var(--pnl-pos) calc(var(--day-intensity, 0) * 22% + 10%), var(--surface-1));
+}
+#dashboard .mini-cal-day.is-trade.pnl-negative {
+  background: color-mix(in srgb, var(--pnl-neg) calc(var(--day-intensity, 0) * 22% + 10%), var(--surface-1));
+}
+#dashboard .mini-cal-day.is-today { box-shadow: inset 0 0 0 1px var(--accent); }
+#dashboard .mini-cal-day.is-future { opacity: 0.45; }
+#dashboard .mini-cal-foot {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font: 600 11px/1.4 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+/* ESTIMATE ONE-LINER (the banner, demoted to a footnote under the card) */
+#dashboard .estimated-analytics-notice {
+  font-size: 12px;
+  padding: 4px 2px;
+  background: none;
+  border: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Seam releases: the ratio guard is load bearing at >=1240 where the TV
+   column fixes the card's width; below that the ratio would fight the
+   narrower column, so it releases. */
+@media (max-width: 1239px) {
+  #dashboard .dash-month-card { aspect-ratio: auto; }
+}
+@media (max-width: 899px) {
+  #dashboard .dash-month-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: 16px;
+  }
+  #dashboard .dash-month-card .dash-hero-value { font-size: 36px; }
+  #dashboard .dash-month-card .dash-spark-wrap {
+    position: static;
+    height: 72px;
+    z-index: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  #dashboard .mini-cal-weekdays,
+  #dashboard .mini-cal-grid { gap: 3px; }
+  /* The spec's tile arithmetic missed the view's own gutter: at 375 the
+     tiles measured 42px against the 44px floor. The calendar earns the
+     missing width by bleeding into the card's padding, tiles at 44.6px,
+     instead of the fallback that would have made them inert. */
+  #dashboard .mini-cal { margin-inline: -6px; align-self: stretch; }
+  #dashboard .mini-cal-open,
+  #dashboard .mini-cal-foot { padding-inline: 6px; }
+  #dashboard .mini-cal-day { border-radius: 8px; }
+  #dashboard .mini-cal-foot { min-height: 44px; }
+}
+
+/* THE PULSE ROW: six tiles, none of which can read a permanent zero. */
+#dashboard .dash-quad { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+#dashboard .dash-quad-card { padding: 12px; }
+#dashboard .dash-quad-card .metric-value { font-size: 22px; }
+#dashboard .dash-quad-card .metric-label { font-size: 11px; }
+
+/* EQUITY FOOTNOTES: five figures that used to each rent a whole card. */
+#dashboard .eq-footnotes { display: flex; flex-wrap: wrap; gap: 4px 20px; margin-top: var(--space-3); }
+#dashboard .eq-footnotes .metric-card {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  background: none;
+  box-shadow: none;
+  border: 0;
+  padding: 0;
+  min-height: 0;
+}
+#dashboard .eq-footnotes .metric-label {
+  font: 600 11px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+#dashboard .eq-footnotes .metric-value { font: 600 13px/1 var(--font-mono); margin: 0; }
+#dashboard .eq-footnotes .metric-delta,
+#dashboard .eq-footnotes .metric-sub { display: none; }
+
+/* BOTTOM GRID: three even panels. */
+#dashboard .panel-grid-bottom { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+#dashboard .panel-grid-bottom > .panel-span-4 { grid-column: span 4; }
+
+/* DEPTH CAPTIONS: the unlock ledger above each locked chart. */
+#dashboard .depth-caption {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-faint);
+  margin: var(--space-3) 0 var(--space-2);
+}
+
+@media (max-width: 899px) {
+  #dashboard .dash-quad { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #dashboard .dash-quad-card .metric-value { font-size: 18px; }
+  #dashboard .panel-grid-bottom { grid-template-columns: minmax(0, 1fr); }
+  #dashboard .panel-grid-bottom > .panel-span-4 { grid-column: auto; }
 }

@@ -24,6 +24,11 @@
 import { formatCurrency, formatCompactCurrency } from "./src/lib/format.js";
 import { getNextSessionOpen, formatCountdown } from "./src/lib/sessions.js";
 import {
+  buildSessionTimingReport,
+  resolveTradePnl,
+  resolveTradeTiming
+} from "./src/lib/sessionReport.js";
+import {
   normalizeMarketSymbol,
   fetchLivePricesFromBackend
 } from "./src/modules/livePrices.js";
@@ -115,6 +120,15 @@ const DEFAULT_SETTINGS = {
   // budget is configured and breached, because that is the budget's whole job.
   cooldownEnabled: true,
   cooldownLossStreak: 3,
+  // Timing Intelligence reads absolute Topstep timestamps in New York market
+  // time by default. Zone-less Trades exports stay unresolved until the
+  // trader explicitly names the clock Topstep exported.
+  timingReportTimeZone: "America/New_York",
+  topstepSourceTimeZone: "",
+  // Session Intelligence keeps its compact filters with the journal so a
+  // return visit opens on the same evidence window and entry-hour metric.
+  sessionDateRange: "all",
+  sessionEntryMetric: "pnl",
   // Multi-account. Seeded empty and filled by ensureAccounts() on the first
   // load, because the migration needs the trader's real starting balance and
   // that is not known at module-evaluation time.
@@ -190,6 +204,7 @@ function prefersReducedMotion() {
 let csrfToken = "";
 // Element that opened the landing auth modal; focus returns to it on close.
 let authModalTrigger = null;
+let sessionTradeDrawerOpener = null;
 const PRESET_SETUP_TYPES = new Set(["Breakout", "Liquidity Grab", "Trend Continuation", "Reversal", "Scalp", "Custom"]);
 const PRODUCT_BRAND_TEXT = "Trader Journal";
 const PRODUCT_BRAND_MARKUP =
@@ -284,6 +299,10 @@ const state = {
   // it. They live on state (not in a module-local) so charts.js can hash them
   // exactly like every other series and keep its draw-in guard honest.
   playbook: { setup: "", curve: [], dates: [], key: "line" },
+  sessionIntelligence: {
+    activeTab: "sessions",
+    selectedHour: null
+  },
   analytics: null
 };
 
@@ -366,12 +385,6 @@ const ui = {
   dashClock: document.getElementById("dashClock"),
   dashHello: document.getElementById("dashboardHeading"),
   estimatedAnalyticsNotice: document.getElementById("estimatedAnalyticsNotice"),
-  riskState: document.getElementById("riskState"),
-  riskDial: document.getElementById("riskDial"),
-  riskDialArc: document.getElementById("riskDialArc"),
-  riskDialValue: document.getElementById("riskDialValue"),
-  riskConsequence: document.getElementById("riskConsequence"),
-  cooldownRulesBtn: document.getElementById("cooldownRulesBtn"),
   riskRulesBtn: document.getElementById("riskRulesBtn"),
   allSetupsBtn: document.getElementById("allSetupsBtn"),
   navUnjournalledBadge: document.getElementById("navUnjournalledBadge"),
@@ -402,7 +415,6 @@ const ui = {
   dashJournalBars: document.getElementById("dashJournalBars"),
   balanceCard: document.querySelector(".metric-card-balance"),
   balanceOverrideNote: document.getElementById("balanceOverrideNote"),
-  riskStrip: document.getElementById("riskStrip"),
   scoreInfoDialog: document.getElementById("scoreInfoDialog"),
   scoreInfoButtons: Array.from(document.querySelectorAll("[data-score-info]")),
   dashboardEmptyState: document.getElementById("dashboardEmptyState"),
@@ -424,6 +436,11 @@ const ui = {
   },
   // 1f #02 checklist editor + the causal readout it feeds.
   rulesPanel: document.getElementById("rulesPanel"),
+  deskSettings: document.getElementById("deskSettings"),
+  dashDepth: document.getElementById("dashDepth"),
+  depthCaptionScore: document.getElementById("depthCaptionScore"),
+  depthCaptionPsych: document.getElementById("depthCaptionPsych"),
+  depthCaptionR: document.getElementById("depthCaptionR"),
   rulesForm: document.getElementById("rulesForm"),
   rulesEditorList: document.getElementById("rulesEditorList"),
   rulesAddBtn: document.getElementById("rulesAddBtn"),
@@ -518,7 +535,6 @@ const ui = {
   equityScrubClear: document.getElementById("equityScrubClear"),
   drawdownChart: document.getElementById("drawdownChart"),
   psychologyChart: document.getElementById("psychologyChart"),
-  sessionChart: document.getElementById("sessionChart"),
   rMultipleChart: document.getElementById("rMultipleChart"),
   strategyPerformanceChart: document.getElementById("strategyPerformanceChart"),
   strategyDimensionButtons: Array.from(document.querySelectorAll("[data-performance-dimension]")),
@@ -584,6 +600,58 @@ const ui = {
   dashJournalCta: document.getElementById("dashJournalCta"),
   dashJournalCtaCount: document.getElementById("dashJournalCtaCount"),
 
+  // Dedicated Session Intelligence page. The four tab panels each keep one
+  // conclusion, three or fewer primary values, and one visualization.
+  sessionIntelligenceView: document.getElementById("session-intelligence"),
+  sessionHeadline: document.getElementById("sessionHeadline"),
+  sessionDateRange: document.getElementById("sessionDateRange"),
+  sessionTimingSource: document.getElementById("sessionTimingSource"),
+  sessionTimingCoverage: document.getElementById("sessionTimingCoverage"),
+  sessionImportedSource: document.getElementById("sessionImportedSource"),
+  sessionAnalyzedCount: document.getElementById("sessionAnalyzedCount"),
+  sessionConfidence: document.getElementById("sessionConfidence"),
+  sessionTabs: Array.from(document.querySelectorAll("[data-session-tab]")),
+  sessionPanels: Array.from(document.querySelectorAll("[data-session-panel]")),
+  sessionSessionsConclusion: document.getElementById("sessionSessionsConclusion"),
+  sessionSessionsConfidence: document.getElementById("sessionSessionsConfidence"),
+  sessionComparisonHeading: document.getElementById("sessionComparisonHeading"),
+  sessionBestSessionPnlLabel: document.getElementById("sessionBestSessionPnlLabel"),
+  sessionBestSessionPnl: document.getElementById("sessionBestSessionPnl"),
+  sessionBestSessionExpectancy: document.getElementById("sessionBestSessionExpectancy"),
+  sessionBestSessionTrades: document.getElementById("sessionBestSessionTrades"),
+  sessionEntryConclusion: document.getElementById("sessionEntryConclusion"),
+  sessionBestHour: document.getElementById("sessionBestHour"),
+  sessionBestHourMeta: document.getElementById("sessionBestHourMeta"),
+  sessionWorstHour: document.getElementById("sessionWorstHour"),
+  sessionWorstHourMeta: document.getElementById("sessionWorstHourMeta"),
+  sessionEntryMetricButtons: Array.from(document.querySelectorAll("[data-entry-metric]")),
+  sessionWinningHold: document.getElementById("sessionWinningHold"),
+  sessionWinningHoldMeta: document.getElementById("sessionWinningHoldMeta"),
+  sessionLosingHold: document.getElementById("sessionLosingHold"),
+  sessionLosingHoldMeta: document.getElementById("sessionLosingHoldMeta"),
+  sessionBestDuration: document.getElementById("sessionBestDuration"),
+  sessionBestDurationMeta: document.getElementById("sessionBestDurationMeta"),
+  sessionHoldConclusion: document.getElementById("sessionHoldConclusion"),
+  sessionHourRail: document.getElementById("sessionHourRail"),
+  sessionHourEmpty: document.getElementById("sessionHourEmpty"),
+  sessionProfitClockHeading: document.getElementById("sessionProfitClockHeading"),
+  sessionTimingInsight: document.getElementById("sessionTimingInsight"),
+  sessionScorecard: document.getElementById("sessionScorecard"),
+  sessionDurationBands: document.getElementById("sessionDurationBands"),
+  sessionReportTimeZone: document.getElementById("sessionReportTimeZone"),
+  sessionTradeDrawer: document.getElementById("sessionTradeDrawer"),
+  sessionTradeDrawerTitle: document.getElementById("sessionTradeDrawerTitle"),
+  sessionTradeDrawerBody: document.getElementById("sessionTradeDrawerBody"),
+  sessionTradeDrawerClose: document.getElementById("sessionTradeDrawerClose"),
+  sessionCoverageConclusion: document.getElementById("sessionCoverageConclusion"),
+  sessionJournaledCount: document.getElementById("sessionJournaledCount"),
+  sessionUnjournalledCount: document.getElementById("sessionUnjournalledCount"),
+  sessionCoveragePercent: document.getElementById("sessionCoveragePercent"),
+  sessionCoverageBar: document.getElementById("sessionCoverageBar"),
+  sessionCoverageBarFill: document.getElementById("sessionCoverageBarFill"),
+  sessionMissingDataCount: document.getElementById("sessionMissingDataCount"),
+  sessionCoverageBadge: document.getElementById("sessionCoverageBadge"),
+
   tradeForm: document.getElementById("tradeForm"),
   tradeSubmitBtn: document.getElementById("tradeSubmitBtn"),
   tradeResetBtn: document.getElementById("tradeResetBtn"),
@@ -606,6 +674,9 @@ const ui = {
   tradeImportCloseBtn: document.getElementById("tradeImportCloseBtn"),
   bulkAccountLabel: document.getElementById("bulkAccountLabel"),
   topstepImportGuide: document.getElementById("topstepImportGuide"),
+  topstepTimeZoneConfirm: document.getElementById("topstepTimeZoneConfirm"),
+  topstepImportTimeZone: document.getElementById("topstepImportTimeZone"),
+  topstepImportTimeZoneConfirmBtn: document.getElementById("topstepImportTimeZoneConfirmBtn"),
   topstepOrdersAttestation: document.getElementById("topstepOrdersAttestation"),
   topstepOrdersFullDayConfirm: document.getElementById("topstepOrdersFullDayConfirm"),
   // Admin panel markup is JS-injected into this mount only when the session
@@ -707,7 +778,16 @@ const ui = {
   calendarNet: document.getElementById("calendarNet"),
   calPrevBtn: document.getElementById("calPrevBtn"),
   calNextBtn: document.getElementById("calNextBtn"),
+  dashEstChip: document.getElementById("dashEstChip"),
+  dashMiniCal: document.getElementById("dashMiniCal"),
+  miniCalMonth: document.getElementById("miniCalMonth"),
+  miniCalNet: document.getElementById("miniCalNet"),
+  miniCalGrid: document.getElementById("miniCalGrid"),
+  miniCalFoot: document.getElementById("miniCalFoot"),
+  miniCalOpenBtn: document.getElementById("miniCalOpenBtn"),
   calendarGrid: document.getElementById("calendarGrid"),
+  calendarStrip: document.getElementById("calendarStrip"),
+  calendarAgenda: document.getElementById("calendarAgenda"),
   replayNotes: document.getElementById("replayNotes"),
   saveReplayBtn: document.getElementById("saveReplayBtn"),
   replayMessage: document.getElementById("replayMessage")
@@ -1565,11 +1645,35 @@ function bindEvents() {
   // already opens the dialog: no second import path to keep in step.
   document.getElementById("dashQuickImportBtn")?.addEventListener("click", openTradeImport);
   document.getElementById("tabBarImportBtn")?.addEventListener("click", openTradeImport);
+  ui.sessionDateRange?.addEventListener("change", handleSessionIntelligenceFilterChange);
+  ui.sessionReportTimeZone?.addEventListener("change", handleSessionIntelligenceFilterChange);
+  ui.sessionTabs.forEach((button) => {
+    button.addEventListener("click", () => activateSessionIntelligenceTab(button.dataset.sessionTab));
+    button.addEventListener("keydown", handleSessionIntelligenceTabKeydown);
+  });
+  ui.sessionEntryMetricButtons.forEach((button) => {
+    button.addEventListener("click", () => handleSessionEntryMetricChange(button.dataset.entryMetric));
+  });
+  ui.sessionHourRail?.addEventListener("click", (event) => {
+    const hour = event.target.closest("[data-session-hour]");
+    if (hour) openSessionTradeDrawer(Number(hour.dataset.sessionHour));
+  });
+  ui.sessionTradeDrawerClose?.addEventListener("click", closeSessionTradeDrawer);
+  ui.sessionTradeDrawer?.addEventListener("click", (event) => {
+    if (event.target === ui.sessionTradeDrawer) closeSessionTradeDrawer();
+  });
+  ui.sessionTradeDrawerBody?.addEventListener("click", (event) => {
+    const journalButton = event.target.closest("[data-session-journal-trade]");
+    if (!journalButton) return;
+    closeSessionTradeDrawer();
+    openJournalSheet(journalButton.dataset.sessionJournalTrade);
+  });
   ui.tradeImportCloseBtn?.addEventListener("click", closeTradeImport);
   ui.tradeImportDialog?.addEventListener("click", (event) => {
     if (event.target === ui.tradeImportDialog) closeTradeImport();
   });
   ui.bulkSource?.addEventListener("change", syncTradeImportSource);
+  ui.topstepImportTimeZoneConfirmBtn?.addEventListener("click", handleTopstepImportTimeZoneConfirm);
   ui.topstepOrdersFullDayConfirm?.addEventListener("change", handleBulkPreview);
   ui.bulkFileInput?.addEventListener("change", handleBulkFileSelect);
   if (ui.bulkDropZone) {
@@ -1679,19 +1783,18 @@ function bindEvents() {
 
   // Both "Rules" routes land on the risk budgets that drive the consequence
   // line. Phase 6 replaces this target with the cooldown feature itself.
-  // 1f: RULES is the checklist you write once; "Cooldown rules →" is the lock
-  // that acts on the budgets. Two destinations, two links.
+  // 1f: RULES is the checklist you write once; the cooldown dialog's settings
+  // link is the lock that acts on the budgets. Both now live inside the
+  // closed-by-default Desk settings details, so every route opens it first.
   ui.riskRulesBtn?.addEventListener("click", () => {
     switchView("dashboard");
-    scrollDashboardTo(ui.rulesPanel);
+    openDeskSettings(ui.rulesPanel);
   });
-  [ui.cooldownRulesBtn, ui.cooldownSettingsBtn].forEach((button) => {
-    button?.addEventListener("click", () => {
-      ui.cooldownDialog?.close();
-      cooldownPrompt = null;
-      switchView("dashboard");
-      scrollDashboardTo(ui.cooldownFieldset || ui.riskForm);
-    });
+  ui.cooldownSettingsBtn?.addEventListener("click", () => {
+    ui.cooldownDialog?.close();
+    cooldownPrompt = null;
+    switchView("dashboard");
+    openDeskSettings(ui.cooldownFieldset || ui.riskForm);
   });
 
   // 1f #02 checklist editor.
@@ -1781,8 +1884,9 @@ function bindEvents() {
   // Mobile: one pill instead of the row list, pointed at the oldest trade
   // still waiting. Saving advances the queue, so repeated taps clear it.
   ui.dashJournalCta?.addEventListener("click", () => {
+    const reportNext = state.analytics?.sessionTiming?.journalCoverage?.nextTradeId;
     const pending = getUnjournalledTrades();
-    openJournalSheet(pending[pending.length - 1]?.id);
+    openJournalSheet(reportNext || pending[pending.length - 1]?.id);
   });
   // Overflow menu is a <details>; close it on outside click and on Escape.
   // Every flyout in the rail shares one dismissal contract: outside click,
@@ -1867,6 +1971,23 @@ function bindEvents() {
   if (ui.calendarGrid) {
     ui.calendarGrid.addEventListener("click", handleCalendarDayClick);
   }
+  if (ui.calendarAgenda) {
+    ui.calendarAgenda.addEventListener("click", handleCalendarDayClick);
+  }
+  if (ui.miniCalGrid) {
+    ui.miniCalGrid.addEventListener("click", handleCalendarDayClick);
+  }
+  [ui.miniCalOpenBtn, ui.miniCalFoot].forEach((button) => {
+    button?.addEventListener("click", () => switchView("calendar"));
+  });
+  // The locked-analytics drawer lays out its canvases at zero size while
+  // closed; the chart hash gate would then skip them forever. Opening forces
+  // one honest repaint at real dimensions.
+  ui.dashDepth?.addEventListener("toggle", () => {
+    if (ui.dashDepth.open && state.analytics) {
+      renderCharts(state.analytics, { force: true });
+    }
+  });
   ui.saveReplayBtn.addEventListener("click", saveReplayNotes);
 
   // Clear pnl-tick classes once the flash finishes so the next change replays.
@@ -1924,6 +2045,7 @@ function bindEvents() {
     }
 
     if (event.key === "Escape") {
+      closeSessionTradeDrawer();
       toggleMobileNav(false);
     }
   });
@@ -2441,6 +2563,16 @@ function buildDemoJournal() {
     date.setDate(date.getDate() - daysAgo);
     return toDateInputValue(date);
   };
+  const sessionEntryClock = {
+    Asia: ["00:20", "00:50", "01:20", "02:05"],
+    London: ["07:10", "07:45", "08:20", "09:05"],
+    "New York": ["13:35", "14:05", "14:40", "15:20"]
+  };
+  const formatDemoDuration = (minutes) => {
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    return `${String(hours).padStart(2, "0")}:${String(rest).padStart(2, "0")}:00`;
+  };
 
   const trades = DEMO_OUTCOMES_R.map((outcomeR, index) => {
     const instrument = DEMO_INSTRUMENTS[index % DEMO_INSTRUMENTS.length];
@@ -2455,6 +2587,14 @@ function buildDemoJournal() {
     const target = roundTo(entry + dir * instrument.stopDistance * 2.2, instrument.decimals);
     const exit = roundTo(entry + dir * instrument.stopDistance * outcomeR, instrument.decimals);
     const date = dayIso(DEMO_DAYS_AGO[index]);
+    const session = DEMO_SESSIONS[index % DEMO_SESSIONS.length];
+    const entryClock = sessionEntryClock[session][index % sessionEntryClock[session].length];
+    const enteredAt = new Date(`${date}T${entryClock}:00.000Z`);
+    // Sample winners develop for longer than sample losses. This is demo data
+    // only (every row is visibly marked SAMPLE DATA) and exists so the timing
+    // report can demonstrate its real calculations before a broker import.
+    const holdMinutes = outcomeR > 0 ? 18 + (index % 4) * 9 : outcomeR < 0 ? 5 + (index % 3) * 5 : 11;
+    const exitedAt = new Date(enteredAt.getTime() + holdMinutes * 60_000);
 
     return {
       id: `${DEMO_BATCH_ID}-${index}`,
@@ -2462,7 +2602,10 @@ function buildDemoJournal() {
       closedAt: `${date}T14:30:00.000Z`,
       updatedAt: `${date}T14:30:00.000Z`,
       date,
-      session: DEMO_SESSIONS[index % DEMO_SESSIONS.length],
+      session,
+      enteredAt: enteredAt.toISOString(),
+      exitedAt: exitedAt.toISOString(),
+      tradeDuration: formatDemoDuration(holdMinutes),
       market: instrument.market,
       asset: instrument.asset,
       direction: isBuy ? "Buy" : "Sell",
@@ -3691,7 +3834,33 @@ function buildTradeRecord(tradeInput, options = {}) {
     : Number.isFinite(existingTrade?.brokerPnl)
       ? existingTrade.brokerPnl
       : null;
-  const sourcePnl = isTopstepOrders ? reconstructedPnl : isTopstep ? brokerReportedPnl : null;
+  const hasNumericCost = (value) =>
+    value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+  const explicitCostTotal = hasNumericCost(tradeInput.costs)
+    ? Math.abs(Number(tradeInput.costs))
+    : hasNumericCost(existingTrade?.costs)
+      ? Math.abs(Number(existingTrade.costs))
+      : null;
+  const feeValue = hasNumericCost(tradeInput.fees)
+    ? Math.abs(Number(tradeInput.fees))
+    : hasNumericCost(existingTrade?.fees)
+      ? Math.abs(Number(existingTrade.fees))
+      : null;
+  const commissionValue = hasNumericCost(tradeInput.commissions)
+    ? Math.abs(Number(tradeInput.commissions))
+    : hasNumericCost(existingTrade?.commissions)
+      ? Math.abs(Number(existingTrade.commissions))
+      : null;
+  const brokerCostsKnown = explicitCostTotal !== null || feeValue !== null || commissionValue !== null;
+  const brokerCosts = explicitCostTotal ?? round((feeValue || 0) + (commissionValue || 0));
+  // The shipped Topstep Trades fixture proves its PnL column is pre-cost:
+  // fill arithmetic equals brokerPnl exactly while Fees and Commissions are
+  // separate columns. Derive net once here and keep brokerPnl untouched for
+  // audit. Orders use their separately provenance-stamped estimate/gross path.
+  const brokerDerivedNetPnl = brokerReportedPnl === null
+    ? null
+    : round(brokerReportedPnl - (brokerCostsKnown ? brokerCosts : 0));
+  const sourcePnl = isTopstepOrders ? reconstructedPnl : isTopstep ? brokerDerivedNetPnl : null;
   const reportedPnl = explicitReportedPnl !== null
     ? round(explicitReportedPnl)
     : sourcePnl !== null
@@ -3775,6 +3944,15 @@ function buildTradeRecord(tradeInput, options = {}) {
       tradeInput.sourceFullDayConfirmedAt || existingTrade?.sourceFullDayConfirmedAt || ""
     ),
     pnlProvenance: String(tradeInput.pnlProvenance || existingTrade?.pnlProvenance || ""),
+    pnlBasis: String(
+      isTopstepOrders
+        ? Number.isFinite(tradeInput.estimatedNetPnl) || Number.isFinite(existingTrade?.estimatedNetPnl)
+          ? "estimated-net"
+          : tradeInput.pnlBasis || existingTrade?.pnlBasis || "calculated-gross"
+        : isTopstep
+          ? brokerCostsKnown ? "derived-net" : "broker"
+          : tradeInput.pnlBasis || existingTrade?.pnlBasis || "net"
+    ),
     pnlIsEstimated: Boolean(
       tradeInput.pnlIsEstimated === undefined ? existingTrade?.pnlIsEstimated : tradeInput.pnlIsEstimated
     ),
@@ -3973,9 +4151,60 @@ function syncTradeImportSource() {
   state.bulkErrors = [];
   if (ui.topstepOrdersFullDayConfirm) ui.topstepOrdersFullDayConfirm.checked = false;
   if (ui.topstepOrdersAttestation) ui.topstepOrdersAttestation.hidden = true;
+  if (ui.topstepTimeZoneConfirm) ui.topstepTimeZoneConfirm.hidden = true;
+  if (ui.topstepImportTimeZone && state.settings.topstepSourceTimeZone) {
+    ui.topstepImportTimeZone.value = state.settings.topstepSourceTimeZone;
+  }
   renderBulkPreview([], []);
   renderBulkErrors([]);
   if (ui.bulkImportBtn) ui.bulkImportBtn.disabled = true;
+}
+
+function getTopstepTimeZoneRequirement(parsed) {
+  const needsConfirmation = parsed?.fileKind === "trades" && parsed.trades.some((trade) =>
+    trade.sourceTimezoneProvenance === "unresolved" ||
+    trade.sourceTimezoneProvenance === "user-confirmed"
+  );
+  const confirmedTimeZone = normalizeTimingTimeZone(
+    state.settings.topstepSourceTimeZone,
+    "",
+    { allowEmpty: true }
+  );
+  return {
+    needsConfirmation,
+    confirmedTimeZone,
+    ready: !needsConfirmation || Boolean(confirmedTimeZone)
+  };
+}
+
+function syncTopstepTimeZoneConfirmation(parsed) {
+  const requirement = getTopstepTimeZoneRequirement(parsed);
+  if (ui.topstepImportTimeZone && requirement.confirmedTimeZone) {
+    ui.topstepImportTimeZone.value = requirement.confirmedTimeZone;
+  }
+  if (ui.topstepTimeZoneConfirm) {
+    // A previously confirmed source clock is reused without asking on every
+    // import. The prompt appears only when the CSV itself is zone-less and no
+    // saved answer exists.
+    ui.topstepTimeZoneConfirm.hidden = !requirement.needsConfirmation || requirement.ready;
+  }
+  return requirement;
+}
+
+function handleTopstepImportTimeZoneConfirm() {
+  const selected = normalizeTimingTimeZone(ui.topstepImportTimeZone?.value, "", { allowEmpty: true });
+  if (!selected) {
+    setMessage(ui.bulkMessage, "Choose the clock Topstep used for these timestamps.", "error");
+    ui.topstepImportTimeZone?.focus();
+    return;
+  }
+  state.settings = normalizeSettings({
+    ...state.settings,
+    topstepSourceTimeZone: selected
+  });
+  persistState();
+  handleBulkPreview();
+  renderAll();
 }
 
 function handleBulkFileSelect() {
@@ -4055,6 +4284,9 @@ function parseSelectedBulkTrades() {
   const detected = detectTopstepExport(rawInput);
   const selectedTopstep = ui.bulkSource?.value === "topstep";
   const fileKind = detected.kind === "orders" || detected.kind === "trades" ? detected.kind : "unknown";
+  const confirmedTopstepSourceTimeZone = String(
+    ui.topstepImportTimeZone?.value || state.settings.topstepSourceTimeZone || ""
+  ).trim();
 
   if (fileKind === "orders" || fileKind === "trades" || selectedTopstep) {
     const sourceParsed = fileKind === "orders" ? parseTopstepOrdersCsv(rawInput) : parseTopstepCsv(rawInput);
@@ -4161,6 +4393,8 @@ function parseSelectedBulkTrades() {
           ? topstepOrdersDuplicateKey(trade)
           : topstepDuplicateKey(trade);
         const sourceOrderCount = Array.isArray(trade.sourceOrderIds) ? trade.sourceOrderIds.length : 0;
+        const exportedSourceTimeZone = String(trade.sourceTimezone || "").trim();
+        const sourceTimeZoneIsKnown = exportedSourceTimeZone && exportedSourceTimeZone.toLowerCase() !== "unknown";
         return {
           ...trade,
           importSource: fileKind === "orders" ? "topstepx-orders" : "topstepx",
@@ -4177,7 +4411,14 @@ function parseSelectedBulkTrades() {
           sourceTradeDayTimezones: undefined,
           pnlBasis: undefined,
           sourceOrderCount,
-          sourceTimezone: trade.sourceTimezone || "Unknown",
+          sourceTimezone: sourceTimeZoneIsKnown
+            ? exportedSourceTimeZone
+            : confirmedTopstepSourceTimeZone || "Unknown",
+          sourceTimezoneProvenance: sourceTimeZoneIsKnown
+            ? "export"
+            : confirmedTopstepSourceTimeZone
+              ? "user-confirmed"
+              : "unresolved",
           session: "Not recorded",
           setupType: "Not recorded",
           timeframe: "Not recorded",
@@ -4211,6 +4452,7 @@ function handleBulkPreview() {
   }
 
   const parsed = parseSelectedBulkTrades();
+  const timeZoneRequirement = syncTopstepTimeZoneConfirmation(parsed);
   state.bulkPreview = parsed.trades;
   state.bulkErrors = parsed.errors;
   const preview = markBulkPreviewDuplicates(parsed.trades);
@@ -4258,8 +4500,13 @@ function handleBulkPreview() {
   if (parsed.errors.length > 0) {
     message += ` ${parsed.errors.length} row(s) need attention.`;
   }
+  if (!timeZoneRequirement.ready) {
+    message += " Confirm the clock used by this zone-less Topstep Trades export to enable import.";
+  }
   setMessage(ui.bulkMessage, message, "success");
-  if (ui.bulkImportBtn) ui.bulkImportBtn.disabled = ready === 0 || !fullDayConfirmed;
+  if (ui.bulkImportBtn) {
+    ui.bulkImportBtn.disabled = ready === 0 || !fullDayConfirmed || !timeZoneRequirement.ready;
+  }
 }
 
 function handleBulkImport() {
@@ -4281,6 +4528,15 @@ function handleBulkImport() {
       "Confirm that this file covers the complete Topstep trading day before importing reconstructed Orders episodes.",
       "error"
     );
+    return;
+  }
+  if (!getTopstepTimeZoneRequirement(parsed).ready) {
+    setMessage(
+      ui.bulkMessage,
+      "Confirm the clock used by this zone-less Topstep Trades export before importing.",
+      "error"
+    );
+    ui.topstepImportTimeZone?.focus();
     return;
   }
 
@@ -4411,6 +4667,7 @@ function clearBulkImport(keepMessage = false) {
   if (ui.bulkFileInput) ui.bulkFileInput.value = "";
   if (ui.topstepOrdersFullDayConfirm) ui.topstepOrdersFullDayConfirm.checked = false;
   if (ui.topstepOrdersAttestation) ui.topstepOrdersAttestation.hidden = true;
+  if (ui.topstepTimeZoneConfirm) ui.topstepTimeZoneConfirm.hidden = true;
   if (ui.bulkFileName) {
     ui.bulkFileName.textContent = ui.bulkSource?.value === "topstep"
       ? "or drop the original TopstepX Trades or Orders export here"
@@ -7919,7 +8176,8 @@ function renderAll() {
   renderProgressTradeSummary();
   renderEstimatedAnalyticsBoundary();
   renderDashboardMetrics(state.analytics);
-  renderRiskStrip(state.analytics);
+  renderDepthCaptions();
+  renderSessionTiming(state.analytics.sessionTiming);
   renderPropTracker();
   renderNavRisk();
   renderGreeting();
@@ -7938,6 +8196,7 @@ function renderAll() {
   }
   renderCharts(state.analytics);
   renderCalendarView();
+  renderDashMiniCal();
   hydrateSetupFilter();
   renderJournalTable();
   renderReflections();
@@ -8052,6 +8311,14 @@ function renderEstimatedAnalyticsBoundary() {
       ? `${count} Topstep Orders episode${count === 1 ? "" : "s"} in these figures: P&L calculated from fill prices, fees estimated from Topstep's published schedule.`
       : "";
   }
+  // The chip in the month card head mirrors the notice, so the estimate state
+  // survives even a crop that cuts the footnote off.
+  if (ui.dashEstChip) {
+    ui.dashEstChip.hidden = count === 0;
+    ui.dashEstChip.title = count
+      ? `${count} Topstep Orders episode${count === 1 ? "" : "s"} in these figures: P&L calculated from fill prices, fees estimated from Topstep's published schedule.`
+      : "";
+  }
 
   const hasClosedTrades = getClosedTrades().length > 0;
   const openImports = state.trades.filter(
@@ -8103,7 +8370,6 @@ function calculateAnalytics(trades, settings, reflections) {
   const assetPerformance = new Map();
   const dayPerformance = new Map();
   const psychologyStats = new Map();
-  const sessionPerformance = new Map();
 
   for (const trade of ordered) {
     totalPnl += trade.netPnl;
@@ -8162,7 +8428,6 @@ function calculateAnalytics(trades, settings, reflections) {
     accumulatePerformanceEntry(setupPerformance, setupKey, trade);
     accumulatePerformanceEntry(assetPerformance, trade.asset || "Unknown", trade);
     accumulatePerformanceEntry(dayPerformance, getTradeDayLabel(trade.date), trade);
-    accumulatePerformanceEntry(sessionPerformance, trade.session || "Unknown", trade);
 
     const psychKey = trade.psychology || "Unknown";
     const psychBucket = psychologyStats.get(psychKey) || { label: psychKey, pnl: 0, count: 0, wins: 0 };
@@ -8206,6 +8471,11 @@ function calculateAnalytics(trades, settings, reflections) {
   const profitFactor = grossLoss < 0 ? grossProfit / Math.abs(grossLoss) : grossProfit > 0 ? 999 : 0;
   const expectancy = totalTrades > 0 ? totalPnl / totalTrades : 0;
   const averageDrawdown = drawdownCount > 0 ? drawdownSum / drawdownCount : 0;
+  const sessionTiming = buildSessionTimingReport(ordered, {
+    reportTimeZone: settings.timingReportTimeZone,
+    sourceTimeZone: settings.topstepSourceTimeZone,
+    dateRange: settings.sessionDateRange
+  });
 
   const bestDay = getExtremeDay(dailyPnl, "max");
   const worstDay = getExtremeDay(dailyPnl, "min");
@@ -8287,13 +8557,490 @@ function calculateAnalytics(trades, settings, reflections) {
         winRate: entry.count > 0 ? (entry.wins / entry.count) * 100 : 0
       }))
       .sort((a, b) => b.pnl - a.pnl),
-    sessionReport: Array.from(sessionPerformance.values()).sort((a, b) => b.pnl - a.pnl),
+    sessionTiming,
     rMultipleReport: buildRMultipleHistogram(ordered),
     disciplineScore,
     dailyTradingScore,
     goalProgress,
     traderScore
   };
+}
+
+/* ══ SESSION INTELLIGENCE ══════════════════════════════════════════════════
+   Topstep already gives us the broker entry, exit and hold duration. The pure
+   sessionReport module turns those facts into venue sessions, entry-hour
+   buckets and holding-time cohorts; this renderer only states those results.
+   No journal save time and no intratrade price path is ever substituted. */
+
+function formatTimingDuration(milliseconds) {
+  if (!Number.isFinite(milliseconds) || milliseconds < 0) {
+    return "—";
+  }
+  const totalSeconds = Math.round(milliseconds / 1000);
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`;
+  }
+  const totalMinutes = Math.round(totalSeconds / 60);
+  if (totalMinutes < 60) {
+    return `${totalMinutes}m`;
+  }
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
+}
+
+function timingZoneLabel(timeZone) {
+  return {
+    "America/New_York": "New York time (ET)",
+    "America/Chicago": "Chicago time (CT)",
+    "Asia/Manila": "Manila time (PHT)"
+  }[timeZone] || timeZone || "unresolved source time";
+}
+
+function timingTone(value) {
+  return value > 0 ? "is-positive" : value < 0 ? "is-negative" : "is-flat";
+}
+
+function timingMoney(value) {
+  const amount = Number(value) || 0;
+  return amount === 0 ? formatCurrency(0) : formatSignedCurrency(amount);
+}
+
+function timingTradeCount(count) {
+  return `${count} trade${count === 1 ? "" : "s"}`;
+}
+
+function handleSessionIntelligenceFilterChange() {
+  const sessionDateRange = ["30d", "90d", "ytd", "all"].includes(ui.sessionDateRange?.value)
+    ? ui.sessionDateRange.value
+    : DEFAULT_SETTINGS.sessionDateRange;
+  const timingReportTimeZone = normalizeTimingTimeZone(
+    ui.sessionReportTimeZone?.value,
+    DEFAULT_SETTINGS.timingReportTimeZone
+  );
+  if (
+    sessionDateRange === state.settings.sessionDateRange &&
+    timingReportTimeZone === state.settings.timingReportTimeZone
+  ) {
+    return;
+  }
+  state.settings = normalizeSettings({ ...state.settings, sessionDateRange, timingReportTimeZone });
+  closeSessionTradeDrawer();
+  persistState();
+  renderAll();
+}
+
+function handleSessionEntryMetricChange(metric) {
+  if (!["pnl", "expectancy", "winRate"].includes(metric) || metric === state.settings.sessionEntryMetric) {
+    return;
+  }
+  state.settings = normalizeSettings({ ...state.settings, sessionEntryMetric: metric });
+  persistState();
+  renderAll();
+}
+
+function activateSessionIntelligenceTab(tab) {
+  const activeTab = ["sessions", "entry-time", "hold-time", "journal-coverage"].includes(tab)
+    ? tab
+    : "sessions";
+  state.sessionIntelligence.activeTab = activeTab;
+  ui.sessionTabs.forEach((button) => {
+    const active = button.dataset.sessionTab === activeTab;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", String(active));
+    button.tabIndex = active ? 0 : -1;
+  });
+  ui.sessionPanels.forEach((panel) => {
+    panel.hidden = panel.dataset.sessionPanel !== activeTab;
+  });
+  if (activeTab !== "entry-time") closeSessionTradeDrawer();
+}
+
+function handleSessionIntelligenceTabKeydown(event) {
+  const current = ui.sessionTabs.indexOf(event.currentTarget);
+  if (current < 0) return;
+  let next = current;
+  if (event.key === "ArrowRight") next = (current + 1) % ui.sessionTabs.length;
+  else if (event.key === "ArrowLeft") next = (current + ui.sessionTabs.length - 1) % ui.sessionTabs.length;
+  else if (event.key === "Home") next = 0;
+  else if (event.key === "End") next = ui.sessionTabs.length - 1;
+  else return;
+  event.preventDefault();
+  const button = ui.sessionTabs[next];
+  activateSessionIntelligenceTab(button.dataset.sessionTab);
+  button.focus();
+}
+
+function timingConfidenceCopy(confidence) {
+  if (!confidence || confidence.count === 0) return "No data";
+  const more = confidence.neededForReliable > 0
+    ? ` · ${confidence.neededForReliable} more for reliable`
+    : "";
+  return `${confidence.label} · n=${confidence.count}${more}`;
+}
+
+function setTimingValue(node, text, tone = "") {
+  if (!node) return;
+  node.textContent = text;
+  node.classList.toggle("is-positive", tone === "is-positive");
+  node.classList.toggle("is-negative", tone === "is-negative");
+}
+
+function formatTimingHourRange(label) {
+  const match = String(label || "").match(/^(\d{2}):00-(\d{2}):00$/);
+  if (!match) return String(label || "—").replace("-", "–");
+  const start = Number(match[1]);
+  const end = Number(match[2]);
+  const clock = (hour) => `${hour % 12 || 12}:00`;
+  const startPeriod = start < 12 ? "AM" : "PM";
+  const endPeriod = end < 12 ? "AM" : "PM";
+  return startPeriod === endPeriod
+    ? `${clock(start)} to ${clock(end)} ${endPeriod}`
+    : `${clock(start)} ${startPeriod} to ${clock(end)} ${endPeriod}`;
+}
+
+function renderSessionTiming(report) {
+  if (!report || !ui.sessionIntelligenceView) return;
+  if (ui.sessionDateRange) ui.sessionDateRange.value = state.settings.sessionDateRange;
+  if (ui.sessionReportTimeZone) {
+    if (!Array.from(ui.sessionReportTimeZone.options).some((option) => option.value === report.reportTimeZone)) {
+      ui.sessionReportTimeZone.add(new Option(report.reportTimeZone, report.reportTimeZone));
+    }
+    ui.sessionReportTimeZone.value = report.reportTimeZone;
+  }
+  if (ui.sessionHeadline) ui.sessionHeadline.textContent = report.headline.sentence;
+  if (ui.sessionImportedSource) {
+    ui.sessionImportedSource.textContent = report.source.topstepDetected
+      ? `${report.source.label} · detected`
+      : report.source.label;
+  }
+  if (ui.sessionAnalyzedCount) ui.sessionAnalyzedCount.textContent = `${report.coverage.analyzed} analyzed`;
+  if (ui.sessionConfidence) {
+    ui.sessionConfidence.textContent = report.confidence.label;
+    ui.sessionConfidence.classList.remove("is-early", "is-developing", "is-reliable");
+    ui.sessionConfidence.classList.add(`is-${report.confidence.key === "none" ? "early" : report.confidence.key}`);
+    ui.sessionConfidence.title = timingConfidenceCopy(report.confidence);
+  }
+  if (ui.sessionTimingSource) ui.sessionTimingSource.textContent = report.source.label;
+  if (ui.sessionTimingCoverage) {
+    ui.sessionTimingCoverage.textContent = `${report.coverage.timed} of ${report.coverage.total} entry times · ${report.coverage.durationKnown} measured holds`;
+  }
+  renderSessionScorecard(report);
+  renderSessionHourRail(report);
+  renderSessionDurations(report);
+  renderSessionCoverage(report);
+  activateSessionIntelligenceTab(state.sessionIntelligence.activeTab);
+}
+
+function renderSessionScorecard(report) {
+  if (!ui.sessionScorecard) return;
+  if (ui.sessionComparisonHeading) ui.sessionComparisonHeading.textContent = `${report.pnl.label} by entry session`;
+  const observed = report.bestSession || report.bestObservedSession;
+  if (!observed) {
+    if (ui.sessionSessionsConclusion) ui.sessionSessionsConclusion.textContent = "Import closed trades to compare your sessions.";
+    if (ui.sessionSessionsConfidence) ui.sessionSessionsConfidence.textContent = `A reliable session needs at least ${report.minimumReliableSamples} trades.`;
+    setTimingValue(ui.sessionBestSessionPnl, "—");
+    setTimingValue(ui.sessionBestSessionExpectancy, "—");
+    if (ui.sessionBestSessionTrades) ui.sessionBestSessionTrades.textContent = "0";
+  } else {
+    const reliable = observed.confidence.key === "reliable";
+    const positive = observed.pnl > 0;
+    if (ui.sessionSessionsConclusion) {
+      ui.sessionSessionsConclusion.textContent = reliable && positive
+        ? `Your best session is ${observed.label}.`
+        : positive
+          ? `${observed.label} is a ${observed.confidence.key === "early" ? "promising early" : "developing"} signal.`
+          : `No session is profitable yet; ${observed.label} is least negative.`;
+    }
+    if (ui.sessionSessionsConfidence) ui.sessionSessionsConfidence.textContent = timingConfidenceCopy(observed.confidence);
+    if (ui.sessionBestSessionPnlLabel) ui.sessionBestSessionPnlLabel.textContent = observed.pnlLabel;
+    const metricTone = reliable ? timingTone(observed.pnl) : "";
+    setTimingValue(ui.sessionBestSessionPnl, timingMoney(observed.pnl), metricTone);
+    setTimingValue(ui.sessionBestSessionExpectancy, timingMoney(observed.expectancy), metricTone);
+    if (ui.sessionBestSessionTrades) ui.sessionBestSessionTrades.textContent = String(observed.count);
+  }
+  const active = report.sessions.filter((row) => row.count > 0);
+  if (!active.length) {
+    ui.sessionScorecard.innerHTML = '<p class="session-empty-copy">Import timestamped closed trades to compare Asia, London, New York, and off-session entries.</p>';
+    return;
+  }
+  const peak = Math.max(...active.map((row) => Math.abs(row.pnl)), 1);
+  ui.sessionScorecard.innerHTML = report.sessions.map((row) => {
+    const reliable = row.confidence.key === "reliable";
+    const tone = !row.count ? "is-empty" : reliable ? timingTone(row.pnl) : "is-early";
+    const magnitude = row.count ? Math.abs(row.pnl) / peak : 0;
+    const details = row.count
+      ? `${row.label}: ${timingMoney(row.pnl)} ${row.pnlLabel}, ${timingMoney(row.expectancy)} expectancy, ${Math.round(row.winRate)}% win rate, average hold ${formatTimingDuration(row.avgHoldMs)}, ${timingConfidenceCopy(row.confidence)}`
+      : `${row.label}: no trades`;
+    return `
+      <article class="session-score-row ${tone}" role="listitem" tabindex="${row.count ? "0" : "-1"}" title="${escapeHtml(details)}" aria-label="${escapeHtml(details)}" style="--session-score-size:${magnitude.toFixed(3)}">
+        <div class="session-score-main">
+          <strong class="session-score-name">${escapeHtml(row.label)}</strong>
+          <span class="session-score-pnl">${row.count ? escapeHtml(timingMoney(row.pnl)) : "—"}</span>
+        </div>
+        <span class="session-score-track" aria-hidden="true"><span class="session-score-fill"></span></span>
+        <p class="session-score-meta">${row.count ? `n=${row.count} · ${escapeHtml(row.confidence.label)}` : "No trades"}</p>
+      </article>`;
+  }).join("");
+}
+
+function entryMetricValue(row, metric) {
+  if (metric === "winRate") return row.winRate;
+  return metric === "expectancy" ? row.expectancy : row.pnl;
+}
+
+function entryMetricText(row, metric) {
+  if (!row.count) return "—";
+  return metric === "winRate" ? `${Math.round(row.winRate)}%` : timingMoney(entryMetricValue(row, metric));
+}
+
+function renderSessionHourRail(report) {
+  if (!report || !ui.sessionHourRail || !ui.sessionHourEmpty) return;
+  const metric = state.settings.sessionEntryMetric;
+  if (ui.sessionProfitClockHeading) {
+    ui.sessionProfitClockHeading.textContent = metric === "winRate"
+      ? "Win rate by entry hour"
+      : metric === "expectancy"
+        ? "Expectancy by entry hour"
+        : `${report.pnl.label} by entry hour`;
+  }
+  ui.sessionEntryMetricButtons.forEach((button) => {
+    const active = button.dataset.entryMetric === metric;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+    if (button.dataset.entryMetric === "pnl") button.textContent = report.pnl.label;
+  });
+
+  const best = report.entryTime.bestHour || report.entryTime.strongestObservedHour;
+  const weakest = report.entryTime.weakestHour || report.entryTime.weakestObservedHour;
+  if (ui.sessionEntryConclusion) {
+    ui.sessionEntryConclusion.textContent = !best
+      ? "Import timestamped trades to reveal your strongest entry window."
+      : best.pnl <= 0
+        ? "No profitable entry window has emerged yet."
+        : best.confidence.key === "reliable"
+          ? `Your best entry window is ${formatTimingHourRange(best.label)}.`
+          : `${formatTimingHourRange(best.label)} is a ${best.confidence.key === "early" ? "promising early" : "developing"} signal.`;
+  }
+  setTimingValue(
+    ui.sessionBestHour,
+    best ? formatTimingHourRange(best.label) : "—",
+    best?.confidence.key === "reliable" ? timingTone(best.pnl) : ""
+  );
+  if (ui.sessionBestHourMeta) {
+    ui.sessionBestHourMeta.textContent = best
+      ? `${timingMoney(best.pnl)} ${best.pnlLabel.toLowerCase()} · ${Math.round(best.winRate)}% win · ${timingConfidenceCopy(best.confidence)}`
+      : "No timestamped entries yet";
+  }
+  setTimingValue(
+    ui.sessionWorstHour,
+    weakest ? formatTimingHourRange(weakest.label) : "—",
+    weakest?.confidence.key === "reliable" ? "is-negative" : ""
+  );
+  if (ui.sessionWorstHourMeta) {
+    ui.sessionWorstHourMeta.textContent = weakest
+      ? `${timingMoney(weakest.pnl)} ${weakest.pnlLabel.toLowerCase()} · ${Math.round(weakest.winRate)}% win · ${timingConfidenceCopy(weakest.confidence)}`
+      : "No losing entry window yet";
+  }
+
+  const active = report.hours.filter((row) => row.count > 0);
+  ui.sessionHourEmpty.hidden = active.length > 0;
+  ui.sessionHourRail.hidden = active.length === 0;
+  if (!active.length) {
+    ui.sessionHourRail.innerHTML = "";
+    if (ui.sessionTimingInsight) {
+      ui.sessionTimingInsight.textContent = report.timeZones.source.requiresConfirmation
+        ? "A zone-less Topstep export needs its source clock confirmed during import before entry hours can be analyzed."
+        : "Import trades with broker entry timestamps to build the 24-hour profit timeline.";
+    }
+    return;
+  }
+
+  const peak = metric === "winRate"
+    ? 100
+    : Math.max(...active.map((row) => Math.abs(entryMetricValue(row, metric))), 1);
+  ui.sessionHourRail.innerHTML = report.hours.map((row) => {
+    const value = entryMetricValue(row, metric);
+    const reliable = row.confidence.key === "reliable";
+    const toneValue = metric === "winRate" ? value - 50 : value;
+    const tone = !row.count ? "is-empty" : reliable ? timingTone(toneValue) : "is-early";
+    const magnitude = row.count ? Math.min(Math.abs(value) / peak, 1) : 0;
+    const details = row.count
+      ? `${formatTimingHourRange(row.label)}: ${timingMoney(row.pnl)} ${row.pnlLabel}, ${timingMoney(row.expectancy)} expectancy, ${Math.round(row.winRate)}% win rate, ${timingTradeCount(row.count)}, ${row.confidence.label}`
+      : `${formatTimingHourRange(row.label)}: no trades`;
+    return `
+      <button
+        class="session-hour-cell ${tone}"
+        type="button"
+        role="listitem"
+        data-session-hour="${row.hour}"
+        aria-selected="${state.sessionIntelligence.selectedHour === row.hour}"
+        aria-label="${escapeHtml(details)}"
+        title="${escapeHtml(details)}"
+        ${row.count ? "" : 'aria-disabled="true" tabindex="-1"'}
+        style="--session-hour-size:${magnitude.toFixed(3)}"
+      >
+        <span class="session-hour-bar" aria-hidden="true"><span class="session-hour-fill"></span></span>
+        <span class="session-hour-label">${String(row.hour).padStart(2, "0")}</span>
+        <span class="session-hour-value">${escapeHtml(entryMetricText(row, metric))}</span>
+      </button>`;
+  }).join("");
+
+  if (ui.sessionTimingInsight) {
+    ui.sessionTimingInsight.textContent = `${timingZoneLabel(report.reportTimeZone)} · click an hour to inspect its trades. Gray hours need ${report.minimumReliableSamples} trades before they are treated as reliable.`;
+  }
+}
+
+function renderSessionDurations(report) {
+  if (!ui.sessionDurationBands) return;
+  const { winners, losers, comparison, bands } = report.duration;
+  const best = report.duration.bestBand || report.duration.strongestObservedBand;
+  if (ui.sessionHoldConclusion) {
+    ui.sessionHoldConclusion.textContent = winners.count && losers.count
+      ? comparison.meaningful
+        ? `Profitable trades are normally held ${formatTimingDuration(Math.abs(comparison.differenceMs))} ${comparison.direction} than losing trades.`
+        : "Profitable and losing trades are currently held for a similar amount of time."
+      : "Add measured profitable and losing trades to compare holding behavior.";
+  }
+  setTimingValue(
+    ui.sessionWinningHold,
+    formatTimingDuration(winners.medianMs),
+    winners.confidence.key === "reliable" ? "is-positive" : ""
+  );
+  if (ui.sessionWinningHoldMeta) {
+    ui.sessionWinningHoldMeta.textContent = winners.count
+      ? `Median · ${timingConfidenceCopy(winners.confidence)}`
+      : "No measured profitable holds";
+  }
+  setTimingValue(
+    ui.sessionLosingHold,
+    formatTimingDuration(losers.medianMs),
+    losers.confidence.key === "reliable" ? "is-negative" : ""
+  );
+  if (ui.sessionLosingHoldMeta) {
+    ui.sessionLosingHoldMeta.textContent = losers.count
+      ? `Median · ${timingConfidenceCopy(losers.confidence)}`
+      : "No measured losing holds";
+  }
+  setTimingValue(
+    ui.sessionBestDuration,
+    best?.label || "—",
+    best?.confidence.key === "reliable" ? timingTone(best.pnl) : ""
+  );
+  if (ui.sessionBestDurationMeta) {
+    ui.sessionBestDurationMeta.textContent = best
+      ? `${timingMoney(best.pnl)} ${best.pnlLabel.toLowerCase()} · ${timingConfidenceCopy(best.confidence)}`
+      : "No measured holds yet";
+  }
+
+  const heading = document.getElementById("sessionDurationHeading");
+  if (heading) heading.textContent = `${report.pnl.label} by duration range`;
+  const active = bands.filter((band) => band.count > 0);
+  if (!active.length) {
+    ui.sessionDurationBands.innerHTML = '<p class="session-empty-copy">No measured holding-time ranges yet.</p>';
+    return;
+  }
+  const peak = Math.max(...active.map((band) => Math.abs(band.pnl)), 1);
+  ui.sessionDurationBands.innerHTML = bands.map((band) => {
+    const reliable = band.confidence.key === "reliable";
+    const tone = !band.count ? "is-empty" : reliable ? timingTone(band.pnl) : "is-early";
+    const magnitude = band.count ? Math.abs(band.pnl) / peak : 0;
+    const details = band.count
+      ? `${band.label}: ${timingMoney(band.pnl)} ${band.pnlLabel}, ${timingMoney(band.expectancy)} expectancy, ${timingTradeCount(band.count)}, ${band.confidence.label}`
+      : `${band.label}: no trades`;
+    return `
+      <article class="session-duration-band ${tone}" role="listitem" tabindex="${band.count ? "0" : "-1"}" title="${escapeHtml(details)}" aria-label="${escapeHtml(details)}" style="--session-duration-size:${magnitude.toFixed(3)}">
+        <div class="session-duration-band-head">
+          <strong>${escapeHtml(band.label)}</strong>
+          <span>${band.count ? escapeHtml(timingMoney(band.pnl)) : "—"}</span>
+        </div>
+        <span class="session-duration-track" aria-hidden="true"><span class="session-duration-fill"></span></span>
+        <p class="session-duration-band-meta">${band.count ? `n=${band.count} · ${escapeHtml(band.confidence.label)}` : "No trades"}</p>
+      </article>`;
+  }).join("");
+}
+
+function renderSessionCoverage(report) {
+  const coverage = report.journalCoverage;
+  if (ui.sessionCoverageConclusion) {
+    ui.sessionCoverageConclusion.textContent = !coverage.total
+      ? "No closed trades are available in this date range."
+      : coverage.unjournalled === 0
+        ? "Every analyzed trade has journal context."
+        : `${coverage.unjournalled} ${coverage.unjournalled === 1 ? "trade still needs" : "trades still need"} journal context.`;
+  }
+  if (ui.sessionJournaledCount) ui.sessionJournaledCount.textContent = String(coverage.journalled);
+  if (ui.sessionUnjournalledCount) ui.sessionUnjournalledCount.textContent = String(coverage.unjournalled);
+  if (ui.sessionCoveragePercent) ui.sessionCoveragePercent.textContent = `${Math.round(coverage.completionPercent)}%`;
+  if (ui.sessionMissingDataCount) ui.sessionMissingDataCount.textContent = String(coverage.importedMissingOrIncomplete);
+  if (ui.sessionCoverageBar) {
+    ui.sessionCoverageBar.setAttribute("aria-valuenow", String(Math.round(coverage.completionPercent)));
+    ui.sessionCoverageBar.style.setProperty("--session-coverage", `${coverage.completionPercent}%`);
+  }
+  if (ui.sessionCoverageBarFill) ui.sessionCoverageBarFill.style.width = `${coverage.completionPercent}%`;
+  if (ui.sessionCoverageBadge) {
+    ui.sessionCoverageBadge.hidden = coverage.unjournalled === 0;
+    ui.sessionCoverageBadge.textContent = String(coverage.unjournalled);
+  }
+}
+
+function openSessionTradeDrawer(hour) {
+  const report = state.analytics?.sessionTiming;
+  const row = report?.hours?.find((entry) => entry.hour === hour && entry.count > 0);
+  if (!row || !ui.sessionTradeDrawer || !ui.sessionTradeDrawerBody) return;
+  state.sessionIntelligence.selectedHour = hour;
+  sessionTradeDrawerOpener = document.activeElement;
+  ui.sessionHourRail?.querySelectorAll("[data-session-hour]").forEach((button) => {
+    button.setAttribute("aria-selected", String(Number(button.dataset.sessionHour) === hour));
+  });
+  if (ui.sessionTradeDrawerTitle) {
+    ui.sessionTradeDrawerTitle.textContent = `${formatTimingHourRange(row.label)} · ${timingZoneLabel(report.reportTimeZone)}`;
+  }
+  const trades = row.tradeIds
+    .map((id) => state.trades.find((trade) => String(trade.id) === String(id)))
+    .filter(Boolean);
+  ui.sessionTradeDrawerBody.innerHTML = trades.length
+    ? trades.map((trade) => {
+        const pnl = resolveTradePnl(trade);
+        const timing = resolveTradeTiming(trade, { sourceTimeZone: state.settings.topstepSourceTimeZone });
+        const entry = timing.entryMs === null
+          ? trade.date || "Date unavailable"
+          : new Intl.DateTimeFormat("en-US", {
+              timeZone: report.reportTimeZone,
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit"
+            }).format(new Date(timing.entryMs));
+        const tone = pnl.value > 0 ? "is-positive" : pnl.value < 0 ? "is-negative" : "";
+        const journalled = isTradeJournalled(trade);
+        return `
+          <article class="session-drawer-row">
+            <div class="session-drawer-main">
+              <strong>${escapeHtml(trade.asset || "Unknown")}</strong>
+              <span>${escapeHtml(trade.direction || "")}</span>
+            </div>
+            <p class="session-drawer-meta">${escapeHtml(entry)} · ${formatTimingDuration(timing.durationMs)} hold · ${journalled ? "Journaled" : "Needs journal"}</p>
+            <p class="session-drawer-pnl ${tone}">${pnl.value === null ? "P&L unavailable" : `${escapeHtml(timingMoney(pnl.value))} ${escapeHtml(pnl.label.toLowerCase())}`}</p>
+            <button class="session-drawer-action" type="button" data-session-journal-trade="${escapeHtml(String(trade.id || ""))}">${journalled ? "Edit journal" : "Journal trade"}</button>
+          </article>`;
+      }).join("")
+    : '<p class="session-drawer-empty">The trades behind this hour are no longer available.</p>';
+  ui.sessionTradeDrawer.hidden = false;
+  ui.sessionTradeDrawerClose?.focus();
+}
+
+function closeSessionTradeDrawer() {
+  if (!ui.sessionTradeDrawer || ui.sessionTradeDrawer.hidden) return;
+  ui.sessionTradeDrawer.hidden = true;
+  state.sessionIntelligence.selectedHour = null;
+  ui.sessionHourRail?.querySelectorAll("[data-session-hour]").forEach((button) => {
+    button.setAttribute("aria-selected", "false");
+  });
+  if (sessionTradeDrawerOpener instanceof HTMLElement && sessionTradeDrawerOpener.isConnected) {
+    sessionTradeDrawerOpener.focus();
+  }
+  sessionTradeDrawerOpener = null;
 }
 
 // R-multiple distribution over closed trades, in fixed 1R buckets. Empty
@@ -8608,8 +9355,36 @@ function renderMetricDeltas() {
   });
 }
 
+/* The locked drawer reads as a to-do list, not a graveyard: each chart is
+   headed by a live count of what would unlock it. Orders imports carry no
+   mood, no R and no setup, which is exactly why these three left the plane
+   of real data. */
+function renderDepthCaptions() {
+  const trades = getClosedTrades();
+  const total = trades.length;
+  const mood = trades.filter((trade) => trade.psychology && trade.psychology !== "Not recorded").length;
+  const withR = trades.filter((trade) => Number.isFinite(trade.rMultiple) && trade.rMultiple !== 0).length;
+  const qualify = trades.filter((trade) => trade.setupType && trade.setupType !== "Not recorded" && trade.stopLoss).length;
+  if (ui.depthCaptionPsych) {
+    ui.depthCaptionPsych.textContent = `${mood} of ${total} trade${total === 1 ? "" : "s"} carry a mood tag. Tag one from the journal.`;
+  }
+  if (ui.depthCaptionR) {
+    ui.depthCaptionR.textContent = `${withR} of ${total} trade${total === 1 ? "" : "s"} carry an R multiple. R needs a stop price, add one in Full trade detail.`;
+  }
+  if (ui.depthCaptionScore) {
+    ui.depthCaptionScore.textContent = `The score builds from setups and stops. ${qualify} of ${total} trade${total === 1 ? "" : "s"} qualify.`;
+  }
+}
+
 function renderDashboardMetrics(analytics) {
   const hasTrades = analytics.totalTrades > 0;
+  // The pulse row's sixth tile: one figure that answers "is my average win
+  // bigger than my average loss" without the R plumbing the old Avg R:R tile
+  // needed and never had for Orders imports.
+  const avgWinLossNode = document.querySelector('[data-metric="avgWinLoss"]');
+  if (avgWinLossNode) {
+    avgWinLossNode.textContent = `${formatCompactCurrency(analytics.avgWin || 0)} / ${formatCompactCurrency(Math.abs(analytics.avgLoss || 0))}`;
+  }
   if (ui.metricGrid && ui.dashboardEmptyState) {
     ui.metricGrid.hidden = !hasTrades;
     ui.dashboardEmptyState.hidden = hasTrades;
@@ -8996,89 +9771,6 @@ function setupScrollReveals() {
 // Daily/weekly risk-budget strip: how much of the configured loss limits
 // today and this week have consumed. Breach logic mirrors the violations
 // filters in calculateAnalytics (pnl < -limit).
-function renderRiskStrip(analytics) {
-  if (!ui.riskStrip) {
-    return;
-  }
-
-  const entries = [
-    { key: "day", pnl: analytics.todayPnl, limit: state.settings.dailyMaxLoss },
-    { key: "week", pnl: analytics.weekPnl, limit: state.settings.weeklyMaxLoss }
-  ];
-
-  const visible = analytics.totalTrades > 0 && entries.some((entry) => entry.limit > 0);
-  ui.riskStrip.hidden = !visible;
-  if (!visible) {
-    return;
-  }
-
-  let tightestLeft = 1;
-  let breached = false;
-
-  entries.forEach((entry) => {
-    const item = ui.riskStrip.querySelector(`[data-risk-strip="${entry.key}"]`);
-    if (!item) {
-      return;
-    }
-
-    item.hidden = !(entry.limit > 0);
-    if (item.hidden) {
-      return;
-    }
-
-    const used = Math.max(-entry.pnl, 0);
-    const ratio = clamp(used / entry.limit, 0, 1);
-    const isBreach = entry.pnl < -entry.limit;
-    breached = breached || isBreach;
-    tightestLeft = Math.min(tightestLeft, 1 - ratio);
-
-    item.classList.toggle("is-breach", isBreach);
-    item.classList.toggle("is-warn", !isBreach && ratio >= 0.6);
-
-    const fill = item.querySelector(".risk-strip-fill");
-    if (fill) {
-      fill.style.width = `${Math.round(ratio * 100)}%`;
-    }
-    // "used / limit" — the figures the mockup asks for, in that order.
-    const value = item.querySelector(".risk-strip-value");
-    if (value) {
-      value.textContent = `${formatCurrency(used)} / ${formatCurrency(entry.limit)}`;
-    }
-  });
-
-  // The dial reads the TIGHTEST of the two budgets: the one that locks the
-  // desk first is the one that matters. State is carried by the word, the
-  // colour and the arc — never by the arc alone (WCAG 1.4.1).
-  const percentLeft = Math.round(clamp(tightestLeft, 0, 1) * 100);
-  const state3 = breached ? "breach" : tightestLeft <= 0.4 ? "warn" : "safe";
-
-  if (ui.riskDial) {
-    ui.riskDial.classList.remove("is-safe", "is-warn", "is-breach");
-    ui.riskDial.classList.add(`is-${state3}`);
-  }
-  if (ui.riskState) {
-    ui.riskState.textContent = state3.toUpperCase();
-    ui.riskState.classList.remove("is-safe", "is-warn", "is-breach");
-    ui.riskState.classList.add(`is-${state3}`);
-  }
-  if (ui.riskDialArc) {
-    // r=48 → circumference 2πr. dasharray paints the remaining budget.
-    const circumference = 2 * Math.PI * 48;
-    ui.riskDialArc.setAttribute(
-      "stroke-dasharray",
-      `${(clamp(tightestLeft, 0, 1) * circumference).toFixed(1)} ${circumference.toFixed(1)}`
-    );
-  }
-  if (ui.riskDialValue) {
-    ui.riskDialValue.innerHTML = `${percentLeft}<span>%</span>`;
-    ui.riskDial?.setAttribute("aria-label", `${percentLeft}% of the tightest loss budget left, ${state3}`);
-    ui.riskDial?.setAttribute("role", "img");
-  }
-  if (ui.riskConsequence) {
-    ui.riskConsequence.textContent = buildRiskConsequence(analytics, breached);
-  }
-}
-
 // The consequence line, computed from the real budgets and risk-per-trade:
 // risk amount = account balance x risk% , losses left = daily budget / that.
 function buildRiskConsequence(analytics, breached) {
@@ -9831,7 +10523,13 @@ function getUnjournalledTrades() {
 }
 
 function renderUnjournalled() {
-  const pending = getUnjournalledTrades();
+  const allPending = getUnjournalledTrades();
+  const scopedIds = new Set(
+    state.analytics?.sessionTiming?.journalCoverage?.unjournalledTradeIds?.map(String) || []
+  );
+  const pending = state.analytics?.sessionTiming
+    ? allPending.filter((trade) => scopedIds.has(String(trade.id)))
+    : allPending;
 
   // Desktop top bar and mobile dock carry the same count — 1f #01 asks for the
   // badge in the nav AND the dock, and a phone only ever sees the dock.
@@ -9839,11 +10537,11 @@ function renderUnjournalled() {
     if (!badge) {
       return;
     }
-    badge.hidden = pending.length === 0;
-    badge.textContent = String(pending.length);
+    badge.hidden = allPending.length === 0;
+    badge.textContent = String(allPending.length);
     badge.setAttribute(
       "aria-label",
-      `${pending.length} trade${pending.length === 1 ? "" : "s"} without a note`
+      `${allPending.length} trade${allPending.length === 1 ? "" : "s"} without a note`
     );
   });
 
@@ -9851,33 +10549,28 @@ function renderUnjournalled() {
     return;
   }
 
-  // The card stays up once there is anything closed to journal: with an empty
-  // queue it flips to the all-clear state, which is the only place the streak
-  // is visible — hiding it would hide the reward for keeping it.
-  const hasClosed = state.trades.some((trade) => trade.status !== "open");
-  ui.dashUnjournalled.hidden = !hasClosed;
+  // This is a task tray now, not a permanent dashboard metric. With no debt it
+  // disappears; the counted nav badges already provide the persistent route
+  // into Trade Review without spending a full card on "all clear".
+  ui.dashUnjournalled.hidden = pending.length === 0;
   if (ui.dashJournalCta) {
-    ui.dashJournalCta.hidden = !hasClosed || pending.length === 0;
+    ui.dashJournalCta.hidden = pending.length === 0;
     if (ui.dashJournalCtaCount) {
       ui.dashJournalCtaCount.textContent = String(pending.length);
     }
   }
-  if (!hasClosed) {
+  if (!pending.length) {
     ui.dashUnjournalledList.innerHTML = "";
     return;
   }
 
-  ui.dashUnjournalled.classList.toggle("is-clear", pending.length === 0);
+  ui.dashUnjournalled.classList.remove("is-clear");
   const lede = ui.dashUnjournalled.querySelector(".dash-unj-lede");
   if (ui.dashUnjournalledCount) {
-    ui.dashUnjournalledCount.textContent = pending.length
-      ? `${pending.length} trade${pending.length === 1 ? "" : "s"}`
-      : "All clear";
+    ui.dashUnjournalledCount.textContent = `${pending.length} trade${pending.length === 1 ? "" : "s"}`;
   }
   if (lede) {
-    lede.textContent = pending.length
-      ? "Closed, but you never said why. Two minutes each."
-      : "Every closed trade has a note. Keep it that way.";
+    lede.textContent = "Closed, but you never said why. Two minutes each.";
   }
 
   ui.dashUnjournalledList.innerHTML = pending
@@ -9953,6 +10646,16 @@ function renderJournalStreak() {
       ? `Last ${recent.length} trading day${recent.length === 1 ? "" : "s"}: ${recent.filter((day) => day.journalled === day.total).length} fully journalled`
       : "No trading days yet"
   );
+}
+
+/* Any path targeting a panel inside the Desk settings details must open the
+   details first, or the scroll lands on a closed summary and the form the
+   click promised never appears. One door, every route through it. */
+function openDeskSettings(target) {
+  if (ui.deskSettings) {
+    ui.deskSettings.open = true;
+  }
+  scrollDashboardTo(target || ui.riskForm);
 }
 
 function scrollDashboardTo(node) {
@@ -10693,7 +11396,7 @@ function renderPropTracker() {
     setText(
       ui.propMllMoves,
       moves.length
-        ? `Moved up ${moves.length} time${moves.length === 1 ? "" : "s"} — last on ${
+        ? `Moved up ${moves.length} time${moves.length === 1 ? "" : "s"}, last on ${
             moves[moves.length - 1].date
           }, from ${money(moves[moves.length - 1].from)} to ${money(moves[moves.length - 1].to)}.`
         : "Has not moved yet. It sits where it started."
@@ -11125,6 +11828,88 @@ function stepCalendarMonth(delta) {
   renderCalendarView();
 }
 
+/* The month card's right half. Reuses buildCalendarDayStats and the big
+   calendar's exact 4-step intensity ramp, so the two surfaces can never tell
+   a different story about the same day. Always the real current month,
+   independent of the calendar view's month input. */
+function renderDashMiniCal() {
+  if (!ui.miniCalGrid) {
+    return;
+  }
+  const now = new Date();
+  const monthValue = toDateInputValue(now).slice(0, 7);
+  const [yearText, monthText] = monthValue.split("-");
+  const year = Number(yearText);
+  const monthIndex = Number(monthText) - 1;
+  const dayStats = buildCalendarDayStats(monthValue);
+  const firstDay = new Date(year, monthIndex, 1);
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const startOffset = firstDay.getDay();
+  const todayIso = toDateInputValue(now);
+  const monthName = new Intl.DateTimeFormat("en-US", { month: "long" }).format(firstDay);
+
+  let net = 0;
+  let best = 0;
+  let green = 0;
+  let monthMaxAbsPnl = 0;
+  dayStats.forEach((stats) => {
+    net = round(net + stats.pnl);
+    if (stats.pnl > best) best = stats.pnl;
+    if (stats.pnl > 0) green += 1;
+    monthMaxAbsPnl = Math.max(monthMaxAbsPnl, Math.abs(stats.pnl));
+  });
+
+  if (ui.miniCalMonth) {
+    ui.miniCalMonth.textContent = monthName.toUpperCase();
+  }
+  if (ui.miniCalNet) {
+    ui.miniCalNet.textContent = net === 0 ? formatCurrency(0) : formatSignedCurrency(net);
+    toneBySign(ui.miniCalNet, net);
+  }
+  if (ui.miniCalOpenBtn) {
+    ui.miniCalOpenBtn.setAttribute("aria-label", dayStats.size
+      ? `${monthName}, ${net >= 0 ? "up" : "down"} ${formatCurrency(Math.abs(net))} net, ${dayStats.size} trading day${dayStats.size === 1 ? "" : "s"}, opens calendar`
+      : `${monthName}, no trades yet, opens calendar`);
+  }
+
+  const tiles = [];
+  for (let i = 0; i < startOffset; i += 1) {
+    tiles.push('<span class="mini-cal-day is-blank" aria-hidden="true"></span>');
+  }
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const isoDate = `${monthValue}-${String(day).padStart(2, "0")}`;
+    const stats = dayStats.get(isoDate);
+    const isToday = isoDate === todayIso;
+    const todayClass = isToday ? " is-today" : "";
+    if (stats && stats.trades > 0) {
+      const pnlClass = stats.pnl > 0 ? "pnl-positive" : stats.pnl < 0 ? "pnl-negative" : "";
+      const intensity = monthMaxAbsPnl > 0
+        ? Math.ceil(clamp(Math.abs(stats.pnl) / monthMaxAbsPnl, 0, 1) * 4) / 4
+        : 0;
+      const dayLong = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric" }).format(new Date(year, monthIndex, day));
+      const signed = stats.pnl === 0 ? formatCurrency(0) : formatSignedCurrency(stats.pnl);
+      tiles.push(`<button type="button" class="mini-cal-day is-trade ${pnlClass}${todayClass}" data-date="${isoDate}" style="--day-intensity:${intensity}" title="${escapeHtml(signed)}, ${stats.trades} trade${stats.trades === 1 ? "" : "s"}" aria-label="${stats.trades} trade${stats.trades === 1 ? "" : "s"} on ${dayLong}, ${stats.pnl >= 0 ? "up" : "down"} ${formatCurrency(Math.abs(stats.pnl))}, review in the journal">${day}</button>`);
+    } else if (isoDate > todayIso) {
+      tiles.push(`<span class="mini-cal-day is-future${todayClass}">${day}</span>`);
+    } else {
+      tiles.push(`<span class="mini-cal-day${todayClass}">${day}</span>`);
+    }
+  }
+  ui.miniCalGrid.innerHTML = tiles.join("");
+
+  if (ui.miniCalFoot) {
+    ui.miniCalFoot.textContent = dayStats.size
+      ? `${dayStats.size} TRADED · ${green} GREEN · BEST ${best > 0 ? "+" : ""}${formatCompactCurrency(best)}`
+      : "AWAITING FIRST TRADE";
+  }
+
+  const card = ui.dashMiniCal ? ui.dashMiniCal.closest(".dash-month-card") : null;
+  if (card) {
+    card.classList.toggle("is-pos", net > 0);
+    card.classList.toggle("is-neg", net < 0);
+  }
+}
+
 function renderCalendarView() {
   if (!ui.calendarGrid || !ui.dashboardCalendarMonth) {
     return;
@@ -11149,6 +11934,7 @@ function renderCalendarView() {
   const startOffset = firstDay.getDay();
   const monthTrades = getClosedTrades().filter((trade) => trade.date.startsWith(monthValue));
   const monthPnl = monthTrades.reduce((sum, trade) => sum + trade.netPnl, 0);
+  const monthName = new Intl.DateTimeFormat("en-US", { month: "long" }).format(firstDay);
 
   if (ui.calendarHeading) {
     ui.calendarHeading.textContent = new Intl.DateTimeFormat("en-US", {
@@ -11157,16 +11943,25 @@ function renderCalendarView() {
     }).format(firstDay);
   }
 
+  // The month's dominant asset decides what the tiles may stay silent about:
+  // a one-instrument book never prints its own name 20 times.
+  const assetCounts = new Map();
+  monthTrades.forEach((trade) => assetCounts.set(trade.asset, (assetCounts.get(trade.asset) || 0) + 1));
+  const dominantAsset = assetCounts.size
+    ? Array.from(assetCounts.entries()).sort((a, b) => b[1] - a[1])[0][0]
+    : "";
+
   if (ui.calendarMeta) {
     if (!monthTrades.length) {
       ui.calendarMeta.textContent = "No closed trades this month.";
-    } else {
-      const counts = new Map();
-      monthTrades.forEach((trade) => counts.set(trade.asset, (counts.get(trade.asset) || 0) + 1));
-      const topAsset = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0][0];
+    } else if (assetCounts.size > 1) {
       ui.calendarMeta.innerHTML = `${dayStats.size} trading day${dayStats.size === 1 ? "" : "s"} · ${
         monthTrades.length
-      } trade${monthTrades.length === 1 ? "" : "s"} · most traded <strong>${escapeHtml(topAsset)}</strong>`;
+      } trade${monthTrades.length === 1 ? "" : "s"} · most traded <strong>${escapeHtml(dominantAsset)}</strong>`;
+    } else {
+      ui.calendarMeta.textContent = `${dayStats.size} trading day${dayStats.size === 1 ? "" : "s"} · ${
+        monthTrades.length
+      } trade${monthTrades.length === 1 ? "" : "s"}`;
     }
   }
 
@@ -11180,23 +11975,38 @@ function renderCalendarView() {
   weekdayLabels.forEach((label) => {
     cells.push(`<div class="calendar-weekday">${label}</div>`);
   });
+  // The 8th column: a weekly spine of real figures where the legend's three
+  // swatches used to hand-hold. Hidden on the phone by CSS.
+  cells.push('<div class="calendar-weekday calendar-weekday-net">Net</div>');
 
   for (let i = 0; i < startOffset; i += 1) {
     cells.push('<div class="calendar-cell calendar-cell-empty" aria-hidden="true"></div>');
   }
 
-  // Intensity ramp (graft): each traded day gets --day-intensity 0-1 in four
-  // clamped steps, relative to the month's largest daily swing.
   let monthMaxAbsPnl = 0;
   dayStats.forEach((stats) => {
     monthMaxAbsPnl = Math.max(monthMaxAbsPnl, Math.abs(stats.pnl));
   });
 
   const todayIso = toDateInputValue(new Date());
+  const agendaRows = [];
+  let weekPnl = 0;
+  let weekHasTrades = false;
+  let weekIndex = 1;
+  const pushWeekNet = () => {
+    const tone = weekPnl > 0 ? "pnl-positive" : weekPnl < 0 ? "pnl-negative" : "";
+    const figure = weekHasTrades
+      ? escapeHtml(weekPnl === 0 ? formatCurrency(0) : formatSignedCurrency(weekPnl))
+      : "";
+    cells.push(`<div class="calendar-week-net"><span>WK ${weekIndex}</span><b class="${tone}">${figure}</b></div>`);
+    weekPnl = 0;
+    weekHasTrades = false;
+    weekIndex += 1;
+  };
 
   for (let day = 1; day <= daysInMonth; day += 1) {
     const isoDate = `${monthValue}-${String(day).padStart(2, "0")}`;
-    const stats = dayStats.get(isoDate) || { pnl: 0, trades: 0, topAsset: "-", winRate: 0 };
+    const stats = dayStats.get(isoDate) || { pnl: 0, trades: 0, topAsset: "", winRate: 0 };
     const hasTrades = stats.trades > 0;
     const pnlClass = stats.pnl > 0 ? "pnl-positive" : stats.pnl < 0 ? "pnl-negative" : "";
     const toneClass = stats.pnl > 0 ? "calendar-cell-positive" : stats.pnl < 0 ? "calendar-cell-negative" : "calendar-cell-flat";
@@ -11210,54 +12020,101 @@ function renderCalendarView() {
       isoDate === todayIso ? "calendar-cell-today" : "",
       hasTrades ? "calendar-cell-has-trades" : ""
     ].filter(Boolean).join(" ");
-    // 1e tile: day number, P&L, one meta line. The signed money value carries
-    // the win/loss state in text as well as colour, so the raise/sink is never
-    // the only signal (WCAG 1.4.1).
-    // Two figures, one shown at a time. A phone cell is about 46px wide, where
-    // "+$260.00" does not fit, and money must never be TRUNCATED: "+$26…" is a
-    // wrong number, not a clipped word. So the compact form is rendered
-    // alongside and CSS picks per width. Both carry the sign, which is what
-    // keeps the win/loss state readable without colour (WCAG 1.4.1).
-    const compact = hasTrades && stats.pnl !== 0
-      ? `${stats.pnl > 0 ? "+" : ""}${formatCompactCurrency(stats.pnl)}`
-      : hasTrades
-      ? formatCompactCurrency(0)
-      : "";
-    const cellBody = `
-        <span class="calendar-cell-day">${day}</span>
-        <span class="calendar-cell-pnl ${pnlClass}">${hasTrades ? escapeHtml(stats.pnl === 0 ? formatCurrency(0) : formatSignedCurrency(stats.pnl)) : "—"}</span>
-        <span class="calendar-cell-pnl-compact ${pnlClass}" aria-hidden="true">${escapeHtml(compact)}</span>
-        <span class="calendar-cell-meta">${hasTrades ? `${stats.trades} trade${stats.trades === 1 ? "" : "s"} · ${escapeHtml(stats.topAsset)}` : "no trades"}</span>
-    `;
 
-    // Traded days are real buttons (graft): click filters the journal to that day.
-    cells.push(hasTrades
-      ? `<button type="button" class="${cellClasses}" data-date="${isoDate}" style="--day-intensity:${intensity};" aria-label="${stats.trades} trade${stats.trades === 1 ? "" : "s"} on ${isoDate}, ${stats.pnl >= 0 ? "up" : "down"} ${formatCurrency(Math.abs(stats.pnl))} — review in the journal">${cellBody}</button>`
-      : `<div class="${cellClasses}">${cellBody}</div>`);
+    if (hasTrades) {
+      weekPnl = round(weekPnl + stats.pnl);
+      weekHasTrades = true;
+      const compact = `${stats.pnl > 0 ? "+" : ""}${formatCompactCurrency(stats.pnl)}`;
+      // The asset earns its ink only when it differs from the month's habit.
+      const assetClause = stats.topAsset && stats.topAsset !== dominantAsset
+        ? ` · ${escapeHtml(stats.topAsset)}`
+        : "";
+      const dayLong = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric" }).format(new Date(year, monthIndex, day));
+      const aria = `${stats.trades} trade${stats.trades === 1 ? "" : "s"} on ${dayLong}, ${
+        stats.pnl >= 0 ? "up" : "down"
+      } ${formatCurrency(Math.abs(stats.pnl))}, review in the journal`;
+      cells.push(`<button type="button" class="${cellClasses}" data-date="${isoDate}" style="--day-intensity:${intensity};" aria-label="${aria}">
+        <span class="calendar-cell-day">${day}</span>
+        <span class="calendar-cell-pnl ${pnlClass}">${escapeHtml(stats.pnl === 0 ? formatCurrency(0) : formatSignedCurrency(stats.pnl))}</span>
+        <span class="calendar-cell-pnl-compact ${pnlClass}" aria-hidden="true">${escapeHtml(compact)}</span>
+        <span class="calendar-cell-meta">${stats.trades} trade${stats.trades === 1 ? "" : "s"}${assetClause}</span>
+      </button>`);
+      const dayShort = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(year, monthIndex, day));
+      agendaRows.push(`<button type="button" class="cal-agenda-row" data-date="${isoDate}">
+        <span class="cal-agenda-date">${dayShort}</span>
+        <span class="cal-agenda-trades">${stats.trades} trade${stats.trades === 1 ? "" : "s"}${assetClause}</span>
+        <b class="cal-agenda-net ${pnlClass}">${escapeHtml(stats.pnl === 0 ? formatCurrency(0) : formatSignedCurrency(stats.pnl))}</b>
+      </button>`);
+    } else {
+      // A quiet day is a number, not an announcement. The state survives for
+      // screen readers only.
+      cells.push(`<div class="${cellClasses}">
+        <span class="calendar-cell-day">${day}</span>
+        <span class="visually-hidden">no trades</span>
+      </div>`);
+    }
+
+    const weekday = (startOffset + day - 1) % 7;
+    if (weekday === 6) {
+      pushWeekNet();
+    }
   }
 
-  if (!dayStats.size) {
-    // Visible only in the <=760px agenda layout, which hides untraded days.
-    cells.push('<div class="calendar-agenda-note">No trading days this month.</div>');
+  const lastWeekday = (startOffset + daysInMonth - 1) % 7;
+  if (lastWeekday !== 6) {
+    for (let i = lastWeekday + 1; i <= 6; i += 1) {
+      cells.push('<div class="calendar-cell calendar-cell-empty" aria-hidden="true"></div>');
+    }
+    pushWeekNet();
   }
 
   ui.calendarGrid.innerHTML = cells.join("");
+
+  // The strip: the legend's pixels, spent on figures instead of hand-holding.
+  if (ui.calendarStrip) {
+    if (dayStats.size) {
+      let green = 0;
+      let red = 0;
+      let best = 0;
+      dayStats.forEach((stats) => {
+        if (stats.pnl > 0) green += 1;
+        else if (stats.pnl < 0) red += 1;
+        if (stats.pnl > best) best = stats.pnl;
+      });
+      const winDays = Math.round((green / dayStats.size) * 100);
+      ui.calendarStrip.textContent = `GREEN ${green} · RED ${red} · BEST ${best > 0 ? "+" : ""}${formatCompactCurrency(best)} · WIN DAYS ${winDays}%`;
+      ui.calendarStrip.hidden = false;
+    } else {
+      ui.calendarStrip.hidden = true;
+    }
+  }
+
+  if (ui.calendarAgenda) {
+    ui.calendarAgenda.innerHTML = agendaRows.length
+      ? agendaRows.join("")
+      : '<p class="calendar-agenda-note">No trading days this month.</p>';
+  }
+}
+
+function openJournalDay(date) {
+  if (!date) {
+    return;
+  }
+  ui.filters.dateFrom.value = date;
+  ui.filters.dateTo.value = date;
+  handleFilterChange();
+  // The date inputs live under "More filters"; open it so the range the click
+  // just applied is visible rather than mysteriously in force.
+  document.querySelector(".rev-more")?.setAttribute("open", "");
+  switchView("journal");
 }
 
 function handleCalendarDayClick(event) {
   const cell = event.target.closest("[data-date]");
-  if (!cell || !ui.calendarGrid.contains(cell)) {
+  if (!cell || !event.currentTarget.contains(cell)) {
     return;
   }
-
-  const date = cell.dataset.date;
-  ui.filters.dateFrom.value = date;
-  ui.filters.dateTo.value = date;
-  handleFilterChange();
-  // The date inputs now live under "More filters"; open it so the range the
-  // click just applied is visible rather than mysteriously in force.
-  document.querySelector(".rev-more")?.setAttribute("open", "");
-  switchView("journal");
+  openJournalDay(cell.dataset.date);
 }
 
 function buildCalendarDayStats(monthValue) {
@@ -11430,7 +12287,7 @@ function describeJournalFilters() {
     parts.push(QUICK_FILTER_LABELS[quick]);
   }
   if (dateFrom && dateTo) {
-    parts.push(dateFrom === dateTo ? formatIsoShort(dateFrom) : `${formatIsoShort(dateFrom)} – ${formatIsoShort(dateTo)}`);
+    parts.push(dateFrom === dateTo ? formatIsoShort(dateFrom) : `${formatIsoShort(dateFrom)} to ${formatIsoShort(dateTo)}`);
   } else if (dateFrom) {
     parts.push(`from ${formatIsoShort(dateFrom)}`);
   } else if (dateTo) {
@@ -11871,7 +12728,7 @@ function weekBoundsFor(dateString) {
     from,
     to,
     key: getWeekKey(from),
-    label: `Week of ${formatIsoShort(from)} – ${formatIsoShort(to)}`
+    label: `Week of ${formatIsoShort(from)} to ${formatIsoShort(to)}`
   };
 }
 
@@ -12040,7 +12897,7 @@ function buildWeeklyDigest(dateString) {
     )}.`,
     `${wins} win${plural(wins)}, ${losses} loss${losses === 1 ? "" : "es"}${
       scratches ? `, ${scratches} scratch${scratches === 1 ? "" : "es"}` : ""
-    } — a ${((wins / count) * 100).toFixed(1)}% win rate.`,
+    }, a ${((wins / count) * 100).toFixed(1)}% win rate.`,
     `Expectancy ran ${digestMoney(net / count)} per trade.`
   ];
   if (best && Number(best.netPnl) > 0) {
@@ -12055,7 +12912,7 @@ function buildWeeklyDigest(dateString) {
     well.push(
       `The week before was ${previous.length} trade${plural(previous.length)} for ${digestMoney(
         previousNet
-      )} — ${delta >= 0 ? "up" : "down"} ${formatCurrency(Math.abs(delta))} on that.`
+      )}, ${delta >= 0 ? "up" : "down"} ${formatCurrency(Math.abs(delta))} on that.`
     );
   }
   well.push(
@@ -12450,12 +13307,39 @@ function normalizeSettings(input) {
       0,
       20
     ),
+    timingReportTimeZone: normalizeTimingTimeZone(
+      value.timingReportTimeZone,
+      DEFAULT_SETTINGS.timingReportTimeZone
+    ),
+    topstepSourceTimeZone: normalizeTimingTimeZone(value.topstepSourceTimeZone, "", { allowEmpty: true }),
+    sessionDateRange: ["30d", "90d", "ytd", "all"].includes(value.sessionDateRange)
+      ? value.sessionDateRange
+      : DEFAULT_SETTINGS.sessionDateRange,
+    sessionEntryMetric: ["pnl", "expectancy", "winRate"].includes(value.sessionEntryMetric)
+      ? value.sessionEntryMetric
+      : DEFAULT_SETTINGS.sessionEntryMetric,
     // Multi-account. Absent on every journal written before this ships;
     // ensureAccounts() fills it from the trader's existing starting balance on
     // the first load, so nothing has to be re-entered.
     accounts: normalizeAccounts(value.accounts),
     activeAccountId: String(value.activeAccountId || "")
   };
+}
+
+function normalizeTimingTimeZone(value, fallback, options = {}) {
+  const zone = String(value || "").trim();
+  if (!zone && options.allowEmpty) {
+    return "";
+  }
+  try {
+    // Intl is the source of truth here: it accepts real IANA identifiers,
+    // applies daylight-saving rules, and rejects fixed-offset guesses such as
+    // "UTC-5" that would drift for half the year.
+    new Intl.DateTimeFormat("en-US", { timeZone: zone }).format(new Date(0));
+    return zone;
+  } catch (error) {
+    return fallback;
+  }
 }
 
 // Ids are persisted on trades, so a rule keeps whatever id it was created
@@ -12514,6 +13398,15 @@ function normalizeTrades(input) {
   return input
     .filter((item) => item && typeof item === "object" && item.id && item.date)
     .map((item) => {
+      const hasStoredCost = (value) =>
+        value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+      const storedFees = hasStoredCost(item.fees) ? Math.abs(Number(item.fees)) : null;
+      const storedCommissions = hasStoredCost(item.commissions) ? Math.abs(Number(item.commissions)) : null;
+      const storedCosts = hasStoredCost(item.costs)
+        ? Math.abs(Number(item.costs))
+        : storedFees !== null || storedCommissions !== null
+          ? round((storedFees || 0) + (storedCommissions || 0))
+          : null;
       const baseTrade = {
         id: String(item.id),
         createdAt: String(item.createdAt || ""),
@@ -12569,16 +13462,12 @@ function normalizeTrades(input) {
         sourceCommissions: item.sourceCommissions === undefined || item.sourceCommissions === null
           ? null
           : ensureNumber(item.sourceCommissions, null),
-        fees: isTopstepOrdersImport(item) ? null : ensureNonNegative(item.fees, 0),
-        commissions: isTopstepOrdersImport(item) ? null : ensureNonNegative(item.commissions, 0),
-        costs: isTopstepOrdersImport(item)
-          ? null
-          : ensureNonNegative(
-              item.costs,
-              Math.abs(ensureNumber(item.fees, 0)) + Math.abs(ensureNumber(item.commissions, 0))
-            ),
+        fees: isTopstepOrdersImport(item) ? null : storedFees,
+        commissions: isTopstepOrdersImport(item) ? null : storedCommissions,
+        costs: isTopstepOrdersImport(item) ? null : storedCosts,
         sourceTradeDay: String(item.sourceTradeDay || ""),
         sourceTimezone: String(item.sourceTimezone || ""),
+        sourceTimezoneProvenance: String(item.sourceTimezoneProvenance || ""),
         tradeDuration: String(item.tradeDuration || ""),
         sourceOrderCount: ensureNonNegative(item.sourceOrderCount, 0),
         roundTurnQuantity: ensureNonNegative(item.roundTurnQuantity, 0),
@@ -12598,6 +13487,7 @@ function normalizeTrades(input) {
         sourceFullDayConfirmed: Boolean(item.sourceFullDayConfirmed),
         sourceFullDayConfirmedAt: String(item.sourceFullDayConfirmedAt || ""),
         pnlProvenance: String(item.pnlProvenance || ""),
+        pnlBasis: String(item.pnlBasis || ""),
         pnlIsEstimated: Boolean(item.pnlIsEstimated || isTopstepOrdersImport(item)),
         // No longer forced on for Orders imports: reconstructed episodes are
         // included in analytics, and re-locking stored rows here was what made
@@ -12684,12 +13574,14 @@ function normalizeTrades(input) {
         : Number.isFinite(baseTrade.calculatedGrossPnl)
           ? baseTrade.calculatedGrossPnl
           : null;
+      const storedBrokerCosts = baseTrade.costs ?? round((baseTrade.fees || 0) + (baseTrade.commissions || 0));
+      const storedBrokerCostsKnown = baseTrade.costs !== null || baseTrade.fees !== null || baseTrade.commissions !== null;
       const authoritativePnl = Number.isFinite(baseTrade.reportedNetPnl)
         ? round(baseTrade.reportedNetPnl)
         : isTopstepOrdersImport(baseTrade) && reconstructedPnl !== null
           ? round(reconstructedPnl)
-          : baseTrade.importSource === "topstepx" && Number.isFinite(baseTrade.brokerPnl)
-          ? round(baseTrade.brokerPnl)
+        : baseTrade.importSource === "topstepx" && Number.isFinite(baseTrade.brokerPnl)
+          ? round(baseTrade.brokerPnl - (storedBrokerCostsKnown ? storedBrokerCosts : 0))
           : null;
       const manualResult = String(item.result || "").trim();
       const safeManualResult =
@@ -12710,6 +13602,13 @@ function normalizeTrades(input) {
 
       return {
         ...baseTrade,
+        pnlBasis: baseTrade.pnlBasis || (
+          isTopstepOrdersImport(baseTrade)
+            ? Number.isFinite(baseTrade.estimatedNetPnl) ? "estimated-net" : "calculated-gross"
+            : baseTrade.importSource === "topstepx"
+              ? storedBrokerCostsKnown ? "derived-net" : "broker"
+              : "net"
+        ),
         result: resolvedResult,
         netPnl: baseTrade.status === "open"
           ? 0
