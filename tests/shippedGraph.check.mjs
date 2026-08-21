@@ -60,14 +60,14 @@ function resolveRef(fromFile, spec) {
   return rel.split(/[\\/]/).join(posix.sep);
 }
 
-/* THE APP'S RUNTIME GRAPH, and deliberately not one file more.
-   docs/ holds archived design-tool exports (frozen <x-dc> markup that no page
-   links to and that carries a dangling ./support.js from the tool that made
-   it). Holding a historical record to the running app's standard would mean
-   either editing the record or carrying a permanent exception, and a check
-   people learn to ignore is worse than no check at all. What is guarded here
-   is what a browser actually loads when someone opens the site. */
-const OUT_OF_GRAPH = /^(?:node_modules|docs)\//;
+/* EVERYTHING THIS REPO SHIPS. No exceptions, on purpose: the moment a check
+   carries a permanent exemption, the exemption is where the next outage hides.
+   The one candidate was docs/, whose archived design exports carried a
+   <script src="./support.js"> pointing at a file this repo has never once
+   committed. Its six sibling exports do not carry that tag, so the dead line
+   went rather than the coverage. node_modules stays out because it is not
+   ours to vouch for. */
+const OUT_OF_GRAPH = /^(?:node_modules)\//;
 const sources = [...tracked].filter((f) => /\.(js|mjs|html)$/.test(f) && !OUT_OF_GRAPH.test(f));
 const misses = [];
 
