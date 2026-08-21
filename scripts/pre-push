@@ -1,0 +1,29 @@
+#!/bin/sh
+# Runs the whole suite before anything leaves the machine. Install with:
+#   ln -sf ../../scripts/pre-push .git/hooks/pre-push
+#
+# Why a hook and not just discipline: two sessions share this working tree and
+# this .git, so both push through here whether or not either remembers to run
+# the tests. The suite takes about four seconds, which is cheaper than one
+# outage by several orders of magnitude.
+#
+# The check that makes this hook worth its four seconds is
+# tests/shippedGraph.check.mjs: it asks GIT, not the filesystem, whether every
+# imported module actually ships. A tracked import of an untracked file passes
+# every other test on this machine and 404s the moment it deploys.
+set -e
+
+cd "$(git rev-parse --show-toplevel)"
+
+if ! npm test >/tmp/tj-prepush.log 2>&1; then
+  echo ""
+  echo "PUSH BLOCKED: the test suite is red."
+  echo ""
+  tail -25 /tmp/tj-prepush.log
+  echo ""
+  echo "Full log: /tmp/tj-prepush.log"
+  echo "Push anyway (you had better mean it): git push --no-verify"
+  exit 1
+fi
+
+echo "pre-push: suite green, shipping."
