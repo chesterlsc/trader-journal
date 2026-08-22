@@ -21,13 +21,13 @@
   debounce,
   openTradeTriggerLevel
 } from "./src/lib/core.js";
-import { formatCurrency, formatCompactCurrency, formatStatMoney, formatChartDateLabel } from "./src/lib/format.js";
+import { formatCurrency, formatCompactCurrency, formatStatMoney, formatChartDateLabel } from "./src/lib/format.js?v=20260822-format2";
 import { getNextSessionOpen, formatCountdown } from "./src/lib/sessions.js";
 import {
   buildSessionTimingReport,
   resolveTradePnl,
   resolveTradeTiming
-} from "./src/lib/sessionReport.js";
+} from "./src/lib/sessionReport.js?v=20260822-session-topstep4";
 import {
   normalizeMarketSymbol,
   fetchLivePricesFromBackend
@@ -637,6 +637,13 @@ const ui = {
   sessionProfitClockHeading: document.getElementById("sessionProfitClockHeading"),
   sessionTimingInsight: document.getElementById("sessionTimingInsight"),
   sessionScorecard: document.getElementById("sessionScorecard"),
+  sessionTopstepExecution: document.getElementById("sessionTopstepExecution"),
+  sessionTopstepExecutionConfidence: document.getElementById("sessionTopstepExecutionConfidence"),
+  sessionTopstepExecutionSummary: document.getElementById("sessionTopstepExecutionSummary"),
+  sessionTopstepScaleInsight: document.getElementById("sessionTopstepScaleInsight"),
+  sessionTopstepReversalInsight: document.getElementById("sessionTopstepReversalInsight"),
+  sessionTopstepPnlBasisInsight: document.getElementById("sessionTopstepPnlBasisInsight"),
+  sessionTopstepExecutionNote: document.getElementById("sessionTopstepExecutionNote"),
   sessionDurationBands: document.getElementById("sessionDurationBands"),
   sessionReportTimeZone: document.getElementById("sessionReportTimeZone"),
   sessionTradeDrawer: document.getElementById("sessionTradeDrawer"),
@@ -8739,10 +8746,129 @@ function renderSessionTiming(report) {
     ui.sessionTimingCoverage.textContent = `${report.coverage.timed} of ${report.coverage.total} entry times · ${report.coverage.durationKnown} measured holds`;
   }
   renderSessionScorecard(report);
+  renderSessionTopstepExecution(report);
   renderSessionHourRail(report);
   renderSessionDurations(report);
   renderSessionCoverage(report);
   activateSessionIntelligenceTab(state.sessionIntelligence.activeTab);
+}
+
+function timingSegment(rows, key) {
+  return Array.isArray(rows) ? rows.find((row) => row.key === key) || null : null;
+}
+
+function renderSessionTopstepExecution(report) {
+  if (!ui.sessionTopstepExecution) return;
+  const quality = report?.dataQuality;
+  const lifecycle = report?.lifecycle;
+  const topstepTrades = Number(quality?.topstepTrades || 0);
+  const topstepOrders = Number(quality?.topstepOrders || 0);
+  const topstepTotal = topstepTrades + topstepOrders;
+  const visible = Boolean(report?.source?.topstepDetected && topstepTotal > 0);
+  ui.sessionTopstepExecution.hidden = !visible;
+  if (!visible) return;
+
+  const reliableFloor = Math.max(1, Number(report.minimumReliableSamples || 5));
+  const confidenceKey = topstepTotal >= reliableFloor
+    ? "reliable"
+    : topstepTotal >= Math.max(2, Math.ceil(reliableFloor / 2))
+      ? "developing"
+      : "early";
+  if (ui.sessionTopstepExecutionConfidence) {
+    const needed = Math.max(0, reliableFloor - topstepTotal);
+    const confidenceLabel = confidenceKey === "reliable"
+      ? "Reliable sample"
+      : confidenceKey === "developing"
+        ? "Developing"
+        : "Early signal";
+    ui.sessionTopstepExecutionConfidence.textContent = `${confidenceLabel} · n=${topstepTotal}`;
+    ui.sessionTopstepExecutionConfidence.title = needed
+      ? `${needed} more Topstep cycles needed for the reliable sample floor.`
+      : `Meets the ${reliableFloor}-cycle sample floor.`;
+    ui.sessionTopstepExecutionConfidence.classList.remove("is-early", "is-developing", "is-reliable");
+    ui.sessionTopstepExecutionConfidence.classList.add(`is-${confidenceKey}`);
+  }
+
+  if (ui.sessionTopstepExecutionSummary) {
+    const sourceParts = [];
+    if (topstepTrades) sourceParts.push(`${topstepTrades} paired ${topstepTrades === 1 ? "Trades record" : "Trades records"}`);
+    if (topstepOrders) sourceParts.push(`${topstepOrders} normalized ${topstepOrders === 1 ? "Orders cycle" : "Orders cycles"}`);
+    const scope = sourceParts.join(" and ");
+    ui.sessionTopstepExecutionSummary.textContent = topstepOrders
+      ? `${scope} analyzed. Orders cycles expose execution structure; fill counts describe what executed, not trader intent.`
+      : `${scope} analyzed. Paired Trades preserve timing, broker P&L, and cost evidence, but not the underlying fill sequence.`;
+  }
+
+  if (ui.sessionTopstepScaleInsight) {
+    const entryRows = lifecycle?.entryStructure?.segments || [];
+    const single = timingSegment(entryRows, "single-fill-entry");
+    const multi = timingSegment(entryRows, "multi-fill-entry");
+    const reentry = timingSegment(entryRows, "re-entry-after-partial-exit");
+    const comparison = lifecycle?.entryStructure?.singleVsMultiFill;
+    const reentrySuffix = reentry?.count
+      ? ` ${reentry.count} ${reentry.count === 1 ? "cycle reopened" : "cycles reopened"} quantity after a partial exit.`
+      : "";
+    if (!topstepOrders) {
+      ui.sessionTopstepScaleInsight.textContent = "Paired Trades do not include their opening-fill sequence; import Orders to study fill structure.";
+    } else if (comparison?.reliable && comparison.favoredKey) {
+      const favored = comparison.favoredKey === single?.key ? single : multi;
+      ui.sessionTopstepScaleInsight.textContent = `${favored?.label || "One entry structure"} has ${timingMoney(Math.abs(comparison.expectancyDelta))} higher expectancy than the alternative (n=${single?.count || 0} vs n=${multi?.count || 0}).${reentrySuffix}`;
+    } else if (comparison?.available) {
+      ui.sessionTopstepScaleInsight.textContent = `Single- vs multi-fill entry is developing (n=${single?.count || 0} vs n=${multi?.count || 0}); each needs ${comparison.sampleFloor} cycles.${reentrySuffix}`;
+    } else if (Number(lifecycle?.coverage?.entryStructureKnown || 0) > 0) {
+      ui.sessionTopstepScaleInsight.textContent = `${multi?.count || 0} of ${lifecycle.coverage.entryStructureKnown} cycles used multiple opening fills. A comparison needs both structures.${reentrySuffix}`;
+    } else {
+      ui.sessionTopstepScaleInsight.textContent = "Opening-fill structure was not preserved for these cycles.";
+    }
+  }
+
+  if (ui.sessionTopstepReversalInsight) {
+    const reversal = lifecycle?.reversal;
+    const comparison = reversal?.comparison;
+    const linked = Number(lifecycle?.coverage?.reversalLinked || 0);
+    const linkedRow = timingSegment(reversal?.segments, "reversal-linked");
+    const standaloneRow = timingSegment(reversal?.segments, "standalone-orders");
+    if (!topstepOrders) {
+      ui.sessionTopstepReversalInsight.textContent = "Reversal links require normalized Orders cycles with persisted source-order fingerprints.";
+    } else if (comparison?.reliable && comparison.favoredKey) {
+      const favored = comparison.favoredKey === linkedRow?.key ? linkedRow : standaloneRow;
+      ui.sessionTopstepReversalInsight.textContent = `${favored?.label || "One cycle group"} has ${timingMoney(Math.abs(comparison.expectancyDelta))} higher expectancy (n=${linkedRow?.count || 0} vs n=${standaloneRow?.count || 0}).`;
+    } else if (linked > 0) {
+      ui.sessionTopstepReversalInsight.textContent = `${linked} ${linked === 1 ? "cycle shares" : "cycles share"} a source-order fingerprint with another cycle. A reliable comparison needs ${comparison?.sampleFloor || reliableFloor} linked and standalone cycles.`;
+    } else {
+      ui.sessionTopstepReversalInsight.textContent = "No shared-fill reversal links were found in this date range.";
+    }
+  }
+
+  if (ui.sessionTopstepPnlBasisInsight) {
+    const pnl = quality?.pnlAndCosts;
+    if (!pnl?.total) {
+      ui.sessionTopstepPnlBasisInsight.textContent = "No completed Topstep P&L is available in this range.";
+    } else {
+      const netCount = Number(pnl.exactNet || 0) + Number(pnl.estimatedNet || 0);
+      const basisParts = [];
+      if (pnl.exactNet) basisParts.push(`${pnl.exactNet} exact net`);
+      if (pnl.estimatedNet) basisParts.push(`${pnl.estimatedNet} estimated net`);
+      if (pnl.grossOnly) basisParts.push(`${pnl.grossOnly} gross-only`);
+      if (pnl.brokerOnly) basisParts.push(`${pnl.brokerOnly} broker-only`);
+      if (pnl.missing) basisParts.push(`${pnl.missing} missing`);
+      const costCopy = netCount === pnl.total
+        ? "Every cycle includes an evidenced or provenance-stamped cost basis."
+        : `${pnl.total - netCount} ${pnl.total - netCount === 1 ? "cycle remains" : "cycles remain"} outside a net basis and are never relabeled net.`;
+      ui.sessionTopstepPnlBasisInsight.textContent = `${basisParts.join(" · ")}. ${costCopy}`;
+    }
+  }
+
+  if (ui.sessionTopstepExecutionNote) {
+    const execution = quality?.execution;
+    const complete = Number(execution?.complete || 0);
+    const total = Number(execution?.total || topstepTotal);
+    const excluded = Number(quality?.rawOrderRowsExcluded || 0);
+    const excludedCopy = excluded
+      ? ` ${excluded} non-normalized or incomplete ${excluded === 1 ? "row stays" : "rows stay"} outside cycle analytics.`
+      : "";
+    ui.sessionTopstepExecutionNote.textContent = `Complete entry, exit, and hold timing is available for ${complete} of ${total} Topstep cycles.${excludedCopy} Endpoints still cannot measure time above breakeven, MFE, MAE, or winner giveback.`;
+  }
 }
 
 function renderSessionScorecard(report) {
@@ -8807,6 +8933,11 @@ function entryMetricText(row, metric) {
   return metric === "winRate" ? `${Math.round(row.winRate)}%` : timingMoney(entryMetricValue(row, metric));
 }
 
+function timingCrossDayCopy(row) {
+  if (!row || !row.distinctDays || row.profitableDayRate === null || row.profitableDayRate === undefined) return "";
+  return `${Math.round(row.profitableDayRate)}% profitable across ${row.distinctDays} active ${row.distinctDays === 1 ? "date" : "dates"}`;
+}
+
 function renderSessionHourRail(report) {
   if (!report || !ui.sessionHourRail || !ui.sessionHourEmpty) return;
   const metric = state.settings.sessionEntryMetric;
@@ -8841,8 +8972,9 @@ function renderSessionHourRail(report) {
     best?.confidence.key === "reliable" ? timingTone(best.pnl) : ""
   );
   if (ui.sessionBestHourMeta) {
+    const crossDay = timingCrossDayCopy(best);
     ui.sessionBestHourMeta.textContent = best
-      ? `${timingMoney(best.pnl)} ${best.pnlLabel.toLowerCase()} · ${Math.round(best.winRate)}% win · ${timingConfidenceCopy(best.confidence)}`
+      ? `${timingMoney(best.pnl)} ${best.pnlLabel.toLowerCase()} · ${Math.round(best.winRate)}% win${crossDay ? ` · ${crossDay}` : ""} · ${timingConfidenceCopy(best.confidence)}`
       : "No timestamped entries yet";
   }
   setTimingValue(
@@ -8900,7 +9032,22 @@ function renderSessionHourRail(report) {
   }).join("");
 
   if (ui.sessionTimingInsight) {
-    ui.sessionTimingInsight.textContent = `${timingZoneLabel(report.reportTimeZone)} · click an hour to inspect its trades. Gray hours need ${report.minimumReliableSamples} trades before they are treated as reliable.`;
+    const consistency = report.entryTime?.consistency;
+    const consistent = consistency?.mostConsistentHour || consistency?.strongestObservedHour;
+    const crossDay = timingCrossDayCopy(consistent);
+    const consistencyLabel = consistent?.consistencyConfidence?.key === "reliable" && consistent.consistentPositive
+      ? "Repeatable edge"
+      : Number(consistent?.distinctDays || 0) >= 2
+        ? "Developing cross-day signal"
+        : "Early observation";
+    const consistencyCopy = consistent && crossDay
+      ? `${consistencyLabel}: ${formatTimingHourRange(consistent.label)} is ${crossDay}.`
+      : "Cross-day consistency needs timestamps on multiple active dates.";
+    const concentrated = consistency?.concentrationRiskHours?.find((row) => row.hour === best?.hour) || null;
+    const concentrationCopy = concentrated
+      ? ` One winner contributes ${Math.round(concentrated.largestWinnerSharePct)}% of gross profit in the leading hour, so treat it as concentrated.`
+      : "";
+    ui.sessionTimingInsight.textContent = `${timingZoneLabel(report.reportTimeZone)} · ${consistencyCopy}${concentrationCopy} Click an hour to inspect the underlying trades.`;
   }
 }
 
@@ -8908,12 +9055,20 @@ function renderSessionDurations(report) {
   if (!ui.sessionDurationBands) return;
   const { winners, losers, comparison, bands } = report.duration;
   const best = report.duration.bestBand || report.duration.strongestObservedBand;
+  const sessionHold = report.interactions?.sessionHold;
+  const bestSessionHold = sessionHold?.bestCell || sessionHold?.strongestObservedCell;
   if (ui.sessionHoldConclusion) {
-    ui.sessionHoldConclusion.textContent = winners.count && losers.count
+    const holdComparison = winners.count && losers.count
       ? comparison.meaningful
         ? `Profitable trades are normally held ${formatTimingDuration(Math.abs(comparison.differenceMs))} ${comparison.direction} than losing trades.`
         : "Profitable and losing trades are currently held for a similar amount of time."
       : "Add measured profitable and losing trades to compare holding behavior.";
+    const interactionCopy = bestSessionHold?.count && bestSessionHold.pnl > 0
+      ? bestSessionHold.confidence.key === "reliable"
+        ? ` ${bestSessionHold.sessionLabel} entries held ${bestSessionHold.durationLabel.toLowerCase()} are the strongest reliable combination (${timingMoney(bestSessionHold.expectancy)} expectancy, n=${bestSessionHold.count}).`
+        : ` Early interaction signal: ${bestSessionHold.sessionLabel} entries held ${bestSessionHold.durationLabel.toLowerCase()} lead so far, but only across n=${bestSessionHold.count}.`
+      : "";
+    ui.sessionHoldConclusion.textContent = `${holdComparison}${interactionCopy}`;
   }
   setTimingValue(
     ui.sessionWinningHold,
@@ -8942,7 +9097,7 @@ function renderSessionDurations(report) {
   );
   if (ui.sessionBestDurationMeta) {
     ui.sessionBestDurationMeta.textContent = best
-      ? `${timingMoney(best.pnl)} ${best.pnlLabel.toLowerCase()} · ${timingConfidenceCopy(best.confidence)}`
+      ? `${timingMoney(best.pnl)} ${best.pnlLabel.toLowerCase()} · ${timingConfidenceCopy(best.confidence)}${bestSessionHold?.durationKey === best.key ? ` · strongest in ${bestSessionHold.sessionLabel}` : ""}`
       : "No measured holds yet";
   }
 

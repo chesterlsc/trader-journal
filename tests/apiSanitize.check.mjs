@@ -93,11 +93,19 @@ assert.strictEqual(collectTradeScreenshots(trades).length, 1, 'only trades with 
     preTradeRules: [{ id: 'playbook', label: 'Setup is in my playbook' }],
     cooldownEnabled: false,
     cooldownLossStreak: 4,
+    timingReportTimeZone: 'America/New_York',
+    topstepSourceTimeZone: 'Asia/Manila',
+    sessionDateRange: '90d',
+    sessionEntryMetric: 'expectancy',
   });
   assert.deepStrictEqual(carried.accounts, accounts, 'accounts survive the server round trip');
   assert.strictEqual(carried.activeAccountId, 'a1');
   assert.strictEqual(carried.cooldownEnabled, false, 'a false setting is carried, not treated as absent');
   assert.strictEqual(carried.cooldownLossStreak, 4);
+  assert.strictEqual(carried.timingReportTimeZone, 'America/New_York');
+  assert.strictEqual(carried.topstepSourceTimeZone, 'Asia/Manila');
+  assert.strictEqual(carried.sessionDateRange, '90d');
+  assert.strictEqual(carried.sessionEntryMetric, 'expectancy');
   assert.strictEqual(carried.preTradeRules.length, 1);
   assert.strictEqual(carried.startingBalance, 50000, 'the audited fields are still sanitised');
 }

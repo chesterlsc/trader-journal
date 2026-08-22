@@ -113,13 +113,13 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260822-desknow2" />
+    <link rel="stylesheet" href="styles.css?v=20260822-session-topstep4" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260822-desknow2" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260822-session-topstep4" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260822-desknow2" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260822-session-topstep4" />
   </head>
   <body>
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -2040,6 +2040,41 @@
                   <p class="session-empty-copy">Import timestamped closed trades to compare trading sessions.</p>
                 </div>
               </section>
+
+              <aside
+                class="session-topstep-execution"
+                id="sessionTopstepExecution"
+                aria-labelledby="sessionTopstepExecutionHeading"
+                hidden
+              >
+                <header class="session-topstep-head">
+                  <div>
+                    <p>Topstep execution</p>
+                    <h4 id="sessionTopstepExecutionHeading">Execution quality from normalized trade cycles</h4>
+                  </div>
+                  <span class="session-confidence is-early" id="sessionTopstepExecutionConfidence">Needs cycles</span>
+                </header>
+                <p class="session-topstep-summary" id="sessionTopstepExecutionSummary">
+                  Completed Topstep cycles will reveal how scale management, reversals, and P&amp;L evidence affect this report.
+                </p>
+                <dl class="session-topstep-signals">
+                  <div>
+                    <dt>Opening fill structure</dt>
+                    <dd id="sessionTopstepScaleInsight">Awaiting completed cycles</dd>
+                  </div>
+                  <div>
+                    <dt>Position reversals</dt>
+                    <dd id="sessionTopstepReversalInsight">Awaiting completed cycles</dd>
+                  </div>
+                  <div>
+                    <dt>P&amp;L basis</dt>
+                    <dd id="sessionTopstepPnlBasisInsight">Broker result when available</dd>
+                  </div>
+                </dl>
+                <p class="session-topstep-note" id="sessionTopstepExecutionNote">
+                  Open, incomplete, cancelled, and rejected order rows stay outside completed-cycle performance.
+                </p>
+              </aside>
             </section>
 
             <section
@@ -4098,6 +4133,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260822-desknow2"></script>
+    <script type="module" src="app.js?v=20260822-session-topstep5"></script>
   </body>
 </html>

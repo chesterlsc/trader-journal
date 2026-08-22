@@ -239,8 +239,9 @@ const imported = buildApi.buildTradeRecord({
 });
 
 assert.equal(imported.accountId, "acct-funded");
-assert.equal(imported.netPnl, -42.75, "brokerPnl must override generic price-model P&L");
-assert.equal(imported.result, "Loss", "result must follow brokerPnl, not the calculated Win");
+assert.equal(imported.netPnl, -49.51, "Topstep net must deduct the separately reported costs exactly once");
+assert.equal(imported.pnlBasis, "derived-net");
+assert.equal(imported.result, "Loss", "result must follow cost-adjusted broker P&L, not generic point math");
 assert.equal(stampCalls, 0, "a Topstep row dated today must not inherit today's event tape");
 assert.deepEqual(imported.eventContext, []);
 assert.equal(imported.riskAmount, 0);
@@ -311,8 +312,8 @@ const edited = buildApi.buildTradeRecord(formOnlyEdit, {
   closedAt: imported.closedAt,
   existingTrade: imported
 });
-assert.equal(edited.netPnl, -42.75, "editing form fields must not replace Topstep's broker P&L");
-assert.equal(edited.result, "Loss", "the edited result must still follow Topstep's broker P&L");
+assert.equal(edited.netPnl, -49.51, "editing form fields must preserve the cost-adjusted Topstep net");
+assert.equal(edited.result, "Loss", "the edited result must still follow Topstep's cost-adjusted P&L");
 assert.equal(edited.riskAmount, 0);
 for (const key of ["rMultiple", "rrRatio", "pips", "pipSize", "pipValuePerLot", "dollarPerPip"]) {
   assert.equal(edited[key], null, `edited Topstep ${key} must remain unknown`);
@@ -350,7 +351,7 @@ const attemptedReopen = buildApi.buildTradeRecord({ ...formOnlyEdit, status: "op
   existingTrade: imported
 });
 assert.equal(attemptedReopen.status, "closed", "a paired Topstep Trades row cannot be changed to in progress");
-assert.equal(attemptedReopen.netPnl, -42.75, "an attempted reopen must not remove broker P&L from closed analytics");
+assert.equal(attemptedReopen.netPnl, -49.51, "an attempted reopen must not remove cost-adjusted P&L from closed analytics");
 assert.equal(attemptedReopen.result, "Loss");
 for (const key of ["rMultiple", "rrRatio", "pips", "pipSize", "pipValuePerLot", "dollarPerPip"]) {
   assert.equal(attemptedReopen[key], null, `attempted-reopen Topstep ${key} must remain unknown`);
@@ -606,7 +607,7 @@ const reloaded = normalizeApi.normalizeTrades([{
   eventContext: []
 }])[0];
 
-assert.equal(reloaded.netPnl, -42.75, "reload must keep brokerPnl authoritative over stored/calculated values");
+assert.equal(reloaded.netPnl, -49.51, "reload must re-derive net from broker P&L and stored costs");
 assert.equal(reloaded.result, "Loss");
 assert.equal(reloaded.status, "closed");
 for (const [key, expected] of Object.entries({
@@ -639,7 +640,7 @@ for (const key of ["rMultiple", "rrRatio", "pips", "pipSize", "pipValuePerLot", 
 
 const repairedOpen = normalizeApi.normalizeTrades([{ ...imported, id: "stored-open-topstep", status: "open" }])[0];
 assert.equal(repairedOpen.status, "closed", "reload repairs a legacy Topstep row incorrectly saved as open");
-assert.equal(repairedOpen.netPnl, -42.75);
+assert.equal(repairedOpen.netPnl, -49.51);
 assert.equal(repairedOpen.result, "Loss");
 assert.equal(repairedOpen.rMultiple, null);
 assert.equal(repairedOpen.pips, null);

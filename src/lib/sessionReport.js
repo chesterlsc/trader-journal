@@ -64,6 +64,88 @@ export const DURATION_BANDS = Object.freeze([
   Object.freeze({ key: "2h-plus", label: "2 hours or longer", minMs: 2 * HOUR_MS, maxMs: Infinity })
 ]);
 
+// These gates are deliberately stricter than a simple trade count. A clock
+// pattern seen five times on one day is repeatable within that day, but it is
+// not yet repeatable across days. Lifecycle comparisons require both sides to
+// clear the normal reliable-sample floor.
+export const INSIGHT_THRESHOLDS = Object.freeze({
+  reliableDistinctDays: 3,
+  consistentPositiveDayRate: 60,
+  concentrationWarningShare: 50,
+  lifecycleComparisonEachSide: CONFIDENCE_THRESHOLDS.reliable.min
+});
+
+// Field-level provenance contract for normalized Topstep records. This list is
+// intentionally about persisted trade-cycle metadata; transient raw order ids,
+// account names and source arrays are stripped upstream and are never expected
+// here. `kind` defines what counts as evidence for the completeness audit.
+const field = (name, label, category, appliesTo = "all", kind = "string") =>
+  Object.freeze({ field: name, label, category, appliesTo, kind });
+
+export const TOPSTEP_FIELD_DEFINITIONS = Object.freeze([
+  field("accountId", "Journal account", "identity"),
+  field("importBatchId", "Import batch", "identity"),
+  field("importSource", "Import source", "identity"),
+  field("externalSource", "External source", "identity"),
+  field("importKey", "Import dedupe key", "identity"),
+  field("externalTradeId", "Broker trade id", "identity", "trades"),
+  field("externalFingerprint", "Stable trade fingerprint", "identity"),
+  field("sourceAccountFingerprint", "Account fingerprint", "identity", "orders"),
+  field("sourceOrderFingerprints", "Order fingerprints", "identity", "orders", "array"),
+  field("status", "Trade status", "trade"),
+  field("market", "Market", "trade"),
+  field("asset", "Asset", "trade"),
+  field("contractName", "Contract name", "trade"),
+  field("direction", "Direction", "trade"),
+  field("entryPrice", "Entry price", "trade", "all", "number"),
+  field("exitPrice", "Exit price", "trade", "all", "number"),
+  field("positionSize", "Position size", "trade", "all", "positive-number"),
+  field("date", "Journal date", "execution"),
+  field("enteredAt", "Entry timestamp", "execution"),
+  field("exitedAt", "Exit timestamp", "execution"),
+  field("sourceTradeDay", "Broker trade day", "execution"),
+  field("sourceTimezone", "Execution timezone", "execution"),
+  field("sourceTimezoneProvenance", "Timezone provenance", "execution"),
+  field("tradeDuration", "Broker duration", "execution", "trades"),
+  field("sourceOrderCount", "Source order count", "lifecycle", "orders", "positive-number"),
+  field("roundTurnQuantity", "Round-turn quantity", "lifecycle", "orders", "positive-number"),
+  field("entryFillCount", "Entry fill count", "lifecycle", "orders", "positive-number"),
+  field("exitFillCount", "Exit fill count", "lifecycle", "orders", "positive-number"),
+  field("peakPositionSize", "Peak position size", "lifecycle", "orders", "positive-number"),
+  field("reconstructionMethod", "Reconstruction method", "lifecycle", "orders"),
+  field("reconstructedDuration", "Reconstructed duration", "lifecycle", "orders"),
+  field("sourceTradeDayTimezone", "Trade-day timezone", "lifecycle", "orders"),
+  field("sourceFullDayConfirmed", "Full-day export confirmation", "lifecycle", "orders", "boolean"),
+  field("sourceFullDayConfirmedAt", "Full-day confirmation time", "lifecycle", "orders"),
+  field("contractMultiplier", "Contract multiplier", "pnl", "orders", "positive-number"),
+  field("pnlProvenance", "P&L provenance", "pnl"),
+  field("pnlBasis", "P&L basis", "pnl"),
+  field("pnlIsEstimated", "Estimated P&L flag", "pnl", "all", "boolean"),
+  field("analyticsExcluded", "Analytics exclusion flag", "pnl", "all", "boolean"),
+  field("netPnl", "Persisted journal P&L", "pnl", "all", "number"),
+  field("calculatedGrossPnl", "Calculated gross P&L", "pnl", "orders", "number"),
+  field("estimatedNetPnl", "Estimated net P&L", "pnl", "orders", "number"),
+  field("brokerPnl", "Broker P&L", "pnl", "trades", "number"),
+  field("reportedNetPnl", "Reported net P&L", "pnl", "all", "number"),
+  field("costProvenance", "Cost provenance", "costs", "orders"),
+  field("costScheduleUrl", "Cost schedule URL", "costs", "orders"),
+  field("costScheduleAsOf", "Cost schedule as-of", "costs", "orders"),
+  field("costScheduleEffectiveFrom", "Cost schedule effective date", "costs", "orders"),
+  field("costScheduleVerifiedThrough", "Cost schedule verification horizon", "costs", "orders"),
+  field("estimatedFeeRate", "Estimated fee rate", "costs", "orders", "number"),
+  field("estimatedCommissionRate", "Estimated commission rate", "costs", "orders", "number"),
+  field("costAccountClass", "Cost account class", "costs", "orders"),
+  field("costEstimateUnavailableReason", "Cost estimate unavailable reason", "costs", "orders"),
+  field("estimatedFees", "Estimated fees", "costs", "orders", "number"),
+  field("estimatedCommissions", "Estimated commissions", "costs", "orders", "number"),
+  field("estimatedCosts", "Estimated total costs", "costs", "orders", "number"),
+  field("sourceFees", "Broker fees", "costs", "trades", "number"),
+  field("sourceCommissions", "Broker commissions", "costs", "trades", "number"),
+  field("fees", "Normalized fees", "costs", "trades", "number"),
+  field("commissions", "Normalized commissions", "costs", "trades", "number"),
+  field("costs", "Normalized total costs", "costs", "trades", "number")
+]);
+
 const FORMATTERS = new Map();
 
 export function isValidTimeZone(value) {
@@ -358,14 +440,17 @@ export function detectPrimarySession(instant, options = {}) {
   return { primary, active: active.map((entry) => entry.label) };
 }
 
-export function isNormalizedTrade(trade) {
-  if (!trade || typeof trade !== "object" || Array.isArray(trade)) return false;
-  const hasRawOrderShape = (
+function hasRawOrderRowShape(trade) {
+  return Boolean(trade && typeof trade === "object" && !Array.isArray(trade) && (
     Object.hasOwn(trade, "FilledAt") ||
     Object.hasOwn(trade, "PositionDisposition") ||
     Object.hasOwn(trade, "CreationDisposition")
-  ) && !Object.hasOwn(trade, "enteredAt");
-  if (hasRawOrderShape) return false;
+  ) && !Object.hasOwn(trade, "enteredAt"));
+}
+
+export function isNormalizedTrade(trade) {
+  if (!trade || typeof trade !== "object" || Array.isArray(trade)) return false;
+  if (hasRawOrderRowShape(trade)) return false;
   return [
     "id", "status", "date", "enteredAt", "exitedAt", "netPnl", "brokerPnl",
     "calculatedGrossPnl", "importSource", "externalSource"
@@ -500,6 +585,15 @@ function resolvedTopstepCosts(trade) {
     };
   }
 
+  // A partially preserved source pair cannot be completed with normalized
+  // zero defaults: zero may mean "not captured" after persistence. Likewise,
+  // buildTradeRecord stamps `pnlBasis: broker` when original cost evidence was
+  // absent. In both cases the honest result is broker P&L, not derived net.
+  const declaredBasis = String(trade?.pnlBasis || "").trim().toLowerCase();
+  if (hasSourceFees !== hasSourceCommissions || declaredBasis === "broker") {
+    return { known: false, value: null, source: "unavailable" };
+  }
+
   const fees = finiteNumber(trade?.fees);
   const commissions = finiteNumber(trade?.commissions);
   const hasFees = fees !== null;
@@ -611,6 +705,41 @@ export function getConfidenceState(sampleCount, options = {}) {
   };
 }
 
+export function getConsistencyConfidenceState(sampleCount, distinctDays, options = {}) {
+  const base = getConfidenceState(sampleCount, options);
+  const dayCount = Math.max(0, Math.floor(Number(distinctDays) || 0));
+  const minimumReliableDays = Math.max(
+    INSIGHT_THRESHOLDS.reliableDistinctDays,
+    Math.floor(Number(options.minimumReliableDays) || INSIGHT_THRESHOLDS.reliableDistinctDays)
+  );
+  if (base.key === "none" || dayCount === 0) {
+    return {
+      ...base,
+      key: "none",
+      label: "No cross-day evidence",
+      distinctDays: dayCount,
+      minimumReliableDays,
+      neededDaysForReliable: minimumReliableDays
+    };
+  }
+  if (base.key === "reliable" && dayCount >= minimumReliableDays) {
+    return {
+      ...base,
+      distinctDays: dayCount,
+      minimumReliableDays,
+      neededDaysForReliable: 0
+    };
+  }
+  return {
+    ...base,
+    key: base.key === "early" ? "early" : "developing",
+    label: base.key === "early" ? CONFIDENCE_THRESHOLDS.early.label : CONFIDENCE_THRESHOLDS.developing.label,
+    distinctDays: dayCount,
+    minimumReliableDays,
+    neededDaysForReliable: Math.max(0, minimumReliableDays - dayCount)
+  };
+}
+
 function quantile(sorted, probability) {
   if (!sorted.length) return null;
   const index = (sorted.length - 1) * probability;
@@ -650,14 +779,18 @@ function createAccumulator(label) {
     holdTotal: 0,
     holdCount: 0,
     basisCounts: new Map(),
+    pnlValues: [],
+    dailyPnl: new Map(),
+    datedTrades: 0,
     tradeIds: [],
     sourceIndexes: []
   };
 }
 
-function addToAccumulator(bucket, pnl, durationMs, tradeRef) {
+function addToAccumulator(bucket, pnl, durationMs, tradeRef, dateKey = null) {
   bucket.pnl += pnl.value;
   bucket.count += 1;
+  bucket.pnlValues.push(pnl.value);
   if (pnl.value > 0) bucket.wins += 1;
   else if (pnl.value < 0) bucket.losses += 1;
   else bucket.breakeven += 1;
@@ -666,6 +799,10 @@ function addToAccumulator(bucket, pnl, durationMs, tradeRef) {
     bucket.holdCount += 1;
   }
   bucket.basisCounts.set(pnl.basis, (bucket.basisCounts.get(pnl.basis) || 0) + 1);
+  if (dateKey) {
+    bucket.dailyPnl.set(dateKey, (bucket.dailyPnl.get(dateKey) || 0) + pnl.value);
+    bucket.datedTrades += 1;
+  }
   if (tradeRef.id) bucket.tradeIds.push(tradeRef.id);
   bucket.sourceIndexes.push(tradeRef.sourceIndex);
 }
@@ -710,6 +847,20 @@ function summarizePnlBasis(basisCounts) {
 
 function finalizeAccumulator(bucket, minimumReliableSamples, extras = {}) {
   const pnlBasis = summarizePnlBasis(bucket.basisCounts);
+  const sortedPnl = [...bucket.pnlValues].sort((left, right) => left - right);
+  const dailyValues = [...bucket.dailyPnl.values()];
+  const profitableDays = dailyValues.filter((value) => value > 0).length;
+  const losingDays = dailyValues.filter((value) => value < 0).length;
+  const flatDays = dailyValues.filter((value) => value === 0).length;
+  const distinctDays = dailyValues.length;
+  const positivePnl = bucket.pnlValues.filter((value) => value > 0);
+  const grossProfit = positivePnl.reduce((sum, value) => sum + value, 0);
+  const largestWinner = positivePnl.length ? Math.max(...positivePnl) : null;
+  const consistencyConfidence = getConsistencyConfidenceState(bucket.count, distinctDays, {
+    minimumReliableSamples
+  });
+  const medianPnl = sortedPnl.length ? roundTo(quantile(sortedPnl, 0.5)) : null;
+  const profitableDayRate = distinctDays ? roundTo((profitableDays / distinctDays) * 100, 1) : null;
   return {
     ...extras,
     label: bucket.label,
@@ -720,8 +871,21 @@ function finalizeAccumulator(bucket, minimumReliableSamples, extras = {}) {
     breakeven: bucket.breakeven,
     winRate: bucket.count ? roundTo((bucket.wins / bucket.count) * 100) : 0,
     expectancy: bucket.count ? roundTo(bucket.pnl / bucket.count) : 0,
+    medianPnl,
     avgHoldMs: bucket.holdCount ? Math.round(bucket.holdTotal / bucket.holdCount) : null,
     confidence: getConfidenceState(bucket.count, { minimumReliableSamples }),
+    consistencyConfidence,
+    distinctDays,
+    profitableDays,
+    losingDays,
+    flatDays,
+    datedTrades: bucket.datedTrades,
+    undatedTrades: bucket.count - bucket.datedTrades,
+    profitableDayRate,
+    largestWinner: largestWinner === null ? null : roundTo(largestWinner),
+    largestWinnerSharePct: grossProfit > 0 ? roundTo((largestWinner / grossProfit) * 100, 1) : null,
+    consistentPositive: consistencyConfidence.key === "reliable" && bucket.pnl > 0 &&
+      medianPnl > 0 && profitableDayRate >= INSIGHT_THRESHOLDS.consistentPositiveDayRate,
     pnlBasis: pnlBasis.basis,
     pnlLabel: pnlBasis.label,
     pnlEstimated: pnlBasis.isEstimated,
@@ -947,6 +1111,500 @@ function missingFieldsFor(timing, pnl, source) {
   };
 }
 
+function consistentFirst(left, right) {
+  return (right.profitableDayRate ?? -1) - (left.profitableDayRate ?? -1) ||
+    (right.medianPnl ?? -Infinity) - (left.medianPnl ?? -Infinity) ||
+    right.pnl - left.pnl || right.count - left.count ||
+    (Number.isFinite(left.hour) && Number.isFinite(right.hour)
+      ? left.hour - right.hour
+      : left.label.localeCompare(right.label));
+}
+
+function buildEntryConsistency(hours) {
+  const observedPositive = hours
+    .filter((row) => row.count > 0 && row.pnl > 0)
+    .sort(consistentFirst);
+  const reliablePositive = observedPositive.filter((row) => row.consistentPositive);
+  const concentrationRiskHours = hours
+    .filter((row) => row.count > 1 && row.largestWinnerSharePct !== null &&
+      row.largestWinnerSharePct >= INSIGHT_THRESHOLDS.concentrationWarningShare)
+    .sort((left, right) => right.largestWinnerSharePct - left.largestWinnerSharePct || consistentFirst(left, right));
+  return {
+    meaning: "Cross-day entry-hour consistency. A reliable result needs both the trade-count floor and activity on at least three distinct report-timezone dates.",
+    minimumDistinctDays: INSIGHT_THRESHOLDS.reliableDistinctDays,
+    positiveDayRateThreshold: INSIGHT_THRESHOLDS.consistentPositiveDayRate,
+    concentrationWarningShare: INSIGHT_THRESHOLDS.concentrationWarningShare,
+    mostConsistentHour: reliablePositive[0] || null,
+    strongestObservedHour: observedPositive[0] || null,
+    reliableHours: hours.filter((row) => row.consistencyConfidence.key === "reliable").length,
+    concentrationRiskHours
+  };
+}
+
+function numericAboveZero(value) {
+  const number = finiteNumber(value);
+  return number !== null && number > 0 ? number : null;
+}
+
+function lifecycleEntryKey(trade) {
+  const entryFillCount = numericAboveZero(trade?.entryFillCount);
+  const roundTurnQuantity = numericAboveZero(trade?.roundTurnQuantity);
+  const peakPositionSize = numericAboveZero(trade?.peakPositionSize);
+  if (roundTurnQuantity !== null && peakPositionSize !== null && roundTurnQuantity > peakPositionSize) {
+    return "re-entry-after-partial-exit";
+  }
+  if (entryFillCount === 1) return "single-fill-entry";
+  if (entryFillCount !== null && entryFillCount > 1) return "multi-fill-entry";
+  return "unknown-entry-structure";
+}
+
+function lifecycleExitKey(trade) {
+  const exitFillCount = numericAboveZero(trade?.exitFillCount);
+  if (exitFillCount === 1) return "single-fill-exit";
+  if (exitFillCount !== null && exitFillCount > 1) return "multi-fill-exit";
+  return "unknown-exit-structure";
+}
+
+function peakSizeKey(trade) {
+  const peak = numericAboveZero(trade?.peakPositionSize);
+  if (peak === null) return "unknown-peak-size";
+  if (peak === 1) return "peak-1";
+  if (peak < 4) return "peak-2-3";
+  return "peak-4-plus";
+}
+
+function createSegmentMap(definitions) {
+  return new Map(definitions.map((definition) => [definition.key, createAccumulator(definition.label)]));
+}
+
+function finalizedSegments(definitions, accumulators, minimumReliableSamples) {
+  return definitions.map((definition) => finalizeAccumulator(
+    accumulators.get(definition.key),
+    minimumReliableSamples,
+    { key: definition.key, meaning: definition.meaning }
+  ));
+}
+
+function compareSegments(left, right, minimumReliableSamples) {
+  const sampleFloor = Math.max(INSIGHT_THRESHOLDS.lifecycleComparisonEachSide, minimumReliableSamples);
+  const available = Boolean(left?.count && right?.count);
+  const confidence = getConfidenceState(available ? Math.min(left.count, right.count) : 0, {
+    minimumReliableSamples: sampleFloor
+  });
+  const basisComparable = available && left.pnlBasis === right.pnlBasis && left.pnlBasis !== "unavailable";
+  const sampleReliable = confidence.key === "reliable";
+  const reliable = sampleReliable && basisComparable;
+  const expectancyDelta = available ? roundTo(left.expectancy - right.expectancy) : null;
+  const winRateDelta = available ? roundTo(left.winRate - right.winRate, 1) : null;
+  const pnlDelta = available ? roundTo(left.pnl - right.pnl) : null;
+  const favoredKey = reliable && expectancyDelta !== 0
+    ? expectancyDelta > 0 ? left.key : right.key
+    : null;
+  const conclusion = !available
+    ? "Both segments need measured trades before they can be compared."
+    : !sampleReliable
+      ? `Developing only: each segment needs at least ${sampleFloor} measured trades.`
+      : !basisComparable
+        ? "Samples are sufficient, but their P&L bases differ; no winner is declared."
+        : expectancyDelta === 0
+          ? "Reliable sample sizes; expectancy is tied."
+          : `${favoredKey === left.key ? left.label : right.label} has higher expectancy at reliable sample sizes.`;
+  return {
+    available,
+    reliable,
+    leftKey: left?.key || null,
+    rightKey: right?.key || null,
+    sampleFloor,
+    basisComparable,
+    leftPnlBasis: left?.pnlBasis || "unavailable",
+    rightPnlBasis: right?.pnlBasis || "unavailable",
+    expectancyDelta,
+    winRateDelta,
+    pnlDelta,
+    favoredKey,
+    confidence,
+    conclusion
+  };
+}
+
+function normalizedFingerprints(trade) {
+  return Array.isArray(trade?.sourceOrderFingerprints)
+    ? [...new Set(trade.sourceOrderFingerprints.map((value) => String(value || "").trim().toLowerCase()).filter(Boolean))]
+    : [];
+}
+
+function buildLifecycleAnalysis(records, minimumReliableSamples) {
+  const ordersRecords = records.filter((record) => record.source.kind === "orders");
+  const analyzedOrders = ordersRecords.filter((record) => record.pnl.value !== null);
+  const entryDefinitions = [
+    { key: "single-fill-entry", label: "Single-fill entry", meaning: "One recorded opening fill." },
+    { key: "multi-fill-entry", label: "Multi-fill entry", meaning: "More than one recorded opening fill; this does not prove scale-in intent." },
+    { key: "re-entry-after-partial-exit", label: "Re-entry after partial exit", meaning: "Round-turn quantity exceeded peak size, proving quantity was reopened after an earlier reduction." },
+    { key: "unknown-entry-structure", label: "Entry structure unavailable", meaning: "Opening fill or size evidence is incomplete." }
+  ];
+  const exitDefinitions = [
+    { key: "single-fill-exit", label: "Single-fill exit", meaning: "One recorded closing fill." },
+    { key: "multi-fill-exit", label: "Multi-fill exit", meaning: "More than one recorded closing fill; this does not identify discretionary scaling intent." },
+    { key: "unknown-exit-structure", label: "Exit structure unavailable", meaning: "Closing fill evidence is incomplete." }
+  ];
+  const peakDefinitions = [
+    { key: "peak-1", label: "Peak size: 1", meaning: "Maximum reconstructed open quantity was one contract." },
+    { key: "peak-2-3", label: "Peak size: 2-3", meaning: "Maximum reconstructed open quantity was two or three contracts." },
+    { key: "peak-4-plus", label: "Peak size: 4+", meaning: "Maximum reconstructed open quantity was four or more contracts." },
+    { key: "unknown-peak-size", label: "Peak size unavailable", meaning: "Peak reconstructed quantity is missing." }
+  ];
+  const entryAccumulators = createSegmentMap(entryDefinitions);
+  const exitAccumulators = createSegmentMap(exitDefinitions);
+  const peakAccumulators = createSegmentMap(peakDefinitions);
+  const reentryDefinitions = [
+    { key: "re-entry", label: "Re-entry observed", meaning: "Round-turn quantity exceeded peak size." },
+    { key: "no-re-entry", label: "No re-entry observed", meaning: "Round-turn quantity did not exceed peak size." }
+  ];
+  const peakComparisonDefinitions = [
+    { key: "peak-one", label: "Peak size: 1", meaning: "Peak reconstructed quantity was one contract." },
+    { key: "peak-multiple", label: "Peak size: 2+", meaning: "Peak reconstructed quantity was at least two contracts." }
+  ];
+  const reentryAccumulators = createSegmentMap(reentryDefinitions);
+  const peakComparisonAccumulators = createSegmentMap(peakComparisonDefinitions);
+
+  for (const record of analyzedOrders) {
+    const entryKey = lifecycleEntryKey(record.trade);
+    const peakKey = peakSizeKey(record.trade);
+    addToAccumulator(entryAccumulators.get(entryKey), record.pnl, record.timing.durationMs, record.tradeRef, record.dateKey);
+    addToAccumulator(exitAccumulators.get(lifecycleExitKey(record.trade)), record.pnl, record.timing.durationMs, record.tradeRef, record.dateKey);
+    addToAccumulator(peakAccumulators.get(peakKey), record.pnl, record.timing.durationMs, record.tradeRef, record.dateKey);
+    if (entryKey !== "unknown-entry-structure") {
+      addToAccumulator(
+        reentryAccumulators.get(entryKey === "re-entry-after-partial-exit" ? "re-entry" : "no-re-entry"),
+        record.pnl,
+        record.timing.durationMs,
+        record.tradeRef,
+        record.dateKey
+      );
+    }
+    if (peakKey !== "unknown-peak-size") {
+      addToAccumulator(
+        peakComparisonAccumulators.get(peakKey === "peak-1" ? "peak-one" : "peak-multiple"),
+        record.pnl,
+        record.timing.durationMs,
+        record.tradeRef,
+        record.dateKey
+      );
+    }
+  }
+
+  const entrySegments = finalizedSegments(entryDefinitions, entryAccumulators, minimumReliableSamples);
+  const exitSegments = finalizedSegments(exitDefinitions, exitAccumulators, minimumReliableSamples);
+  const peakSegments = finalizedSegments(peakDefinitions, peakAccumulators, minimumReliableSamples);
+  const entryByKey = new Map(entrySegments.map((row) => [row.key, row]));
+  const exitByKey = new Map(exitSegments.map((row) => [row.key, row]));
+  const reentrySegments = finalizedSegments(reentryDefinitions, reentryAccumulators, minimumReliableSamples);
+  const reentryByKey = new Map(reentrySegments.map((row) => [row.key, row]));
+  const peakComparisonSegments = finalizedSegments(
+    peakComparisonDefinitions,
+    peakComparisonAccumulators,
+    minimumReliableSamples
+  );
+  const peakComparisonByKey = new Map(peakComparisonSegments.map((row) => [row.key, row]));
+
+  const fingerprintOwners = new Map();
+  for (const record of ordersRecords) {
+    for (const fingerprint of normalizedFingerprints(record.trade)) {
+      const owners = fingerprintOwners.get(fingerprint) || new Set();
+      owners.add(record.sourceIndex);
+      fingerprintOwners.set(fingerprint, owners);
+    }
+  }
+  const linkedIndexes = new Set();
+  for (const owners of fingerprintOwners.values()) {
+    if (owners.size > 1) for (const sourceIndex of owners) linkedIndexes.add(sourceIndex);
+  }
+  const reversalDefinitions = [
+    { key: "reversal-linked", label: "Shared-fill / reversal-linked", meaning: "This cycle shares a stable source-order fingerprint with another reconstructed cycle." },
+    { key: "standalone-orders", label: "Standalone reconstructed cycle", meaning: "No source-order fingerprint is shared with another included cycle." }
+  ];
+  const reversalAccumulators = createSegmentMap(reversalDefinitions);
+  const evaluableRecords = analyzedOrders.filter((record) => normalizedFingerprints(record.trade).length > 0);
+  for (const record of evaluableRecords) {
+    const key = linkedIndexes.has(record.sourceIndex) ? "reversal-linked" : "standalone-orders";
+    addToAccumulator(reversalAccumulators.get(key), record.pnl, record.timing.durationMs, record.tradeRef, record.dateKey);
+  }
+  const reversalSegments = finalizedSegments(reversalDefinitions, reversalAccumulators, minimumReliableSamples);
+  const reversalByKey = new Map(reversalSegments.map((row) => [row.key, row]));
+  const linkedRecords = ordersRecords.filter((record) => linkedIndexes.has(record.sourceIndex));
+
+  const peakMeasured = peakSegments.filter((row) => row.key !== "unknown-peak-size");
+  return {
+    meaning: "Lifecycle evidence comes only from normalized Topstep Orders trade cycles. Fill counts describe executions, not trader intent.",
+    source: "topstepx-orders-normalized-cycles",
+    scaleInIntentSupported: false,
+    coverage: {
+      ordersTrades: ordersRecords.length,
+      analyzed: analyzedOrders.length,
+      entryStructureKnown: ordersRecords.filter((record) => lifecycleEntryKey(record.trade) !== "unknown-entry-structure").length,
+      exitStructureKnown: ordersRecords.filter((record) => lifecycleExitKey(record.trade) !== "unknown-exit-structure").length,
+      peakSizeKnown: ordersRecords.filter((record) => peakSizeKey(record.trade) !== "unknown-peak-size").length,
+      reversalLinkEvaluable: ordersRecords.filter((record) => normalizedFingerprints(record.trade).length > 0).length,
+      reversalLinked: linkedRecords.length
+    },
+    entryStructure: {
+      segments: entrySegments,
+      singleVsMultiFill: compareSegments(
+        entryByKey.get("single-fill-entry"),
+        entryByKey.get("multi-fill-entry"),
+        minimumReliableSamples
+      ),
+      reentrySegments,
+      reentryVsNoReentry: compareSegments(
+        reentryByKey.get("re-entry"),
+        reentryByKey.get("no-re-entry"),
+        minimumReliableSamples
+      )
+    },
+    exitStructure: {
+      segments: exitSegments,
+      singleVsMultiFill: compareSegments(
+        exitByKey.get("single-fill-exit"),
+        exitByKey.get("multi-fill-exit"),
+        minimumReliableSamples
+      )
+    },
+    peakSize: {
+      segments: peakSegments,
+      bestReliableBand: rankedRow(peakMeasured, { reliable: true, positive: true }),
+      strongestObservedBand: rankedRow(peakMeasured),
+      comparisonSegments: peakComparisonSegments,
+      oneVsMultiple: compareSegments(
+        peakComparisonByKey.get("peak-one"),
+        peakComparisonByKey.get("peak-multiple"),
+        minimumReliableSamples
+      )
+    },
+    reversal: {
+      method: "Two normalized cycles are linked only when they share a persisted sourceOrderFingerprint from upstream reconstruction.",
+      segments: reversalSegments,
+      comparison: compareSegments(
+        reversalByKey.get("reversal-linked"),
+        reversalByKey.get("standalone-orders"),
+        minimumReliableSamples
+      ),
+      linkedTradeIds: linkedRecords.map((record) => record.id).filter(Boolean),
+      linkedSourceIndexes: linkedRecords.map((record) => record.sourceIndex),
+      confidence: getConfidenceState(linkedRecords.length, { minimumReliableSamples })
+    }
+  };
+}
+
+function fieldApplies(definition, source) {
+  return definition.appliesTo === "all" || definition.appliesTo === source.kind;
+}
+
+function fieldValueAvailable(trade, definition) {
+  const value = trade?.[definition.field];
+  if (definition.kind === "boolean") return Object.hasOwn(trade || {}, definition.field) && typeof value === "boolean";
+  if (definition.kind === "array") return Array.isArray(value) && value.length > 0;
+  if (definition.kind === "number") return finiteNumber(value) !== null;
+  if (definition.kind === "positive-number") return numericAboveZero(value) !== null;
+  const text = String(value ?? "").trim();
+  if (!text) return false;
+  if (definition.field === "sourceTimezone") return isValidTimeZone(text);
+  if (definition.field === "sourceTimezoneProvenance") return !["unknown", "unresolved"].includes(text.toLowerCase());
+  return true;
+}
+
+function buildDataQuality(records, rawOrderRowsExcluded, invalidNormalizedRowsExcluded) {
+  const topstepRecords = records.filter((record) => record.source.topstep);
+  const tradesRecords = topstepRecords.filter((record) => record.source.kind === "trades");
+  const ordersRecords = topstepRecords.filter((record) => record.source.kind === "orders");
+  const recordIds = (rows) => rows.map((record) => record.id).filter(Boolean);
+  const recordIndexes = (rows) => rows.map((record) => record.sourceIndex);
+  const percent = (value, total) => total ? roundTo((value / total) * 100, 1) : 0;
+  const fieldCoverage = {};
+
+  for (const definition of TOPSTEP_FIELD_DEFINITIONS) {
+    const applicableRecords = topstepRecords.filter((record) => fieldApplies(definition, record.source));
+    const availableRecords = applicableRecords.filter((record) => fieldValueAvailable(record.trade, definition));
+    const missingRecords = applicableRecords.filter((record) => !fieldValueAvailable(record.trade, definition));
+    fieldCoverage[definition.field] = {
+      label: definition.label,
+      category: definition.category,
+      appliesTo: definition.appliesTo,
+      kind: definition.kind,
+      available: availableRecords.length,
+      applicable: applicableRecords.length,
+      missing: missingRecords.length,
+      percent: percent(availableRecords.length, applicableRecords.length),
+      availableTradeIds: recordIds(availableRecords),
+      availableSourceIndexes: recordIndexes(availableRecords),
+      missingTradeIds: recordIds(missingRecords),
+      missingSourceIndexes: recordIndexes(missingRecords)
+    };
+  }
+
+  const exactEntries = topstepRecords.filter((record) => record.timing.entryQuality === "exact");
+  const assumedEntries = topstepRecords.filter((record) => record.timing.entryQuality === "assumed");
+  const unresolvedEntries = topstepRecords.filter((record) => record.timing.entryMs === null);
+  const exactExits = topstepRecords.filter((record) => record.timing.exitQuality === "exact");
+  const assumedExits = topstepRecords.filter((record) => record.timing.exitQuality === "assumed");
+  const unresolvedExits = topstepRecords.filter((record) => record.timing.exitMs === null);
+  const durationKnown = topstepRecords.filter((record) => record.timing.durationMs !== null);
+  const executionComplete = topstepRecords.filter((record) =>
+    record.timing.entryMs !== null && record.timing.exitMs !== null && record.timing.durationMs !== null
+  );
+  const basisCount = (basis) => topstepRecords.filter((record) => record.pnl.basis === basis).length;
+  const pnlKnown = topstepRecords.filter((record) => record.pnl.value !== null);
+  const lifecycleComplete = ordersRecords.filter((record) =>
+    numericAboveZero(record.trade.sourceOrderCount) !== null &&
+    numericAboveZero(record.trade.roundTurnQuantity) !== null &&
+    numericAboveZero(record.trade.entryFillCount) !== null &&
+    numericAboveZero(record.trade.exitFillCount) !== null &&
+    numericAboveZero(record.trade.peakPositionSize) !== null &&
+    Boolean(String(record.trade.reconstructionMethod || "").trim())
+  );
+  const stableIdentity = topstepRecords.filter((record) =>
+    Boolean(String(record.trade.importKey || record.trade.externalTradeId || record.trade.externalFingerprint || "").trim())
+  );
+
+  return {
+    grain: "one normalized closed trade cycle after report date filtering and exact-identity deduplication",
+    topstepTrades: tradesRecords.length,
+    topstepOrders: ordersRecords.length,
+    rawOrderRowsExcluded,
+    invalidNormalizedRowsExcluded,
+    identity: {
+      stable: stableIdentity.length,
+      missing: topstepRecords.length - stableIdentity.length,
+      percent: percent(stableIdentity.length, topstepRecords.length)
+    },
+    execution: {
+      total: topstepRecords.length,
+      entry: { exact: exactEntries.length, assumed: assumedEntries.length, unresolved: unresolvedEntries.length },
+      exit: { exact: exactExits.length, assumed: assumedExits.length, unresolved: unresolvedExits.length },
+      durationKnown: durationKnown.length,
+      complete: executionComplete.length,
+      completePercent: percent(executionComplete.length, topstepRecords.length),
+      incompleteTradeIds: recordIds(topstepRecords.filter((record) => !executionComplete.includes(record))),
+      incompleteSourceIndexes: recordIndexes(topstepRecords.filter((record) => !executionComplete.includes(record)))
+    },
+    pnlAndCosts: {
+      total: topstepRecords.length,
+      known: pnlKnown.length,
+      knownPercent: percent(pnlKnown.length, topstepRecords.length),
+      exactNet: basisCount("net"),
+      estimatedNet: basisCount("estimated-net"),
+      grossOnly: basisCount("gross"),
+      brokerOnly: basisCount("broker"),
+      missing: basisCount("unavailable"),
+      netBasisPercent: percent(basisCount("net") + basisCount("estimated-net"), topstepRecords.length),
+      meaning: "Exact net subtracts evidenced costs from broker P&L; estimated net uses provenance-stamped Orders cost estimates. Gross-only and broker-only results are never relabeled net."
+    },
+    lifecycle: {
+      applicableOrders: ordersRecords.length,
+      complete: lifecycleComplete.length,
+      completePercent: percent(lifecycleComplete.length, ordersRecords.length),
+      fingerprintKnown: ordersRecords.filter((record) => normalizedFingerprints(record.trade).length > 0).length,
+      fullDayConfirmed: ordersRecords.filter((record) => record.trade.sourceFullDayConfirmed === true).length,
+      fullDayConfirmationMeaning: "A user attestation that the imported Orders file covered the complete trade day; it is not independent broker verification."
+    },
+    fieldCoverage,
+    limitations: [
+      "Presence coverage is reported field by field; optional provenance fields are not combined into a synthetic quality score.",
+      "Raw Orders rows are excluded. Lifecycle analytics use only upstream normalized flat-to-flat cycles.",
+      "Endpoint entry and exit values do not reveal the intratrade price or unrealized-P&L path."
+    ]
+  };
+}
+
+function buildSessionHoldInteraction(records, minimumReliableSamples) {
+  const cellMap = new Map();
+  for (const sessionLabel of SESSION_ROW_LABELS) {
+    for (const band of DURATION_BANDS) {
+      cellMap.set(`${sessionLabel}:${band.key}`, createAccumulator(`${sessionLabel} · ${band.label}`));
+    }
+  }
+  let eligibleTrades = 0;
+  for (const record of records) {
+    if (record.pnl.value === null || record.timing.durationMs === null || !SESSION_ROW_LABELS.includes(record.timing.session)) continue;
+    const band = durationBandFor(record.timing.durationMs);
+    if (!band) continue;
+    eligibleTrades += 1;
+    addToAccumulator(
+      cellMap.get(`${record.timing.session}:${band.key}`),
+      record.pnl,
+      record.timing.durationMs,
+      record.tradeRef,
+      record.dateKey
+    );
+  }
+  const cells = SESSION_ROW_LABELS.flatMap((sessionLabel) => DURATION_BANDS.map((band) => finalizeAccumulator(
+    cellMap.get(`${sessionLabel}:${band.key}`),
+    minimumReliableSamples,
+    {
+      key: `${sessionLabel.toLowerCase().replace(/\s+/g, "-")}:${band.key}`,
+      sessionKey: sessionLabel.toLowerCase().replace(/\s+/g, "-"),
+      sessionLabel,
+      durationKey: band.key,
+      durationLabel: band.label,
+      minMs: band.minMs,
+      maxMs: Number.isFinite(band.maxMs) ? band.maxMs : null
+    }
+  )));
+  return {
+    meaning: "P&L by detected venue session and completed-trade holding-time band. The best cell is shown only after the reliable sample floor.",
+    cells,
+    bestCell: rankedRow(cells, { reliable: true, positive: true }),
+    strongestObservedCell: rankedRow(cells),
+    coverage: {
+      eligibleTrades,
+      populatedCells: cells.filter((cell) => cell.count > 0).length,
+      reliableCells: cells.filter((cell) => cell.confidence.key === "reliable").length,
+      totalCells: cells.length
+    }
+  };
+}
+
+function pathDependentCapabilities(records) {
+  const winnerRecords = records.filter((record) => record.pnl.value !== null && record.pnl.value > 0);
+  const tradeIds = winnerRecords.map((record) => record.id).filter(Boolean);
+  const sourceIndexes = winnerRecords.map((record) => record.sourceIndex);
+  return {
+    winnerGiveback: {
+      supported: false,
+      value: null,
+      measuredTrades: 0,
+      eligibleWinnerTrades: winnerRecords.length,
+      tradeIds,
+      sourceIndexes,
+      endpointOnly: true,
+      reason: "Entry, exit and final P&L do not reveal peak unrealized profit or the intratrade price path.",
+      requires: ["broker MFE or peak-unrealized-P&L data", "intratrade price path"]
+    },
+    timeAboveBreakeven: {
+      supported: false,
+      value: null,
+      measuredTrades: 0,
+      eligibleTrades: records.filter((record) => record.timing.entryMs !== null && record.timing.exitMs !== null).length,
+      endpointOnly: true,
+      reason: "Two execution endpoints cannot measure how long a position's unrealized P&L stayed above zero.",
+      requires: ["timestamped intratrade position P&L or price path"]
+    },
+    maximumFavorableExcursion: {
+      supported: false,
+      value: null,
+      measuredTrades: 0,
+      endpointOnly: true,
+      reason: "No preserved normalized Topstep field contains MFE."
+    },
+    maximumAdverseExcursion: {
+      supported: false,
+      value: null,
+      measuredTrades: 0,
+      endpointOnly: true,
+      reason: "No preserved normalized Topstep field contains MAE."
+    }
+  };
+}
+
 export function buildSessionTimingReport(trades, options = {}) {
   const reportTimeZone = requireTimeZone(options.reportTimeZone, DEFAULT_REPORT_TIME_ZONE);
   const configuredSourceZone = String(options.sourceTimeZone || "").trim();
@@ -979,6 +1637,7 @@ export function buildSessionTimingReport(trades, options = {}) {
     analyticsExcluded: 0,
     duplicatesExcluded: 0,
     invalidNormalized: 0,
+    rawOrderRowsExcluded: 0,
     outsideDateRange: 0,
     dateUnresolved: 0,
     dateFallback: 0,
@@ -1002,6 +1661,7 @@ export function buildSessionTimingReport(trades, options = {}) {
     const source = detectNormalizedTradeSource(trade);
     if (!source.normalized) {
       coverage.invalidNormalized += 1;
+      if (hasRawOrderRowShape(trade)) coverage.rawOrderRowsExcluded += 1;
       continue;
     }
     if (String(trade.status || "closed").trim().toLowerCase() === "open") {
@@ -1089,17 +1749,17 @@ export function buildSessionTimingReport(trades, options = {}) {
     if (pnl.value === null) continue;
     const sessionLabel = SESSION_ROW_LABELS.includes(timing.session) ? timing.session : UNRESOLVED_SESSION;
     if (sessionLabel === UNRESOLVED_SESSION) coverage.sessionUnresolved += 1;
-    else addToAccumulator(sessions.get(sessionLabel), pnl, timing.durationMs, tradeRef);
+    else addToAccumulator(sessions.get(sessionLabel), pnl, timing.durationMs, tradeRef, dateKey);
 
     if (timing.entryMs !== null) {
       const local = getZonedDateParts(timing.entryMs, reportTimeZone);
-      if (local) addToAccumulator(hourAccumulators[local.hour], pnl, timing.durationMs, tradeRef);
+      if (local) addToAccumulator(hourAccumulators[local.hour], pnl, timing.durationMs, tradeRef, dateKey);
     }
     if (timing.durationMs !== null) {
       if (pnl.value > 0) winnerDurations.push(timing.durationMs);
       if (pnl.value < 0) loserDurations.push(timing.durationMs);
       const band = durationBandFor(timing.durationMs);
-      if (band) addToAccumulator(bandAccumulators.get(band.key), pnl, timing.durationMs, tradeRef);
+      if (band) addToAccumulator(bandAccumulators.get(band.key), pnl, timing.durationMs, tradeRef, dateKey);
     }
   }
 
@@ -1118,6 +1778,15 @@ export function buildSessionTimingReport(trades, options = {}) {
     minimumReliableSamples,
     { key: band.key, minMs: band.minMs, maxMs: Number.isFinite(band.maxMs) ? band.maxMs : null }
   ));
+  const entryConsistency = buildEntryConsistency(hours);
+  const lifecycle = buildLifecycleAnalysis(records, minimumReliableSamples);
+  const dataQuality = buildDataQuality(
+    records,
+    coverage.rawOrderRowsExcluded,
+    coverage.invalidNormalized
+  );
+  const sessionHold = buildSessionHoldInteraction(records, minimumReliableSamples);
+  const pathDependent = pathDependentCapabilities(records);
 
   const bestObservedSession = rankedRow(sessionRows);
   const bestSession = rankedRow(sessionRows, { reliable: true, positive: true });
@@ -1229,6 +1898,7 @@ export function buildSessionTimingReport(trades, options = {}) {
     sourceTimeZone: configuredSourceZone,
     minimumReliableSamples,
     confidenceThresholds: CONFIDENCE_THRESHOLDS,
+    insightThresholds: INSIGHT_THRESHOLDS,
     confidence,
     dateRange,
     timeZones,
@@ -1252,7 +1922,8 @@ export function buildSessionTimingReport(trades, options = {}) {
       bestHour,
       strongestObservedHour: bestObservedHour,
       weakestHour,
-      weakestObservedHour
+      weakestObservedHour,
+      consistency: entryConsistency
     },
     duration: {
       meaning: "Holding time of closed winners and losers, not time spent floating in profit.",
@@ -1263,6 +1934,10 @@ export function buildSessionTimingReport(trades, options = {}) {
       bestBand,
       strongestObservedBand
     },
+    lifecycle,
+    dataQuality,
+    interactions: { sessionHold },
+    pathDependent,
     journalCoverage,
     coverage,
     // Compatibility aliases used by the existing chart/renderer while the

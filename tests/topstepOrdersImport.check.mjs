@@ -356,11 +356,6 @@ expectFailure(
   "non-Filled row with execution evidence"
 );
 expectFailure(
-  [order({ CreationDisposition: "ReversePosition" }), pair()[1]],
-  /Row 2: .*ReversePosition orders are not supported/,
-  "explicit reverse-position order"
-);
-expectFailure(
   [order({ FilledAt: "08\/13\/2026 09:00:00" }), pair()[1]],
   /Row 2: .*FilledAt must be an explicit timestamp/,
   "timestamp without source offset"
@@ -380,11 +375,12 @@ expectFailure(
     order({
       Id: "SANITIZED-WRONG-OPEN",
       Side: "Ask",
+      CreationDisposition: "ReversePosition",
       CreatedAt: "08/13/2026 09:01:00 +08:00",
       FilledAt: "08/13/2026 09:01:00 +08:00"
     })
   ]));
-  assert.deepEqual(offset.errors, [], "a reversing fill is split, not rejected");
+  assert.deepEqual(offset.errors, [], "an explicit ReversePosition fill is split, not rejected");
   assert.equal(offset.trades.length, 1);
   assert.equal(offset.openPositions.length, 0);
 }
@@ -502,6 +498,7 @@ assert.match(
     order({
       Id: "SANITIZED-REV-2", Size: "5", Side: "Ask", ExecutePrice: "4438.100000000",
       PositionDisposition: "Opening",
+      CreationDisposition: "ReversePosition",
       CreatedAt: "08/13/2026 09:05:00 +08:00", FilledAt: "08/13/2026 09:05:00 +08:00"
     }),
     order({

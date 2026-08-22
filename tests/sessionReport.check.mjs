@@ -6,11 +6,14 @@ import { fileURLToPath } from "node:url";
 import {
   CONFIDENCE_THRESHOLDS,
   DEFAULT_REPORT_TIME_ZONE,
+  INSIGHT_THRESHOLDS,
   MIN_RELIABLE_HOUR_SAMPLES,
+  TOPSTEP_FIELD_DEFINITIONS,
   buildSessionTimingReport,
   detectNormalizedTradeSource,
   detectPrimarySession,
   getConfidenceState,
+  getConsistencyConfidenceState,
   parseDurationMs,
   parseExecutionTimestamp,
   resolveTradePnl,
@@ -74,6 +77,14 @@ const topstepOrders = (overrides = {}) => closed({
   assert.equal(getConfidenceState(3).key, "developing");
   assert.equal(getConfidenceState(4).key, "developing");
   assert.equal(getConfidenceState(5).key, "reliable");
+  assert.deepEqual(INSIGHT_THRESHOLDS, {
+    reliableDistinctDays: 3,
+    consistentPositiveDayRate: 60,
+    concentrationWarningShare: 50,
+    lifecycleComparisonEachSide: 5
+  });
+  assert.equal(getConsistencyConfidenceState(5, 1).key, "developing");
+  assert.equal(getConsistencyConfidenceState(5, 3).key, "reliable");
   assert.deepEqual(getConfidenceState(5, { minimumReliableSamples: 7 }), {
     key: "developing",
     label: "Developing",
@@ -190,6 +201,9 @@ const topstepOrders = (overrides = {}) => closed({
   assert.equal(detectNormalizedTradeSource(rawOrder).normalized, false);
   const report = buildSessionTimingReport([rawOrder, topstepOrders()]);
   assert.equal(report.coverage.invalidNormalized, 1);
+  assert.equal(report.coverage.rawOrderRowsExcluded, 1);
+  assert.equal(report.dataQuality.rawOrderRowsExcluded, 1);
+  assert.equal(report.dataQuality.invalidNormalizedRowsExcluded, 1);
   assert.equal(report.coverage.total, 1);
   assert.equal(report.source.key, "topstepx-orders");
 }
@@ -230,6 +244,19 @@ const topstepOrders = (overrides = {}) => closed({
     })).basis,
     "broker",
     "one known cost component is not enough evidence for net P&L"
+  );
+  assert.equal(
+    resolveTradePnl(topstepTrade({
+      brokerPnl: 125.5,
+      sourceFees: null,
+      sourceCommissions: null,
+      fees: 0,
+      commissions: 0,
+      costs: 0,
+      pnlBasis: "broker"
+    })).basis,
+    "broker",
+    "persistence zero defaults cannot overwrite an explicit broker-only basis"
   );
 
   const estimated = resolveTradePnl(topstepOrders({ estimatedNetPnl: 91.25, calculatedGrossPnl: 100 }));
@@ -507,9 +534,261 @@ const topstepOrders = (overrides = {}) => closed({
   assert.equal(report.duration.bestBand, null);
   assert.equal(report.bestSession, null);
   assert.equal(report.journalCoverage.total, 0);
+  assert.equal(report.interactions.sessionHold.cells.length, 28);
+  assert.equal(report.interactions.sessionHold.bestCell, null);
+  assert.equal(report.lifecycle.coverage.ordersTrades, 0);
+  assert.equal(report.pathDependent.winnerGiveback.supported, false);
+  assert.equal(report.pathDependent.winnerGiveback.value, null);
   assert.match(report.headline.sentence, /import normalized closed trades/i);
 }
 
+// --- 15. Entry-hour consistency needs evidence across separate days -------
+{
+  const sameDay = Array.from({ length: 5 }, (_, index) => closed({
+    id: `same-day-${index}`,
+    enteredAt: `2026-08-10T10:0${index}:00-04:00`,
+    exitedAt: `2026-08-10T10:1${index}:00-04:00`,
+    netPnl: 20
+  }));
+  const sameDayReport = buildSessionTimingReport(sameDay);
+  assert.equal(sameDayReport.hours[10].confidence.key, "reliable");
+  assert.equal(sameDayReport.hours[10].distinctDays, 1);
+  assert.equal(sameDayReport.hours[10].consistencyConfidence.key, "developing");
+  assert.equal(sameDayReport.entryTime.consistency.mostConsistentHour, null,
+    "five trades from one day cannot be called a cross-day-consistent window");
+
+  const repeatable = ["2026-08-10", "2026-08-11", "2026-08-12"].flatMap((date, dayIndex) =>
+    [0, 1].map((slot) => closed({
+      id: `repeatable-${dayIndex}-${slot}`,
+      enteredAt: `${date}T10:${String(slot * 10).padStart(2, "0")}:00-04:00`,
+      exitedAt: `${date}T10:${String(slot * 10 + 5).padStart(2, "0")}:00-04:00`,
+      netPnl: 20
+    }))
+  );
+  const concentrated = [
+    ["2026-08-10", 100],
+    ["2026-08-10", 1],
+    ["2026-08-11", 1],
+    ["2026-08-11", 1],
+    ["2026-08-12", 1]
+  ].map(([date, pnl], index) => closed({
+    id: `concentrated-${index}`,
+    enteredAt: `${date}T11:${String(index).padStart(2, "0")}:00-04:00`,
+    exitedAt: `${date}T11:${String(index + 5).padStart(2, "0")}:00-04:00`,
+    netPnl: pnl
+  }));
+  const report = buildSessionTimingReport([...repeatable, ...concentrated]);
+  assert.equal(report.entryTime.consistency.mostConsistentHour.hour, 10);
+  assert.equal(report.entryTime.consistency.mostConsistentHour.consistencyConfidence.key, "reliable");
+  assert.equal(report.entryTime.consistency.mostConsistentHour.distinctDays, 3);
+  assert.equal(report.entryTime.consistency.mostConsistentHour.profitableDayRate, 100);
+  assert.equal(report.entryTime.consistency.mostConsistentHour.medianPnl, 20);
+  assert.equal(report.hours[11].largestWinnerSharePct, 96.2);
+  assert.deepEqual(
+    report.entryTime.consistency.concentrationRiskHours.map((row) => row.hour),
+    [11],
+    "a window whose gross profit mostly comes from one outlier is exposed, not promoted silently"
+  );
+}
+
+// --- 16. Orders lifecycle evidence stays source-backed and gated -----------
+{
+  const cycle = (index) => {
+    const entryKind = index < 5 ? "single" : index < 10 ? "multi" : "reentry";
+    const entryFillCount = entryKind === "single" ? 1 : 2;
+    const exitFillCount = index < 5 ? 1 : 2;
+    const peakPositionSize = entryKind === "single" ? 1 : 2;
+    const roundTurnQuantity = entryKind === "reentry" ? 3 : peakPositionSize;
+    const estimatedNetPnl = entryKind === "single" ? 10 : entryKind === "multi" ? 30 : 15;
+    const sharedFingerprint = index < 6 ? `reversal-${Math.floor(index / 2)}` : `standalone-${index}`;
+    return topstepOrders({
+      id: `cycle-${index}`,
+      accountId: "account-a",
+      importBatchId: "batch-a",
+      importKey: `cycle-import-${index}`,
+      externalFingerprint: `cycle-fingerprint-${index}`,
+      sourceAccountFingerprint: "account-fingerprint",
+      sourceOrderFingerprints: [sharedFingerprint],
+      sourceOrderCount: entryFillCount + exitFillCount,
+      roundTurnQuantity,
+      entryFillCount,
+      exitFillCount,
+      peakPositionSize,
+      positionSize: peakPositionSize,
+      contractMultiplier: 10,
+      reconstructionMethod: "flat-to-flat-v1",
+      reconstructedDuration: "00:10:00",
+      sourceTradeDayTimezone: "America/New_York",
+      sourceTradeDay: "2026-08-10",
+      sourceTimezone: "America/New_York",
+      sourceTimezoneProvenance: "export",
+      sourceFullDayConfirmed: false,
+      sourceFullDayConfirmedAt: "",
+      market: "MGC",
+      asset: "FUTURES",
+      contractName: "MGCZ6",
+      direction: "Long",
+      entryPrice: 2400,
+      exitPrice: 2401,
+      enteredAt: `2026-08-10T14:${String(index).padStart(2, "0")}:00Z`,
+      exitedAt: `2026-08-10T14:${String(index + 10).padStart(2, "0")}:00Z`,
+      date: "2026-08-10",
+      estimatedNetPnl,
+      calculatedGrossPnl: estimatedNetPnl + 2,
+      estimatedFees: 1,
+      estimatedCommissions: 1,
+      estimatedCosts: 2,
+      estimatedFeeRate: 0.5,
+      estimatedCommissionRate: 0.5,
+      costProvenance: "verified-schedule",
+      costScheduleUrl: "https://example.invalid/topstep-costs",
+      costScheduleAsOf: "2026-08-01",
+      costScheduleEffectiveFrom: "2026-01-01",
+      costScheduleVerifiedThrough: "2026-12-31",
+      costAccountClass: "evaluation",
+      pnlBasis: "estimated-net",
+      pnlProvenance: "reconstructed-gross-minus-estimated-costs",
+      pnlIsEstimated: true,
+      analyticsExcluded: false
+    });
+  };
+  const report = buildSessionTimingReport(Array.from({ length: 15 }, (_, index) => cycle(index)));
+  const entry = Object.fromEntries(report.lifecycle.entryStructure.segments.map((row) => [row.key, row]));
+  assert.equal(report.lifecycle.coverage.ordersTrades, 15);
+  assert.equal(entry["single-fill-entry"].count, 5);
+  assert.equal(entry["multi-fill-entry"].count, 5);
+  assert.equal(entry["re-entry-after-partial-exit"].count, 5);
+  assert.equal(report.lifecycle.entryStructure.singleVsMultiFill.reliable, true);
+  assert.equal(report.lifecycle.entryStructure.singleVsMultiFill.favoredKey, "multi-fill-entry");
+  assert.equal(report.lifecycle.entryStructure.reentryVsNoReentry.reliable, true);
+  assert.equal(report.lifecycle.entryStructure.reentryVsNoReentry.favoredKey, "no-re-entry");
+  assert.equal(report.lifecycle.scaleInIntentSupported, false);
+  assert.match(report.lifecycle.meaning, /not trader intent/i);
+  assert.equal(report.lifecycle.peakSize.bestReliableBand.key, "peak-2-3");
+  assert.equal(report.lifecycle.peakSize.oneVsMultiple.reliable, true);
+  assert.equal(report.lifecycle.peakSize.oneVsMultiple.favoredKey, "peak-multiple");
+  assert.equal(report.lifecycle.reversal.linkedTradeIds.length, 6);
+  assert.deepEqual(report.lifecycle.reversal.linkedSourceIndexes, [0, 1, 2, 3, 4, 5]);
+  assert.equal(report.lifecycle.reversal.comparison.reliable, true);
+  assert.equal(report.lifecycle.reversal.comparison.favoredKey, "standalone-orders");
+  assert.match(report.lifecycle.reversal.method, /sourceOrderFingerprint/);
+  assert.deepEqual(entry["multi-fill-entry"].tradeIds, ["cycle-5", "cycle-6", "cycle-7", "cycle-8", "cycle-9"]);
+
+  assert.equal(report.dataQuality.lifecycle.applicableOrders, 15);
+  assert.equal(report.dataQuality.lifecycle.complete, 15);
+  assert.equal(report.dataQuality.lifecycle.fullDayConfirmed, 0);
+  assert.equal(report.dataQuality.fieldCoverage.sourceFullDayConfirmed.available, 15,
+    "false is valid boolean evidence, not a missing value");
+  assert.equal(report.dataQuality.pnlAndCosts.estimatedNet, 15);
+}
+
+// --- 17. Persisted-field audit is exhaustive and raw identifiers stay out --
+{
+  const auditedFields = new Set(TOPSTEP_FIELD_DEFINITIONS.map((definition) => definition.field));
+  const expectedPersistedFields = [
+    "accountId", "importBatchId", "importSource", "externalSource", "importKey",
+    "externalTradeId", "externalFingerprint", "sourceAccountFingerprint", "sourceOrderFingerprints",
+    "status", "market", "asset", "contractName", "direction", "entryPrice", "exitPrice", "positionSize",
+    "date", "enteredAt", "exitedAt", "sourceTradeDay", "sourceTimezone", "sourceTimezoneProvenance", "tradeDuration",
+    "sourceOrderCount", "roundTurnQuantity", "entryFillCount", "exitFillCount", "peakPositionSize",
+    "reconstructionMethod", "reconstructedDuration", "sourceTradeDayTimezone", "sourceFullDayConfirmed",
+    "sourceFullDayConfirmedAt", "contractMultiplier", "pnlProvenance", "pnlBasis", "pnlIsEstimated",
+    "analyticsExcluded", "netPnl", "calculatedGrossPnl", "estimatedNetPnl", "brokerPnl", "reportedNetPnl",
+    "costProvenance", "costScheduleUrl", "costScheduleAsOf", "costScheduleEffectiveFrom",
+    "costScheduleVerifiedThrough", "estimatedFeeRate", "estimatedCommissionRate", "costAccountClass",
+    "costEstimateUnavailableReason", "estimatedFees", "estimatedCommissions", "estimatedCosts",
+    "sourceFees", "sourceCommissions", "fees", "commissions", "costs"
+  ];
+  assert.deepEqual(expectedPersistedFields.filter((name) => !auditedFields.has(name)), []);
+  for (const transientRawField of [
+    "sourceOrderIds", "sourceExchangeOrderIds", "sourcePlatformOrderIds", "sourceAccountName",
+    "sourceTradeDays", "sourceTimezones", "sourceTradeDayTimezones"
+  ]) {
+    assert.equal(auditedFields.has(transientRawField), false, `${transientRawField} is deliberately stripped upstream`);
+  }
+
+  const report = buildSessionTimingReport([
+    topstepTrade({ id: "quality-net", externalTradeId: "Q-1", brokerPnl: 20, sourceFees: 1, sourceCommissions: 1 }),
+    topstepTrade({
+      id: "quality-broker", externalTradeId: "Q-2", brokerPnl: 20,
+      sourceFees: null, sourceCommissions: null, fees: null, commissions: null, costs: null
+    }),
+    topstepOrders({ id: "quality-estimated", externalFingerprint: "Q-3", estimatedNetPnl: 18, calculatedGrossPnl: 20 }),
+    topstepOrders({
+      id: "quality-gross", externalFingerprint: "Q-4", estimatedNetPnl: undefined,
+      netPnl: undefined, pnlIsEstimated: false, calculatedGrossPnl: 20
+    }),
+    topstepOrders({
+      id: "quality-missing", externalFingerprint: "Q-5", estimatedNetPnl: undefined,
+      netPnl: undefined, pnlIsEstimated: false, calculatedGrossPnl: undefined
+    })
+  ]);
+  assert.deepEqual(
+    {
+      exactNet: report.dataQuality.pnlAndCosts.exactNet,
+      estimatedNet: report.dataQuality.pnlAndCosts.estimatedNet,
+      grossOnly: report.dataQuality.pnlAndCosts.grossOnly,
+      brokerOnly: report.dataQuality.pnlAndCosts.brokerOnly,
+      missing: report.dataQuality.pnlAndCosts.missing
+    },
+    { exactNet: 1, estimatedNet: 1, grossOnly: 1, brokerOnly: 1, missing: 1 }
+  );
+}
+
+// --- 18. Session x hold interactions are fixed, drillable and gated --------
+{
+  const newYork = Array.from({ length: 5 }, (_, index) => closed({
+    id: `ny-hold-${index}`,
+    enteredAt: `2026-08-10T14:0${index}:00Z`,
+    exitedAt: `2026-08-10T14:4${index}:00Z`,
+    netPnl: 50
+  }));
+  const london = Array.from({ length: 5 }, (_, index) => closed({
+    id: `london-hold-${index}`,
+    enteredAt: `2026-08-10T08:0${index}:00Z`,
+    exitedAt: `2026-08-10T08:1${index}:00Z`,
+    netPnl: 10
+  }));
+  const report = buildSessionTimingReport([...newYork, ...london]);
+  const interaction = report.interactions.sessionHold;
+  assert.equal(interaction.cells.length, 28);
+  assert.equal(interaction.coverage.eligibleTrades, 10);
+  assert.equal(interaction.coverage.reliableCells, 2);
+  assert.equal(interaction.bestCell.sessionLabel, "New York");
+  assert.equal(interaction.bestCell.durationKey, "30m-60m");
+  assert.equal(interaction.bestCell.confidence.key, "reliable");
+  assert.deepEqual(interaction.bestCell.tradeIds, newYork.map((trade) => trade.id));
+
+  const thin = buildSessionTimingReport(newYork.slice(0, 4));
+  assert.equal(thin.interactions.sessionHold.bestCell, null);
+  assert.equal(thin.interactions.sessionHold.strongestObservedCell.sessionLabel, "New York");
+}
+
+// --- 19. Endpoint-only imports never fabricate path-dependent metrics ------
+{
+  const report = buildSessionTimingReport([topstepTrade({
+    id: "endpoint-winner",
+    externalTradeId: "PATH-1",
+    entryPrice: 2300,
+    exitPrice: 2400,
+    brokerPnl: 1000,
+    sourceFees: 2,
+    sourceCommissions: 2
+  })]);
+  assert.deepEqual(
+    [
+      report.pathDependent.winnerGiveback.value,
+      report.pathDependent.timeAboveBreakeven.value,
+      report.pathDependent.maximumFavorableExcursion.value,
+      report.pathDependent.maximumAdverseExcursion.value
+    ],
+    [null, null, null, null]
+  );
+  assert.equal(report.pathDependent.winnerGiveback.measuredTrades, 0);
+  assert.equal(report.pathDependent.winnerGiveback.eligibleWinnerTrades, 1);
+  assert.match(report.pathDependent.winnerGiveback.reason, /intratrade price path/i);
+}
+
 console.log(
-  "sessionReport.check.mjs: OK - normalized Topstep sources, net/gross provenance, DST sessions, deterministic ranges, confidence gates, drill-down refs, duration and journal coverage pinned"
+  "sessionReport.check.mjs: OK - normalized sources, P&L provenance, DST/date boundaries, cross-day consistency, lifecycle evidence, field completeness, session-hold interactions and unsupported path metrics pinned"
 );

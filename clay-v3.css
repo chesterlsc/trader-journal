@@ -1404,7 +1404,25 @@ body.auth-locked .app-ticker { display: none !important; }
   min-width: 0;
   max-width: 1320px;
   margin-inline: auto;
-  overflow: clip;
+  overflow: visible;
+}
+
+/* Desktop views are fixed beneath the rail and therefore own their scrolling.
+   Keep every report row intrinsic so richer Topstep content increases the
+   scroller's scrollHeight instead of being compressed into the viewport. */
+@media (min-width: 900px) {
+  #session-intelligence.is-active {
+    align-content: start;
+    grid-template-rows: max-content max-content max-content;
+    grid-auto-rows: auto;
+    min-height: 0;
+    padding-bottom: max(var(--space-8), 48px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 .session-page-head {
@@ -1606,7 +1624,9 @@ body.auth-locked .app-ticker { display: none !important; }
   border-top: 0;
   border-radius: 0 0 12px 12px;
   background: var(--surface-1);
-  overflow: hidden;
+  /* overflow:hidden made this fixed-view grid item shrink below its content,
+     clipping lower insights while the parent still reported no overflow. */
+  overflow: visible;
 }
 
 .session-panel {
@@ -1861,6 +1881,91 @@ body.auth-locked .app-ticker { display: none !important; }
 .session-score-row.is-early .session-score-fill,
 .session-score-row.is-empty .session-score-fill {
   background: var(--line-strong);
+}
+
+/* Topstep execution quality: one compact evidence read below the session
+   comparison, not another chart or another wall of metric cards. */
+.session-topstep-execution {
+  display: grid;
+  gap: 15px;
+  min-width: 0;
+  margin-top: clamp(24px, 4vw, 38px);
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.session-topstep-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px 24px;
+}
+
+.session-topstep-head p {
+  margin: 0;
+  color: var(--text-faint);
+  font: 700 11px/1.2 var(--font-mono);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.session-topstep-head h4 {
+  margin: 6px 0 0;
+  color: var(--text);
+  font: 700 16px/1.25 var(--font-ui);
+  letter-spacing: -0.015em;
+}
+
+.session-topstep-summary {
+  max-width: 78ch;
+  margin: 0;
+  color: var(--text-soft);
+  font: 500 12.5px/1.55 var(--font-ui);
+}
+
+.session-topstep-signals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
+  margin: 0;
+  border-block: 1px solid var(--line);
+}
+
+.session-topstep-signals > div {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 14px 18px;
+  border-right: 1px solid var(--line);
+}
+
+.session-topstep-signals > div:first-child {
+  padding-left: 0;
+}
+
+.session-topstep-signals > div:last-child {
+  border-right: 0;
+}
+
+.session-topstep-signals dt {
+  color: var(--text-faint);
+  font: 700 11px/1.2 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.session-topstep-signals dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--text);
+  font: 650 12.5px/1.4 var(--font-ui);
+  overflow-wrap: anywhere;
+}
+
+.session-topstep-note {
+  margin: 0;
+  color: var(--text-faint);
+  font: 500 11px/1.5 var(--font-ui);
 }
 
 /* Entry time: compact timeline, never a 24-card horizontal scroller. */
@@ -2426,6 +2531,28 @@ button.session-hour-cell {
 }
 
 /* Responsive composition ------------------------------------------------- */
+@media (max-width: 899px) {
+  /* Phones use the document scroller. Keep the route in normal flow and make
+     focus/anchor moves stop above the fixed dock rather than underneath it. */
+  #session-intelligence.is-active {
+    align-content: start;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  #session-intelligence :is(button, select, [tabindex]) {
+    scroll-margin-bottom: calc(env(safe-area-inset-bottom, 0px) + 132px);
+  }
+
+  body.app-on:has(#session-intelligence.is-active) .site-footer {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 132px);
+  }
+
+  html:has(#session-intelligence.is-active) {
+    scroll-padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 132px);
+  }
+}
+
 @media (max-width: 1180px) {
   #dashboard .panel-grid-analytics > .panel-span-6 {
     grid-column: span 1;
@@ -2546,6 +2673,25 @@ button.session-hour-cell {
 
   .session-chart-legend {
     justify-content: flex-start;
+  }
+
+  .session-topstep-head {
+    flex-direction: column;
+  }
+
+  .session-topstep-signals {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .session-topstep-signals > div,
+  .session-topstep-signals > div:first-child {
+    padding: 13px 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .session-topstep-signals > div:last-child {
+    border-bottom: 0;
   }
 
   .session-hour-rail {

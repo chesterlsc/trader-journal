@@ -100,7 +100,6 @@ const ui = {
   strategyPerformanceChart: canvas("strategyPerformanceChart", 280),
   traderScoreChart: canvas("traderScoreChart", 300),
   psychologyChart: canvas("psychologyChart", 240),
-  sessionChart: canvas("sessionChart", 240),
   rMultipleChart: canvas("rMultipleChart", 240),
   // 1f #04 playbook page: same line engine, series carried on state.
   playbookChart: canvas("playbookChart", 240),
@@ -135,10 +134,6 @@ const full = {
     { label: "Calm", pnl: 2400, count: 9, wins: 6, winRate: 66.6 },
     { label: "Anxious", pnl: -900, count: 5, wins: 1, winRate: 20 }
   ],
-  sessionReport: [
-    { label: "London", pnl: 1800, count: 8 },
-    { label: "New York", pnl: -300, count: 6 }
-  ],
   rMultipleReport: [
     { label: "< -2R", count: 2, tone: "neg" },
     { label: "-1R to 0R", count: 5, tone: "neg" },
@@ -165,7 +160,6 @@ const empty = {
   drawdownDates: ["2026-01-02"],
   strategyPerformance: { setup: [], asset: [], day: [] },
   psychologyReport: [],
-  sessionReport: [],
   rMultipleReport: [],
   traderScore: { score: 0, metrics: [] }
 };
@@ -241,7 +235,6 @@ function scrubHarness(reducedMotion) {
     strategyPerformanceChart: canvas("strategyPerformanceChart", 280),
     traderScoreChart: canvas("traderScoreChart", 300),
     psychologyChart: canvas("psychologyChart", 240),
-    sessionChart: canvas("sessionChart", 240),
     rMultipleChart: canvas("rMultipleChart", 240),
     playbookChart: canvas("playbookChart", 240),
     strategyDimensionButtons: [],

@@ -144,7 +144,6 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
       analytics.strategyPerformance,
       analytics.traderScore?.metrics,
       analytics.psychologyReport,
-      analytics.sessionReport,
       analytics.rMultipleReport,
       state.dashboard.performanceDimension,
       state.dashboard.performanceMetric,
@@ -599,13 +598,6 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
           },
           p
         ),
-      progress
-    );
-
-    paint(
-      ui.sessionChart,
-      (p) =>
-        drawBarChart(ui.sessionChart, analytics.sessionReport || [], { metric: "pnl", emptyLabel: "No session data yet" }, p),
       progress
     );
 

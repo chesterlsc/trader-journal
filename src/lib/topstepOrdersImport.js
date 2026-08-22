@@ -325,7 +325,6 @@ function mapFilledOrder(record, indexes) {
   const tradeDay = parseTradeDay(value("TradeDay"));
   const executePrice = parseNumeric(value("ExecutePrice"));
   const disposition = normalizeDisposition(value("PositionDisposition"));
-  const creationDisposition = normalizeHeader(value("CreationDisposition"));
 
   if (!orderId) issues.push("Id is required");
   if (!sourceAccountName) issues.push("AccountName is required");
@@ -338,9 +337,6 @@ function mapFilledOrder(record, indexes) {
   if (!tradeDay) issues.push("TradeDay must be a valid date with an explicit UTC offset");
   if (!(executePrice > 0)) issues.push("ExecutePrice must be a positive number");
   if (!disposition) issues.push("PositionDisposition must be Opening or Closing");
-  if (creationDisposition === "reverseposition" || creationDisposition === "reverse") {
-    issues.push("ReversePosition orders are not supported without a verified split contract");
-  }
   if (created && filledAt && filledAt.ms < created.ms) issues.push("FilledAt cannot be earlier than CreatedAt");
 
   if (issues.length) {

@@ -120,7 +120,7 @@ state.filters.dateTo = "2026-08-05";
 state.filters.setup = "Breakout";
 assert.deepEqual(
   api.describeJournalFilters(),
-  ["not journalled", "Aug 01 – Aug 05", "Breakout"],
+  ["not journalled", "Aug 01 to Aug 05", "Breakout"],
   "chip, date range and dropdown all appear, in reading order"
 );
 state.filters.dateTo = "2026-08-01";
