@@ -1423,6 +1423,31 @@ body.auth-locked .app-ticker { display: none !important; }
     scrollbar-gutter: stable;
     -webkit-overflow-scrolling: touch;
   }
+
+  /* THE SCROLLER IS THE WHOLE VIEW, not the reading column.
+     .session-page caps itself at 1320px and centres with auto margins, and
+     because that same element IS the fixed scroller, everything outside
+     1320px was not a scroll surface at all: at a 1999px window that is 312px
+     of dead margin down each side, 624px of screen where the wheel reached
+     BODY, found nothing scrollable, and did nothing. On a wide monitor the
+     pointer sits there most of the time, which is why the page read as
+     unscrollable while scrollTop moved perfectly from script.
+
+     The box goes full bleed; the COLUMN is centred by padding instead. Two
+     traps are answered here. The selector names the class twice to reach
+     (1,2,0), because styles.css carries .view.is-active:not(#terminal) at
+     that weight (:not() takes its argument's weight) and a bare id plus
+     class loses to it. And the padding is written in viewport units because
+     this element is position FIXED, where a percentage resolves against the
+     viewport rather than the element, so only (100vw - rail) actually
+     centres. Kept as a separate rule so the block above stays byte identical
+     to the contract its own check pins. */
+  #session-intelligence.session-page.is-active {
+    width: auto;
+    max-width: none;
+    margin-inline: 0;
+    padding-inline: max(var(--space-6), calc((100vw - var(--rail-w, 0px) - 1320px) / 2));
+  }
 }
 
 .session-page-head {

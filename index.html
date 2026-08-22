@@ -2070,6 +2070,18 @@
                     <dt>P&amp;L basis</dt>
                     <dd id="sessionTopstepPnlBasisInsight">Broker result when available</dd>
                   </div>
+                  <!-- Who closed the trade. Only an Orders export knows this:
+                       every filled order carries the disposition that created
+                       it, so a closing fill says whether the bracket worked or
+                       the trader reached in. -->
+                  <div>
+                    <dt>Who closed it</dt>
+                    <dd id="sessionTopstepExitInsight">Awaiting completed cycles</dd>
+                  </div>
+                  <div>
+                    <dt>Cost of closing by hand</dt>
+                    <dd id="sessionTopstepExitCost">Awaiting completed cycles</dd>
+                  </div>
                 </dl>
                 <p class="session-topstep-note" id="sessionTopstepExecutionNote">
                   Open, incomplete, cancelled, and rejected order rows stay outside completed-cycle performance.

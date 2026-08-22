@@ -325,6 +325,12 @@ function mapFilledOrder(record, indexes) {
   const tradeDay = parseTradeDay(value("TradeDay"));
   const executePrice = parseNumeric(value("ExecutePrice"));
   const disposition = normalizeDisposition(value("PositionDisposition"));
+  // HOW the fill was created, not just which way it went. Topstep marks a
+  // filled order StopLoss, TakeProfit or Trader, and on a CLOSING fill that
+  // is the only record anywhere of whether the bracket did its job or the
+  // trader reached in and closed by hand. The importer already read this
+  // column for resting brackets and threw it away for everything else.
+  const creationDisposition = normalizeHeader(value("CreationDisposition"));
 
   if (!orderId) issues.push("Id is required");
   if (!sourceAccountName) issues.push("AccountName is required");
@@ -352,6 +358,7 @@ function mapFilledOrder(record, indexes) {
       sourceAccountName,
       contractName,
       orderType,
+      creationDisposition,
       size,
       side,
       signedSize: side === "Bid" ? size : -size,
@@ -482,6 +489,29 @@ function reconstructGroup(input) {
    VWAP of every opening fill (standard average cost), the size is what is
    still on, and the protection prices are attached later from the resting
    Open StopLoss / TakeProfit orders in the same export. */
+/* Topstep marks every filled order with how it was created: StopLoss,
+   TakeProfit, or Trader for a discretionary click. On the CLOSING side that
+   is the only surviving record of whether the plan closed the trade or the
+   trader did, which is the one discipline question a fill log can answer and
+   a hand written journal never can honestly. Weighted by size: the kind that
+   closed the most contracts wins, and a genuine split reports "mixed". */
+function summarizeExitKind(closings) {
+  const weight = new Map();
+  let known = 0;
+  (Array.isArray(closings) ? closings : []).forEach((order) => {
+    const raw = String(order?.creationDisposition || "").toLowerCase();
+    const kind = raw === "stoploss" ? "stop" : raw === "takeprofit" ? "target" : raw === "trader" ? "manual" : "";
+    if (!kind) return;
+    const size = Number(order?.size) > 0 ? Number(order.size) : 1;
+    weight.set(kind, (weight.get(kind) || 0) + size);
+    known += size;
+  });
+  if (!known) return "unknown";
+  const ranked = [...weight.entries()].sort((a, b) => b[1] - a[1]);
+  if (ranked.length > 1 && ranked[0][1] === ranked[1][1]) return "mixed";
+  return ranked[0][1] / known >= 0.6 ? ranked[0][0] : "mixed";
+}
+
 function buildOpenPosition(episode, position) {
   const first = episode.openings[0];
   const openedQuantity = episode.openings.reduce((sum, order) => sum + order.size, 0);
@@ -580,6 +610,11 @@ function buildEpisodeTrade(episode) {
     sourcePlatformOrderIds,
     entryFillCount: episode.openings.length,
     exitFillCount: episode.closings.length,
+    // The exit's own verdict, weighted by contracts rather than by fill count
+    // so a 4 lot stop is not outvoted by a 1 lot scratch. "mixed" is an
+    // honest answer rather than a failure: scaling out through a target and
+    // then stopping the runner really did happen both ways.
+    exitKind: summarizeExitKind(episode.closings),
     externalFingerprint,
     externalSource: SOURCE,
     importSource: SOURCE,

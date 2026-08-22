@@ -641,6 +641,8 @@ const ui = {
   sessionTopstepExecutionConfidence: document.getElementById("sessionTopstepExecutionConfidence"),
   sessionTopstepExecutionSummary: document.getElementById("sessionTopstepExecutionSummary"),
   sessionTopstepScaleInsight: document.getElementById("sessionTopstepScaleInsight"),
+  sessionTopstepExitInsight: document.getElementById("sessionTopstepExitInsight"),
+  sessionTopstepExitCost: document.getElementById("sessionTopstepExitCost"),
   sessionTopstepReversalInsight: document.getElementById("sessionTopstepReversalInsight"),
   sessionTopstepPnlBasisInsight: document.getElementById("sessionTopstepPnlBasisInsight"),
   sessionTopstepExecutionNote: document.getElementById("sessionTopstepExecutionNote"),
@@ -3937,6 +3939,8 @@ function buildTradeRecord(tradeInput, options = {}) {
     ),
     entryFillCount: ensureNonNegative(tradeInput.entryFillCount, ensureNonNegative(existingTrade?.entryFillCount, 0)),
     exitFillCount: ensureNonNegative(tradeInput.exitFillCount, ensureNonNegative(existingTrade?.exitFillCount, 0)),
+    // Who closed the trade: the stop, the target, or the trader's own hand.
+    exitKind: String(tradeInput.exitKind || existingTrade?.exitKind || ""),
     peakPositionSize: ensureNonNegative(tradeInput.peakPositionSize, ensureNonNegative(existingTrade?.peakPositionSize, 0)),
     contractMultiplier: Number.isFinite(tradeInput.contractMultiplier)
       ? tradeInput.contractMultiplier
@@ -8747,6 +8751,10 @@ function renderSessionTiming(report) {
   }
   renderSessionScorecard(report);
   renderSessionTopstepExecution(report);
+  // Kept out of renderSessionTopstepExecution on purpose: that function is
+  // extracted and evaluated in isolation by its own integration check, so a
+  // call to a sibling declared elsewhere in the module would break it.
+  renderExitDiscipline();
   renderSessionHourRail(report);
   renderSessionDurations(report);
   renderSessionCoverage(report);
@@ -8755,6 +8763,99 @@ function renderSessionTiming(report) {
 
 function timingSegment(rows, key) {
   return Array.isArray(rows) ? rows.find((row) => row.key === key) || null : null;
+}
+
+/* EXIT DISCIPLINE, the question only a fill log can answer.
+   Topstep stamps each filled order with what created it, so a closing fill
+   records whether the stop fired, the target filled, or the trader closed by
+   hand. Nobody journals "I bailed early" in the moment, which is exactly why
+   this number is worth more than a self report.
+
+   The comparison that matters is not how often each happens, it is what each
+   one PAYS. Expectancy per cycle by exit kind, and then the honest question:
+   when you close by hand instead of letting the bracket work, what does the
+   difference come to across the trades you actually took. Stated as a gap in
+   expectancy times the count, never as a promise about trades you did not
+   take, because the counterfactual price is unknowable and pretending
+   otherwise would be the same lie as a backtest with no slippage. */
+function summarizeExitDiscipline(trades) {
+  const buckets = new Map([
+    ["stop", { label: "the stop", count: 0, pnl: 0 }],
+    ["target", { label: "the target", count: 0, pnl: 0 }],
+    ["manual", { label: "you, by hand", count: 0, pnl: 0 }],
+    ["mixed", { label: "a split exit", count: 0, pnl: 0 }]
+  ]);
+  let known = 0;
+  (Array.isArray(trades) ? trades : []).forEach((trade) => {
+    const kind = String(trade?.exitKind || "");
+    const bucket = buckets.get(kind);
+    if (!bucket) return;
+    const pnl = Number(trade.netPnl);
+    if (!Number.isFinite(pnl)) return;
+    bucket.count += 1;
+    bucket.pnl = round(bucket.pnl + pnl);
+    known += 1;
+  });
+  if (!known) return null;
+  const rows = [...buckets.entries()]
+    .map(([key, value]) => ({ key, ...value, expectancy: value.count ? round(value.pnl / value.count) : 0 }))
+    .filter((row) => row.count > 0)
+    .sort((a, b) => b.count - a.count);
+  const manual = rows.find((row) => row.key === "manual") || null;
+  const planned = rows.filter((row) => row.key === "stop" || row.key === "target");
+  const plannedCount = planned.reduce((sum, row) => sum + row.count, 0);
+  const plannedPnl = planned.reduce((sum, row) => sum + row.pnl, 0);
+  const plannedExpectancy = plannedCount ? round(plannedPnl / plannedCount) : null;
+  return {
+    known,
+    rows,
+    manual,
+    plannedCount,
+    plannedExpectancy,
+    // Both sides need enough cycles to mean anything; five a side is the
+    // floor this page already uses for a comparison it is willing to call.
+    comparable: Boolean(manual && manual.count >= 5 && plannedCount >= 5 && plannedExpectancy !== null),
+    gap: manual && plannedExpectancy !== null ? round(manual.expectancy - plannedExpectancy) : null
+  };
+}
+
+function renderExitDiscipline() {
+  if (!ui.sessionTopstepExitInsight && !ui.sessionTopstepExitCost) {
+    return;
+  }
+  const summary = summarizeExitDiscipline(getClosedTrades());
+  if (!summary) {
+    if (ui.sessionTopstepExitInsight) {
+      ui.sessionTopstepExitInsight.textContent = "Import a Topstep Orders export to see whether the bracket or your hand closed each trade.";
+    }
+    if (ui.sessionTopstepExitCost) {
+      ui.sessionTopstepExitCost.textContent = "Awaiting completed cycles";
+    }
+    return;
+  }
+
+  if (ui.sessionTopstepExitInsight) {
+    const share = (row) => Math.round((row.count / summary.known) * 100);
+    ui.sessionTopstepExitInsight.textContent = summary.rows
+      .map((row) => `${row.label} ${share(row)}% (n=${row.count})`)
+      .join(" · ");
+  }
+
+  if (ui.sessionTopstepExitCost) {
+    if (!summary.manual || summary.manual.count === 0) {
+      ui.sessionTopstepExitCost.textContent = `Every cycle closed on a bracket across ${summary.known} exits. Nothing was closed by hand.`;
+    } else if (!summary.comparable) {
+      ui.sessionTopstepExitCost.textContent = `${summary.manual.count} closed by hand at ${timingMoney(summary.manual.expectancy)} per cycle. A verdict needs five a side; the bracket has ${summary.plannedCount}.`;
+    } else {
+      const gap = summary.gap;
+      const total = round(Math.abs(gap) * summary.manual.count);
+      // Magnitudes, not signed figures: "runs +$162 behind" states the
+      // direction twice and contradicts itself once.
+      ui.sessionTopstepExitCost.textContent = gap < 0
+        ? `Closing by hand runs ${formatCurrency(Math.abs(gap))} per cycle behind letting the bracket work, which is ${formatCurrency(total)} across the ${summary.manual.count} you closed yourself.`
+        : `Closing by hand runs ${formatCurrency(Math.abs(gap))} per cycle ahead of the bracket across ${summary.manual.count} cycles. Your discretion is beating your plan here.`;
+    }
+  }
 }
 
 function renderSessionTopstepExecution(report) {
@@ -13778,6 +13879,7 @@ function normalizeTrades(input) {
         roundTurnQuantity: ensureNonNegative(item.roundTurnQuantity, 0),
         entryFillCount: ensureNonNegative(item.entryFillCount, 0),
         exitFillCount: ensureNonNegative(item.exitFillCount, 0),
+        exitKind: String(item.exitKind || ""),
         peakPositionSize: ensureNonNegative(item.peakPositionSize, 0),
         contractMultiplier: item.contractMultiplier === undefined || item.contractMultiplier === null
           ? null
