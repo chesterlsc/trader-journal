@@ -1222,7 +1222,11 @@ const WALL_STORAGE_KEY = "axiom_journal_wall_v1";
 const WALL_SIZE_KEY = "axiom_journal_wall_size_v1";
 // band: a strip under the desk. half: 2x2 at half height. max: 2x2 filling
 // the viewport, so each monitor is a true quarter of the screen.
-const WALL_SIZES = ["band", "half", "max"];
+/* band | half | solo | stack | max. One attribute, one key, no second axis.
+   Migration is already written: getWallSize and applyWallSize both gate on
+   WALL_SIZES.includes(...), so a stored value that is not on the list falls
+   through to the fallback. Adding names cannot break a stored one. */
+const WALL_SIZES = ["band", "half", "solo", "stack", "max"];
 const WALL_SLOTS = 4;
 const TICKER_CACHE_KEY = "axiom_journal_ticker_v1";
 // Last price actually rendered per symbol — the strip's delta is "vs the
@@ -15210,7 +15214,7 @@ function setupTerminal() {
       document.getElementById("bbWall")?.dataset.size === "max" &&
       !document.querySelector("dialog[open]")
     ) {
-      applyWallSize("band");
+      applyWallSize("half");
     }
   });
 
@@ -16391,9 +16395,9 @@ function monitorTile(slotValue, index) {
 function getWallSize() {
   try {
     const stored = localStorage.getItem(WALL_SIZE_KEY);
-    return WALL_SIZES.includes(stored) ? stored : "band";
+    return WALL_SIZES.includes(stored) ? stored : "half";
   } catch (error) {
-    return "band";
+    return "half";
   }
 }
 
@@ -16642,7 +16646,7 @@ function syncChromeHeight() {
    rebuilt and a playing stream is never interrupted by a resize: an iframe that
    is re-created loses its stream and has to buffer again. */
 function applyWallSize(size) {
-  const next = WALL_SIZES.includes(size) ? size : "band";
+  const next = WALL_SIZES.includes(size) ? size : "half";
   const wall = document.getElementById("bbWall");
   if (wall) {
     wall.dataset.size = next;
@@ -16650,6 +16654,17 @@ function applyWallSize(size) {
   // Publish the tape's MEASURED height so the maximised wall starts below it.
   // A hard-coded offset would overlap the moment the strip wraps on a narrow
   // window, which is exactly the class of bug this is fixing.
+  // The monitor masthead is measured for the same reason the tape and the
+  // wall head already are: solo and stack compute their picture from the
+  // height left after it, and a coarse pointer gets a 48px bar rather than
+  // 26. Guessing it is how half once came out 23px too generous.
+  const monHead = document.querySelector("#bbWallGrid .bb-mon-h");
+  if (monHead) {
+    const headHeight = Math.round(monHead.getBoundingClientRect().height);
+    if (headHeight > 0) {
+      document.documentElement.style.setProperty("--mon-head-h", `${headHeight}px`);
+    }
+  }
   const tape = document.querySelector("#terminal .bb-tape");
   if (tape) {
     const height = Math.round(tape.getBoundingClientRect().height);

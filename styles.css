@@ -11769,7 +11769,11 @@ body.auth-locked {
 .bb-wall-tok:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
 /* half: two across, taller tiles, still inside the page flow. */
-.bb-wall[data-size="half"] .bb-wall-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bb-wall:is([data-size="half"], [data-size="solo"], [data-size="stack"]) .bb-wall-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* 34vh is the 2x2 number: four pictures stacked two deep need a ceiling so a
+   short window cannot push the bottom row off. Solo and stack size their
+   picture from the ratio instead, and inheriting this clamp is what pinned
+   them at 374px tall and stretched them to 3.03 and 3.57 to one. */
 .bb-wall[data-size="half"] .bb-mon-screen,
 .bb-wall[data-size="half"] .bb-mon iframe { max-height: 34vh; }
 
@@ -11923,7 +11927,7 @@ body.auth-locked {
    space above it, so F1 THE APPROACH and the monitors are on screen together.
    The page reserves the same height it takes, so nothing is ever hidden behind
    it and the last pane can still be scrolled to. */
-.bb-wall[data-size="half"] {
+.bb-wall:is([data-size="half"], [data-size="solo"], [data-size="stack"]) {
   position: fixed;
   left: 0;
   right: 0;
@@ -11940,7 +11944,7 @@ body.auth-locked {
   border-top: 1px solid var(--term-line);
   background: var(--term-void);
 }
-#terminal:has(.bb-wall[data-size="half"]) { padding-bottom: 56vh; }
+#terminal:has(.bb-wall:is([data-size="half"], [data-size="solo"], [data-size="stack"])) { padding-bottom: 56vh; }
 
 .bb-wall[data-size="half"] .bb-wall-h {
   margin: 0;
@@ -11977,7 +11981,7 @@ body.auth-locked {
 }
 .bb-wall[data-size="half"] .bb-mon { position: relative; grid-template-rows: minmax(0, 1fr); }
 /* Frameless here too: in a short band a 35px name row is most of the tile. */
-.bb-wall[data-size="half"] .bb-mon-h {
+.bb-wall:is([data-size="half"], [data-size="solo"], [data-size="stack"]) .bb-mon-h {
   position: absolute;
   top: 0;
   left: 0;
@@ -11991,7 +11995,7 @@ body.auth-locked {
   opacity: 0.5;
 }
 .bb-wall[data-size="half"] .bb-mon:hover .bb-mon-h,
-.bb-wall[data-size="half"] .bb-mon:focus-within .bb-mon-h { opacity: 1; }
+.bb-wall:is([data-size="half"], [data-size="solo"], [data-size="stack"]) .bb-mon:focus-within .bb-mon-h { opacity: 1; }
 .bb-wall[data-size="half"] .bb-mon-h em { display: none; }
 .bb-wall[data-size="half"] .bb-wall-note { display: none; }
 
@@ -12025,7 +12029,7 @@ body.auth-locked {
     padding-right: calc(var(--wall-w) + var(--space-4));
     padding-bottom: var(--space-4);
   }
-  .bb-wall[data-size="half"] {
+  .bb-wall:is([data-size="half"], [data-size="solo"], [data-size="stack"]) {
     inset: var(--chrome-h, 86px) 0 0 auto;
     width: var(--wall-w);
     height: auto;
@@ -12040,7 +12044,7 @@ body.auth-locked {
      width carries both limits itself and the height follows the ratio: if
      anything ever drifts the grid gets NARROWER, which costs a thin band and
      can neither distort a tile nor spill onto the desk. */
-  .bb-wall[data-size="half"] .bb-wall-grid {
+  .bb-wall:is([data-size="half"], [data-size="solo"], [data-size="stack"]) .bb-wall-grid {
     width: min(100%, calc((100vh - var(--chrome-h, 86px) - var(--wall-head-h, 57px)) * 16 / 9));
     height: auto;
     margin-inline: auto;
@@ -12051,7 +12055,7 @@ body.auth-locked {
      uses there. Left at three columns F2/F3/F4 got about 150px each and F3's
      tag clipped mid-word. It scrolls inside #terminal, which already owns its
      own overflow. */
-  #terminal:has(.bb-wall[data-size="half"]) .bb-desk {
+  #terminal:has(.bb-wall:is([data-size="half"], [data-size="solo"], [data-size="stack"])) .bb-desk {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       "cmd"

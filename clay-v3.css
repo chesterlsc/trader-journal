@@ -3463,3 +3463,74 @@ button.session-hour-cell {
 @media (prefers-reduced-motion: reduce) {
   .bb-mon:has(iframe) .bb-mon-h { transition: none; }
 }
+
+/* ==========================================================================
+   TWO MORE WALL SHAPES: SOLO AND STACK.
+
+   The owner's instruction was that half is the resting format, with an option
+   for one big picture, and an option for one big picture over three small
+   ones. Both are column modes like half, so they inherit half's reserved desk
+   padding, its measured --wall-w, its phone band fallback and its single
+   column desk collapse: the only thing written here is the grid inside.
+
+   Both size themselves from the SAME available height and express the picture
+   at a true ratio, so a short window narrows the block rather than growing
+   black bars, which is the rule half already follows. Heads are measured, not
+   guessed: a coarse pointer gets a 48px bar rather than 26 and the arithmetic
+   has to know.
+   ========================================================================== */
+.bb-wall {
+  --wall-avail: calc(100vh - var(--chrome-h, 86px) - var(--wall-head-h, 57px));
+}
+
+@media (min-width: 1100px) {
+  /* THE RATIO IS DECLARED ON THE PICTURE, not computed into the grid's
+     height. The first pass sized the grid by arithmetic and lost twice: the
+     masthead is an absolute overlay so it contributes no height, and the
+     screen carries its own max-height from the band rules, which pinned the
+     picture at 264px and stretched it to 4.3:1 no matter what the grid said.
+     A declared aspect-ratio cannot be argued with by a clamp it outlives.
+
+     The grid still carries a WIDTH cap, because width is the only lever that
+     keeps the block inside the available height: at 16:9 a solo picture is
+     W*9/16 tall, and a stack is W*9/16 plus a third of that, which is exactly
+     W*3/4. Cap the width and the height follows. */
+  .bb-wall:is([data-size="solo"], [data-size="stack"]) .bb-mon-screen,
+  .bb-wall:is([data-size="solo"], [data-size="stack"]) .bb-mon iframe {
+    aspect-ratio: 16 / 9;
+    width: 100%;
+    height: auto;
+    max-height: none;
+  }
+
+  /* SOLO. One picture, as wide as the column or as wide as the height allows. */
+  .bb-wall[data-size="solo"] .bb-wall-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    aspect-ratio: auto;
+    width: min(100%, calc(var(--wall-avail) * 16 / 9));
+    height: auto;
+    margin-inline: auto;
+    align-self: center;
+    border: 0;
+    gap: 1px;
+  }
+  /* display:none rather than a DOM move: the iframe document is never
+     re-created, which is the contract that keeps a stream alive. */
+  .bb-wall[data-size="solo"] .bb-mon:nth-child(n + 2) { display: none; }
+
+  /* STACK. One big picture over three thirds: W*9/16 plus W/3*9/16 = W*3/4. */
+  .bb-wall[data-size="stack"] .bb-wall-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto auto;
+    aspect-ratio: auto;
+    width: min(100%, calc(var(--wall-avail) * 4 / 3));
+    height: auto;
+    margin-inline: auto;
+    align-self: center;
+    border: 0;
+    gap: 1px;
+  }
+  .bb-wall[data-size="stack"] .bb-mon:first-child { grid-column: 1 / -1; }
+}
+
