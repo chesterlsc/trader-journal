@@ -3393,3 +3393,73 @@ button.session-hour-cell {
 @media (min-width: 1240px) {
   #dashboard .panel-grid-bottom > .panel-span-4 { grid-column: span 6; }
 }
+
+/* ==========================================================================
+   THE MASTHEAD STOPS STEALING THE PLAYER'S TAPS.
+
+   A YouTube embed that autoplays starts MUTED, and YouTube puts its own "tap
+   to unmute" affordance in the top left of the picture. The wall's masthead
+   is an absolutely positioned scrim across that exact strip, and in half size
+   it sat at opacity 0.5 with no pointer-events change at all: half invisible
+   and fully clickable. The channel <select> occupies the top left, so the tap
+   meant for unmute opened our picker instead, every time, which is precisely
+   the bug reported. The link and max keys did the same to YouTube's own top
+   right controls.
+
+   Visible and clickable are now the same state. While a monitor is LIVE the
+   masthead is transparent AND inert, and it comes back together on hover or
+   keyboard focus. :has(iframe) is the liveness test because the iframe is
+   created only by playMonitor, so no JS flag can drift out of step with it.
+   ========================================================================== */
+/* Specificity: the half size rule is .bb-wall[data-size="half"] .bb-mon-h at
+   (0,3,0), and :has(iframe) contributes only an element, so a bare
+   .bb-mon:has(iframe) .bb-mon-h is (0,2,1) and loses. Naming .bb-wall makes
+   it (0,3,1). Without this the masthead stays half visible while inert,
+   which is the exact "looks clickable, is not" state this block exists to
+   abolish. */
+.bb-wall .bb-mon:has(iframe) .bb-mon-h {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms var(--ease-out);
+}
+.bb-mon:has(iframe) .bb-mon-pick,
+.bb-mon:has(iframe) .bb-mon-link,
+.bb-mon:has(iframe) .bb-mon-full {
+  pointer-events: none;
+}
+.bb-wall .bb-mon:has(iframe):hover .bb-mon-h,
+.bb-wall .bb-mon:has(iframe):focus-within .bb-mon-h {
+  opacity: 1;
+}
+.bb-mon:has(iframe):hover .bb-mon-pick,
+.bb-mon:has(iframe):hover .bb-mon-link,
+.bb-mon:has(iframe):hover .bb-mon-full,
+.bb-mon:has(iframe):focus-within .bb-mon-pick,
+.bb-mon:has(iframe):focus-within .bb-mon-link,
+.bb-mon:has(iframe):focus-within .bb-mon-full {
+  pointer-events: auto;
+}
+
+/* TOUCH HAS NO HOVER, so fading on hover would hand a tablet a masthead it
+   can never summon back. There the bar stops being an overlay entirely and
+   sits in normal flow above the picture, where it cannot cover the player at
+   all and needs no fading. */
+@media (pointer: coarse) {
+  .bb-wall .bb-mon-h,
+  .bb-mon:has(iframe) .bb-mon-h {
+    position: static;
+    opacity: 1;
+    pointer-events: auto;
+    background: var(--term-rail);
+    border-bottom: 1px solid var(--term-line);
+  }
+  .bb-mon:has(iframe) .bb-mon-pick,
+  .bb-mon:has(iframe) .bb-mon-link,
+  .bb-mon:has(iframe) .bb-mon-full {
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bb-mon:has(iframe) .bb-mon-h { transition: none; }
+}
