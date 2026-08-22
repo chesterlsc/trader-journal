@@ -2823,10 +2823,13 @@ button.session-hour-cell {
   position: relative;
   isolation: isolate;
   display: grid;
-  /* The calendar column is CAPPED, which is what mini means: 236px puts
-     tiles at ~31px, and a six-row month lands the whole card near 300px
-     where the first cut spent 512. The hero takes every remaining pixel. */
-  grid-template-columns: minmax(0, 1fr) 236px;
+  /* BUDGET, do not reopen the blank:
+     card = 20 pad + 293 content + 20 pad = 333px at 1440.
+     LEFT  573px: Zone A 98 + 14 + Zone B (NOW grid) 84 + 14 + Zone C 83 = 293.
+     RIGHT 330px: head 18 + 6 + weekdays 11 + 6 + grid flex 231 + 6 + foot 15 = 293.
+     Short months: the grid's 1fr rows stretch taller tiles into the same 231,
+     so five and six row months land the columns together with zero JS. */
+  grid-template-columns: minmax(0, 1fr) 330px;
   gap: var(--space-6);
   align-items: start;
   overflow: hidden;
@@ -2843,11 +2846,12 @@ button.session-hour-cell {
   position: static;
   background: none;
   box-shadow: none;
-  padding: 0 0 76px;           /* the reserved ground the sparkline lives in */
+  min-height: 293px;
+  padding: 0 0 83px;           /* Zone C: 11px air + 72px spark ground */
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  gap: var(--space-3);
+  gap: 0;
   min-width: 0;
   overflow: visible;
 }
@@ -2856,9 +2860,45 @@ button.session-hour-cell {
 /* Minimized, still first: 36px instead of 64, and still the largest thing on
    the card, docked at the top where the eye enters. */
 #dashboard .dash-month-card .dash-hero-value {
-  font-size: clamp(32px, 2.6vw, 40px);
+  margin-top: 4px;
+  font-size: clamp(30px, 2.4vw, 34px);
   letter-spacing: -0.02em;
 }
+
+/* Zone A's delta line: the one survivor of the old chip row. The lit range
+   tab already names the period, so the copy is value and percent only. */
+#dashboard .dash-hero-range {
+  display: block;
+  margin-top: 6px;
+  font: 600 13px/14px var(--font-mono);
+}
+#dashboard .dash-hero-range.is-pos { color: var(--pnl-pos); }
+#dashboard .dash-hero-range.is-neg { color: var(--pnl-neg); }
+
+/* Zone B: the NOW grid. fr tracks, never fixed px, so the edges close. */
+#dashboard .dash-now {
+  margin-top: 10px;
+  padding-top: 7px;
+  border-top: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 20px;
+  row-gap: 14px;
+}
+#dashboard .dash-now-label {
+  display: block;
+  font: 600 11px/11px var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  margin-bottom: 5px;
+}
+#dashboard .dash-now-fig { font: 700 17px/17px var(--font-mono); color: var(--text); }
+#dashboard .dash-now-fig.is-pos { color: var(--pnl-pos); }
+#dashboard .dash-now-fig.is-neg { color: var(--pnl-neg); }
+#dashboard .dash-now-fig.is-idle { color: var(--text-faint); font-weight: 600; }
+#dashboard .dash-now-fig.is-hot { color: var(--accent); }
+#dashboard .dash-now-sub { font: 600 11px/1 var(--font-mono); color: var(--text-faint); }
 
 /* The sparkline is the balance story's ground, not the card's wallpaper: it
    spans only the hero column and dies before the calendar starts. */
@@ -2866,7 +2906,8 @@ button.session-hour-cell {
   position: absolute;
   left: 0;
   bottom: 0;
-  width: 56%;
+  width: 59%;
+  opacity: 0.45;               /* ground, not wallpaper */
   height: 72px;
   z-index: -1;
   pointer-events: none;
@@ -2874,6 +2915,18 @@ button.session-hour-cell {
   mask-image: linear-gradient(to right, black 62%, transparent 96%);
 }
 #dashboard .dash-month-card .dash-spark-wrap canvas { width: 100%; height: 100%; }
+#dashboard .dash-ground-caps {
+  position: absolute;
+  left: 0;
+  bottom: 58px;
+  width: 55%;
+  display: flex;
+  justify-content: space-between;
+  font: 600 10px/1 var(--font-mono);
+  color: var(--text-faint);
+  letter-spacing: 0.06em;
+  pointer-events: none;
+}
 
 /* The mark rides the calendar's foot line, right-aligned: one line, two
    voices, zero collisions. */
@@ -2900,6 +2953,7 @@ button.session-hour-cell {
   gap: 5px;
   min-width: 0;
   align-self: start;
+  height: 293px;               /* both columns pin to the same budget */
 }
 #dashboard .mini-cal-open {
   display: flex;
@@ -2924,22 +2978,57 @@ button.session-hour-cell {
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 3px;
 }
+/* The grid is the only valve: it takes whatever the head, weekdays and foot
+   leave of the 293, and 1fr rows split it evenly. A five row month gets
+   taller tiles in the same box, so the columns can never desync. */
+#dashboard .mini-cal-grid {
+  flex: 1;
+  grid-auto-rows: minmax(0, 1fr);
+  min-height: 0;
+}
 #dashboard .mini-cal-weekdays span {
   font: 600 11px/1 var(--font-mono);
   color: var(--text-faint);
   text-align: center;
 }
 #dashboard .mini-cal-day {
-  aspect-ratio: 1;
-  border-radius: 6px;
+  position: relative;
+  border-radius: 7px;
   border: 0;
   padding: 0;
   display: grid;
   place-items: center;
+  min-height: 0;
   font: 400 11px/1 var(--font-mono);
   color: var(--text-faint);
   background: var(--surface-inset);
 }
+
+/* THE LEDGER TILE. The money is the figure, the day number is a corner
+   index; the header net declares the currency once so tiles carry none. */
+#dashboard .mini-cal-day .mc-ix {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  font: 600 9px/1 var(--font-mono);
+  font-style: normal;
+  color: var(--text-faint);
+  opacity: 0.7;
+}
+#dashboard .mini-cal-day .mc-amt {
+  font: 700 11px/1 var(--font-mono);
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+#dashboard .mini-cal-day.is-trade:hover {
+  filter: brightness(1.06);
+}
+#dashboard .mini-cal-day.is-trade:focus-visible { box-shadow: inset 0 0 0 1px var(--accent); }
+#dashboard .mini-cal-day.is-scratch {
+  background: var(--surface-inset);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 8%, transparent);
+}
+#dashboard .mini-cal-day.is-scratch .mc-amt { color: var(--text-faint); font-weight: 600; }
 #dashboard .mini-cal-day.is-blank { background: none; }
 #dashboard .mini-cal-day.is-trade { font-weight: 600; color: var(--text); cursor: pointer; }
 #dashboard .mini-cal-day.is-trade.pnl-positive {
@@ -3018,7 +3107,17 @@ button.session-hour-cell {
      tiles measured 42px against the 44px floor. The calendar earns the
      missing width by bleeding into the card's padding, tiles at 44.6px,
      instead of the fallback that would have made them inert. */
-  #dashboard .mini-cal { margin-inline: -6px; align-self: stretch; }
+  #dashboard .mini-cal { margin-inline: -6px; align-self: stretch; height: auto; }
+  /* Touch floor: rows stop being 1fr shares of a pinned box and become
+     honest 44px targets. */
+  #dashboard .mini-cal-grid { flex: none; grid-auto-rows: auto; }
+  #dashboard .mini-cal-day { height: 44px; }
+  /* The 9px corner index cannot meet the 11px phone floor, so it does not
+     ship there; the aria-label and title carry the date. */
+  #dashboard .mini-cal-day .mc-ix { display: none; }
+  #dashboard .dash-ground-caps { display: none; }
+  #dashboard .dash-now { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 14px; }
+  #dashboard .dash-month-card .dash-hero { min-height: 0; padding-bottom: 0; }
   #dashboard .mini-cal-open,
   #dashboard .mini-cal-foot { padding-inline: 6px; }
   #dashboard .mini-cal-day { border-radius: 8px; }

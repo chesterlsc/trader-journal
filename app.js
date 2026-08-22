@@ -1912,8 +1912,20 @@ function bindEvents() {
     if (!item) return;
     item.closest("details.topnav-more")?.removeAttribute("open");
   });
-  // The greeting carries a live session countdown; a minute tick is enough.
-  window.setInterval(renderGreeting, 60000);
+  // The greeting carries a live session countdown; a minute tick is enough,
+  // and the NOW grid's event cell rides the same clock above its hot window.
+  window.setInterval(() => {
+    renderGreeting();
+    renderNowEvent();
+  }, 60000);
+  // Inside ten minutes the event cell counts seconds; above it, the minute
+  // tick owns the cell and this loop costs one class check.
+  window.setInterval(() => {
+    const cell = document.getElementById("dashNowEvent");
+    if (cell && cell.classList.contains("is-hot")) {
+      renderNowEvent();
+    }
+  }, 1000);
   ui.backupJsonBtn.addEventListener("click", exportBackupJson);
   ui.deleteFilteredBtn?.addEventListener("click", deleteFilteredTrades);
   ui.importJsonBtn.addEventListener("click", () => ui.jsonImportInput.click());
@@ -8523,6 +8535,7 @@ function calculateAnalytics(trades, settings, reflections) {
     winRate,
     avgWin,
     avgLoss,
+    dailyPnl,
     avgRR,
     avgR,
     profitFactor,
@@ -10031,42 +10044,156 @@ function renderBalanceCard(analytics) {
   // balance override — mixing the two would produce a number nobody can trace.
   const computedBalance = equity[equity.length - 1] ?? state.settings.startingBalance;
 
-  const setChip = (node, text, tone) => {
+  // THE NOW GRID. Six figures, each able to change within the hour, which is
+  // the test for living on this card: monthly quality lives in the pulse row.
+  // Idle states are words, never blanks and never hidden cells.
+  const setFig = (node, text, tone, idle) => {
     if (!node) {
       return;
     }
-    node.hidden = !hasTrades || !text;
-    node.textContent = text || "";
-    node.classList.toggle("is-pos", tone > 0);
-    node.classList.toggle("is-neg", tone < 0);
+    node.textContent = text;
+    node.classList.toggle("is-pos", !idle && tone > 0);
+    node.classList.toggle("is-neg", !idle && tone < 0);
+    node.classList.toggle("is-idle", Boolean(idle));
   };
 
-  const today = analytics.todayPnl;
-  setChip(
-    ui.dashHeroToday,
-    `${today > 0 ? "▲ " : today < 0 ? "▼ " : ""}${formatCurrency(Math.abs(today))} today`,
-    today
+  const today = analytics.todayPnl || 0;
+  setFig(ui.dashHeroToday, today === 0 ? "$0" : nowMoney(today), today, today === 0);
+  const todaySub = document.getElementById("dashNowTodaySub");
+  if (todaySub) {
+    const todayIso = toDateInputValue(new Date());
+    const count = getClosedTrades().filter((trade) => trade.date === todayIso).length;
+    todaySub.textContent = count ? `· ${count} TRADE${count === 1 ? "" : "S"}` : "· NO TRADES";
+  }
+
+  const week = analytics.weekPnl || 0;
+  setFig(ui.dashHeroWeek, week === 0 ? "$0" : nowMoney(week), week, week === 0);
+
+  const float = openFloatingPnl();
+  const openNode = document.getElementById("dashNowOpen");
+  if (float.open === 0) {
+    setFig(openNode, "FLAT", 0, true);
+  } else {
+    setFig(openNode, formatSignedCurrency(float.floating), float.floating, false);
+  }
+
+  const streak = currentDayStreak(analytics.dailyPnl);
+  const streakLabel = document.getElementById("dashNowStreakLabel");
+  if (streakLabel) {
+    streakLabel.textContent = streak.sign < 0 ? "Red streak" : "Green streak";
+  }
+  setFig(
+    document.getElementById("dashNowStreak"),
+    `${streak.days} DAY${streak.days === 1 ? "" : "S"}`,
+    streak.sign,
+    streak.days === 0
   );
 
-  const weekAgo = balanceAtDate(analytics, shiftDaysIso(7));
-  const weekPct = weekAgo > 0 ? ((computedBalance - weekAgo) / weekAgo) * 100 : 0;
-  setChip(
-    ui.dashHeroWeek,
-    `${weekPct >= 0 ? "+" : "−"}${Math.abs(weekPct).toFixed(2)}% vs last week`,
-    weekPct
-  );
+  renderNowEvent();
 
+  const dd = Math.abs(analytics.currentDrawdown || 0);
+  setFig(document.getElementById("dashNowHighs"), dd === 0 ? "AT HIGHS" : nowMoney(-dd), dd === 0 ? 1 : -1, false);
+
+  // Zone A delta line: value and percent; the lit range tab names the period.
   const range = state.dashboard.balanceRange;
   const days = BALANCE_RANGE_DAYS[range] || 0;
   const base = days ? balanceAtDate(analytics, shiftDaysIso(days)) : state.settings.startingBalance;
   const change = computedBalance - base;
-  setChip(
-    ui.dashHeroRange,
-    `${change >= 0 ? "+" : "−"}${formatCurrency(Math.abs(change))} ${BALANCE_RANGE_LABELS[range]}`,
-    change
-  );
+  const pct = base > 0 ? (change / base) * 100 : 0;
+  if (ui.dashHeroRange) {
+    ui.dashHeroRange.hidden = !hasTrades;
+    ui.dashHeroRange.textContent = `${nowMoney(change)} · ${change >= 0 ? "+" : "-"}${Math.abs(pct).toFixed(1)}%`;
+    ui.dashHeroRange.classList.toggle("is-pos", change > 0);
+    ui.dashHeroRange.classList.toggle("is-neg", change < 0);
+  }
+
+  // Zone C captions: what the ground line actually is, and its bounds.
+  const capLabel = document.getElementById("dashGroundLabel");
+  const capHiLo = document.getElementById("dashGroundHiLo");
+  if (capLabel && capHiLo) {
+    const slice = days > 0 ? equity.slice(-days) : equity;
+    if (slice.length > 1) {
+      capLabel.textContent = `${{ "1m": "1M", "3m": "3M", all: "ALL" }[range] || "ALL"} EQUITY`;
+      capHiLo.textContent = `H ${formatStatMoney(Math.max(...slice))} · L ${formatStatMoney(Math.min(...slice))}`;
+    } else {
+      capLabel.textContent = "";
+      capHiLo.textContent = "";
+    }
+  }
 
   renderDashSparkline(analytics);
+}
+
+/* The streak the owner is ON, not the best he has ever had: walk traded days
+   newest first while the sign matches the most recent traded day's sign.
+   Untraded calendar days between traded days do not break it, because a
+   weekend is not a loss. */
+/* NOW figures speak whole dollars: cents on a glance figure are noise, and
+   the tiered stat format already knows when to go compact. */
+function nowMoney(value) {
+  const v = Number(value) || 0;
+  return (v > 0 ? "+" : v < 0 ? "-" : "") + formatStatMoney(Math.abs(v)).replace(/^\$/, "$");
+}
+
+function currentDayStreak(dailyPnl) {
+  if (!(dailyPnl instanceof Map) || dailyPnl.size === 0) {
+    return { days: 0, sign: 0 };
+  }
+  const traded = [...dailyPnl.entries()]
+    .filter(([, pnl]) => pnl !== 0)
+    .sort((a, b) => b[0].localeCompare(a[0]));
+  if (!traded.length) {
+    return { days: 0, sign: 0 };
+  }
+  const sign = traded[0][1] > 0 ? 1 : -1;
+  let days = 0;
+  for (const [, pnl] of traded) {
+    if ((pnl > 0 ? 1 : -1) !== sign) {
+      break;
+    }
+    days += 1;
+  }
+  return { days, sign };
+}
+
+/* NEXT EVENT: the same ranking the edge mini already computes, first row
+   only. QUIET on empty, stale or gated feeds, never a throw. Above ten
+   minutes the cell holds minute granularity; the second-by-second window is
+   patched by tickCountdowns. */
+function renderNowEvent() {
+  const node = document.getElementById("dashNowEvent");
+  if (!node) {
+    return;
+  }
+  let next = null;
+  let lead = null;
+  try {
+    const events = Array.isArray(terminal.events) ? terminal.events : [];
+    next = rankEvents(events, {
+      now: new Date(),
+      currencies: tradedCurrencies(state.trades),
+      minImpact: "Medium"
+    })[0] || null;
+    lead = next ? countdown(next, new Date()) : null;
+  } catch (error) {
+    next = null;
+  }
+  if (!next || !lead || lead.phase === "past" || !Number.isFinite(lead.ms) || lead.ms < 0) {
+    node.textContent = "QUIET";
+    node.classList.remove("is-hot", "is-pos", "is-neg");
+    node.classList.add("is-idle");
+    return;
+  }
+  const name = String(next.title || "EVENT").toUpperCase().replace(/\s+/g, " ").slice(0, 12).trim();
+  const mins = Math.floor(lead.ms / 60000);
+  const hot = lead.ms < 10 * 60000;
+  node.textContent = hot
+    ? `${name} · ${mins}:${String(Math.floor((lead.ms % 60000) / 1000)).padStart(2, "0")}`
+    : mins >= 90
+      ? `${name} · ${Math.round(mins / 60)}H`
+      : `${name} · ${mins}M`;
+  node.classList.toggle("is-hot", hot);
+  node.classList.remove("is-idle", "is-pos", "is-neg");
 }
 
 /* ── 1a playbook ─────────────────────────────────────────────────────────── */
@@ -11887,6 +12014,10 @@ function renderDashMiniCal() {
       : `${monthName}, no trades yet, opens calendar`);
   }
 
+  // Tile money: signed, no currency glyph (the header net declares it once),
+  // whole dollars under 10K via the stat tier, so +1,036 stays +1,036 and
+  // never rounds into +1.0K inside its own month.
+  const tileMoney = (v) => (v > 0 ? "+" : "") + formatStatMoney(v).replace("$", "");
   const tiles = [];
   for (let i = 0; i < startOffset; i += 1) {
     tiles.push('<span class="mini-cal-day is-blank" aria-hidden="true"></span>');
@@ -11897,13 +12028,13 @@ function renderDashMiniCal() {
     const isToday = isoDate === todayIso;
     const todayClass = isToday ? " is-today" : "";
     if (stats && stats.trades > 0) {
-      const pnlClass = stats.pnl > 0 ? "pnl-positive" : stats.pnl < 0 ? "pnl-negative" : "";
+      const pnlClass = stats.pnl > 0 ? "pnl-positive" : stats.pnl < 0 ? "pnl-negative" : "is-scratch";
       const intensity = monthMaxAbsPnl > 0
         ? Math.ceil(clamp(Math.abs(stats.pnl) / monthMaxAbsPnl, 0, 1) * 4) / 4
         : 0;
       const dayLong = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric" }).format(new Date(year, monthIndex, day));
       const signed = stats.pnl === 0 ? formatCurrency(0) : formatSignedCurrency(stats.pnl);
-      tiles.push(`<button type="button" class="mini-cal-day is-trade ${pnlClass}${todayClass}" data-date="${isoDate}" style="--day-intensity:${intensity}" title="${escapeHtml(signed)}, ${stats.trades} trade${stats.trades === 1 ? "" : "s"}" aria-label="${stats.trades} trade${stats.trades === 1 ? "" : "s"} on ${dayLong}, ${stats.pnl >= 0 ? "up" : "down"} ${formatCurrency(Math.abs(stats.pnl))}, review in the journal">${day}</button>`);
+      tiles.push(`<button type="button" class="mini-cal-day is-trade ${pnlClass}${todayClass}" data-date="${isoDate}" style="--day-intensity:${intensity}" title="${escapeHtml(signed)}, ${stats.trades} trade${stats.trades === 1 ? "" : "s"}" aria-label="${stats.trades} trade${stats.trades === 1 ? "" : "s"} on ${dayLong}, ${stats.pnl >= 0 ? "up" : "down"} ${formatCurrency(Math.abs(stats.pnl))}, review in the journal"><i class="mc-ix">${day}</i><b class="mc-amt">${escapeHtml(stats.pnl === 0 ? "0" : tileMoney(stats.pnl))}</b></button>`);
     } else if (isoDate > todayIso) {
       tiles.push(`<span class="mini-cal-day is-future${todayClass}">${day}</span>`);
     } else {
@@ -11913,8 +12044,12 @@ function renderDashMiniCal() {
   ui.miniCalGrid.innerHTML = tiles.join("");
 
   if (ui.miniCalFoot) {
+    // BEST duplicated the pulse row's Best Day tile; AVG per traded day is
+    // the figure no other surface carries.
+    const red = [...dayStats.values()].filter((s) => s.pnl < 0).length;
+    const avg = dayStats.size ? round(net / dayStats.size) : 0;
     ui.miniCalFoot.textContent = dayStats.size
-      ? `${green} GREEN · BEST ${best > 0 ? "+" : ""}${formatStatMoney(best)}`
+      ? `${green} GREEN${red ? ` · ${red} RED` : ""} · AVG ${avg === 0 ? "$0" : (avg > 0 ? "+$" : "-$") + formatStatMoney(Math.abs(avg)).replace("$", "")}`
       : "AWAITING FIRST TRADE";
   }
 
@@ -14028,16 +14163,20 @@ function renderLiveEquity() {
   const float = openFloatingPnl();
   const equity = round(balance + float.floating);
   const label = document.getElementById("dashBalanceLabel");
-  const chip = document.getElementById("dashFloatChip");
+  const openNode = document.getElementById("dashNowOpen");
 
-  // Nothing open: the hero IS the balance, and the floating chip does not exist
-  // rather than sitting there reading zero.
+  // The float chip died with the chip row; the OPEN P&L cell in the NOW grid
+  // is its heir, and FLAT at zero is information rather than absence, so the
+  // cell never hides. The priced/unpriced honesty rides the title.
   if (float.open === 0) {
     if (label) {
       setText(label, "Account balance");
     }
-    if (chip) {
-      chip.hidden = true;
+    if (openNode) {
+      setText(openNode, "FLAT");
+      openNode.classList.remove("is-pos", "is-neg", "is-hot");
+      openNode.classList.add("is-idle");
+      openNode.title = "";
     }
     countUpTo(node, equity);
     return;
@@ -14046,13 +14185,14 @@ function renderLiveEquity() {
   if (label) {
     setText(label, "Account equity");
   }
-  if (chip) {
-    chip.hidden = false;
-    chip.className = `dash-float ${float.floating >= 0 ? "is-pos" : "is-neg"}`;
-    const priced = float.unpriced === 0
+  if (openNode) {
+    setText(openNode, formatSignedCurrency(float.floating));
+    openNode.classList.toggle("is-pos", float.floating > 0);
+    openNode.classList.toggle("is-neg", float.floating < 0);
+    openNode.classList.remove("is-idle");
+    openNode.title = float.unpriced === 0
       ? `${float.counted} open`
       : `${float.counted} of ${float.open} priced`;
-    setText(chip, `${formatSignedCurrency(float.floating)} floating, ${priced}`);
   }
   countUpTo(node, equity);
 }

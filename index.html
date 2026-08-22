@@ -1369,17 +1369,33 @@
                   >Manual override</span
                 >
                 <p class="metric-value dash-hero-value" data-metric="accountBalance">$0.00</p>
-                <!-- Floating P&L. Present ONLY while something is open, so it
-                     never sits there reading zero, and it says how many of the
-                     open trades actually have a confirmed price behind them. -->
-                <p class="dash-float" id="dashFloatChip" hidden></p>
-                <div class="dash-hero-meta">
-                  <span class="dash-hero-today" id="dashHeroToday" hidden></span>
-                  <span class="dash-hero-week" id="dashHeroWeek" hidden></span>
-                  <span class="dash-hero-range" id="dashHeroRange" hidden></span>
+                <span class="dash-hero-range" id="dashHeroRange" hidden></span>
+                <!-- THE NOW GRID. Six figures that can change within the hour,
+                     which is the test for living on this card at all: monthly
+                     quality lives in the pulse row below, never here. Idle
+                     states are words (FLAT, QUIET, AT HIGHS), never blanks and
+                     never hidden cells, because a hole in a grid reads as a
+                     bug and a word reads as a fact. -->
+                <div class="dash-now">
+                  <div><span class="dash-now-label">Today</span>
+                       <span class="dash-now-fig" id="dashHeroToday">$0</span> <span class="dash-now-sub" id="dashNowTodaySub"></span></div>
+                  <div><span class="dash-now-label">This week</span>
+                       <span class="dash-now-fig" id="dashHeroWeek">$0</span></div>
+                  <div><span class="dash-now-label">Open P&amp;L</span>
+                       <span class="dash-now-fig" id="dashNowOpen">FLAT</span></div>
+                  <div><span class="dash-now-label" id="dashNowStreakLabel">Green streak</span>
+                       <span class="dash-now-fig" id="dashNowStreak">0 DAYS</span></div>
+                  <div><span class="dash-now-label">Next event</span>
+                       <span class="dash-now-fig" id="dashNowEvent">QUIET</span></div>
+                  <div><span class="dash-now-label">From highs</span>
+                       <span class="dash-now-fig" id="dashNowHighs">AT HIGHS</span></div>
                 </div>
                 <div class="dash-spark-wrap" aria-hidden="true">
                   <canvas id="dashSparkline" class="dash-spark" width="1000" height="180"></canvas>
+                </div>
+                <div class="dash-ground-caps" aria-hidden="true">
+                  <span id="dashGroundLabel"></span>
+                  <span id="dashGroundHiLo"></span>
                 </div>
               </article>
 
