@@ -3195,3 +3195,30 @@ button.session-hour-cell {
   margin-right: var(--space-3);
   white-space: nowrap;
 }
+
+/* ==========================================================================
+   THE PLAYBOOK ROW'S EMPTY TRACK, FILLED.
+
+   .dash-boards is a two column grid (1.55fr / 1fr) whose second column lost
+   its tenant in an earlier renovation: the playbook sat in column one and
+   column two rendered as a permanent dark field beside it, at every width.
+   The owner saw it immediately; the audits missed it because they scanned
+   vertical gaps between siblings, not empty tracks inside a row. Discipline
+   Monitor moves up from the bottom grid to hold it: behavioral quality
+   beside setup quality, the two boards that answer "HOW am I trading".
+   ========================================================================== */
+#dashboard .dash-boards-playbook .dash-board-slot {
+  height: 100%;
+  min-height: 0;
+}
+
+/* No setups yet: the playbook self-hides and discipline takes the whole
+   row rather than guarding a hole in column one. */
+#dashboard .dash-boards-playbook:has(> #dashPlaybook[hidden]) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* The bottom grid's two remaining panels split it evenly. */
+@media (min-width: 1240px) {
+  #dashboard .panel-grid-bottom > .panel-span-4 { grid-column: span 6; }
+}

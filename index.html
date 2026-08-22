@@ -1543,6 +1543,39 @@
                   <p id="dashSetupAlertText"></p>
                 </div>
               </section>
+              <section class="panel dash-board-slot">
+            <div class="panel-head panel-head-inline">
+              <div>
+                <h3>Discipline Monitor</h3>
+                <p>Rule breaks and psychology pressure points</p>
+              </div>
+              <button class="info-btn" type="button" data-score-info aria-label="How the scores are calculated">&#9432;</button>
+            </div>
+            <div class="score-stack">
+              <div class="score-item">
+                <p>Discipline Score</p>
+                <strong id="disciplineScore">100</strong>
+              </div>
+              <div class="score-item">
+                <p>Daily Trading Score</p>
+                <strong id="dailyTradingScore">0</strong>
+              </div>
+              <div class="score-item">
+                <p>Equity Goal Progress</p>
+                <strong id="goalProgress">0%</strong>
+              </div>
+            </div>
+            <!-- 1f #02: what the score is made of, in money. Rendered only
+                 when both sides of a rule clear the threshold; until then the
+                 list says what the threshold is. Never a placeholder number. -->
+            <div class="rule-cost">
+              <p class="rule-cost-title">What the checklist costs</p>
+              <ul id="ruleCostList" class="rule-cost-list"></ul>
+            </div>
+            <ul id="riskViolations" class="warning-list">
+              <li class="muted">No violations detected.</li>
+            </ul>
+          </section>
 
             </div>
 
@@ -1657,39 +1690,7 @@
           </section>
 
           <div class="panel-grid panel-grid-bottom">
-          <section class="panel panel-span-4">
-            <div class="panel-head panel-head-inline">
-              <div>
-                <h3>Discipline Monitor</h3>
-                <p>Rule breaks and psychology pressure points</p>
-              </div>
-              <button class="info-btn" type="button" data-score-info aria-label="How the scores are calculated">&#9432;</button>
-            </div>
-            <div class="score-stack">
-              <div class="score-item">
-                <p>Discipline Score</p>
-                <strong id="disciplineScore">100</strong>
-              </div>
-              <div class="score-item">
-                <p>Daily Trading Score</p>
-                <strong id="dailyTradingScore">0</strong>
-              </div>
-              <div class="score-item">
-                <p>Equity Goal Progress</p>
-                <strong id="goalProgress">0%</strong>
-              </div>
-            </div>
-            <!-- 1f #02: what the score is made of, in money. Rendered only
-                 when both sides of a rule clear the threshold; until then the
-                 list says what the threshold is. Never a placeholder number. -->
-            <div class="rule-cost">
-              <p class="rule-cost-title">What the checklist costs</p>
-              <ul id="ruleCostList" class="rule-cost-list"></ul>
-            </div>
-            <ul id="riskViolations" class="warning-list">
-              <li class="muted">No violations detected.</li>
-            </ul>
-          </section>
+          
             <section class="panel panel-span-4 is-clamped" id="accountsPanel">
             <div class="panel-head panel-head-inline">
               <div>
