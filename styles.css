@@ -11979,7 +11979,13 @@ body.auth-locked {
   max-height: none;
   height: 100%;
 }
-.bb-wall[data-size="half"] .bb-mon { position: relative; grid-template-rows: minmax(0, 1fr); }
+/* The masthead is absolutely positioned in all three column modes, so all
+   three must establish the containing block for it. Extending the overlay to
+   solo and stack without extending this is what stacked every monitor's
+   masthead at the top of the WALL: with no positioned ancestor on .bb-mon the
+   scrim resolved against the fixed wall instead, and four heads drew over the
+   wall's own title row. */
+.bb-wall:is([data-size="half"], [data-size="solo"], [data-size="stack"]) .bb-mon { position: relative; grid-template-rows: minmax(0, 1fr); }
 /* Frameless here too: in a short band a 35px name row is most of the tile. */
 .bb-wall:is([data-size="half"], [data-size="solo"], [data-size="stack"]) .bb-mon-h {
   position: absolute;
