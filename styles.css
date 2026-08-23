@@ -11961,7 +11961,7 @@ body.auth-locked {
    letterbox at all. Measured before this: a 720x223 cell against a 16:9 stream,
    an aspect of 3.23, which showed the picture as a strip with black either
    side. Height drives the width here, so the band's height stays the control. */
-.bb-wall[data-size="half"] .bb-wall-grid {
+.bb-wall:is([data-size="half"], [data-size="solo"], [data-size="stack"]) .bb-wall-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
   height: 100%;
@@ -12024,7 +12024,7 @@ body.auth-locked {
    min() caps the column at what the available height can fill at 16:9, so a
    short window narrows the column rather than growing black bars beside it. */
 @media (min-width: 1100px) {
-  #terminal:has(.bb-wall[data-size="half"]) {
+  #terminal:has(.bb-wall:is([data-size="half"], [data-size="solo"], [data-size="stack"])) {
     /* --wall-head-h is the masthead MEASURED by app.js, beside --tape-h. It was
        a guessed 34px here and the real bar is 57, so the column came out 23px
        of height too generous, the grid overflowed its row, max-height clamped
@@ -12094,10 +12094,10 @@ body.auth-locked {
     height: 38vh;
     bottom: var(--dock-clear-h, 112px);
   }
-  #terminal:has(.bb-wall[data-size="half"]) {
+  #terminal:has(.bb-wall:is([data-size="half"], [data-size="solo"], [data-size="stack"])) {
     padding-bottom: calc(38vh + var(--dock-clear-h, 112px));
   }
-  .bb-wall[data-size="half"] .bb-wall-grid {
+  .bb-wall:is([data-size="half"], [data-size="solo"], [data-size="stack"]) .bb-wall-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-rows: repeat(2, minmax(0, 1fr));
     width: 100%;
