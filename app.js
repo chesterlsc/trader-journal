@@ -1309,6 +1309,10 @@ function init() {
   renderLoginLogs();
   renderAdminUsers();
   renderAll();
+  // Boot veil: preview / desk-app / guest / reset-token boots have auth
+  // settled by here, so this first render pass IS the ready state. The web
+  // owner's veil waits for checkAuthSession(), which owns the landing swap.
+  if (state.auth.checked && window.__liftBootVeil) window.__liftBootVeil();
   renderLastSaved();
   setupScrollReveals();
   setupLandingReveals();
@@ -2965,6 +2969,10 @@ async function checkAuthSession() {
     updateAccessGate();
     await loadPublicRecentTrades({ silent: true });
   }
+
+  // The owner's veil covers the auth swap AND the panel population above.
+  // Past 2600ms the inline fail-open has already won; this is a no-op then.
+  if (window.__liftBootVeil) window.__liftBootVeil();
 }
 
 // Async buttons (§4): dim + inert + swapped label while the request runs.
