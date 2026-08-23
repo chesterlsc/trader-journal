@@ -2949,15 +2949,10 @@ async function checkAuthSession() {
 
   updateAuthUi();
 
+  // Land on the right view BEFORE any of the network below. The journal is
+  // already in state from loadState(), so the dashboard paints real numbers
+  // here; the fetches only reconcile them.
   if (state.auth.isAuthenticated) {
-    const loaded = await loadFromPhpStorage({ silent: true, source: "session", preferLocalIfServerEmpty: true });
-    await loadRecentTrades({ silent: true });
-    if (loaded) {
-      setMessage(ui.authMessage, `Session restored for ${state.auth.username}.`, "success");
-    }
-    await loadLoginLogs({ silent: true });
-    await loadAdminUsers({ silent: true });
-    refreshLivePrices({ immediate: true });
     switchView(restoreRouteFromHash() || "dashboard");
   } else {
     state.recentTrades = [];
@@ -2967,12 +2962,31 @@ async function checkAuthSession() {
     renderLoginLogs();
     renderAdminUsers();
     updateAccessGate();
-    await loadPublicRecentTrades({ silent: true });
   }
 
-  // The owner's veil covers the auth swap AND the panel population above.
-  // Past 2600ms the inline fail-open has already won; this is a no-op then.
+  // Everything the veil exists to cover — the auth swap and the view it lands
+  // on — has happened. LIFT HERE, not after the loads. Those five round trips
+  // used to run first, so on a real boot the veil held for all of them and the
+  // 2600ms fail-open ended up doing the lifting. It read as a hung app.
   if (window.__liftBootVeil) window.__liftBootVeil();
+
+  if (state.auth.isAuthenticated) {
+    refreshLivePrices({ immediate: true });
+    // Four independent endpoints writing to four different state slices, so
+    // they race instead of queueing behind each other. Each repaints its own
+    // panel as it lands, under a dashboard the user is already reading.
+    const [loaded] = await Promise.all([
+      loadFromPhpStorage({ silent: true, source: "session", preferLocalIfServerEmpty: true }),
+      loadRecentTrades({ silent: true }),
+      loadLoginLogs({ silent: true }),
+      loadAdminUsers({ silent: true })
+    ]);
+    if (loaded) {
+      setMessage(ui.authMessage, `Session restored for ${state.auth.username}.`, "success");
+    }
+  } else {
+    await loadPublicRecentTrades({ silent: true });
+  }
 }
 
 // Async buttons (§4): dim + inert + swapped label while the request runs.

@@ -154,9 +154,19 @@ assert.ok(
   /renderAll\(\);\n(?:\s*\/\/[^\n]*\n)*\s*if \(state\.auth\.checked && window\.__liftBootVeil\)/.test(app),
   "init()'s lift must sit right after renderAll() and behind the auth.checked gate"
 );
+// The lift must land AFTER the view swap but BEFORE the awaited fetches. When
+// it sat after them the veil held for five sequential round trips and the
+// fail-open did the lifting on every real boot, which read as a hung app.
+const authFn = app.slice(app.indexOf("async function checkAuthSession()"));
+const body = authFn.slice(0, authFn.indexOf("\n}\n") + 2);
+const liftAt = body.indexOf("window.__liftBootVeil()");
+const swapAt = body.indexOf("switchView(restoreRouteFromHash()");
+const firstAwaitedLoad = body.search(/await (Promise\.all|load[A-Z])/);
+assert.ok(liftAt > 0 && swapAt > 0 && firstAwaitedLoad > 0, "checkAuthSession() lost a landmark");
+assert.ok(swapAt < liftAt, "the view swap must happen before the lift, or the landing flashes");
 assert.ok(
-  /if \(window\.__liftBootVeil\) window\.__liftBootVeil\(\);\n\}/.test(app),
-  "checkAuthSession() must lift as its last statement, after the view swap"
+  liftAt < firstAwaitedLoad,
+  "the lift must precede the awaited loads — holding the veil for them reads as a hung app"
 );
 
 console.log(

@@ -154,21 +154,25 @@
       }
       #tjv #tjv-p { fill: var(--tjv-plate); }
 
-      #tjv #tjv-o { animation: tjv-trace 380ms cubic-bezier(.32,0,.18,1) both,
-                               tjv-vanish 160ms 850ms ease-out both; }
-      #tjv #tjv-c { animation: tjv-trace 150ms 320ms cubic-bezier(.4,0,.2,1) both,
-                               tjv-ink 160ms 850ms ease-out both; }
-      #tjv #tjv-s { animation: tjv-trace 180ms 430ms cubic-bezier(.36,0,.14,1) both,
-                               tjv-ink 160ms 850ms ease-out both; }
-      #tjv #tjv-j { animation: tjv-trace 240ms 570ms cubic-bezier(.32,0,.12,1) both,
-                               tjv-ink 160ms 850ms ease-out both; }
-      #tjv #tjv-p { animation: tjv-plate 160ms 850ms ease-out both; }
-      #tjv #tjv-t1 { animation: tjv-trace 90ms 850ms cubic-bezier(.2,0,.3,1) both,
-                                tjv-shim 1600ms 1450ms ease-in-out infinite; }
-      #tjv #tjv-t2 { animation: tjv-trace 90ms 890ms cubic-bezier(.2,0,.3,1) both,
-                                tjv-shim 1600ms 1560ms ease-in-out infinite; }
-      #tjv #tjv-t3 { animation: tjv-trace 90ms 930ms cubic-bezier(.2,0,.3,1) both,
-                                tjv-shim 1600ms 1670ms ease-in-out infinite; }
+      /* Timings are the WHOLE budget, not a suggestion: the mark is solid at
+         700ms and the app is usually ready before that, so most boots see the
+         snap rather than the full draw. An earlier cut ran to 1010ms and read
+         as lag on every warm start. */
+      #tjv #tjv-o { animation: tjv-trace 260ms cubic-bezier(.32,0,.18,1) both,
+                               tjv-vanish 120ms 580ms ease-out both; }
+      #tjv #tjv-c { animation: tjv-trace 110ms 210ms cubic-bezier(.4,0,.2,1) both,
+                               tjv-ink 120ms 580ms ease-out both; }
+      #tjv #tjv-s { animation: tjv-trace 130ms 290ms cubic-bezier(.36,0,.14,1) both,
+                               tjv-ink 120ms 580ms ease-out both; }
+      #tjv #tjv-j { animation: tjv-trace 170ms 400ms cubic-bezier(.32,0,.12,1) both,
+                               tjv-ink 120ms 580ms ease-out both; }
+      #tjv #tjv-p { animation: tjv-plate 120ms 580ms ease-out both; }
+      #tjv #tjv-t1 { animation: tjv-trace 70ms 580ms cubic-bezier(.2,0,.3,1) both,
+                                tjv-shim 1400ms 1000ms ease-in-out infinite; }
+      #tjv #tjv-t2 { animation: tjv-trace 70ms 610ms cubic-bezier(.2,0,.3,1) both,
+                                tjv-shim 1400ms 1090ms ease-in-out infinite; }
+      #tjv #tjv-t3 { animation: tjv-trace 70ms 640ms cubic-bezier(.2,0,.3,1) both,
+                                tjv-shim 1400ms 1180ms ease-in-out infinite; }
 
       @keyframes tjv-trace  { from { stroke-dashoffset: 101 } to { stroke-dashoffset: 0 } }
       @keyframes tjv-plate  { from { opacity: 0 } to { opacity: 1 } }
@@ -180,11 +184,11 @@
          finished default. Then the ground dissolves and the tile follows it
          out, handing the eye to the topnav TJ tile in the same place. */
       #tjv.out { pointer-events: none; opacity: 0;
-                 transition: opacity 220ms cubic-bezier(.33,0,.2,1) 60ms; }
+                 transition: opacity 150ms cubic-bezier(.33,0,.2,1) 40ms; }
       #tjv.out * { animation: none !important; }
-      #tjv.out svg { opacity: 0; transform: translateY(-4px) scale(.97);
-                     transition: opacity 200ms cubic-bezier(.4,0,1,1) 140ms,
-                                 transform 200ms cubic-bezier(.4,0,1,1) 140ms; }
+      #tjv.out svg { opacity: 0; transform: translateY(-3px) scale(.98);
+                     transition: opacity 130ms cubic-bezier(.4,0,1,1) 80ms,
+                                 transform 130ms cubic-bezier(.4,0,1,1) 80ms; }
 
       @media (prefers-reduced-motion: reduce) {
         #tjv, #tjv * { animation: none !important; }
@@ -229,7 +233,7 @@
          a 404ing import once already. app.js calls window.__liftBootVeil(). */
       (function () {
         var fired = false;
-        var timer = setTimeout(lift, 2600);
+        var timer = setTimeout(lift, 1600);
         window.__liftBootVeil = lift;
         function lift() {
           if (fired) return;
@@ -250,7 +254,7 @@
             v.className = "out";
             setTimeout(function () {
               if (v.parentNode) v.parentNode.removeChild(v);
-            }, 420);
+            }, 260);
           }
         }
       })();
