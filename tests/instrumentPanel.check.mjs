@@ -78,9 +78,14 @@ assert.ok(
 
 // ── 3. Stretch is stated, and the workarounds are gone ────────────────────────
 assert.ok(/align-items:\s*stretch/.test(clay), "the panel grid must state align-items: stretch");
+// End the slice on the short-screen MEDIA QUERY, not on the words "SHORT
+// SCREENS" — those live inside a comment, which decls() strips, so indexOf
+// returned -1 and this assertion silently scanned to end-of-file.
+const SHORT_Q = "@media (min-width: 1240px) and (max-height: 960px)";
 const gridBlock = decls(clay.slice(clay.indexOf(".view.is-active#dashboard")));
+assert.ok(gridBlock.includes(SHORT_Q), "lost the short-screen media query anchor");
 assert.ok(
-  !/height:\s*100%/.test(gridBlock.slice(0, gridBlock.indexOf("SHORT SCREENS"))),
+  !/height:\s*100%/.test(gridBlock.slice(0, gridBlock.indexOf(SHORT_Q))),
   "height:100% re-states the track as an answer rather than a ceiling — it stopped the canvas sizing"
 );
 
@@ -127,7 +132,7 @@ const clayDecls = decls(clay);
 const tallRule = blockAt(clayDecls, clayDecls.indexOf("#dashboard.is-active {\n    grid-template-columns"));
 const tall = rowsOf(tallRule);
 assert.equal(tall, "36px 108px minmax(0, 0.51fr) minmax(0, 0.49fr)", "tall-screen track set changed");
-const shortBlock = clay.slice(clay.indexOf("SHORT SCREENS"));
+const shortBlock = clay.slice(clay.indexOf(SHORT_Q));
 const shortDecls = decls(shortBlock);
 assert.equal(rowsOf(shortDecls), "32px 88px minmax(0, 0.48fr) minmax(0, 0.52fr)", "short-screen track set changed");
 // 1093 viewport - 32 padding-block - 36 row gaps = 1025 of track

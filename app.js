@@ -15287,11 +15287,27 @@ function setupTerminal() {
   // way the other Escape handlers are: a native dialog eats it first, and the
   // mobile drawer keeps its own binding.
   document.addEventListener("keydown", (event) => {
-    if (
-      event.key === "Escape" &&
-      document.getElementById("bbWall")?.dataset.size === "max" &&
-      !document.querySelector("dialog[open]")
-    ) {
+    if (event.key !== "Escape" || document.querySelector("dialog[open]")) {
+      return;
+    }
+    // Native fullscreen first. An Escape that is LEAVING a tile's fullscreen
+    // must not ALSO dock the TV or resize the wall — one key, one thing. This
+    // also fixes a pre-existing case: fullscreening a wall tile and pressing
+    // Escape used to snap the wall back to "half" as a side effect.
+    if (document.fullscreenElement) {
+      return;
+    }
+    const host = document.getElementById("dashEdgeMini");
+    if (host?.classList.contains("is-tv-out")) {
+      host.classList.remove("is-tv-out");
+      const toggle = document.getElementById("dashEdgeMiniOut");
+      toggle?.setAttribute("aria-pressed", "false");
+      toggle?.setAttribute("aria-label", "Pop out the live monitor");
+      setText(toggle?.querySelector(".dem-tv-out-label"), "watch");
+      toggle?.focus();
+      return;
+    }
+    if (document.getElementById("bbWall")?.dataset.size === "max") {
       applyWallSize("half");
     }
   });
@@ -15444,6 +15460,41 @@ function setupTerminal() {
       /* private mode: the choice holds for this session */
     }
     syncEdgeMiniCollapsed();
+  });
+
+  /* WATCH. One class on the rail; every pixel of the size is CSS on
+     #dashEdgeMiniTv, the element that already holds the iframe, so nothing
+     moves in the DOM and no ancestor is ever closed.
+
+     NOT a sixth WALL_SIZES token. applyWallSize writes #bbWall.dataset.size,
+     measures three terminal-only nodes, publishes --mon-head-h / --tape-h /
+     --wall-head-h that only the .bb-wall[data-size] rules read, and persists to
+     WALL_SIZE_KEY — which getWallSize replays through WALL_SIZES.includes(). A
+     dashboard name in that list matches no rule and silently breaks the desk.
+     Two mechanisms, one boolean here.
+
+     NOT persisted. Nothing autoplays — the tile is a standby button until it is
+     asked for — so a restored "out" state would paint a 920x517 black rectangle
+     over the board on every reload. */
+  document.addEventListener("click", (event) => {
+    const toggle = event.target.closest("#dashEdgeMiniOut");
+    if (!toggle) {
+      return;
+    }
+    const host = document.getElementById("dashEdgeMini");
+    if (!host) {
+      return;
+    }
+    const out = host.classList.toggle("is-tv-out");
+    toggle.setAttribute("aria-pressed", String(out));
+    toggle.setAttribute("aria-label", out ? "Dock the live monitor" : "Pop out the live monitor");
+    setText(toggle.querySelector(".dem-tv-out-label"), out ? "dock" : "watch");
+    if (out) {
+      // One press opens it AND starts it, so "watch" never produces a 920px
+      // standby rectangle. playMonitor early-returns once an iframe exists, so
+      // this can never reload a playing stream.
+      playMonitor(document.querySelector("#dashEdgeMiniTv .bb-mon"));
+    }
   });
 
   // The picker, same reasoning. The dashboard tile carries slot 0, so changing
@@ -16912,6 +16963,13 @@ function setWallSlot(slot, channelId) {
   if (tv && slot === 0) {
     tv.dataset.channel = channelId;
     setHtml(tv, monitorTile(channelId, 0));
+    // Popped out, a channel change must not leave a 920x517 standby rectangle
+    // where a picture was. setHtml just replaced the tile, so the iframe is
+    // gone either way — this is the one innerHTML write on this element that is
+    // not channel-gated, and it is the only place a restart is owed.
+    if (document.getElementById("dashEdgeMini")?.classList.contains("is-tv-out")) {
+      playMonitor(tv.querySelector(".bb-mon"));
+    }
   }
 }
 

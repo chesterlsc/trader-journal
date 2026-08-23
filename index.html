@@ -1465,6 +1465,19 @@
             <div class="dem-cmd">
               <span class="dem-prompt" id="dashEdgeMiniHeading">&gt; edge --link journal<i class="dem-caret" aria-hidden="true"></i></span>
               <span class="dem-clock" id="dashEdgeMiniAsOf"></span>
+              <!-- WATCH. The picture goes big without moving one node in the
+                   DOM: this button only writes a class on the rail, and the CSS
+                   is position:fixed on #dashEdgeMiniTv, the element that
+                   already contains the iframe. Moving the iframe would reload
+                   the stream and display:none on any ancestor would kill it. -->
+              <button
+                class="dem-min"
+                type="button"
+                id="dashEdgeMiniOut"
+                aria-controls="dashEdgeMiniTv"
+                aria-pressed="false"
+                aria-label="Pop out the live monitor"
+              ><span class="dem-tv-out-label">watch</span></button>
               <button
                 class="dem-min"
                 type="button"

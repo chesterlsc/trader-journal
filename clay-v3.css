@@ -4032,3 +4032,72 @@ button.session-hour-cell {
   #dashboard.is-active .dem-tv { max-height: 120px; }
 }
 
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   WATCH — the dashboard monitor, big.
+
+   The picture goes large WITHOUT MOVING ONE NODE. #dashEdgeMiniTv already
+   contains the iframe, so promoting that element to position:fixed resizes the
+   picture in place: no re-parenting (which reloads a stream), no display:none
+   on an ancestor (which kills one). The button writes a single class on the
+   rail and the whole size lives here.
+
+   The height term in the width is what stops a short wide screen pushing the
+   picture up over the figures — on a 1150-tall screen it resolves to 920x517
+   at the bottom right, leaving the top two bands and the curve entirely clear.
+   ═══════════════════════════════════════════════════════════════════════ */
+#dashboard.is-active .dash-edge-mini.is-tv-out .dem-tv {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 5;
+  display: grid;
+  align-content: center;
+  width: min(46vw, (100dvh - 260px) * 16 / 9);
+  height: calc(min(46vw, (100dvh - 260px) * 16 / 9) * 9 / 16);
+  max-height: none;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: #000;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgb(0 0 0 / 0.62);
+}
+/* The docked tile keeps its slot in the rail's flow, so the rail does not
+   collapse and reflow the board the moment the picture leaves it. */
+#dashboard.is-active .dash-edge-mini.is-tv-out .dem-tv::before {
+  content: "";
+  display: block;
+}
+#dashboard.is-active .dash-edge-mini.is-tv-out .dem-tv .bb-mon,
+#dashboard.is-active .dash-edge-mini.is-tv-out .dem-tv .bb-mon-pic,
+#dashboard.is-active .dash-edge-mini.is-tv-out .dem-tv iframe {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+}
+#dashEdgeMiniOut[aria-pressed="true"] {
+  color: var(--accent);
+}
+
+/* A phone gets one size, anchored to the TOP: the fixed tab bar and its
+   new-trade button both paint over the dashboard's stacking context, so a
+   bottom anchor lands underneath them. The top only has to clear the sticky
+   header. */
+@media (max-width: 899px) {
+  #dashboard.is-active .dash-edge-mini.is-tv-out .dem-tv {
+    width: calc(100vw - 16px);
+    height: calc((100vw - 16px) * 9 / 16);
+    left: 8px;
+    right: auto;
+    bottom: auto;
+    top: calc(56px + env(safe-area-inset-top, 0px));
+  }
+}
+
+/* ponytail: dashboard-scoped popout. .view { display: none }, toggled by
+   switchView, means navigating to Journal or Edge takes the fixed TV and its
+   iframe with it. A stream that survives navigation needs #dashboard to stop
+   being display:none, which is a shell-wide layout change, not a TV change. */
