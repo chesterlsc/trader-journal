@@ -3534,3 +3534,167 @@ button.session-hour-cell {
   .bb-wall[data-size="stack"] .bb-mon:first-child { grid-column: 1 / -1; }
 }
 
+
+/* ==========================================================================
+   THE INSTRUMENT PANEL. One screen, no scroll.
+
+   The dashboard spent about 2003px of column in a 1043px box, so it scrolled
+   by 946 at the owner's window. The fix is not to delete panels, it is to
+   stop stacking them.
+
+   PROMOTE, DO NOT RE-PARENT. display:contents on three grouping wrappers
+   dissolves their boxes and promotes their children to grid items of
+   #dashboard, so every card can be placed on a four row grid WITHOUT one node
+   moving in index.html. That matters more than it reads: ui.metricNodes is
+   captured once at module load by querySelectorAll, renderWall writes
+   innerHTML on the wall grid, and the TV iframe dies if its DOM is rebuilt.
+   A box that stops existing is invisible to all three.
+   ========================================================================== */
+@media (min-width: 1240px) {
+  #dashboard.is-active .dash-stats,
+  #dashboard.is-active .dash-month-card,
+  #dashboard.is-active .dash-boards { display: contents; }
+
+  /* LOAD BEARING. .dash-stats[hidden] is (0,2,0) and the rule above is
+     (1,2,0), which would leave the metric grid visible through the empty
+     state. Restated at winning specificity. */
+  #dashboard.is-active .dash-stats[hidden] { display: none; }
+
+  #dashboard.is-active {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-rows: 44px 96px minmax(0, 0.46fr) minmax(0, 0.54fr);
+    gap: 12px;
+    /* padding-inline belongs to .view.is-active:not(#terminal) at (1,2,0),
+       which centres on --shell-w. Only the block axis is ours; a padding
+       shorthand here would read as a fight it silently loses. */
+    padding-block: 16px;
+    overflow: hidden;            /* the promise, stated in CSS */
+    align-content: stretch;
+    row-gap: 12px;
+  }
+
+  /* overflow:hidden on a grid ITEM cancels its automatic minimum size, so a
+     panel reports a smaller contribution than its content and CLIPS instead
+     of shrinking. .dash-month-card and .panel both carry it for their rounded
+     corners, and every row budget below assumes shrinking. Not optional. */
+  #dashboard.is-active > *,
+  #dashboard.is-active .dash-stats > *,
+  #dashboard.is-active .dash-month-card > *,
+  #dashboard.is-active .dash-boards > * { min-height: 0; min-width: 0; }
+
+  /* The floor has to reach the NESTED panels too, or a row item that is
+     itself a grid reports its children's intrinsic height and overflows the
+     track it was placed in: measured, the analytics pair came back 723px tall
+     inside a 384px row and the monitor 925px inside 451px. A grid item can
+     only shrink if everything it contains can. */
+  #dashboard.is-active .panel-grid-analytics > *,
+  #dashboard.is-active .dash-edge-mini > *,
+  #dashboard.is-active .dash-board-slot > *,
+  #dashboard.is-active #dashPlaybook > * { min-height: 0; min-width: 0; }
+  /* Stretch alone does not bind: a grid item takes its track's height UNLESS
+     its own automatic minimum is larger, and a panel full of canvases and
+     rows always is. Measured, the analytics pair stood at 723px and the
+     monitor at 925px inside tracks of 384 and 451, correctly placed and
+     simply refusing to shrink. height:100% states the track height as the
+     answer rather than a ceiling, and overflow:hidden makes the panel's own
+     content the thing that gives. */
+  #dashboard.is-active .panel-grid-analytics,
+  #dashboard.is-active .dash-edge-mini,
+  #dashboard.is-active .dash-board-slot,
+  #dashboard.is-active #dashPlaybook,
+  #dashboard.is-active #dashMiniCal,
+  #dashboard.is-active #propTracker {
+    height: 100%;
+    overflow: hidden;
+  }
+  /* A canvas keeps its attribute height unless told otherwise, which is the
+     other half of the same overflow. */
+  #dashboard.is-active .panel-chart,
+  #dashboard.is-active .panel-chart canvas { min-height: 0; height: 100%; }
+  #dashboard.is-active .panel-grid-analytics > .panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* ROW 1, the command bar. */
+  #dashboard.is-active > .dash-head { grid-area: 1 / 1 / 2 / -1; align-items: center; }
+  #dashboard.is-active .dash-hello { font-size: 15px; white-space: nowrap; }
+
+  /* ROW 2, the tile strip: balance beside the pulse row. */
+  #dashboard.is-active .dash-hero { grid-area: 2 / 1 / 3 / 4; }
+  #dashboard.is-active .dash-quad { grid-area: 2 / 4 / 3 / -1; }
+
+  /* The hero is a 96px tile now, so its long tail goes. Each of these keeps
+     rendering into a hidden node, which costs nothing and breaks nothing.
+     #dashSparkline stays in the DOM so ui.dashSparkline never reads null. */
+  #dashboard.is-active .dash-hero .dash-now,
+  #dashboard.is-active .dash-hero .dash-spark-wrap,
+  #dashboard.is-active .dash-hero .dash-ground-caps,
+  #dashboard.is-active .dash-hero #dashCardDate { display: none; }
+  #dashboard.is-active .dash-hero { padding: 10px 14px; }
+  #dashboard.is-active .dash-hero-value { font-size: 26px; margin-top: 2px; }
+
+  /* ROW 3, the charts. */
+  #dashboard.is-active .dash-board-slot { grid-area: 3 / 1 / 4 / 5; }
+  #dashboard.is-active .panel-grid-analytics {
+    grid-area: 3 / 5 / 4 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  #dashboard.is-active #propTracker { grid-area: 3 / 1 / 4 / 5; }
+  #dashboard.is-active:has(#propTracker:not([hidden])) .dash-board-slot { display: none; }
+
+  /* ROW 4, the calendar, the playbook, the monitor. */
+  #dashboard.is-active #dashMiniCal { grid-area: 4 / 1 / 5 / 6; }
+  #dashboard.is-active #dashPlaybook { grid-area: 4 / 6 / 5 / 10; }
+  #dashboard.is-active .dash-edge-mini {
+    grid-area: 4 / 10 / 5 / -1;
+    position: static;            /* kills sticky, grid-row 1/30 and the bleed */
+    margin: 0;
+  }
+
+  /* The calendar lost its surface with the wrapper that carried it. */
+  #dashboard.is-active #dashMiniCal {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 11px;
+    border-radius: var(--radius-xl);
+    background: var(--surface-1);
+    box-shadow: var(--clay-raised);
+  }
+
+  /* The only regions allowed to scroll are inside a panel, never the page. */
+  #dashboard.is-active .dash-playbook-grid,
+  #dashboard.is-active #riskViolations,
+  #dashboard.is-active .dem-panel {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* An advisory that costs zero layout height. */
+  #dashboard.is-active #estimatedAnalyticsNotice {
+    position: fixed;
+    left: 24px;
+    bottom: 12px;
+    max-width: 320px;
+    z-index: 25;
+    margin: 0;
+  }
+
+  /* The empty state owns the panel; JS keeps toggling [hidden] and nothing else. */
+  #dashboard.is-active:has(#dashboardEmptyState:not([hidden])) > *:not(.dash-head):not(#dashboardEmptyState),
+  #dashboard.is-active:has(#dashboardEmptyState:not([hidden])) .dash-stats > *,
+  #dashboard.is-active:has(#dashboardEmptyState:not([hidden])) .dash-month-card > *,
+  #dashboard.is-active:has(#dashboardEmptyState:not([hidden])) .dash-boards > * { display: none; }
+  #dashboard.is-active #dashboardEmptyState { grid-area: 2 / 1 / -1 / -1; place-self: center; }
+
+  /* The drawers are off the grid entirely: they are settings, not instruments. */
+  #dashboard.is-active > #deskSettings,
+  #dashboard.is-active > #dashDepth,
+  #dashboard.is-active > .panel-grid-bottom,
+  #dashboard.is-active > #adminPanelsMount { display: none; }
+}
