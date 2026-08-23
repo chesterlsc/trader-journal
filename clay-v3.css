@@ -3145,9 +3145,12 @@ button.session-hour-cell {
   cursor: pointer;
   color: inherit;
 }
+/* Sentence case, not caps. "August 2026" is a date, and the uppercase mono
+   treatment is this design's device for LABELS — spending it on the one line
+   that is already the panel's title is what made the head shout. */
 #dashboard .mini-cal-month {
-  font: 600 11px/1 var(--font-mono);
-  text-transform: uppercase;
+  font: 600 12px/1 var(--font-ui);
+  letter-spacing: 0.01em;
   letter-spacing: 0.12em;
   color: var(--text-faint);
 }
@@ -3166,39 +3169,64 @@ button.session-hour-cell {
   grid-auto-rows: minmax(0, 1fr);
   min-height: 0;
 }
+/* Weekday headers are named chips, not initials. "S M T W T F S" has two Ts
+   and two Ss and makes the reader count columns. */
 #dashboard .mini-cal-weekdays span {
   font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.04em;
   color: var(--text-faint);
   text-align: center;
+  padding: 5px 0;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
 }
+
+/* THE LEDGER TILE. A day that did not trade is a NUMBER, not a box: giving
+   every cell a surface made a month of two trading days look like a month of
+   thirty, and it was the single biggest reason this grid read as busy. Only
+   .is-trade gets a fill and an edge. */
 #dashboard .mini-cal-day {
   position: relative;
   border-radius: 7px;
-  border: 0;
-  padding: 0;
-  display: grid;
-  place-items: center;
+  border: 1px solid transparent;
+  padding: 4px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  /* gap:0 on purpose. .mc-amt carries margin-top:auto, so the air between the
+     day index and the money is whatever the row has spare — a fixed gap on top
+     of that is what pushed a 3-line tile past a 43px cell. */
+  gap: 0;
   min-height: 0;
+  overflow: hidden;
   font: 400 11px/1 var(--font-mono);
   color: var(--text-faint);
-  background: var(--surface-inset);
+  background: none;
+  text-align: left;
 }
-
-/* THE LEDGER TILE. The money is the figure, the day number is a corner
-   index; the header net declares the currency once so tiles carry none. */
 #dashboard .mini-cal-day .mc-ix {
-  position: absolute;
-  top: 4px;
-  right: 6px;
-  font: 600 10px/1 var(--font-mono);
+  font: 500 10px/1 var(--font-mono);
   font-style: normal;
   color: var(--text-faint);
-  opacity: 0.7;
+  opacity: 0.75;
 }
+/* margin-top:auto pins the money and its count to the BOTTOM of the tile, so
+   every figure in a week sits on one line however tall the row runs. */
 #dashboard .mini-cal-day .mc-amt {
-  font: 700 clamp(11px, 0.9vw, 14px)/1 var(--font-mono);
+  margin-top: auto;
+  font: 700 clamp(11px, 0.72vw, 12.5px)/1.1 var(--font-mono);
   letter-spacing: -0.02em;
   color: var(--text);
+}
+/* The trade count is a third line in a tile that is ~45px tall on the desktop
+   grid and ~30px on a phone. Phones do not get it — a 9px count is under the
+   type floor and a 11px one costs the money its room. */
+#dashboard .mini-cal-day .mc-n {
+  display: none;
+  color: var(--text-faint);
+  opacity: 0.8;
+  white-space: nowrap;
 }
 #dashboard .mini-cal-day.is-trade:hover {
   filter: brightness(1.06);
@@ -3206,17 +3234,45 @@ button.session-hour-cell {
 #dashboard .mini-cal-day.is-trade:focus-visible { box-shadow: inset 0 0 0 1px var(--accent); }
 #dashboard .mini-cal-day.is-scratch {
   background: var(--surface-inset);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 8%, transparent);
+  border-color: color-mix(in srgb, var(--text) 10%, transparent);
 }
 #dashboard .mini-cal-day.is-scratch .mc-amt { color: var(--text-faint); font-weight: 600; }
 #dashboard .mini-cal-day.is-blank { background: none; }
 #dashboard .mini-cal-day.is-trade { font-weight: 600; color: var(--text); cursor: pointer; }
+/* Fill carries magnitude, the edge carries the sign. The border is what makes
+   a small losing day still legible against a big winning one. */
 #dashboard .mini-cal-day.is-trade.pnl-positive {
-  background: color-mix(in srgb, var(--pnl-pos) calc(var(--day-intensity, 0) * 22% + 10%), var(--surface-1));
+  background: color-mix(in srgb, var(--pnl-pos) calc(var(--day-intensity, 0) * 16% + 7%), var(--surface-1));
+  border-color: color-mix(in srgb, var(--pnl-pos) 38%, transparent);
 }
+#dashboard .mini-cal-day.is-trade.pnl-positive .mc-amt { color: var(--pnl-pos); }
 #dashboard .mini-cal-day.is-trade.pnl-negative {
-  background: color-mix(in srgb, var(--pnl-neg) calc(var(--day-intensity, 0) * 22% + 10%), var(--surface-1));
+  background: color-mix(in srgb, var(--pnl-neg) calc(var(--day-intensity, 0) * 16% + 7%), var(--surface-1));
+  border-color: color-mix(in srgb, var(--pnl-neg) 38%, transparent);
 }
+#dashboard .mini-cal-day.is-trade.pnl-negative .mc-amt { color: var(--pnl-neg); }
+
+/* The month head: nav, month, and the net that the tiles deliberately omit. */
+#dashboard .mini-cal-head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+#dashboard .mini-cal-step {
+  min-height: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--text-faint);
+  font: 400 15px/1 var(--font-ui);
+  cursor: pointer;
+}
+#dashboard .mini-cal-step:hover:not(:disabled) { background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text); }
+#dashboard .mini-cal-step:disabled { opacity: 0.25; cursor: default; }
+#dashboard .mini-cal-head .mini-cal-net { margin-left: auto; }
 #dashboard .mini-cal-day.is-today { box-shadow: inset 0 0 0 1px var(--accent); }
 #dashboard .mini-cal-day.is-future { opacity: 0.45; }
 
@@ -3883,6 +3939,10 @@ button.session-hour-cell {
      file already uses. ESCAPE HATCH if it still reads thin: it is ONE grid-area
      swap with #dashPlaybook or the discipline slot. No new code. Do not
      rebuild this decision from scratch. */
+  /* Desktop-only calendar type. Both values are under the 11px phone floor, so
+     they live here rather than in the base rules. */
+  #dashboard.is-active .mini-cal-weekdays span { font-size: 10px; }
+  #dashboard.is-active .mini-cal-day .mc-n { display: block; font: 500 9px/1 var(--font-mono); }
   #dashboard.is-active #dashMiniCal  { grid-area: 4 / 1 / 5 / 4; }
   #dashboard.is-active #dashPlaybook { grid-area: 4 / 4 / 5 / 8; }
 

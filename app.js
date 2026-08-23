@@ -2010,6 +2010,14 @@ function bindEvents() {
   [ui.miniCalOpenBtn, ui.miniCalFoot].forEach((button) => {
     button?.addEventListener("click", () => switchView("calendar"));
   });
+  // Month stepping. Forward is capped at the live month by renderDashMiniCal,
+  // which disables the button rather than letting the clamp be a surprise.
+  [["miniCalPrev", -1], ["miniCalNext", 1]].forEach(([id, delta]) => {
+    document.getElementById(id)?.addEventListener("click", () => {
+      state.dashCalOffset = Math.min(0, (Number(state.dashCalOffset) || 0) + delta);
+      renderDashMiniCal();
+    });
+  });
   // The locked-analytics drawer lays out its canvases at zero size while
   // closed; the chart hash gate would then skip them forever. Opening forces
   // one honest repaint at real dimensions.
@@ -12265,7 +12273,11 @@ function renderDashMiniCal() {
     return;
   }
   const now = new Date();
-  const monthValue = toDateInputValue(now).slice(0, 7);
+  // The card steps months. Offset lives on state rather than a module binding
+  // because anything declared below init() is a boot-time TDZ trap here.
+  const offset = Number(state.dashCalOffset) || 0;
+  const shown = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+  const monthValue = toDateInputValue(shown).slice(0, 7);
   const [yearText, monthText] = monthValue.split("-");
   const year = Number(yearText);
   const monthIndex = Number(monthText) - 1;
@@ -12275,6 +12287,7 @@ function renderDashMiniCal() {
   const startOffset = firstDay.getDay();
   const todayIso = toDateInputValue(now);
   const monthName = new Intl.DateTimeFormat("en-US", { month: "long" }).format(firstDay);
+  const monthLabel = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(firstDay);
 
   let net = 0;
   let best = 0;
@@ -12288,7 +12301,13 @@ function renderDashMiniCal() {
   });
 
   if (ui.miniCalMonth) {
-    ui.miniCalMonth.textContent = monthName.toUpperCase();
+    ui.miniCalMonth.textContent = monthLabel;
+  }
+  // Stepping past the current month would show a grid of days that have not
+  // happened, so forward stops at today.
+  const nextBtn = document.getElementById("miniCalNext");
+  if (nextBtn) {
+    nextBtn.disabled = offset >= 0;
   }
   // The card's own dateline, so a crop of just the card still says when it
   // was taken.
@@ -12327,7 +12346,7 @@ function renderDashMiniCal() {
         : 0;
       const dayLong = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric" }).format(new Date(year, monthIndex, day));
       const signed = stats.pnl === 0 ? formatCurrency(0) : formatSignedCurrency(stats.pnl);
-      tiles.push(`<button type="button" class="mini-cal-day is-trade ${pnlClass}${todayClass}" data-date="${isoDate}" style="--day-intensity:${intensity}" title="${escapeHtml(signed)}, ${stats.trades} trade${stats.trades === 1 ? "" : "s"}" aria-label="${stats.trades} trade${stats.trades === 1 ? "" : "s"} on ${dayLong}, ${stats.pnl >= 0 ? "up" : "down"} ${formatCurrency(Math.abs(stats.pnl))}, review in the journal"><i class="mc-ix">${day}</i><b class="mc-amt">${escapeHtml(stats.pnl === 0 ? "0" : tileMoney(stats.pnl))}</b></button>`);
+      tiles.push(`<button type="button" class="mini-cal-day is-trade ${pnlClass}${todayClass}" data-date="${isoDate}" style="--day-intensity:${intensity}" title="${escapeHtml(signed)}, ${stats.trades} trade${stats.trades === 1 ? "" : "s"}" aria-label="${stats.trades} trade${stats.trades === 1 ? "" : "s"} on ${dayLong}, ${stats.pnl >= 0 ? "up" : "down"} ${formatCurrency(Math.abs(stats.pnl))}, review in the journal"><i class="mc-ix">${day}</i><b class="mc-amt">${escapeHtml(stats.pnl === 0 ? "0" : tileMoney(stats.pnl))}</b><span class="mc-n">${stats.trades} trade${stats.trades === 1 ? "" : "s"}</span></button>`);
     } else if (isoDate > todayIso) {
       tiles.push(`<span class="mini-cal-day is-future${todayClass}">${day}</span>`);
     } else {

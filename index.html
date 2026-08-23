@@ -1550,12 +1550,20 @@
               </article>
 
               <div class="mini-cal" id="dashMiniCal">
-                <button type="button" class="mini-cal-open" id="miniCalOpenBtn" aria-label="Opens the calendar">
-                  <span class="mini-cal-month" id="miniCalMonth">MONTH</span>
+                <div class="mini-cal-head">
+                  <!-- Month nav. The card used to be pinned to the live month with
+                       no way back; stepping months is what makes the calendar a
+                       record rather than a status light. renderDashMiniCal reads
+                       state.dashCalOffset, so "today" is always offset 0. -->
+                  <button type="button" class="mini-cal-step" id="miniCalPrev" aria-label="Previous month">&lsaquo;</button>
+                  <button type="button" class="mini-cal-open" id="miniCalOpenBtn" aria-label="Opens the calendar">
+                    <span class="mini-cal-month" id="miniCalMonth">MONTH</span>
+                  </button>
+                  <button type="button" class="mini-cal-step" id="miniCalNext" aria-label="Next month">&rsaquo;</button>
                   <span class="mini-cal-net" id="miniCalNet">$0.00</span>
-                </button>
+                </div>
                 <div class="mini-cal-weekdays" aria-hidden="true">
-                  <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+                  <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
                 </div>
                 <div class="mini-cal-grid" id="miniCalGrid"></div>
                 <div class="mini-cal-footrow">
