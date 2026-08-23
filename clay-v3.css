@@ -3675,14 +3675,28 @@ button.session-hour-cell {
     overscroll-behavior: contain;
   }
 
-  /* An advisory that costs zero layout height. */
+  /* The estimate advisory is a 130-character sentence. Pinning it bottom-left
+     at max-width 320px with nowrap+ellipsis (see the base rule above) did not
+     make it a footnote, it made it the fragment "...fees estimated from Topstep's
+     published schedule" cut to "...fe…", sitting over the rail as the last thing
+     the eye hits. On this grid the EST chip beside ACCOUNT BALANCE already
+     mirrors it, tooltip and all — renderEstimatedAnalyticsBoundary() has always
+     written both.
+
+     So the sentence goes visually away but STAYS in the accessibility tree.
+     display:none would have taken the note with it, and the chip is a bare
+     <span title> that no screen reader announces. [hidden] still wins on
+     display, so a zero-episode journal drops it entirely. */
   #dashboard.is-active #estimatedAnalyticsNotice {
-    position: fixed;
-    left: 24px;
-    bottom: 12px;
-    max-width: 320px;
-    z-index: 25;
+    position: absolute;
+    width: 1px;
+    height: 1px;
     margin: 0;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   /* The empty state owns the panel; JS keeps toggling [hidden] and nothing else. */

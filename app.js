@@ -8364,6 +8364,12 @@ function renderEstimatedAnalyticsBoundary() {
   // survives even a crop that cuts the footnote off.
   if (ui.dashEstChip) {
     ui.dashEstChip.hidden = count === 0;
+    // The chip is the only VISIBLE carrier of this on the instrument panel, so
+    // it states the whole sentence rather than relying on a hover title.
+    ui.dashEstChip.setAttribute(
+      "aria-label",
+      count ? `Estimated figures. ${ui.estimatedAnalyticsNotice ? ui.estimatedAnalyticsNotice.textContent : ""}`.trim() : ""
+    );
     ui.dashEstChip.title = count
       ? `${count} Topstep Orders episode${count === 1 ? "" : "s"} in these figures: P&L calculated from fill prices, fees estimated from Topstep's published schedule.`
       : "";
