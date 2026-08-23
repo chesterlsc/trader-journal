@@ -204,13 +204,13 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260823-bootveil" />
+    <link rel="stylesheet" href="styles.css?v=20260823-morningread" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260823-bootveil" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260823-morningread" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260823-bootveil" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260823-morningread" />
   </head>
   <body>
     <div id="tjv" aria-hidden="true">
@@ -1401,6 +1401,19 @@
               <div id="progressTradeTrack" class="dash-live-track"></div>
             </article>
 
+            <!-- The range pill and the EST chip live in the command bar, not on
+                 the hero. The chip qualifies figures across the whole view, and
+                 on the hero it sat 519px from the sentence it refers to. THE
+                 MOVE IS INERT: ui.balanceRangeButtons is a querySelectorAll
+                 captured once at module load and moving a node keeps its
+                 listeners, and syncBalanceRangeButtons() reads that same array. -->
+            <div class="dash-range" role="group" aria-label="Balance range">
+              <button class="dash-range-btn is-active" type="button" data-balance-range="1m" aria-pressed="true">1M</button>
+              <button class="dash-range-btn" type="button" data-balance-range="3m" aria-pressed="false">3M</button>
+              <button class="dash-range-btn" type="button" data-balance-range="all" aria-pressed="false">ALL</button>
+            </div>
+            <span class="dash-est-chip" id="dashEstChip" hidden>EST</span>
+
             <button id="journalNewTradeBtn" class="btn primary dash-log-btn" type="button">
               <span class="journal-action-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false">
@@ -1490,13 +1503,7 @@
               <article class="metric-card metric-card-balance dash-hero dash-reveal" style="--i: 0">
                 <div class="dash-hero-top">
                   <span class="dash-card-date" id="dashCardDate" aria-hidden="true"></span>
-                  <p class="metric-label" id="dashBalanceLabel">Account balance</p>
-                  <span class="dash-est-chip" id="dashEstChip" hidden>EST</span>
-                  <div class="dash-range" role="group" aria-label="Balance range">
-                    <button class="dash-range-btn is-active" type="button" data-balance-range="1m" aria-pressed="true">1M</button>
-                    <button class="dash-range-btn" type="button" data-balance-range="3m" aria-pressed="false">3M</button>
-                    <button class="dash-range-btn" type="button" data-balance-range="all" aria-pressed="false">ALL</button>
-                  </div>
+                  <p class="metric-label" id="dashBalanceLabel">Net P&amp;L</p>
                 </div>
                 <span
                   class="metric-note"
@@ -1505,7 +1512,13 @@
                   hidden
                   >Manual override</span
                 >
-                <p class="metric-value dash-hero-value" data-metric="accountBalance">$0.00</p>
+                <!-- The headline figure. NOT a relabel of accountBalance: that node
+                     is queried by attribute on every price poll by renderLiveEquity
+                     and keyed by METRIC_DELTA_SPECS, so it keeps its name and drops
+                     to a 13px clause underneath. ui.metricNodes is a flat
+                     querySelectorAll("[data-metric]"), so this node is picked up free. -->
+                <p class="metric-value dash-hero-value" data-metric="totalPnl">$0.00</p>
+                <p class="dash-hero-equity"><span class="dash-hero-tag" id="dashEquityTag">Account balance</span><span class="metric-value" data-metric="accountBalance">$0.00</span></p>
                 <span class="dash-hero-range" id="dashHeroRange" hidden></span>
                 <!-- THE NOW GRID. Six figures that can change within the hour,
                      which is the test for living on this card at all: monthly
@@ -1627,39 +1640,6 @@
               </details>
             </section>
 
-            <section class="dash-quad" aria-label="Edge quality">
-              <article class="metric-card dash-quad-card dash-reveal" data-tilt style="--i: 2">
-                <p class="metric-label">Win rate</p>
-                <p class="metric-value" data-metric="winRate">0%</p>
-                <span class="metric-delta" data-metric-delta="winRate" hidden></span>
-              </article>
-              <article class="metric-card dash-quad-card dash-reveal" data-tilt style="--i: 3">
-                <p class="metric-label">Profit factor</p>
-                <p class="metric-value" data-metric="profitFactor">0.00</p>
-                <span class="metric-delta" data-metric-delta="profitFactor" hidden></span>
-              </article>
-              <article class="metric-card dash-quad-card dash-reveal" data-tilt style="--i: 4">
-                <p class="metric-label">Expectancy</p>
-                <p class="metric-value" data-metric="expectancy">$0.00</p>
-                <span class="metric-delta" data-metric-delta="expectancy" hidden></span>
-              </article>
-              <article class="metric-card dash-quad-card dash-reveal" data-tilt style="--i: 5">
-                <p class="metric-label">Avg win / loss</p>
-                <p class="metric-value" data-metric="avgWinLoss">$0.00 / $0.00</p>
-              </article>
-              <article class="metric-card dash-quad-card dash-reveal" data-tilt style="--i: 6">
-                <p class="metric-label">Best Day</p>
-                <p class="metric-value" data-metric="bestDay">$0.00</p>
-                <span class="metric-sub" data-metric-sub="bestDay" hidden></span>
-                <span class="metric-delta" data-metric-delta="bestDay" hidden></span>
-              </article>
-              <article class="metric-card dash-quad-card dash-reveal" data-tilt style="--i: 7">
-                <p class="metric-label">Worst Day</p>
-                <p class="metric-value" data-metric="worstDay">$0.00</p>
-                <span class="metric-sub" data-metric-sub="worstDay" hidden></span>
-                <span class="metric-delta" data-metric-delta="worstDay" hidden></span>
-              </article>
-            </section>
 
             <!-- 1a board: the playbook now owns the full dashboard row. The
                  unjournalled work queue lives in Trade Review, where the notes
@@ -1805,20 +1785,50 @@
                 <p class="metric-value" data-metric="losingStreak">0</p>
                 <span class="metric-delta" data-metric-delta="losingStreak" hidden></span>
               </article>
+                <article class="metric-card">
+                <p class="metric-label">Win rate</p>
+                <p class="metric-value" data-metric="winRate">0%</p>
+                <span class="metric-delta" data-metric-delta="winRate" hidden></span>
+              </article>
+                <article class="metric-card">
+                <p class="metric-label">Profit factor</p>
+                <p class="metric-value" data-metric="profitFactor">0.00</p>
+                <span class="metric-delta" data-metric-delta="profitFactor" hidden></span>
+              </article>
+                <article class="metric-card">
+                <p class="metric-label">Expectancy</p>
+                <p class="metric-value" data-metric="expectancy">$0.00</p>
+                <span class="metric-delta" data-metric-delta="expectancy" hidden></span>
+              </article>
+                <article class="metric-card">
+                <p class="metric-label">Avg win / loss</p>
+                <p class="metric-value" data-metric="avgWinLoss">$0.00 / $0.00</p>
+              </article>
               </div>
             </article>
             <article class="panel panel-chart panel-span-4">
               <div class="panel-head">
-                <h3>Drawdown Curve</h3>
-                <p>Peak to trough pressure</p>
+                <h3>Net Daily P&amp;L</h3>
+                <p>Every session that traded</p>
               </div>
+              <!-- The drawdown canvas STAYS in the DOM. styles.css gives
+                   .panel-chart canvas display:block at (0,2,0), which beats the
+                   UA [hidden] rule, so this is display:none'd from the grid
+                   instead — ui.drawdownChart and drawAllCharts never read null,
+                   and its two figures live in the stat strip under the curve. -->
               <canvas
                 id="drawdownChart"
                 width="900"
                 height="280"
                 data-height="180"
                 aria-label="Drawdown curve chart"
-              ></canvas> <!-- density pass: was 240 -->
+              ></canvas>
+              <div
+                class="day-bars"
+                id="dashDayBars"
+                role="img"
+                aria-label="Net profit or loss for each of the last 30 trading days"
+              ></div>
             </article>
 
 
@@ -4284,6 +4294,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260823-bootveil"></script>
+    <script type="module" src="app.js?v=20260823-morningread"></script>
   </body>
 </html>

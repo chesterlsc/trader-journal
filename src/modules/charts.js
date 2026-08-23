@@ -629,16 +629,23 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
     clearCanvas(ctx, width, height);
 
     const compact = width < 430;
-    const padLeft = compact ? 44 : 56;
-    const padRight = 18;
-    const padTop = 42;
-    const padBottom = 30;
+    // HONEST FLOORS. Reading the box back (above) turns a squashed lie into a
+    // CRISP one unless the chrome scales too: 72px of fixed padding in a 100px
+    // box leaves 28px of plot. 10px type needs ~2.5x leading to read, so four
+    // gridline rows need >=30px of spacing; below that the axis is decoration.
+    const bare = height < 140;      // no gridlines, no y-axis, no date labels
+    const padLeft = bare ? 8 : compact ? 44 : 56;
+    const padRight = bare ? 8 : 18;
+    const padTop = bare ? 14 : 42;  // 14/4 is the sparkline's own budget
+    const padBottom = bare ? 4 : 30;
     const left = padLeft;
     const right = width - padRight;
     const top = padTop;
     const bottom = height - padBottom;
     const plotW = right - left;
     const plotH = bottom - top;
+    const maxRows = plotH >= 128 ? 5 : plotH >= 68 ? 2 : 0;
+    let rows = maxRows;
 
     const series = Array.isArray(data) ? data : [];
     if (series.length < 2 || !series.every(Number.isFinite)) {
@@ -662,10 +669,52 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
         max += 1;
       }
     }
-    const headroom = (max - min) * 0.14;
-    min -= headroom;
-    if (!options.underwater) {
-      max += headroom;
+    // Nice-number ticks. Without this a crisp axis still reads
+    // "$50.5K / $50.4K / $50.2K / $50.1K / $49.9K" in a 48px gutter, and on a
+    // large account all five compact to the same string — a silent lie.
+    // The step has to yield EXACTLY `rows` intervals, because drawPlotFrame
+    // walks the axis as the fraction i/rows; a step that merely covers the
+    // range would put the labels back between the multiples. Snapping outward
+    // supplies the headroom, so the old flat 14% is gone.
+    if (maxRows > 0) {
+      // THE TICK COUNT IS PART OF THE ANSWER, not a constant. A fixed 4 rows
+      // forced a $10K step on a $10K-$34.7K equity curve, so the axis ran
+      // $10K-$50K and the curve used 62% of the plot with dead air above it.
+      // Trying a few counts and keeping the tightest fit picks 5 rows at a $5K
+      // step here: $10K-$35K, 99% of the plot, and rounder labels than before.
+      const span = max - min;
+      let best = null;
+      for (let n = maxRows; n >= Math.min(3, maxRows); n -= 1) {
+        const seed = Math.max(span / n, Number.MIN_VALUE);
+        const base = 10 ** Math.floor(Math.log10(seed));
+        const fits = options.underwater
+          ? (s) => s * n >= -min
+          : (s) => Math.floor(min / s) * s + s * n >= max;
+        let step = null;
+        for (let scale = base; scale <= base * 1e4 && step === null; scale *= 10) {
+          step = [1, 2, 2.5, 5, 10].map((m) => m * scale).find(fits) ?? null;
+        }
+        if (step === null) {
+          continue;
+        }
+        const lo = options.underwater ? -step * n : Math.floor(min / step) * step;
+        const hi = options.underwater ? 0 : lo + step * n;
+        const fill = hi > lo ? span / (hi - lo) : 0;
+        if (!best || fill > best.fill) {
+          best = { n, lo, hi, fill };
+        }
+      }
+      if (best) {
+        rows = best.n;
+        min = best.lo;
+        max = best.hi;
+      }
+    } else {
+      const headroom = (max - min) * 0.14;
+      min -= headroom;
+      if (!options.underwater) {
+        max += headroom;
+      }
     }
 
     const yFor = (value) => bottom - ((value - min) / (max - min)) * plotH;
@@ -682,7 +731,8 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
       // `plotted` is already sign-corrected, so the axis reads it straight:
       // the underwater chart labels depth as negative money.
       valueAt: (t) => max - (max - min) * t,
-      formatter: formatCompactCurrency
+      formatter: formatCompactCurrency,
+      rows
     });
 
     const stroke = options.key === "neg" ? colors.neg : colors.line;
@@ -790,7 +840,11 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
     ctx.font = colors.font(700, compact ? 15 : 17);
     ctx.fillText(formatCurrency(options.underwater ? -lastValue : lastValue), left, 34);
 
-    drawDateLabels(ctx, points, options.labels, bottom);
+    // A bare box has 4px below the baseline; date labels draw at bottom+11 and
+    // would land outside the canvas.
+    if (!bare) {
+      drawDateLabels(ctx, points, options.labels, bottom);
+    }
 
     // Playhead before the crosshair, and mutually exclusive with it (the
     // mousemove handler bails while a scrub is engaged).
@@ -980,10 +1034,12 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
   function drawPlotFrame(ctx, options) {
     const colors = getPalette();
     const { left, right, top, bottom, valueAt, formatter } = options;
-    const rows = 4;
+    // The caller decides how many rules the box can carry; 4 is the full
+    // treatment, 2 the squeezed one, 0 means the axis is not honest here.
+    const rows = Number.isFinite(options.rows) ? options.rows : 4;
     ctx.save();
     ctx.lineWidth = 1;
-    for (let i = 0; i <= rows; i += 1) {
+    for (let i = 0; rows > 0 && i <= rows; i += 1) {
       const y = Math.round(top + ((bottom - top) * i) / rows) + 0.5;
       ctx.globalAlpha = 0.4 + (i / rows) * 0.6;
       ctx.strokeStyle = colors.grid;
@@ -1622,7 +1678,15 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
 
     const ratio = window.devicePixelRatio || 1;
     const width = canvas.clientWidth || 900;
-    const height = Number(heightOverride || canvas.dataset.height || 280);
+    // THE BOX IS THE TRUTH. data-height stays as the fallback for a canvas
+    // that has no box: a .view without .is-active is display:none, a closed
+    // <details> is too, and #drawdownChart is explicitly display:none on the
+    // dashboard grid — all three report clientHeight 0.
+    // This one expression was the whole "unreadable mush" defect: #equityChart
+    // was a 919x240 bitmap displayed in a 919x94 box, a 2.55x anamorphic
+    // vertical crush at a perfect 1:1 horizontal, which also smeared the
+    // three-pass glow stroke whose blur radii were authored against 240px.
+    const height = Number(heightOverride) || canvas.clientHeight || Number(canvas.dataset.height) || 280;
 
     canvas.width = Math.floor(width * ratio);
     canvas.height = Math.floor(height * ratio);

@@ -1305,6 +1305,7 @@ function init() {
   setupRailPin();
   setupRailAccount();
   setupListClamps();
+  setupChartResize();
   syncChromeHeight();
   renderLoginLogs();
   renderAdminUsers();
@@ -8246,6 +8247,7 @@ function renderAll() {
   renderCharts(state.analytics);
   renderCalendarView();
   renderDashMiniCal();
+  renderDayBars(state.analytics);
   hydrateSetupFilter();
   renderJournalTable();
   renderReflections();
@@ -9700,6 +9702,7 @@ function renderDashboardMetrics(analytics) {
   }
 
   const values = {
+    totalPnl: formatSignedCurrency(analytics.totalPnl),
     accountBalance: formatCurrency(analytics.accountBalance),
     totalTrades: String(analytics.totalTrades),
     winRate: `${analytics.winRate.toFixed(1)}%`,
@@ -9717,6 +9720,7 @@ function renderDashboardMetrics(analytics) {
 
   const wholeNumber = (value) => String(Math.round(value));
   const tweens = {
+    totalPnl: { value: analytics.totalPnl, format: formatSignedCurrency },
     accountBalance: { value: analytics.accountBalance, format: formatCurrency },
     totalTrades: { value: analytics.totalTrades, format: wholeNumber },
     winRate: { value: analytics.winRate, format: (value) => `${value.toFixed(1)}%` },
@@ -9734,6 +9738,7 @@ function renderDashboardMetrics(analytics) {
 
   // Money metrics only: value tone + a signed left hairline on the card.
   const toneValues = {
+    totalPnl: analytics.totalPnl,
     accountBalance: analytics.accountBalance,
     expectancy: analytics.expectancy,
     bestDay: analytics.bestDay.pnl,
@@ -12348,6 +12353,30 @@ function renderDashMiniCal() {
   }
 }
 
+/* The reference's spine, in DOM rather than canvas. A new canvas would need
+   its own devicePixelRatio pass, its own hidden-view sizing and its own resize
+   path, and drawBarChart is horizontal-only — padLeft 138, rowGap split across
+   entries — so 30 dates would be 1020px of rows. CSS bars off a centreline
+   inherit the theme tokens for free and cannot regress getCanvasContext.
+   This replaces the Best Day / Worst Day tiles: it states both extremes plus
+   every session between them, which is why those tiles existed. */
+function renderDayBars(analytics) {
+  const host = document.getElementById("dashDayBars");
+  if (!host || !analytics || !(analytics.dailyPnl instanceof Map)) {
+    return;
+  }
+  const days = [...analytics.dailyPnl].filter(([, pnl]) => pnl !== 0).slice(-30);
+  const peak = Math.max(...days.map(([, pnl]) => Math.abs(pnl)), 1);
+  host.innerHTML = days
+    .map(
+      ([date, pnl]) =>
+        `<span class="day-bar" data-s="${pnl > 0 ? 1 : -1}" style="--mag:${(
+          Math.abs(pnl) / peak
+        ).toFixed(3)}" title="${escapeHtml(date)} · ${escapeHtml(formatSignedCurrency(pnl))}"></span>`
+    )
+    .join("");
+}
+
 function renderCalendarView() {
   if (!ui.calendarGrid || !ui.dashboardCalendarMonth) {
     return;
@@ -14451,7 +14480,9 @@ function renderLiveEquity() {
   const balance = Number(state.analytics.accountBalance) || 0;
   const float = openFloatingPnl();
   const equity = round(balance + float.floating);
-  const label = document.getElementById("dashBalanceLabel");
+  // Retargeted: #dashBalanceLabel is the static "Net P&L" header now, so the
+  // balance/equity distinction rides the clause it actually qualifies.
+  const label = document.getElementById("dashEquityTag");
   const openNode = document.getElementById("dashNowOpen");
 
   // The float chip died with the chip row; the OPEN P&L cell in the NOW grid
@@ -16448,6 +16479,40 @@ function getWallSize() {
    carry the buttons sit inside panels that JS also touches, so a direct
    binding would need re-attaching on every repaint. The clamp itself is CSS
    (see LIST CLAMP in styles.css) — this only flips the class. */
+/* THE DRAW FOLLOWS THE BOX. drawLineChart reads canvas.clientHeight now instead
+   of a data-height attribute, which is what un-squashed the equity curve — but
+   the first render runs before the grid has laid the canvas out, so clientHeight
+   is 0 and the draw falls back to the 280px default. The window `resize`
+   listener only covers one of the ways this box changes; the panel grid also
+   moves it when the desk rail or the playbook is toggled, and when a view is
+   switched back into.
+
+   Observing the canvases themselves covers all of it. Setting canvas.width /
+   canvas.height changes the BITMAP, not the CSS box, so a redraw cannot
+   re-trigger the observer — the size guard is belt and braces. */
+function setupChartResize() {
+  if (state.chartObserver || typeof ResizeObserver !== "function") {
+    return;
+  }
+  const seen = new WeakMap();
+  state.chartObserver = new ResizeObserver((entries) => {
+    const changed = entries.some((entry) => {
+      const box = `${Math.round(entry.contentRect.width)}x${Math.round(entry.contentRect.height)}`;
+      if (seen.get(entry.target) === box) {
+        return false;
+      }
+      seen.set(entry.target, box);
+      return entry.contentRect.width > 0 && entry.contentRect.height > 0;
+    });
+    if (changed && state.analytics) {
+      renderCharts(state.analytics);
+    }
+  });
+  document.querySelectorAll(".panel-chart canvas").forEach((canvas) => {
+    state.chartObserver.observe(canvas);
+  });
+}
+
 function setupListClamps() {
   document.addEventListener("click", (event) => {
     const toggle = event.target.closest("[data-clamp-toggle]");

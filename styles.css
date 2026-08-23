@@ -9935,47 +9935,22 @@ body.auth-locked {
      scrollHeight 5144 against a 900px viewport with only #terminal active. */
   #dashboard.is-active {
     display: grid;
-    /* The rail tile is width-bound — it already carries aspect-ratio 16/9, so
-       the COLUMN is the only lever on the resting picture size. A flat 360
-       was wrong: it takes 60px off the header at every width, and at 1280
-       that is exactly enough to push Quick import onto a second row again.
-       It scales instead, so the extra width is only spent where there is
-       width to spend. Fullscreen covers actually watching it. */
-    grid-template-columns: minmax(0, 1fr) clamp(300px, 23vw, 360px);
-    /* ROW-GAP ZERO, ON PURPOSE. .dash-edge-mini spans grid-row 1/30 to get its
-       sticky column, which forces 29 implicit rows; the trailing ~21 are 0px
-       tall but the row gap still applies BETWEEN each of them, so the
-       dashboard carried 400px of dead scroll below its last panel at 1512 and
-       420px at 1280. The gap moves onto the children instead, where it only
-       exists between things that are actually there. */
-    column-gap: var(--space-5);
-    row-gap: 0;
-    align-items: start;
   }
-  /* Load bearing: without an explicit column every other dashboard child flows
-     into the 300px rail and the most-viewed screen breaks at exactly the width
-     most desktop users sit at. */
-  #dashboard > *:not(.dash-edge-mini) { grid-column: 1; }
-  /* :not(:last-child) is load bearing — these same declarations apply below
-     1240px, where .dash-edge-mini goes full width and the order rules
-     reshuffle which child is last. */
-  #dashboard.is-active > *:not(:last-child) { margin-bottom: var(--space-5); }
-  .dash-edge-mini {
-    grid-column: 2;
-    grid-row: 1 / 30;
-    position: sticky;
-    /* 78px cleared the top bar back when #dashboard sat in document flow and
-       the WINDOW scrolled. The dashboard is its own scrollport now, and it
-       already starts below the bar, so the offset was being applied a second
-       time: measured at 1512x900, the rail sat at y=184 against a .dash-head
-       at 106 and stayed there at every scroll position, leaving a dead 78px
-       band at the top of the right column that never closed.
-       Not var(--chrome-h) and not var(--space-5) either: sticky measures from
-       the scroller's CONTENT box, so the view's own 20px padding-top is
-       already in the reference and adding it again just halves the error.
-       Measured at 0: rect.top 106, level with .dash-head. */
-    top: 0;
-  }
+  /* WHAT USED TO BE HERE, and why it is gone. This block also declared a
+     two-column sticky-rail grid: grid-template-columns 1fr/clamp(300px,23vw,360px),
+     column-gap, row-gap 0, align-items:start, a `> *:not(.dash-edge-mini)
+     { grid-column: 1 }` catch-all, a `> *:not(:last-child) { margin-bottom }`,
+     and a position:sticky .dash-edge-mini.
+
+     clay-v3.css builds a 12-column instrument panel on the same selector at the
+     same breakpoint, so every one of those was either cancelled there or leaking
+     into it. Two were doing visible damage: `align-items: start` switched off the
+     stretch the panel grid assumes, which is what forced six `height: 100%`
+     workarounds; and the margin-bottom put a 427px margin box in a 407px track.
+
+     NOT re-scoped to max-width:1239px. The comments describe intent, but the
+     DECLARATIONS are a desktop sticky-rail layout that has never applied below
+     1240 — flipping the query would ship it to every phone. */
 }
 
 @media (max-width: 899px) {
@@ -12167,8 +12142,9 @@ body.auth-locked {
     padding-inline: max(var(--space-6), calc((100% - var(--shell-w, 100%)) / 2));
   }
 
-  /* The dashboard keeps its rail column; the fixed box is just the canvas. */
-  #dashboard.is-active { align-content: start; }
+  /* The dashboard's align-content lives in clay-v3.css with the rest of the
+     instrument panel, which declares `stretch`. This rule said `start` and
+     contradicted it from two files away. */
   /* The Edge desk is a dark instrument and sets its own ground and padding. */
   #terminal.is-active {
     padding: 0 var(--space-4) var(--space-4);

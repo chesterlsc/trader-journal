@@ -3249,15 +3249,44 @@ button.session-hour-cell {
   white-space: nowrap;
 }
 
+/* NET DAILY P&L SPINE. Bars grow from a centreline: profit up, loss down, both
+   scaled against the month's own peak so the shape is a distribution rather
+   than a ranking. --mag is written per bar by renderDayBars; 46% leaves the
+   centre gap that makes the zero line readable without drawing one. */
+.day-bars {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 3px;
+  min-height: 140px;
+}
+.day-bar { position: relative; }
+.day-bar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: calc(var(--mag) * 46%);
+  background: var(--pnl-neg);
+  border-radius: 0 0 2px 2px;
+}
+.day-bar[data-s="1"]::before {
+  top: auto;
+  bottom: 50%;
+  background: var(--pnl-pos);
+  border-radius: 2px 2px 0 0;
+}
+
 /* ESTIMATE ONE-LINER (the banner, demoted to a footnote under the card) */
 #dashboard .estimated-analytics-notice {
   font-size: 12px;
   padding: 4px 2px;
   background: none;
   border: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* No nowrap/ellipsis: below 1240 the page scrolls, so a two-line footnote
+     costs nothing, and truncating a provenance sentence mid-word costs trust.
+     Above 1240 this note is clipped out of view entirely by the grid rule. */
 }
 
 /* Seam releases: the ratio guard is load bearing at >=1240 where the TV
@@ -3562,7 +3591,9 @@ button.session-hour-cell {
 
   #dashboard.is-active {
     grid-template-columns: repeat(12, minmax(0, 1fr));
-    grid-template-rows: 44px 96px minmax(0, 0.46fr) minmax(0, 0.54fr);
+    /* 1093 view box - 32 padding-block - 36 row gaps = 1025 of track.
+       36 + 108 + 0.51x881 + 0.49x881 = 36 + 108 + 449.3 + 431.7 = 1025. */
+    grid-template-rows: 36px 108px minmax(0, 0.51fr) minmax(0, 0.49fr);
     gap: 12px;
     /* padding-inline belongs to .view.is-active:not(#terminal) at (1,2,0),
        which centres on --shell-w. Only the block axis is ours; a padding
@@ -3570,6 +3601,11 @@ button.session-hour-cell {
     padding-block: 16px;
     overflow: hidden;            /* the promise, stated in CSS */
     align-content: stretch;
+    /* Items stretch to their track. This was the DEFAULT until a second
+       @media (min-width:1240px) block in styles.css set align-items:start on
+       the same selector; that block is gone now, and this states the behaviour
+       instead of inheriting it. Six height:100% workarounds died with it. */
+    align-items: stretch;
     row-gap: 12px;
   }
 
@@ -3591,76 +3627,280 @@ button.session-hour-cell {
   #dashboard.is-active .dash-edge-mini > *,
   #dashboard.is-active .dash-board-slot > *,
   #dashboard.is-active #dashPlaybook > * { min-height: 0; min-width: 0; }
-  /* Stretch alone does not bind: a grid item takes its track's height UNLESS
-     its own automatic minimum is larger, and a panel full of canvases and
-     rows always is. Measured, the analytics pair stood at 723px and the
-     monitor at 925px inside tracks of 384 and 451, correctly placed and
-     simply refusing to shrink. height:100% states the track height as the
-     answer rather than a ceiling, and overflow:hidden makes the panel's own
-     content the thing that gives. */
+  /* height:auto, not 100%. The old comment here blamed the automatic minimum
+     size for stretch "not binding" and answered with height:100% on six
+     panels. The real cause was align-items:start, set on this same selector
+     from a second 1240 block in styles.css. With that deleted the items
+     stretch by construction, and 100% would re-state the track as an ANSWER
+     rather than a ceiling — which is exactly what stopped .panel-chart canvas
+     from sizing to its own flex box. The min-height:0 floors above are what
+     let them shrink; they were already correct. */
   #dashboard.is-active .panel-grid-analytics,
   #dashboard.is-active .dash-edge-mini,
   #dashboard.is-active .dash-board-slot,
   #dashboard.is-active #dashPlaybook,
   #dashboard.is-active #dashMiniCal,
   #dashboard.is-active #propTracker {
-    height: 100%;
+    height: auto;
     overflow: hidden;
   }
-  /* A canvas keeps its attribute height unless told otherwise, which is the
-     other half of the same overflow. */
+  /* The canvas sizes from its flex box, and drawLineChart reads that box back
+     via clientHeight rather than trusting its data-height attribute. */
   #dashboard.is-active .panel-chart,
-  #dashboard.is-active .panel-chart canvas { min-height: 0; height: 100%; }
-  #dashboard.is-active .panel-grid-analytics > .panel {
+  #dashboard.is-active .panel-chart canvas { min-height: 0; height: auto; }
+  /* One source of truth for tile height. styles.css min-height:96px is what
+     both floated the metric tiles AND clipped 15px out of them; the track
+     sizes the item now. */
+  #dashboard.is-active .metric-card { min-height: 0; }
+
+  #dashboard.is-active .panel-grid-analytics > .panel,
+  #dashboard.is-active .dash-board-slot,
+  #dashboard.is-active #dashPlaybook {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    gap: 8px;
+    padding: 16px;
+  }
+  /* MANDATORY companion. The rule above is (1,2,0) and BEATS [hidden] at
+     (0,1,0): without this a hidden #dashPlaybook stays a 629x432 ghost panel. */
+  #dashboard.is-active #dashPlaybook[hidden] { display: none; }
+
+  /* THE RULE: the last list in a panel is flex:1. A box cannot then be taller
+     than its content, and its content cannot be shorter than the box. This is
+     what makes the blank space unreachable BY CONSTRUCTION rather than by
+     tuning it away. The emptiness that remains is pooled in ONE place on
+     purpose — beside the figure you read first — never distributed as slack
+     into every box. Do not "fill" the band-B gap later; that is the design. */
+  #dashboard.is-active #equityChart,
+  #dashboard.is-active #dashDayBars,
+  #dashboard.is-active .dash-playbook-grid,
+  #dashboard.is-active #riskViolations { flex: 1 1 0; min-height: 0; }
+  /* .rule-cost-list is a GRANDCHILD; the flex item is .rule-cost, so that is
+     what has to grow. */
+  #dashboard.is-active .rule-cost {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  #dashboard.is-active .rule-cost-list { flex: 1 1 0; min-height: 0; overflow-y: auto; }
+
+  #dashboard.is-active .dash-playbook-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
+    overflow-y: auto;
   }
 
-  /* ROW 1, the command bar. */
-  #dashboard.is-active > .dash-head { grid-area: 1 / 1 / 2 / -1; align-items: center; }
-  #dashboard.is-active .dash-hello { font-size: 15px; white-space: nowrap; }
+  /* The nine-figure stat strip under the curve. Explicit rows, because with
+     `auto` the flex algorithm sizes the strip before the grid wraps and clips
+     a row. */
+  #dashboard.is-active .eq-footnotes {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: 17px 17px;
+    row-gap: 6px;
+    column-gap: 16px;
+    flex: 0 0 40px;
+    align-content: center;
+    margin: 0;
+  }
+  #dashboard.is-active .eq-footnotes > * { margin: 0; padding: 0; }
 
-  /* ROW 2, the tile strip: balance beside the pulse row. */
-  #dashboard.is-active .dash-hero { grid-area: 2 / 1 / 3 / 4; }
-  #dashboard.is-active .dash-quad { grid-area: 2 / 4 / 3 / -1; }
+  /* Chrome cull. A raised edge means "this is a panel" again, instead of being
+     the default state of every box on screen. */
+  #dashboard.is-active .dash-quad-card,
+  #dashboard.is-active .dash-play-tile {
+    background: none;
+    box-shadow: none;
+    border: 0;
+    border-radius: 0;
+  }
+  /* Nested raise. A panel that is already lifted does not need its scoreboard,
+     its note and its own canvas lifted again inside it — that is what made
+     every box read as equally important. The panel keeps the edge; its
+     contents state rank with type instead. */
+  #dashboard.is-active .score-item,
+  #dashboard.is-active .rule-cost-note,
+  #dashboard.is-active .dash-play-bar,
+  #dashboard.is-active #equityChart { box-shadow: none; }
+  /* What still carries a shadow on this view, on purpose: the six panels, the
+     three command-bar buttons, the range pill, and two state markers (today on
+     the calendar, the desk's live dot). Buttons and state markers are
+     affordances, not surfaces — culling those would cost meaning, not chrome. */
 
-  /* The hero is a 96px tile now, so its long tail goes. Each of these keeps
-     rendering into a hidden node, which costs nothing and breaks nothing.
-     #dashSparkline stays in the DOM so ui.dashSparkline never reads null. */
-  #dashboard.is-active .dash-hero .dash-now,
+  /* Ink the panels do not need at this size. */
+  #dashboard.is-active .eq-scrub-hint { display: none; }  /* the canvas aria-label
+                                        already says how to drive it */
+  #dashboard.is-active .panel-head p,
+  #dashboard.is-active .dash-board-head p { display: none; }  /* 12px sub-copy x5 */
+  #dashboard.is-active .panel-head { margin: 0; }
+  #dashboard.is-active .mini-cal-footrow .month-card-mark { display: none; }
+
+  /* Type ramp: 44 / 28 / 20 / 13 / 11. It was 26/22/22/20 — a four-point band
+     holding nine unequal figures, which is a tie, not a rank. */
+  #dashboard.is-active [data-metric="totalPnl"] {
+    font: 700 44px/48px var(--font-mono);
+    letter-spacing: -0.03em;
+    margin: 0;
+  }
+  #dashboard.is-active [data-metric="accountBalance"] {
+    font: 600 13px/16px var(--font-mono);
+    color: var(--text-faint);
+  }
+  /* The <p> that wraps the clause carries the base paragraph margin (16px top
+     AND bottom), which is what pushed the hero 17px past its 108px track. */
+  #dashboard.is-active .dash-hero-equity { margin: 2px 0 0; line-height: 16px; }
+  #dashboard.is-active .dash-hero-top { margin: 0; }
+  #dashboard.is-active #dashEquityTag {
+    font: 600 11px/16px var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-right: 6px;
+  }
+  #dashboard.is-active .dash-now-fig { font: 700 20px/22px var(--font-mono); }
+  #dashboard.is-active #dashHeroToday,
+  #dashboard.is-active #dashNowOpen { font-size: 28px; line-height: 30px; }
+  #dashboard.is-active .score-item strong { font-size: 20px; }  /* a discipline
+                                        score is a behaviour trigger, not a footnote */
+  #dashboard.is-active .dash-play-value { font-size: 17px; }    /* a per-setup
+                                        expectancy is a 30-second figure, not a 1-second one */
+
+  /* ── THE INSTRUMENT OPTS OUT OF THE READING COLUMN ─────────────────────
+     .view.is-active:not(#terminal) (styles.css) is (1,2,0), because
+     :not(#terminal) contributes an ID. #dashboard.is-active is (1,1,0) and
+     LOSES — measured, it left the computed padding at "16px 259.5px", so 519px
+     of a 1943px content area was gutter and the panels lived in 1424px.
+     .view.is-active#dashboard is (1,2,0), a tie, broken by source order because
+     index.html loads clay-v3.css after styles.css. Measured after: padding
+     "16px", column pitch 107.664px -> 148.25px.
+     styles.css already blesses the precedent for #terminal: "it is an
+     instrument, not a document." So is this. */
+  .view.is-active#dashboard { padding-inline: var(--space-4); }
+
+  /* ── BAND A: which book, which window ────────────────────────────────── */
+  #dashboard.is-active > .dash-head {
+    grid-area: 1 / 1 / 2 / -1;
+    align-items: center;
+    padding: 0;
+    gap: 12px;
+    flex-wrap: nowrap;
+  }
+  #dashboard.is-active .dash-hello { font-size: 13px; margin: 0; white-space: nowrap; }
+  #dashboard.is-active .dash-head .dash-greeting { display: flex; align-items: baseline; gap: 10px; flex: 0 1 auto; }
+  /* min-height:0 and padding-block:0 are load bearing: .btn ships a 52px box
+     that overflows a 36px row by 8px without them. */
+  #dashboard.is-active .dash-head .btn,
+  #dashboard.is-active .dash-head .nav-btn { min-height: 0; height: 30px; padding-block: 0; padding-inline: 12px; font-size: 12px; }
+  /* .dash-range-btn is neither .btn nor .nav-btn, so it kept its own 40px box
+     and was the last thing overflowing the 36px row. */
+  #dashboard.is-active .dash-head .dash-range { height: 26px; padding: 2px; align-self: center; }
+  #dashboard.is-active .dash-head .dash-range-btn { min-height: 0; height: 22px; padding: 0 10px; font-size: 11px; }
+  #dashboard.is-active .dash-head .kbd-hint { display: none; }
+  #dashboard.is-active .dash-live { margin-left: auto; max-width: 380px; overflow: hidden; }
+
+  /* ── BAND B: one raised surface, seven figures, ZERO DOM MOVES ─────────
+     .dash-now is a CHILD of .dash-hero in index.html, so it cannot be placed
+     on this grid, and display:contents on it would delete the surface it sits
+     on. Instead the hero spans the full row and becomes the two-track grid;
+     .dash-now takes track 2 and lays its own six cells out. */
+  #dashboard.is-active .dash-hero {
+    grid-area: 2 / 1 / 3 / -1;
+    padding: 12px 0 12px 16px;
+    display: grid;
+    grid-template-columns: 3fr 9fr;
+    grid-auto-rows: min-content;
+    align-content: center;
+    column-gap: 0;
+  }
+  #dashboard.is-active .dash-hero > * { grid-column: 1; }
+  #dashboard.is-active .dash-hero .dash-now {   /* (1,3,0), beats the line above */
+    grid-column: 2;
+    grid-row: 1 / span 9;
+    align-self: stretch;
+    margin: 0;
+    padding: 0;
+    border-top: 0;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    column-gap: 0;
+    row-gap: 0;
+    align-content: center;
+  }
+  #dashboard.is-active .dash-now > * { padding: 0 16px; border-left: 1px solid var(--line); }
+  /* The hero's long tail. Each keeps rendering into a hidden node, which costs
+     nothing; #dashSparkline stays in the DOM so ui.dashSparkline is never null. */
   #dashboard.is-active .dash-hero .dash-spark-wrap,
   #dashboard.is-active .dash-hero .dash-ground-caps,
+  #dashboard.is-active .dash-hero .metric-note,
+  #dashboard.is-active .dash-hero-range,
   #dashboard.is-active .dash-hero #dashCardDate { display: none; }
-  #dashboard.is-active .dash-hero { padding: 10px 14px; }
-  #dashboard.is-active .dash-hero-value { font-size: 26px; margin-top: 2px; }
+  #dashboard.is-active .dash-quad { display: none; }   /* emptied; its four keepers
+                                        moved into the stat strip under the curve */
 
-  /* ROW 3, the charts. */
-  #dashboard.is-active .dash-board-slot { grid-area: 3 / 1 / 4 / 5; }
-  #dashboard.is-active .panel-grid-analytics {
-    grid-area: 3 / 5 / 4 / -1;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-  }
-  #dashboard.is-active #propTracker { grid-area: 3 / 1 / 4 / 5; }
-  #dashboard.is-active:has(#propTracker:not([hidden])) .dash-board-slot { display: none; }
+  /* ── BAND C: where is my edge ──────────────────────────────────────────
+     display:contents places the two chart panels directly on the outer grid,
+     which is what kills .panel-span-8's `grid-column: span 8` clamp without a
+     new override. Before: both panels at x=794, stacked, splitting one row. */
+  #dashboard.is-active .panel-grid-analytics { display: contents; }
+  #dashboard.is-active .panel-grid-analytics > .panel-span-8 { grid-area: 3 / 1 / 4 / 8; }
+  #dashboard.is-active .panel-grid-analytics > .panel-span-4 { grid-area: 3 / 8 / 4 / 11; }
 
-  /* ROW 4, the calendar, the playbook, the monitor. */
-  #dashboard.is-active #dashMiniCal { grid-area: 4 / 1 / 5 / 6; }
-  #dashboard.is-active #dashPlaybook { grid-area: 4 / 6 / 5 / 10; }
+  /* LOAD BEARING. styles.css `.panel-chart canvas { display: block }` is
+     (0,2,0) and BEATS the UA [hidden] rule — verified: hidden === true and
+     computed display === "block". The canvas STAYS in the DOM so
+     ui.drawdownChart and drawAllCharts never read null; only its box goes.
+     Its numbers survive as maxDrawdown and currentDrawdown in the stat strip. */
+  #dashboard.is-active #drawdownChart { display: none; }
+
+  #dashboard.is-active .dash-board-slot { grid-area: 4 / 8 / 5 / 11; }
+  #dashboard.is-active #propTracker { grid-area: 4 / 1 / 5 / 4; }
+  #dashboard.is-active:has(#propTracker:not([hidden])) #dashMiniCal { display: none; }
+
+  /* ── THE DESK RAIL: full C+D height, right column ──────────────────────
+     NEVER display:none on this element or any ancestor, in any state, at any
+     breakpoint — the warning above extends here. The iframe dies with its box.
+     `grid-template-rows: auto minmax(0,1fr)` bounds the .dem-panel track, which
+     is what makes the overflow-y:auto below actually bind. */
   #dashboard.is-active .dash-edge-mini {
-    grid-area: 4 / 10 / 5 / -1;
+    grid-area: 3 / 11 / 5 / -1;
+    grid-template-rows: auto minmax(0, 1fr);
     position: static;            /* kills sticky, grid-row 1/30 and the bleed */
     margin: 0;
   }
+  #dashboard.is-active .dem-news { min-height: 0; }  /* grandchild: the floors
+                                        above stop one level short of it */
+  /* The 16:9 tile eats the news column. Capping it hands the feed its height
+     back BEFORE any scrolling is needed. Do not remove this without checking
+     where #dashEdgeMiniNews's bottom edge lands. */
+  #dashboard.is-active .dem-tv { max-height: 168px; }
+
+  /* ── BAND D: what did it cost ──────────────────────────────────────────
+     The calendar keeps its month — "ugly" was about appearance, not existence —
+     but drops from 586x478 to 469x432, cells at 45px, above the 44px floor this
+     file already uses. ESCAPE HATCH if it still reads thin: it is ONE grid-area
+     swap with #dashPlaybook or the discipline slot. No new code. Do not
+     rebuild this decision from scratch. */
+  #dashboard.is-active #dashMiniCal  { grid-area: 4 / 1 / 5 / 4; }
+  #dashboard.is-active #dashPlaybook { grid-area: 4 / 4 / 5 / 8; }
+
+  /* ── THE BOARD CLOSES WHEN A PANEL IS OFF ──────────────────────────────
+     .dash-edge-mini ships `hidden` and renderPlaybook toggles
+     #dashPlaybook.hidden. Without these, a fresh account shows a 309px hole
+     down the right and a 629px hole in band D. */
+  #dashboard.is-active:has(.dash-edge-mini[hidden]) .panel-grid-analytics > .panel-span-4,
+  #dashboard.is-active:has(.dash-edge-mini[hidden]) .dash-board-slot { grid-column-end: -1; }
+  #dashboard.is-active:has(#dashPlaybook[hidden]) #dashMiniCal { grid-column: 1 / 6; }
+  #dashboard.is-active:has(#dashPlaybook[hidden]) .dash-board-slot { grid-column-start: 6; }
 
   /* The calendar lost its surface with the wrapper that carried it. */
   #dashboard.is-active #dashMiniCal {
     display: flex;
     flex-direction: column;
-    gap: 5px;
-    padding: 11px;
+    gap: 8px;
+    padding: 12px;
     border-radius: var(--radius-xl);
     background: var(--surface-1);
     box-shadow: var(--clay-raised);
@@ -3712,3 +3952,23 @@ button.session-hour-cell {
   #dashboard.is-active > .panel-grid-bottom,
   #dashboard.is-active > #adminPanelsMount { display: none; }
 }
+
+/* ── SHORT SCREENS ───────────────────────────────────────────────────────
+   The fr rows absorb any height; the 144px of FIXED rows do not. At 1440x900
+   the budget is 843 - 32 padding - 36 gaps = 775 of track, and
+   32 + 88 + 0.48x655 + 0.52x655 = 775. Everything below is the type ramp
+   stepping down with it — same ranks, smaller steps. */
+@media (min-width: 1240px) and (max-height: 960px) {
+  #dashboard.is-active { grid-template-rows: 32px 88px minmax(0, 0.48fr) minmax(0, 0.52fr); }
+  #dashboard.is-active .dash-hero { padding-block: 10px; }
+  #dashboard.is-active [data-metric="totalPnl"] { font-size: 34px; line-height: 38px; }
+  #dashboard.is-active [data-metric="accountBalance"] { font-size: 12px; line-height: 14px; }
+  #dashboard.is-active .dash-hero-equity { margin-top: 3px; }
+  #dashboard.is-active #dashHeroToday,
+  #dashboard.is-active #dashNowOpen { font-size: 22px; line-height: 24px; }
+  #dashboard.is-active .dash-now-fig { font-size: 17px; line-height: 19px; }
+  #dashboard.is-active .eq-footnotes { flex: 0 0 52px; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, 15px); }
+  #dashboard.is-active .mini-cal-footrow { display: none; }
+  #dashboard.is-active .dem-tv { max-height: 120px; }
+}
+
