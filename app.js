@@ -9853,7 +9853,10 @@ function drawDashSparkline(canvas, points, progress) {
   const styles = getComputedStyle(document.documentElement);
   const token = (name, fallback) => (styles.getPropertyValue(name) || "").trim() || fallback;
   const rising = points[points.length - 1] >= points[0];
-  const stroke = token(rising ? "--pnl-pos" : "--pnl-neg", "#2fd18c");
+  // A neutral in NO palette, on purpose. Writing the current --pnl-pos here is
+  // how this literal drifted twice: the fallback silently becomes last
+  // season's green the moment the token moves. Grey cannot go stale.
+  const stroke = token(rising ? "--pnl-pos" : "--pnl-neg", "#8a8a8a");
   const areaTop = token(rising ? "--pnl-pos-line" : "--pnl-neg-line", stroke);
   const areaMid = token(rising ? "--pnl-pos-soft" : "--pnl-neg-soft", stroke);
   const areaFade = token(rising ? "--spark-pos-fade" : "--spark-neg-fade", "rgba(0, 0, 0, 0)");

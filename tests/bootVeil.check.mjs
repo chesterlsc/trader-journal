@@ -112,10 +112,26 @@ const z = Number(styleBlock.match(/z-index:\s*(\d+)/)?.[1]);
 assert.ok(z > 0 && z < 2147483000, `veil z-index ${z} must stay under the desk gate's 2147483000`);
 
 // Both themes get a ground, or one of them boots to the flash it was hiding.
-assert.ok(/background: #14161a/.test(styleBlock), "dark ground missing");
+// DERIVED, not hardcoded. The veil's ground has to BE --surface-0, because its
+// whole job is to be indistinguishable from the page behind it. Pinning a
+// literal here meant a palette change turned the veil into the flash it exists
+// to hide, and the failure said "dark ground missing" rather than "these two
+// values must match".
+const clayCss = read("clay-v3.css");
+const surfaceOf = (block) => {
+  const at = clayCss.indexOf(block + " {");
+  return at < 0 ? null : clayCss.slice(at).match(/--surface-0:\s*([^;]+);/)?.[1].trim() || null;
+};
+const darkGround = surfaceOf(':root:not([data-theme="light"])');
+const lightGround = surfaceOf('[data-theme="light"]');
+assert.ok(darkGround && lightGround, `lost a --surface-0 token block (dark ${darkGround}, light ${lightGround})`);
 assert.ok(
-  /\[data-theme="light"\] #tjv \{[^}]*background: #e6e8ea/.test(styleBlock),
-  "light ground missing — a hardcoded dark veil is the same flash, inverted"
+  new RegExp(`background: ${darkGround}`).test(styleBlock),
+  `veil dark ground must equal --surface-0 (${darkGround}) or the boot flashes`
+);
+assert.ok(
+  new RegExp(`\\[data-theme="light"\\] #tjv \\{[^}]*background: ${lightGround}`).test(styleBlock),
+  `veil light ground must equal the light --surface-0 (${lightGround})`
 );
 
 // Choreography must address elements that exist: an animation on a missing id
