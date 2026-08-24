@@ -12502,6 +12502,30 @@ function renderEquityLegend(analytics) {
   }
 }
 
+/** "Aug 21, 2026". The compact form drops the year, which is fine on a row that
+ *  sits beside today's date and wrong in a queue that can hold a trade from
+ *  last December. */
+function formatQueueDate(trade) {
+  const raw = trade.date || trade.closedAt || trade.createdAt || trade.updatedAt;
+  const d = raw ? new Date(raw) : null;
+  return d && !Number.isNaN(d.getTime())
+    ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(d)
+    : formatCompactTradeDate(trade);
+}
+
+/** The clock beside the date. A broker import can hold a dozen fills of the same
+ *  contract at the same size on one day, which come out as a dozen rows sharing
+ *  a date, a symbol, a side AND a figure. They are different trades; without the
+ *  time the panel looks like it is repeating itself rather than reporting. "" if
+ *  the row carries no timestamp, which is the manual-entry case. */
+function formatQueueTime(trade) {
+  const raw = trade.exitedAt || trade.enteredAt || trade.closedAt;
+  const d = raw ? new Date(raw) : null;
+  return d && !Number.isNaN(d.getTime())
+    ? new Intl.DateTimeFormat([], { hour: "2-digit", minute: "2-digit", hour12: false }).format(d)
+    : "";
+}
+
 function renderDashLedger() {
   const host = document.getElementById("dashLedgerBody");
   if (!host) {
@@ -12528,16 +12552,31 @@ function renderDashLedger() {
           .map((trade) => {
             const short = String(trade.direction || "").toLowerCase() === "sell";
             const src = String(trade.importSource || "").toLowerCase();
-            const source = src === "topstepx" ? "broker" : src === "topstepx-orders" ? "estimated" : "manual";
+            /* WHICH LABEL MEANS WHAT. A topstepx TRADES import is the broker's
+               own reported P&L. A topstepx-ORDERS import is reconstructed from
+               fills with fees estimated from a published schedule — the app has
+               said so in its own provenance notice since that importer shipped.
+               Getting these backwards would print a confident lie about whether
+               money is broker-reported, so the mapping is spelled out here. */
+            const source =
+              src === "topstepx" ? "verified" : src === "topstepx-orders" ? "estimated" : "manual";
+            const sourceLabel =
+              source === "verified" ? "Broker verified" : source === "estimated" ? "Estimated" : "Manual";
+            // An Orders import carries no setup, and the importer records that
+            // honestly as "Not recorded". Printing it as a REASON would read as
+            // a setup called "Not recorded", so it degrades to an em dash.
+            const reason = String(trade.setupType || "").trim();
+            const reasonText = !reason || reason.toLowerCase() === "not recorded" ? "\u2014" : reason;
             return (
-              `<tr><td>${escapeHtml(formatCompactTradeDate(trade))}</td>` +
+              `<tr><td>${escapeHtml(formatQueueDate(trade))}` +
+              `${formatQueueTime(trade) ? `<i class="lq-at">${escapeHtml(formatQueueTime(trade))}</i>` : ""}</td>` +
               `<td>${escapeHtml(trade.asset || "\u2014")}</td>` +
               `<td class="${short ? "is-neg" : ""}">${short ? "Short" : "Long"}</td>` +
               `<td class="${trade.netPnl < 0 ? "is-neg" : "is-pos"}">${escapeHtml(
                 trade.netPnl === 0 ? formatCurrency(0) : formatSignedCurrency(trade.netPnl)
               )}</td>` +
-              `<td class="lq-reason">${escapeHtml(trade.setupType || "\u2014")}</td>` +
-              `<td><span class="lq-src is-${source}">${source}</span></td></tr>`
+              `<td class="lq-reason${reasonText === "\u2014" ? " is-none" : ""}">${escapeHtml(reasonText)}</td>` +
+              `<td><span class="lq-src is-${source}">${escapeHtml(sourceLabel)}</span></td></tr>`
             );
           })
           .join("")

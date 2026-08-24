@@ -4396,9 +4396,36 @@ button.session-hour-cell {
   text-transform: uppercase;
   opacity: 0.85;
 }
-.dash-ledger .lq-src.is-broker { color: var(--pnl-pos); }
-.dash-ledger .lq-src.is-estimated { color: #d9a441; }
-.dash-ledger .lq-src.is-manual { color: var(--text-faint); }
+/* The render's chips are a TINT, not an outline — a bordered chip in every row
+   drew a second grid on top of the table's own rules. `is-verified`, not
+   `is-broker`: the renderer's class follows the LABEL so the two cannot drift. */
+.dash-ledger .lq-src {
+  border-color: transparent;
+  opacity: 1;
+}
+.dash-ledger .lq-src.is-verified {
+  color: var(--pnl-pos);
+  background: color-mix(in srgb, var(--pnl-pos) 12%, transparent);
+}
+.dash-ledger .lq-src.is-estimated {
+  color: var(--text-muted, var(--text-faint));
+  background: color-mix(in srgb, var(--text-faint) 14%, transparent);
+}
+.dash-ledger .lq-src.is-manual {
+  color: var(--text-faint);
+  background: color-mix(in srgb, var(--text-faint) 10%, transparent);
+}
+/* The clock beside the date. Faint and after, so the date still leads the column
+   but two rows from the same session are visibly different trades. */
+.dash-ledger .lq-at {
+  margin-left: 6px;
+  font-style: normal;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A reason that is genuinely absent reads as absent, not as a setup name. */
+.dash-ledger .lq-reason.is-none { color: var(--text-faint); }
 
 /* The edge score's rail: a red-amber-green track with the score as a dot. */
 .score-rail {
