@@ -128,6 +128,15 @@ assert.ok(
   !/\.dash-edge-mini[^{]*\{[^}]*display:\s*none/.test(decls(clay)),
   "display:none on .dash-edge-mini kills the live stream inside its iframe"
 );
+// That regex only catches a rule that NAMES the rail. The empty-state cull is a
+// `> *` sweep, and .dash-edge-mini is a direct child of #dashboard — so it
+// matched, set display:none, and killed the stream on any zero-trade account
+// without tripping the guard above. Excluded by ID so the class form does not
+// trip it either.
+assert.ok(
+  /:has\(#dashboardEmptyState:not\(\[hidden\]\)\) > \*[^{,]*:not\(#dashEdgeMini\)/.test(decls(clay)),
+  "the empty-state cull must exclude #dashEdgeMini — a `> *` sweep hits the rail and stops the stream"
+);
 
 // ── 7. The height budget closes ───────────────────────────────────────────────
 const rowsOf = (block) => {

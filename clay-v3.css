@@ -4076,6 +4076,9 @@ button.session-hour-cell {
      down the right and a 629px hole in band D. */
   #dashboard.is-active:has(.dash-edge-mini[hidden]) .panel-grid-analytics > .panel-span-8,
   #dashboard.is-active:has(.dash-edge-mini[hidden]) #dashLedger { grid-column-end: -1; }
+  /* No rail (no terminalPro) means the empty-state card takes the whole board
+     rather than leaving four columns of hole beside it. */
+  #dashboard.is-active:has(.dash-edge-mini[hidden]) #dashboardEmptyState { grid-column-end: -1; }
 
   /* The calendar lost its surface with the wrapper that carried it. */
   #dashboard.is-active #dashMiniCal {
@@ -4122,11 +4125,24 @@ button.session-hour-cell {
   }
 
   /* The empty state owns the panel; JS keeps toggling [hidden] and nothing else. */
-  #dashboard.is-active:has(#dashboardEmptyState:not([hidden])) > *:not(.dash-head):not(#dashboardEmptyState),
+  /* :not(#dashEdgeMini) IS LOAD BEARING. .dash-edge-mini is a DIRECT CHILD of
+     #dashboard, so this `> *` cull matched it and set display:none — which
+     kills the iframe inside it. renderDashboardMetrics un-hides the empty state
+     whenever the journal has no trades, so deleting your last trade, or landing
+     on a fresh account, silently stopped a playing stream. Reproduced live
+     before the fix: display:none on #dashEdgeMini, the iframe's own ancestor.
+
+     Excluded by ID, not class: the class form would put the literal string
+     `.dash-edge-mini` into a rule whose block is display:none, which is exactly
+     what the guard in tests/instrumentPanel.check.mjs scans for. */
+  #dashboard.is-active:has(#dashboardEmptyState:not([hidden])) > *:not(.dash-head):not(#dashEdgeMini):not(#dashboardEmptyState),
   #dashboard.is-active:has(#dashboardEmptyState:not([hidden])) .dash-stats > *,
   #dashboard.is-active:has(#dashboardEmptyState:not([hidden])) .dash-month-card > *,
   #dashboard.is-active:has(#dashboardEmptyState:not([hidden])) .dash-boards > * { display: none; }
-  #dashboard.is-active #dashboardEmptyState { grid-area: 2 / 1 / -1 / -1; place-self: center; }
+  /* Columns 1-9, not 1--1. The rail is no longer culled with the rest of the
+     board (see above), so a full-width card would sit on top of it. This is the
+     same eight-column content region every other band uses. */
+  #dashboard.is-active #dashboardEmptyState { grid-area: 2 / 1 / -1 / 9; place-self: center; }
 
   /* The drawers are off the grid entirely: they are settings, not instruments. */
   #dashboard.is-active > #deskSettings,
