@@ -1888,15 +1888,29 @@
               </div>
             </article>
             <article class="panel" id="dashLedger">
-              <div class="panel-head"><h3>Recent trades</h3></div>
+              <div class="panel-head">
+                <h3 id="dashQueueTitle">Review queue</h3>
+                <span class="queue-badge" id="dashQueueBadge" hidden>0</span>
+              </div>
               <!-- No span class on purpose: below 1240 every analytics panel is
                    pinned full width by one rule, because .panel-grid-analytics
                    is a 12-column bento at 1200 and a 2-column one at 1100, and a
                    bare panel would come out 84px wide in the first. -->
               <table class="dash-ledger">
-                <thead><tr><th scope="col">Close date</th><th scope="col">Symbol</th><th scope="col">Net P&amp;L</th></tr></thead>
+                <thead><tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Symbol</th>
+                  <th scope="col">Side</th>
+                  <th scope="col">Net P&amp;L</th>
+                  <th scope="col">Reason</th>
+                  <th scope="col">Source</th>
+                </tr></thead>
                 <tbody id="dashLedgerBody"></tbody>
               </table>
+              <div class="dash-ledger-foot">
+                <span id="dashQueueCount">0 items</span>
+                <span id="dashQueueTotal">$0.00</span>
+              </div>
             </article>
           </section>
 

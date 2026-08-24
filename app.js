@@ -12435,38 +12435,62 @@ function renderDayBars(analytics) {
     .join("");
 }
 
-/* THE REFERENCE'S LEDGER. getClosedTrades returns a FRESH array (trades.filter),
-   so sorting it in place cannot disturb state.trades. Field names come from the
-   real trade record: trade.date, trade.asset (there is NO trade.symbol) and
-   trade.netPnl. trade.closedAt is "" on legacy and imported rows, so nothing
-   keys on it — formatCompactTradeDate already falls back through createdAt /
-   closedAt / updatedAt. */
+/* THE REVIEW QUEUE. Two states, both real, never blank.
+
+   The reference calls this a QUEUE, and this app has one: getUnjournalledTrades
+   returns closed trades that have been through neither the close sheet nor a
+   note, which is the same predicate the rail badge already counts. So when
+   there is a queue, the panel IS the queue. When every trade is journalled the
+   panel shows the most recent closed trades instead and says so in its title —
+   an empty panel is the blank space this dashboard keeps being criticised for.
+
+   SOURCE is a THREE-way, not the reference's two. trade.importSource is
+   "topstepx" for a broker-provided P&L, "topstepx-orders" for one calculated
+   from fill prices with estimated fees, and "" for a hand-typed row. Calling a
+   manual entry "broker verified" would be a lie the badge exists to prevent.
+
+   Field names are from the real record: trade.date, trade.asset (there is no
+   trade.symbol), trade.direction ("Buy"/"Sell"), trade.netPnl, trade.setupType. */
 function renderDashLedger() {
   const host = document.getElementById("dashLedgerBody");
   if (!host) {
     return;
   }
-  // THE ROW COUNT FOLLOWS THE PANEL. A constant cannot work: six rows left 61%
-  // of a 1999x1150 panel empty, and twenty overflowed the same panel by 218px
-  // at 1440x900, taking the dashboard's no-scroll promise with it. Estimating
-  // from a row height was no better — the guess was 3px light and still spilled.
-  // So the list is rendered long and then TRIMMED against the real box, which
-  // needs no constant and cannot drift when the type or padding changes.
-  const rows = getClosedTrades().sort(sortTradesDesc).slice(0, 24);
+  const queue = getUnjournalledTrades();
+  const isQueue = queue.length > 0;
+  const rows = (isQueue ? queue : getClosedTrades().sort(sortTradesDesc)).slice(0, 24);
+
+  const title = document.getElementById("dashQueueTitle");
+  if (title) {
+    setText(title, isQueue ? "Review queue" : "Recent trades");
+  }
+  const badge = document.getElementById("dashQueueBadge");
+  if (badge) {
+    badge.hidden = !isQueue;
+    setText(badge, String(queue.length));
+  }
+
   setHtml(
     host,
     rows.length
       ? rows
-          .map(
-            (trade) =>
+          .map((trade) => {
+            const short = String(trade.direction || "").toLowerCase() === "sell";
+            const src = String(trade.importSource || "").toLowerCase();
+            const source = src === "topstepx" ? "broker" : src === "topstepx-orders" ? "estimated" : "manual";
+            return (
               `<tr><td>${escapeHtml(formatCompactTradeDate(trade))}</td>` +
               `<td>${escapeHtml(trade.asset || "\u2014")}</td>` +
+              `<td class="${short ? "is-neg" : ""}">${short ? "Short" : "Long"}</td>` +
               `<td class="${trade.netPnl < 0 ? "is-neg" : "is-pos"}">${escapeHtml(
                 trade.netPnl === 0 ? formatCurrency(0) : formatSignedCurrency(trade.netPnl)
-              )}</td></tr>`
-          )
+              )}</td>` +
+              `<td class="lq-reason">${escapeHtml(trade.setupType || "\u2014")}</td>` +
+              `<td><span class="lq-src is-${source}">${source}</span></td></tr>`
+            );
+          })
           .join("")
-      : `<tr><td colspan="3" class="dash-ledger-empty">No closed trades yet.</td></tr>`
+      : `<tr><td colspan="6" class="dash-ledger-empty">No closed trades yet.</td></tr>`
   );
 
   const panel = host.closest(".panel");
@@ -12474,12 +12498,26 @@ function renderDashLedger() {
     return;
   }
   // One row at a time off the bottom until the panel stops overflowing. The
-  // panel is overflow:hidden, so this is the difference between a list that
-  // ends cleanly and one that ends mid-row behind a clipped edge.
+  // count cannot be a constant: six rows left 61% of a 1999x1150 panel empty
+  // and twenty overflowed the same panel by 218px at 1440x900, and estimating
+  // from a row height was 3px light and still spilled.
   let guard = 24;
   while (host.rows.length > 3 && panel.scrollHeight > panel.clientHeight && guard > 0) {
     host.deleteRow(host.rows.length - 1);
     guard -= 1;
+  }
+
+  // The foot counts what is SHOWN, so it can never contradict the rows above it.
+  const shown = rows.slice(0, host.rows.length);
+  const net = shown.reduce((sum, trade) => sum + (Number(trade.netPnl) || 0), 0);
+  const count = document.getElementById("dashQueueCount");
+  if (count) {
+    setText(count, `${host.rows.length} of ${isQueue ? queue.length : rows.length} shown`);
+  }
+  const total = document.getElementById("dashQueueTotal");
+  if (total) {
+    setText(total, net === 0 ? formatCurrency(0) : formatSignedCurrency(round(net)));
+    toneBySign(total, net);
   }
 }
 

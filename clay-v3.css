@@ -3752,6 +3752,17 @@ button.session-hour-cell {
   /* The ledger is six rows in a 432px panel. Its slack is pooled BELOW the
      table, which is what the reference does — rows do not stretch to fill. */
   #dashboard.is-active #dashLedger .dash-ledger { flex: 0 0 auto; }
+  #dashboard.is-active #dashLedger .panel-head { display: flex; align-items: center; gap: 8px; }
+  /* Six columns in a 309px panel: the reason column is the one that gives, and
+     it ellipsises rather than wrapping a row to two lines. */
+  #dashboard.is-active .dash-ledger th,
+  #dashboard.is-active .dash-ledger td { font-size: 11px; padding: 3px 0; }
+  #dashboard.is-active .dash-ledger th { font-size: 9px; }
+  /* Desktop-only tightening. All three are under the 11px phone floor that
+     mobileFloors.check.mjs enforces, so they live here, not in the base rules. */
+  #dashboard.is-active .queue-badge { font-size: 10px; }
+  #dashboard.is-active .dash-ledger-foot { font-size: 10px; }
+  #dashboard.is-active .dash-ledger .lq-src { font-size: 9px; }
   /* THE FOOT WAS EATING THE RADAR. Stacked — label over numeral, then the rail,
      then a two-line caption — it measured 109px of a 341px panel at 1440x900,
      leaving the canvas 148 and pinning drawRadarChart to its 46px floor: a 92px
@@ -4001,10 +4012,18 @@ button.session-hour-cell {
      live there — a curve and a 30-day bar chart both want landscape, and the
      bars measured 0.68 (portrait) in the old arrangement. Band E is tall, so it
      takes the three things that stack: a radar, a list and a month grid. */
-  #dashboard.is-active .panel-grid-analytics > .panel-span-8 { grid-area: 3 / 1 / 4 / 6; }
-  #dashboard.is-active .panel-grid-analytics > .panel-span-4 { grid-area: 3 / 6 / 4 / 9; }
-  #dashboard.is-active #dashEdgeScore { grid-area: 4 / 1 / 5 / 4; }
-  #dashboard.is-active #dashLedger { grid-area: 4 / 4 / 5 / 6; }
+  /* FOUR PANELS, which is what the reference has. It carries an equity chart, a
+     Market TV column, a calendar and a review queue — no radar and no separate
+     net-daily panel, because its equity panel plots the drawdown on the same
+     axes. Six panels in eight columns is what made every one of them cramped.
+
+     The Edge score and the Net Daily bars keep rendering into hidden nodes, so
+     nothing downstream reads a null and both are one `display` away from coming
+     back. NOT the rail: that holds the iframe. */
+  #dashboard.is-active .panel-grid-analytics > .panel-span-8 { grid-area: 3 / 1 / 4 / 9; }
+  #dashboard.is-active .panel-grid-analytics > .panel-span-4,
+  #dashboard.is-active #dashEdgeScore { display: none; }
+  #dashboard.is-active #dashLedger { grid-area: 4 / 4 / 5 / 9; }
 
   /* LOAD BEARING. styles.css `.panel-chart canvas { display: block }` is
      (0,2,0) and BEATS the UA [hidden] rule — verified: hidden === true and
@@ -4049,14 +4068,14 @@ button.session-hour-cell {
      they live here rather than in the base rules. */
   #dashboard.is-active .mini-cal-weekdays span { font-size: 10px; }
   #dashboard.is-active .mini-cal-day .mc-n { display: block; font: 500 9px/1 var(--font-mono); }
-  #dashboard.is-active #dashMiniCal { grid-area: 4 / 6 / 5 / 9; }
+  #dashboard.is-active #dashMiniCal { grid-area: 4 / 1 / 5 / 4; }
 
   /* ── THE BOARD CLOSES WHEN A PANEL IS OFF ──────────────────────────────
      .dash-edge-mini ships `hidden` and renderPlaybook toggles
      #dashPlaybook.hidden. Without these, a fresh account shows a 309px hole
      down the right and a 629px hole in band D. */
-  #dashboard.is-active:has(.dash-edge-mini[hidden]) .panel-grid-analytics > .panel-span-4,
-  #dashboard.is-active:has(.dash-edge-mini[hidden]) #dashMiniCal { grid-column-end: -1; }
+  #dashboard.is-active:has(.dash-edge-mini[hidden]) .panel-grid-analytics > .panel-span-8,
+  #dashboard.is-active:has(.dash-edge-mini[hidden]) #dashLedger { grid-column-end: -1; }
 
   /* The calendar lost its surface with the wrapper that carried it. */
   #dashboard.is-active #dashMiniCal {
@@ -4194,6 +4213,58 @@ button.session-hour-cell {
 .dash-ledger .is-pos { color: var(--pnl-pos); }
 .dash-ledger .is-neg { color: var(--pnl-neg); }
 .dash-ledger-empty { color: var(--text-faint); }
+
+/* The queue's badge, its foot, and the source stamp. */
+.queue-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #14161a;
+  font: 700 11px/1 var(--font-mono);
+}
+.dash-ledger-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.dash-ledger-foot #dashQueueTotal { font-size: 12px; font-weight: 700; letter-spacing: -0.01em; text-transform: none; }
+.dash-ledger .lq-reason {
+  max-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-soft);
+}
+/* THE PROVENANCE STAMP. Three states, because this app has three: a
+   broker-provided P&L, one calculated from fill prices with estimated fees, and
+   a hand-typed row. The reference shows only the first two, and labelling a
+   manual entry "broker verified" is exactly the claim this badge exists to
+   stop. */
+.dash-ledger .lq-src {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font: 600 11px/1.4 var(--font-mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.dash-ledger .lq-src.is-broker { color: var(--pnl-pos); }
+.dash-ledger .lq-src.is-estimated { color: #d9a441; }
+.dash-ledger .lq-src.is-manual { color: var(--text-faint); }
 
 /* The edge score's rail: a red-amber-green track with the score as a dot. */
 .score-rail {
