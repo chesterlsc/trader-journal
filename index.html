@@ -3389,7 +3389,14 @@
          read. Same .lnd-ticker markup and animation the landing tape uses —
          two identical halves, translated -50% — because renderTickerPair
          patches by [data-ticker-*] and does not care which surface asked. -->
-    <div class="app-ticker lnd-ticker" id="appTicker" data-ticker-strip aria-label="Live futures and spot prices: Micro S&amp;P, Nasdaq, Dow, Russell, Gold, Crude and Euro FX, plus Bitcoin, spot gold, Ether and euro-dollar. Refreshed every 5 seconds.">
+    <!-- THE TOP BAR. The wordmark names the product, the tape runs between, and
+         the feed states its own liveness at the right end. The bar wraps the
+         existing #appTicker rather than replacing it: the 5s price loop, the
+         marquee animation and the edge-fade seams are all keyed to that element
+         and its class list. -->
+    <div class="app-bar">
+      <span class="app-wordmark">Trader Journal</span>
+      <div class="app-ticker lnd-ticker" id="appTicker" data-ticker-strip aria-label="Live futures and spot prices: Micro S&amp;P, Nasdaq, Dow, Russell, Gold, Crude and Euro FX, plus Bitcoin, spot gold, Ether and euro-dollar. Refreshed every 5 seconds.">
       <div class="lnd-ticker-track">
         <div class="lnd-ticker-group">
           <span class="lnd-ticker-item">
@@ -3532,6 +3539,8 @@
           <span class="lnd-ticker-tag lnd-ticker-stale">stale &middot; last known</span>
         </div>
       </div>
+    </div>
+      <span class="app-live" id="appLive" data-feed="live">Live</span>
     </div>
         <nav class="rail" aria-label="Main sections">
           <button class="topnav-mark nav-btn" type="button" data-target="dashboard" data-nav-silent aria-label="Trader Journal dashboard">TJ</button>

@@ -972,16 +972,69 @@
      Fixed, and offset by the rail rather than sitting over it, so the two
      pieces of desk furniture meet at a corner instead of overlapping.
      ========================================================================== */
-  .app-ticker {
+  /* THE TOP BAR. The wordmark names the product, the tape runs between, and the
+     feed states its own liveness at the right end. The bar took the fixed
+     position the ticker used to hold, so the ticker itself becomes a plain flex
+     child — its marquee animation and its edge-fade seams are untouched. */
+  .app-bar {
     position: fixed;
     top: 0;
     left: var(--rail-w);
     right: 0;
     z-index: calc(var(--z-nav) - 1);
-    padding: 7px 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 16px;
     border-bottom: 1px solid var(--line);
     background: var(--surface-0);
+  }
+  .app-wordmark {
+    flex: none;
+    font: 600 12px/1 var(--font-ui);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  /* The feed badge. Cyan is this design's colour for "live", used here and on
+     the catalyst countdown and nowhere else. */
+  .app-live {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font: 600 10px/1 var(--font-mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    white-space: nowrap;
+  }
+  .app-live::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-faint);
+  }
+  .app-live[data-feed="live"] { color: var(--term-live, #3fd0c9); }
+  .app-live[data-feed="live"]::before { background: var(--term-live, #3fd0c9); }
+  .app-live[data-feed="stale"]::before { background: #d9a441; }
+
+  .app-ticker {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 7px 0;
+    background: var(--surface-0);
     overflow: hidden;
+    /* CANCELS THE LANDING BREAKOUT. #appTicker also carries .lnd-ticker, which
+       is `width: 100vw; margin-left: calc(50% - 50vw)` — the landing page's
+       full-bleed trick. Inside a flex bar that negative margin dragged the tape
+       42px back over the wordmark. Measured before: ticker x=179 against a
+       wordmark ending at 221. */
+    width: auto;
+    margin-left: 0;
   }
 
   /* The seam at each end: the tape reads as passing THROUGH the window rather
