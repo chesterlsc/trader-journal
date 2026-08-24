@@ -1,4 +1,4 @@
-import { ensureNumber, ensurePositiveNumber, escapeHtml, sortTradesDesc } from "../lib/core.js";
+import { ensureNumber, ensurePositiveNumber, escapeHtml, normalizeDirection, sortTradesDesc } from "../lib/core.js";
 
 /* 1d landing — the live tape.
    One row per CLOSED trade, no sections, no Show/Hide. The public feed is
@@ -175,7 +175,10 @@ export function createRecentTradesView(deps) {
      interactive is the surface switch: true for the website's clickable rows
      (handleRecentTradesClick reads data-trade-id), false for the app's. */
   function renderTapeRow(trade, order = 0, { interactive = true } = {}) {
-    const isSell = String(trade.direction || "").toLowerCase() === "sell";
+    // Same predicate as the review queue, for the same reason: a literal
+    // === "sell" misses "Short", "S" and untrimmed values, and prints the WRONG
+    // SIDE for each. This tape is on the public landing page.
+    const isSell = normalizeDirection(trade.direction) === "Sell";
     const outcome = trade.status === "open" ? { key: "open", label: "Open" } : getTradeOutcome(trade);
     const meta = `${isSell ? "Short" : "Long"} · ${formatCompactTradeDate(trade)}`;
     const tag = interactive ? "button" : "div";

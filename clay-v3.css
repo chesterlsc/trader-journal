@@ -4374,8 +4374,26 @@ button.session-hour-cell {
   color: var(--text-faint);
 }
 .dash-ledger-foot #dashQueueTotal { font-size: 12px; font-weight: 700; letter-spacing: -0.01em; text-transform: none; }
+/* THE TABLE IS FIXED, NOT AUTO. `max-width: 0` is the standard shrink-to-
+   ellipsis trick for an AUTO table, but it starves the column to its share:
+   measured at 1999x1150 it gave REASON 66px while "Model signal bounce" needs
+   126px and "Trend Continuation" 119px — 7 of 8 real setup names clipped, which
+   is the owner's "every REASON reads Trend".
+
+   Deleting max-width alone swings the other way: the auto algorithm then hands
+   REASON 329px and drops DATE to 137px, and the columns move every time the
+   data does. Percentages on a fixed layout hold both still. */
+.dash-ledger { table-layout: fixed; width: 100%; }
+.dash-ledger th:nth-child(1), .dash-ledger td:nth-child(1) { width: 21%; }  /* date + clock */
+.dash-ledger th:nth-child(2), .dash-ledger td:nth-child(2) { width: 11%; }  /* symbol */
+.dash-ledger th:nth-child(3), .dash-ledger td:nth-child(3) { width: 9%; }   /* side */
+.dash-ledger th:nth-child(4), .dash-ledger td:nth-child(4) { width: 16%; }  /* net p&l */
+.dash-ledger th:nth-child(5), .dash-ledger td:nth-child(5) { width: 26%; }  /* reason */
+.dash-ledger th:nth-child(6), .dash-ledger td:nth-child(6) { width: 17%; }  /* source */
+
 .dash-ledger .lq-reason {
-  max-width: 0;
+  /* max-width DELETED. nowrap + ellipsis stay: under `fixed` they now only
+     catch a runaway free-text Custom setup, which is what they are for. */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

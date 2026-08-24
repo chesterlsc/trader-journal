@@ -12506,11 +12506,18 @@ function renderEquityLegend(analytics) {
  *  sits beside today's date and wrong in a queue that can hold a trade from
  *  last December. */
 function formatQueueDate(trade) {
-  const raw = trade.date || trade.closedAt || trade.createdAt || trade.updatedAt;
-  const d = raw ? new Date(raw) : null;
-  return d && !Number.isNaN(d.getTime())
-    ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(d)
-    : formatCompactTradeDate(trade);
+  /* parseTradeEntryDate builds a date-only string at LOCAL NOON on purpose.
+     `new Date("2026-08-21")` is UTC MIDNIGHT, and formatting that with a local
+     Intl formatter prints "Aug 20" anywhere west of Greenwich — every US
+     trader, which is exactly who a Topstep journal and a "09:30 LOCAL" catalyst
+     are for. Verified: TZ=America/New_York printed Aug 20 for an Aug 21 trade.
+     Reaching past the shared helper is how this comes back. */
+  const d =
+    parseTradeEntryDate(trade.date) ||
+    new Date(trade.closedAt || trade.createdAt || trade.updatedAt || NaN);
+  return Number.isNaN(d.getTime())
+    ? formatCompactTradeDate(trade)
+    : new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(d);
 }
 
 /** The clock beside the date. A broker import can hold a dozen fills of the same
@@ -12550,7 +12557,13 @@ function renderDashLedger() {
     rows.length
       ? rows
           .map((trade) => {
-            const short = String(trade.direction || "").toLowerCase() === "sell";
+            // ONE reading of a side for the whole app. A literal === "sell" is
+            // strictly weaker than normalizeDirection, which also reads "Short",
+            // "S" and untrimmed values — and this renderer painted every one of
+            // those as an uncoloured "Long", i.e. THE WRONG SIDE. normalizeTrades
+            // canonicalises on load, but four writers push straight into
+            // state.trades without it, so a raw side does reach the DOM.
+            const short = normalizeDirection(trade.direction) === "Sell";
             const src = String(trade.importSource || "").toLowerCase();
             /* WHICH LABEL MEANS WHAT. A topstepx TRADES import is the broker's
                own reported P&L. A topstepx-ORDERS import is reconstructed from
@@ -12565,14 +12578,18 @@ function renderDashLedger() {
             // An Orders import carries no setup, and the importer records that
             // honestly as "Not recorded". Printing it as a REASON would read as
             // a setup called "Not recorded", so it degrades to an em dash.
+            const at = formatQueueTime(trade);
             const reason = String(trade.setupType || "").trim();
             const reasonText = !reason || reason.toLowerCase() === "not recorded" ? "\u2014" : reason;
             return (
               `<tr><td>${escapeHtml(formatQueueDate(trade))}` +
-              `${formatQueueTime(trade) ? `<i class="lq-at">${escapeHtml(formatQueueTime(trade))}</i>` : ""}</td>` +
+              // ONE call, and a real space in the text: without it textContent
+              // read "Aug 21, 202619:00", which is what a screen reader says and
+              // what a copy-paste produces.
+              `${at ? ` <i class="lq-at">${escapeHtml(at)}</i>` : ""}</td>` +
               `<td>${escapeHtml(trade.asset || "\u2014")}</td>` +
               `<td class="${short ? "is-neg" : ""}">${short ? "Short" : "Long"}</td>` +
-              `<td class="${trade.netPnl < 0 ? "is-neg" : "is-pos"}">${escapeHtml(
+              `<td class="${trade.netPnl < 0 ? "is-neg" : trade.netPnl > 0 ? "is-pos" : ""}">${escapeHtml(
                 trade.netPnl === 0 ? formatCurrency(0) : formatSignedCurrency(trade.netPnl)
               )}</td>` +
               `<td class="lq-reason${reasonText === "\u2014" ? " is-none" : ""}">${escapeHtml(reasonText)}</td>` +
