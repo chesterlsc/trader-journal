@@ -16775,8 +16775,12 @@ function setupRailPin() {
     pin.setAttribute("aria-pressed", on ? "true" : "false");
     pin.title = on ? "Collapse to icons" : "Keep labels open";
   };
-  let saved = false;
-  try { saved = window.localStorage.getItem("tj.rail.pinned") === "1"; } catch (error) { saved = false; }
+  // LABELS ARE THE DEFAULT. `=== "1"` meant an absent preference collapsed the
+  // rail to bare glyphs, so every first visit had to guess eight icons. `!== "0"`
+  // keeps an explicit opt-out remembered and makes the labelled state the one
+  // you get without asking, which is what the reference shows.
+  let saved = true;
+  try { saved = window.localStorage.getItem("tj.rail.pinned") !== "0"; } catch (error) { saved = true; }
   apply(saved);
   pin.addEventListener("click", () => {
     const next = !document.body.classList.contains("rail-pinned");
