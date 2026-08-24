@@ -15814,6 +15814,15 @@ function terminalNow() {
 /* The only per-second work: patch countdown text in place. No markup is
    rebuilt, so a row's entrance never restarts. One selector drives the desk,
    the pre-market print row and the dashboard rail. */
+/** ms -> "01:05:18". Hours are UNCAPPED: a 40-hour span reads 40:12:07 rather
+ *  than wrapping to 16:12:07, which is the only way this format can lie. */
+function clockSpan(ms) {
+  const total = Math.floor(ms / 1000);
+  return [Math.floor(total / 3600), Math.floor((total % 3600) / 60), total % 60]
+    .map((n) => String(n).padStart(2, "0"))
+    .join(":");
+}
+
 function renderTerminalClock() {
   const now = terminalNow();
   setText(ui.tpClock, now.toLocaleTimeString([], { hour12: false }));
@@ -15828,8 +15837,13 @@ function renderTerminalClock() {
     if (!cell) {
       return;
     }
-    if (cell.textContent !== phase.text) {
-      cell.textContent = phase.text;
+    // ONE surface wants a wall-clock span instead of "1h 05m 18s", and it asks
+    // by ATTRIBUTE — not with a second timer, a second formatter or a second
+    // call site. phase.text still wins on "live" and on past, where a clock
+    // would print 00:00:00 at a release that has already happened.
+    const text = cell.dataset.fmt === "clock" && phase.ms > 0 ? clockSpan(phase.ms) : phase.text;
+    if (cell.textContent !== text) {
+      cell.textContent = text;
     }
   });
   // The schedule rail's now line: same tick, same clock, one property write.
@@ -17174,16 +17188,30 @@ function renderEdgeMini() {
   const closed = getClosedTrades(state.trades);
   const currencies = tradedCurrencies(state.trades);
   const now = terminalNow();
-  const wire = rankEvents(terminal.events, { now, currencies, minImpact: "Medium" }).slice(0, 3);
+  // Four, not three: wire[0] is promoted to the NEXT CATALYST block below, so
+  // the list under it still shows three.
+  const wire = rankEvents(terminal.events, { now, currencies, minImpact: "Medium" }).slice(0, 4);
 
+  const asOf = document.getElementById("dashEdgeMiniAsOf");
   setText(
-    document.getElementById("dashEdgeMiniAsOf"),
+    asOf,
     terminal.sample
       ? "sample data"
       : terminal.asOf === null
       ? "link down"
       : `${new Date(terminal.asOf).toISOString().slice(11, 19)} UTC${terminal.stale ? " stale" : ""}`
   );
+  if (asOf) {
+    // The LIVE dot beside this text reads its colour from here, so the badge
+    // and the words are one statement — no second liveness flag to drift.
+    asOf.dataset.feed = terminal.sample
+      ? "sample"
+      : terminal.asOf === null
+      ? "down"
+      : terminal.stale
+      ? "stale"
+      : "live";
+  }
 
   const key = wire[0]?.key || mostStampedKey(closed);
   const file = key ? eventFile(closed, key, buildBaseline(closed)) : null;
@@ -17198,6 +17226,32 @@ function renderEdgeMini() {
     tv.dataset.channel = slot0;
     setHtml(tv, monitorTile(slot0, 0));
   }
+
+  // --- NEXT CATALYST -------------------------------------------------------
+  // wire[0], promoted. The SAME rankEvents() ordering the rows below use, so
+  // the headline and the list can never contradict each other. renderEdgeMini
+  // ends by calling renderTerminalClock(), so the countdown cell is stamped in
+  // the same pass that creates it and never flashes empty.
+  const catalyst = wire[0] || null;
+  setHtml(
+    document.getElementById("dashEdgeMiniCat"),
+    catalyst === null
+      ? `<p class="dem-cat-h">next catalyst</p><p class="dem-empty">${
+          terminal.asOf === null ? "No calendar link." : "Nothing scheduled on the pairs you trade."
+        }</p>`
+      : `<div data-starts="${escapeHtml(catalyst.startsAt)}">
+          <p class="dem-cat-h">next catalyst<em>${escapeHtml(
+            new Date(catalyst.startsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          )} local</em></p>
+          <p class="dem-cat-b">
+            <b class="dem-cat-t">${escapeHtml(catalyst.title)}</b>
+            <span class="dem-cd" data-fmt="clock"></span>
+          </p>
+          <p class="dem-cat-f">${escapeHtml(
+            new Date(catalyst.startsAt).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" })
+          )}${catalyst.source ? ` · source ${escapeHtml(catalyst.source)}` : ""}</p>
+        </div>`
+  );
 
   // --- the news edge, under the news --------------------------------------
   // The same reading and the same sentences as F6, from the same newsVerdict.

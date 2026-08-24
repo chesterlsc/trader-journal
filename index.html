@@ -1414,7 +1414,7 @@
                  IS the rail, so the dashboard keeps a one-line reminder the
                  desk exists instead of losing it entirely. -->
             <div class="dem-cmd">
-              <span class="dem-prompt" id="dashEdgeMiniHeading">&gt; edge --link journal<i class="dem-caret" aria-hidden="true"></i></span>
+              <span class="dem-title" id="dashEdgeMiniHeading">Market TV</span>
               <span class="dem-clock" id="dashEdgeMiniAsOf"></span>
               <!-- WATCH. The picture goes big without moving one node in the
                    DOM: this button only writes a class on the rail, and the CSS
@@ -1447,6 +1447,16 @@
                  the tile is a standby button until it is asked for, so an open
                  dashboard costs no bandwidth. -->
             <div class="dem-tv" id="dashEdgeMiniTv"></div>
+            <!-- NEXT CATALYST. wire[0], promoted out of the list below so the one
+                 release about to move the tape is readable from across the room.
+                 A SIBLING of #dashEdgeMiniTv, inserted AFTER it — the TV element
+                 is never wrapped, moved or rewritten, because either would
+                 reload the iframe inside it.
+                 THE COUNTDOWN IS NOT A NEW TIMER: data-starts on the wrapper and
+                 .dem-cd on the cell is the whole contract, and the existing 1s
+                 terminal interval walks every [data-starts] and patches the
+                 named cell against the server clock. -->
+            <div class="dem-cat" id="dashEdgeMiniCat"></div>
 
             <!-- The news edge, under the news. Same reading as F6 on the desk,
                  written by the same newsVerdict(), just narrower. -->
@@ -1457,7 +1467,7 @@
               <div id="dashEdgeMiniBody"></div>
             </div>
             <button class="nav-btn dem-key" type="button" data-target="terminal" data-terminal-nav hidden>
-              <b>F1</b> open the desk
+              <b>F1</b> full calendar
             </button>
             </div>
           </aside>
