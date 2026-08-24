@@ -12341,8 +12341,13 @@ function renderDashMiniCal() {
   // never rounds into +1.0K inside its own month.
   const tileMoney = (v) => (v > 0 ? "+" : "") + formatStatMoney(v).replace("$", "");
   const tiles = [];
-  for (let i = 0; i < startOffset; i += 1) {
-    tiles.push('<span class="mini-cal-day is-blank" aria-hidden="true"></span>');
+  // ADJACENT-MONTH DAYS, dimmed, instead of empty cells. The reference shows
+  // 26..31 before the 1st and 1..5 after the 31st: it keeps the grid reading as
+  // a continuous month rather than a shape with bites taken out of it, and it
+  // is the difference between a calendar and a stack of boxes.
+  const prevMonthDays = new Date(year, monthIndex, 0).getDate();
+  for (let i = startOffset; i > 0; i -= 1) {
+    tiles.push(`<span class="mini-cal-day is-outside" aria-hidden="true">${prevMonthDays - i + 1}</span>`);
   }
   for (let day = 1; day <= daysInMonth; day += 1) {
     const isoDate = `${monthValue}-${String(day).padStart(2, "0")}`;
@@ -12363,15 +12368,22 @@ function renderDashMiniCal() {
       tiles.push(`<span class="mini-cal-day${todayClass}">${day}</span>`);
     }
   }
-  ui.miniCalGrid.innerHTML = tiles.join("");
+  // Trailing days, so the last week row is never a ragged edge.
+  const trailing = (7 - (tiles.length % 7)) % 7;
+  for (let i = 1; i <= trailing; i += 1) {
+    tiles.push(`<span class="mini-cal-day is-outside" aria-hidden="true">${i}</span>`);
+  }
+  setHtml(ui.miniCalGrid, tiles.join(""));
 
   if (ui.miniCalFoot) {
     // BEST duplicated the pulse row's Best Day tile; AVG per traded day is
     // the figure no other surface carries.
     const red = [...dayStats.values()].filter((s) => s.pnl < 0).length;
     const avg = dayStats.size ? round(net / dayStats.size) : 0;
+    // "GREEN DAYS 5 · AVG +$455" — the reference's wording. RED was a second
+    // count of the same thing the tiles already show in colour.
     ui.miniCalFoot.textContent = dayStats.size
-      ? `${green} GREEN${red ? ` · ${red} RED` : ""} · AVG ${avg === 0 ? "$0" : (avg > 0 ? "+$" : "-$") + formatStatMoney(Math.abs(avg)).replace("$", "")}`
+      ? `GREEN DAYS ${green} · AVG ${avg === 0 ? "$0" : (avg > 0 ? "+$" : "-$") + formatStatMoney(Math.abs(avg)).replace("$", "")}`
       : "AWAITING FIRST TRADE";
   }
 

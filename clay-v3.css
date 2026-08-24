@@ -3171,14 +3171,15 @@ button.session-hour-cell {
 }
 /* Weekday headers are named chips, not initials. "S M T W T F S" has two Ts
    and two Ss and makes the reader count columns. */
+/* Plain caps text, no chips. The reference's weekday row is a LABEL, and a
+   chip on each one made seven more boxes above a grid of boxes. */
 #dashboard .mini-cal-weekdays span {
   font: 600 11px/1 var(--font-mono);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--text-faint);
   text-align: center;
-  padding: 5px 0;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--text) 4%, transparent);
+  padding: 3px 0;
 }
 
 /* THE LEDGER TILE. A day that did not trade is a NUMBER, not a box: giving
@@ -3205,7 +3206,10 @@ button.session-hour-cell {
   background: none;
   text-align: left;
 }
+/* The index goes TOP-RIGHT in a traded tile: the money is the thing being read
+   and it reads left-aligned, so the date gets out of its way. */
 #dashboard .mini-cal-day .mc-ix {
+  align-self: flex-end;
   font: 500 10px/1 var(--font-mono);
   font-style: normal;
   color: var(--text-faint);
@@ -3238,6 +3242,9 @@ button.session-hour-cell {
 }
 #dashboard .mini-cal-day.is-scratch .mc-amt { color: var(--text-faint); font-weight: 600; }
 #dashboard .mini-cal-day.is-blank { background: none; }
+/* Adjacent-month days: present, so the month reads continuous, but clearly not
+   part of it. */
+#dashboard .mini-cal-day.is-outside { color: var(--text-faint); opacity: 0.32; }
 #dashboard .mini-cal-day.is-trade { font-weight: 600; color: var(--text); cursor: pointer; }
 /* Fill carries magnitude, the edge carries the sign. The border is what makes
    a small losing day still legible against a big winning one. */
@@ -3273,7 +3280,23 @@ button.session-hour-cell {
 #dashboard .mini-cal-step:hover:not(:disabled) { background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text); }
 #dashboard .mini-cal-step:disabled { opacity: 0.25; cursor: default; }
 #dashboard .mini-cal-head .mini-cal-net { margin-left: auto; }
-#dashboard .mini-cal-day.is-today { box-shadow: inset 0 0 0 1px var(--accent); }
+/* TODAY is an orange outline with a dot beneath the numeral — the reference's
+   marker. It is the only place accent is spent inside the grid, so it cannot be
+   confused with a P&L colour. */
+#dashboard .mini-cal-day.is-today {
+  border-color: var(--accent);
+  box-shadow: none;
+  color: var(--text);
+}
+#dashboard .mini-cal-day.is-today:not(.is-trade)::after {
+  content: "";
+  width: 3px;
+  height: 3px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+#dashboard .mini-cal-day.is-today:not(.is-trade) { align-items: center; justify-content: center; }
 #dashboard .mini-cal-day.is-future { opacity: 0.45; }
 
 /* The calendar's foot: figures left, the mark right, one 11px line. */
