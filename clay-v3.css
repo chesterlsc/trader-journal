@@ -3729,7 +3729,28 @@ button.session-hour-cell {
   /* The ledger is six rows in a 432px panel. Its slack is pooled BELOW the
      table, which is what the reference does — rows do not stretch to fill. */
   #dashboard.is-active #dashLedger .dash-ledger { flex: 0 0 auto; }
-  #dashboard.is-active .trader-score-foot { flex: 0 0 auto; }
+  /* THE FOOT WAS EATING THE RADAR. Stacked — label over numeral, then the rail,
+     then a two-line caption — it measured 109px of a 341px panel at 1440x900,
+     leaving the canvas 148 and pinning drawRadarChart to its 46px floor: a 92px
+     circle, the exact regression charts.js:1515 documents.
+
+     One ROW instead: the numeral left, the rail taking the rest. The caption
+     stays in the DOM for screen readers and for the narrow layouts below 1240,
+     where the page scrolls and it costs nothing. */
+  #dashboard.is-active .trader-score-foot {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 14px;
+    row-gap: 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+  #dashboard.is-active .trader-score-value-wrap { display: flex; align-items: baseline; gap: 8px; }
+  #dashboard.is-active .trader-score-value { font: 700 26px/1 var(--font-mono); margin: 0; }
+  #dashboard.is-active .trader-score-value-wrap .metric-label { margin: 0; white-space: nowrap; }
+  #dashboard.is-active .trader-score-caption { display: none; }
 
   /* THE RULE: the last list in a panel is flex:1. A box cannot then be taller
      than its content, and its content cannot be shorter than the box. This is
