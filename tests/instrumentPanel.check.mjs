@@ -207,7 +207,7 @@ assert.ok(
 const strip = html.slice(html.indexOf('class="eq-footnotes"'));
 const stripEnd = strip.indexOf("</div>");
 const figures = (strip.slice(0, stripEnd).match(/data-metric="/g) || []).length;
-assert.equal(figures, 9, `stat strip should carry 9 figures, found ${figures}`);
+assert.equal(figures, 7, `stat strip should carry 7 figures, found ${figures}`);
 assert.ok(!html.includes('data-metric="bestDay"'), "bestDay tile should be gone — the day bars state it");
 assert.ok(!html.includes('data-metric="worstDay"'), "worstDay tile should be gone — the day bars state it");
 assert.ok(!/<section class="dash-quad"/.test(html), "the emptied .dash-quad wrapper should be deleted");

@@ -8257,6 +8257,7 @@ function renderAll() {
   renderDashMiniCal();
   renderDayBars(state.analytics);
   renderDashLedger();
+  renderEquityLegend(state.analytics);
   hydrateSetupFilter();
   renderJournalTable();
   renderReflections();
@@ -12476,6 +12477,31 @@ function renderDayBars(analytics) {
 
    Field names are from the real record: trade.date, trade.asset (there is no
    trade.symbol), trade.direction ("Buy"/"Sell"), trade.netPnl, trade.setupType. */
+/* The legend the on-canvas readout used to be. It states the CLOSED-TRADE
+   equity the curve's head actually plots — deliberately NOT the [data-metric]
+   accountBalance node, which renderLiveEquity re-patches to balance + open
+   float on every 5s price poll. Two figures that mean different things must
+   not share a number. */
+function renderEquityLegend(analytics) {
+  const value = document.getElementById("equityLegendValue");
+  const depth = document.getElementById("equityLegendDepth");
+  if (!value && !depth) {
+    return;
+  }
+  const equity = Array.isArray(analytics?.equity) ? analytics.equity : [];
+  const last = equity.length ? equity[equity.length - 1] : 0;
+  setText(value, formatCurrency(last));
+  const dd = Number(analytics?.currentDrawdown) || 0;
+  // Share of the peak it fell from, which is the same identity the chart's own
+  // depth series uses: peak = equity + drawdown.
+  const peak = last + dd;
+  const pct = peak > 0 ? (dd / peak) * 100 : 0;
+  setText(depth, `${formatCurrency(dd)} (${pct.toFixed(2)}%)`);
+  if (depth) {
+    depth.classList.toggle("is-live", dd > 0);
+  }
+}
+
 function renderDashLedger() {
   const host = document.getElementById("dashLedgerBody");
   if (!host) {

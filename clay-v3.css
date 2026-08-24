@@ -3841,40 +3841,46 @@ button.session-hour-cell {
   /* The nine-figure stat strip under the curve. Explicit rows, because with
      `auto` the flex algorithm sizes the strip before the grid wraps and clips
      a row. */
-  /* Nine figures. On the reference board this panel is 469px wide, not the
-     1076px it had when it was the only chart on its row, so five columns
-     overprinted. Three columns of three, and the strip states its own height so
-     the flex algorithm cannot size it before the grid has wrapped. */
+  /* SEVEN FIGURES, ONE ROW, ABOVE THE CURVE. Hairlines, not a grid of cards:
+     this panel is one surface and dividers do the work borders used to. The
+     streak pair is gone — band A's GREEN STREAK cell already carries it, and
+     repeating it here was the only reason the strip needed three rows. */
   #dashboard.is-active .eq-footnotes {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows: repeat(3, 15px);
-    row-gap: 4px;
-    column-gap: 12px;
-    flex: 0 0 53px;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-rows: auto;
+    column-gap: 0;
+    row-gap: 0;
+    flex: 0 0 auto;
     align-content: center;
-    margin: 0;
+    margin: 0 0 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  #dashboard.is-active .eq-footnotes > article + article {
+    padding-left: 12px;
+    border-left: 1px solid var(--line);
   }
   /* One LINE per figure, not two. Stacking a label over a value needs ~22px a
      row; laying them out as label-left / value-right fits the same nine figures
      in 15px rows and gives the curve back 20px. */
   #dashboard.is-active .eq-footnotes > article {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 6px;
+    flex-direction: column;
+    gap: 3px;
     min-width: 0;
+    padding-right: 12px;
   }
   #dashboard.is-active .eq-footnotes .metric-label {
-    font-size: 9px;
-    line-height: 15px;
+    font-size: 10px;
+    line-height: 13px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   #dashboard.is-active .eq-footnotes .metric-value {
-    font-size: 11px;
-    line-height: 15px;
+    font-size: 15px;
+    line-height: 18px;
     white-space: nowrap;
   }
   #dashboard.is-active .eq-footnotes .metric-delta { display: none; }
@@ -4361,6 +4367,42 @@ button.session-hour-cell {
   background: var(--text);
   box-shadow: 0 0 0 2px var(--surface-1);
 }
+
+/* ══ THE LEGEND ══════════════════════════════════════════════════════════
+   Two series on one plot need naming, and this is what lets drawLineChart run
+   with readout:null — which hands the axis 20px of padTop back. The dots are
+   the series colours: orange for equity, the neutral track wash for depth. */
+.eq-legend {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  margin: 0 0 6px;
+  font: 500 11px/1.3 var(--font-mono);
+  color: var(--text-faint);
+}
+.eq-legend-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.eq-legend-item::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  align-self: center;
+}
+.eq-legend-item.is-equity::before { background: var(--accent); }
+.eq-legend-item.is-depth::before { background: var(--chart-axis, var(--text-faint)); }
+.eq-legend-item b {
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.eq-legend-item.is-depth b.is-live { color: var(--pnl-neg); }
+
 
 /* ══ MARKET TV — the column names itself and states its own liveness ══════ */
 .dem-title {

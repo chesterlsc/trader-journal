@@ -515,6 +515,50 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
     return points[points.length - 1].y;
   }
 
+  /**
+   * Smallest 1/2/2.5/5/10 x 10^k step that satisfies `fits` in exactly `n`
+   * intervals, or null when nothing in range does. Lifted out of the tick search
+   * below so the money axis and the depth axis run the SAME search — a second
+   * copy is how two scales drift onto two different sets of gridlines.
+   */
+  function niceStep(span, n, fits) {
+    const seed = Math.max(span / n, Number.MIN_VALUE);
+    const base = 10 ** Math.floor(Math.log10(seed));
+    let step = null;
+    for (let scale = base; scale <= base * 1e4 && step === null; scale *= 10) {
+      step = [1, 2, 2.5, 5, 10].map((m) => m * scale).find(fits) ?? null;
+    }
+    return step;
+  }
+
+  // Right-hand axis labels. TWO decimals, not one: the step ladder includes
+  // 2.5 x 10^k, so a 0.25 step at one decimal prints -0.3 / -0.5 / -0.8 on an
+  // evenly spaced grid — the same silent lie the money axis was fixed to kill.
+  // Number() drops the trailing zeros afterwards.
+  function formatAxisPercent(value) {
+    return `${Number(value.toFixed(2))}%`;
+  }
+
+  /* Drawdown as a share of the peak it fell from — the equity plot's second
+     series. peak_i = equity_i + drawdown_i is an IDENTITY of how
+     calculateAnalytics builds the pair, so this needs no new analytics field,
+     no new hash key and no second pass.
+
+     SIGN: analytics.drawdowns is a POSITIVE MAGNITUDE, floored at 0 by
+     construction. It is negated HERE, once, so everything downstream reads
+     depth as negative the same way the underwater chart does. */
+  function depthPercent(analytics) {
+    const equity = analytics.equity;
+    const drawdowns = analytics.drawdowns;
+    if (!Array.isArray(equity) || !Array.isArray(drawdowns) || drawdowns.length !== equity.length) {
+      return null;
+    }
+    return drawdowns.map((dd, i) => {
+      const peak = equity[i] + dd;
+      return peak > 0 ? (-Math.abs(dd) / peak) * 100 : 0;
+    });
+  }
+
   function drawAllCharts(analytics, progress) {
     paint(
       ui.equityChart,
@@ -525,10 +569,14 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
           {
             key: "line",
             labels: analytics.equityDates,
-            readout: "EQUITY",
+            // null, not "EQUITY": the legend line above this canvas states the
+            // figure and band A prints it at 44px, so a third copy inside the
+            // plot is duplication — and turning it off buys 20px of padTop back.
+            readout: null,
             emptyLabel: "No equity data yet",
             extreme: "max",
-            extremeLabel: "PEAK"
+            extremeLabel: "PEAK",
+            depth: depthPercent(analytics)
           },
           p
         ),
@@ -635,8 +683,11 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
     // gridline rows need >=30px of spacing; below that the axis is decoration.
     const bare = height < 140;      // no gridlines, no y-axis, no date labels
     const padLeft = bare ? 8 : compact ? 44 : 56;
-    const padRight = bare ? 8 : 18;
-    const padTop = bare ? 14 : 42;  // 14/4 is the sparkline's own budget
+    const padRight = bare ? 8 : Array.isArray(options.depth) ? (compact ? 40 : 48) : 18;
+    // readout === null buys 20px of padTop back: the legend line above the
+    // canvas states that figure and band A prints it at 44px, so a third copy
+    // inside the plot is duplication.
+    const padTop = bare ? 14 : options.readout === null ? 22 : 42;
     const padBottom = bare ? 4 : 30;
     const left = padLeft;
     const right = width - padRight;
@@ -685,15 +736,10 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
       const span = max - min;
       let best = null;
       for (let n = maxRows; n >= Math.min(3, maxRows); n -= 1) {
-        const seed = Math.max(span / n, Number.MIN_VALUE);
-        const base = 10 ** Math.floor(Math.log10(seed));
         const fits = options.underwater
           ? (s) => s * n >= -min
           : (s) => Math.floor(min / s) * s + s * n >= max;
-        let step = null;
-        for (let scale = base; scale <= base * 1e4 && step === null; scale *= 10) {
-          step = [1, 2, 2.5, 5, 10].map((m) => m * scale).find(fits) ?? null;
-        }
+        const step = niceStep(span, n, fits);
         if (step === null) {
           continue;
         }
@@ -717,7 +763,37 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
       }
     }
 
+    /* ── THE SECOND SCALE ──────────────────────────────────────────────────
+       TWO SCALES, ONE SET OF RULES. The row COUNT is part of the money search's
+       answer above, so the depth axis does not get its own: it reuses `rows` and
+       searches only for its own step. That is what makes both label columns land
+       on the same gridlines by construction rather than by luck.
+
+       Nothing below reads `min`/`max` and nothing above reads `depthFloor`.
+       That is the whole independence guarantee.
+
+       ZERO SITS ON THE TOP RULE and the area hangs DOWN from it — the grey is
+       "how far below the peak". Depth is never positive, so a symmetric axis
+       would label rows the data cannot reach.
+
+       `!bare` is NOT redundant with `rows > 0`: a 90px sparkline still gets
+       maxRows 2, so the row count alone would let a grey wash and an off-bitmap
+       percent column onto a box with 8px of right gutter. */
+    const depth =
+      !bare && rows > 0 && Array.isArray(options.depth) && options.depth.length === series.length
+        ? options.depth
+        : null;
+    let depthFloor = 0;
+    if (depth) {
+      const deepest = -Math.min(...depth, 0);
+      // No drawdown in the window: the series lies flat on the zero rule, so the
+      // axis only needs round labels to sit against. 1% a row.
+      const dstep = deepest > 0 ? niceStep(deepest, rows, (s) => s * rows >= deepest) : 1;
+      depthFloor = -(dstep || 1) * rows;
+    }
+
     const yFor = (value) => bottom - ((value - min) / (max - min)) * plotH;
+    const yForDepth = (value) => top + (value / depthFloor) * plotH;
     const points = plotted.map((value, index) => ({
       x: left + (index / (plotted.length - 1)) * plotW,
       y: yFor(value)
@@ -732,6 +808,10 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
       // the underwater chart labels depth as negative money.
       valueAt: (t) => max - (max - min) * t,
       formatter: formatCompactCurrency,
+      // Same `t`, same loop, same `y` — so row i carries BOTH readings and the
+      // two columns can never drift apart.
+      valueAtRight: depth ? (t) => depthFloor * t : null,
+      formatterRight: formatAxisPercent,
       rows
     });
 
@@ -745,6 +825,35 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
       ctx.beginPath();
       ctx.rect(0, 0, revealX + 1, height);
       ctx.clip();
+    }
+
+    /* Depth series. Painted FIRST and flat, in the neutral the palette already
+       carries, so the equity area, its three-pass glow stroke and every marker
+       land on top of it. Z-ORDER is what stops the second series swamping the
+       first — not a scale fudge, which would be a lie about the axis beside it.
+       Inside the reveal clip, so both series wipe in together. PAINT ONLY: it is
+       never written to `geometry`, so the scrub, the hover hit-test and the
+       playhead never see it. */
+    if (depth) {
+      const depthPoints = depth.map((value, index) => ({
+        x: left + (index / (depth.length - 1)) * plotW,
+        y: yForDepth(Math.min(value, 0))
+      }));
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(depthPoints[0].x, top);
+      traceSmoothPath(ctx, depthPoints, false);
+      ctx.lineTo(depthPoints[depthPoints.length - 1].x, top);
+      ctx.closePath();
+      ctx.fillStyle = colors.track;
+      ctx.fill();
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = colors.axis;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      traceSmoothPath(ctx, depthPoints);
+      ctx.stroke();
+      ctx.restore();
     }
 
     // Area — multi-stop gradient spanning the actual envelope of the curve.
@@ -829,21 +938,26 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
       progress
     });
 
-    // Readout block, top-left.
-    const lastValue = series[series.length - 1];
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = colors.textFaint;
-    ctx.font = colors.font(600, 10);
-    ctx.fillText(options.readout || "LAST", left, 18);
-    ctx.fillStyle = options.underwater && lastValue > 0 ? colors.neg : colors.text;
-    ctx.font = colors.font(700, compact ? 15 : 17);
-    ctx.fillText(formatCurrency(options.underwater ? -lastValue : lastValue), left, 34);
+    // Readout block, top-left. `!== null`, not `|| "LAST"`: null has to survive
+    // that default, because a caller that states this figure in its own legend
+    // turns the in-plot copy off. Every other caller passes a string and is
+    // byte-identical in behaviour.
+    if (options.readout !== null) {
+      const lastValue = series[series.length - 1];
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = colors.textFaint;
+      ctx.font = colors.font(600, 10);
+      ctx.fillText(options.readout || "LAST", left, 18);
+      ctx.fillStyle = options.underwater && lastValue > 0 ? colors.neg : colors.text;
+      ctx.font = colors.font(700, compact ? 15 : 17);
+      ctx.fillText(formatCurrency(options.underwater ? -lastValue : lastValue), left, 34);
+    }
 
     // A bare box has 4px below the baseline; date labels draw at bottom+11 and
     // would land outside the canvas.
     if (!bare) {
-      drawDateLabels(ctx, points, options.labels, bottom);
+      drawDateLabels(ctx, points, options.labels, bottom, plotW);
     }
 
     // Playhead before the crosshair, and mutually exclusive with it (the
@@ -1000,13 +1114,20 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
     drawTooltip(ctx, { width, height }, point, rows);
   }
 
-  function drawDateLabels(ctx, points, labels, bottom) {
+  function drawDateLabels(ctx, points, labels, bottom, plotW) {
     if (!Array.isArray(labels) || labels.length !== points.length || !points.length) {
       return;
     }
 
     const colors = getPalette();
-    const indices = Array.from(new Set([0, Math.floor((points.length - 1) / 2), points.length - 1]));
+    // Three was a FLOOR for a phone-width canvas, not a ceiling for a 1100px
+    // plot. ~110px a label at 10px mono keeps "AUG 24" off its neighbour; the
+    // Set collapses the duplicates a short series produces, so a 3-point curve
+    // still prints exactly 3.
+    const slots = clamp(Math.floor((plotW || 0) / 110), 2, 6);
+    const indices = Array.from(
+      new Set(Array.from({ length: slots + 1 }, (_, i) => Math.round((i / slots) * (points.length - 1))))
+    );
     ctx.fillStyle = colors.axis;
     ctx.font = colors.font(500, 10);
     ctx.textBaseline = "top";
@@ -1033,7 +1154,7 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
   // Receding grid: the top rules fade out so the eye lands on the baseline.
   function drawPlotFrame(ctx, options) {
     const colors = getPalette();
-    const { left, right, top, bottom, valueAt, formatter } = options;
+    const { left, right, top, bottom, valueAt, formatter, valueAtRight, formatterRight } = options;
     // The caller decides how many rules the box can carry; 4 is the full
     // treatment, 2 the squeezed one, 0 means the axis is not honest here.
     const rows = Number.isFinite(options.rows) ? options.rows : 4;
@@ -1055,6 +1176,17 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
         ctx.textAlign = "right";
         ctx.textBaseline = "middle";
         ctx.fillText(formatter(valueAt(i / rows)), left - 8, y);
+      }
+
+      // Second scale, right gutter. Restates globalAlpha because the rule stroke
+      // above fades the top rows out and the labels must not fade with them.
+      if (typeof valueAtRight === "function") {
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = colors.axis;
+        ctx.font = colors.font(500, 10);
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(formatterRight(valueAtRight(i / rows)), right + 8, y);
       }
     }
     ctx.restore();

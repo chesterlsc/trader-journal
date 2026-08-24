@@ -1777,9 +1777,55 @@
             </article>
             <article class="panel panel-chart panel-span-8">
               <div class="panel-head">
-                <h3>Equity Curve</h3>
-                <p>Starting balance + trade sequence</p>
+                <h3>Equity / Drawdown</h3>
               </div>
+              <div class="eq-footnotes">
+                <article class="metric-card">
+                  <p class="metric-label">Total trades</p>
+                  <p class="metric-value" data-metric="totalTrades">0</p>
+                <span class="metric-delta" data-metric-delta="totalTrades" hidden></span>
+                </article>
+                <article class="metric-card">
+                  <p class="metric-label">Win rate</p>
+                  <p class="metric-value" data-metric="winRate">0</p>
+                <span class="metric-delta" data-metric-delta="winRate" hidden></span>
+                </article>
+                <article class="metric-card">
+                  <p class="metric-label">Profit factor</p>
+                  <p class="metric-value" data-metric="profitFactor">0</p>
+                <span class="metric-delta" data-metric-delta="profitFactor" hidden></span>
+                </article>
+                <article class="metric-card">
+                  <p class="metric-label">Expectancy</p>
+                  <p class="metric-value" data-metric="expectancy">0</p>
+                <span class="metric-delta" data-metric-delta="expectancy" hidden></span>
+                </article>
+                <article class="metric-card">
+                  <p class="metric-label">Avg win / loss</p>
+                  <p class="metric-value" data-metric="avgWinLoss">0</p>
+                </article>
+                <article class="metric-card">
+                  <p class="metric-label">Max drawdown</p>
+                  <p class="metric-value" data-metric="maxDrawdown">0</p>
+                <span class="metric-delta" data-metric-delta="maxDrawdown" hidden></span>
+                </article>
+                <article class="metric-card">
+                  <p class="metric-label">Current drawdown</p>
+                  <p class="metric-value" data-metric="currentDrawdown">0</p>
+                <span class="metric-delta" data-metric-delta="currentDrawdown" hidden></span>
+                </article>
+              </div>
+              <!-- The legend the on-canvas readout used to be. Two series, one
+                   line, and it is what lets drawLineChart run with readout:null
+                   and hand the axis 20px of padTop back.
+                   NOT [data-metric] nodes, on purpose: these state the
+                   CLOSED-TRADE equity the curve's head actually plots, while
+                   band A's accountBalance node is re-patched to balance + open
+                   float by renderLiveEquity on every 5s poll. -->
+              <p class="eq-legend">
+                <span class="eq-legend-item is-equity">Equity <b id="equityLegendValue">$0.00</b></span>
+                <span class="eq-legend-item is-depth">Drawdown <b id="equityLegendDepth">$0.00 (0.00%)</b></span>
+              </p>
               <!-- 1f #05 equity scrub: the canvas is a slider over the trade
                    sequence. Drag, swipe or arrow-key it and #equityScrub below
                    streams the trade under the playhead. -->
@@ -1812,52 +1858,6 @@
                 </div>
                 <img class="eq-scrub-shot" id="equityScrubShot" alt="" hidden />
                 <button class="eq-scrub-clear" id="equityScrubClear" type="button">Clear</button>
-              </div>
-              <div class="eq-footnotes">
-                <article class="metric-card">
-                <p class="metric-label">Total Trades</p>
-                <p class="metric-value" data-metric="totalTrades">0</p>
-                <span class="metric-delta" data-metric-delta="totalTrades" hidden></span>
-              </article>
-                <article class="metric-card">
-                <p class="metric-label">Current Drawdown</p>
-                <p class="metric-value" data-metric="currentDrawdown">$0.00</p>
-                <span class="metric-delta" data-metric-delta="currentDrawdown" hidden></span>
-              </article>
-                <article class="metric-card">
-                <p class="metric-label">Max Drawdown</p>
-                <p class="metric-value" data-metric="maxDrawdown">$0.00</p>
-                <span class="metric-delta" data-metric-delta="maxDrawdown" hidden></span>
-              </article>
-                <article class="metric-card">
-                <p class="metric-label">Winning Streak</p>
-                <p class="metric-value" data-metric="winningStreak">0</p>
-                <span class="metric-delta" data-metric-delta="winningStreak" hidden></span>
-              </article>
-                <article class="metric-card">
-                <p class="metric-label">Losing Streak</p>
-                <p class="metric-value" data-metric="losingStreak">0</p>
-                <span class="metric-delta" data-metric-delta="losingStreak" hidden></span>
-              </article>
-                <article class="metric-card">
-                <p class="metric-label">Win rate</p>
-                <p class="metric-value" data-metric="winRate">0%</p>
-                <span class="metric-delta" data-metric-delta="winRate" hidden></span>
-              </article>
-                <article class="metric-card">
-                <p class="metric-label">Profit factor</p>
-                <p class="metric-value" data-metric="profitFactor">0.00</p>
-                <span class="metric-delta" data-metric-delta="profitFactor" hidden></span>
-              </article>
-                <article class="metric-card">
-                <p class="metric-label">Expectancy</p>
-                <p class="metric-value" data-metric="expectancy">$0.00</p>
-                <span class="metric-delta" data-metric-delta="expectancy" hidden></span>
-              </article>
-                <article class="metric-card">
-                <p class="metric-label">Avg win / loss</p>
-                <p class="metric-value" data-metric="avgWinLoss">$0.00 / $0.00</p>
-              </article>
               </div>
             </article>
             <article class="panel panel-chart panel-span-4">
