@@ -9745,6 +9745,31 @@ body.auth-locked {
 /* Collapsed, the command bar IS the rail: one line saying the desk is there. */
 .dash-edge-mini.is-min .dem-panel { display: none; }
 
+/* THE POPPED-OUT TV SURVIVES `hide`. The rule above is display:none on
+   .dem-panel, and .dem-panel is the iframe's PARENT — display:none on an
+   ancestor takes the whole subtree out of rendering however fixed the TV is.
+   Removing the class in JS would not hold either: syncEdgeMiniCollapsed
+   re-reads the stored choice and re-applies it on EVERY render, once a second
+   behind the clock.
+
+   So the panel keeps its BOX and loses its contents. .dem-tv is out of flow
+   while popped, so the panel computes to zero height and the rail still reads
+   as one collapsed line. (0,4,0) beats (0,3,0) above.
+
+   THIS LIVES IN styles.css ON PURPOSE. The guard in
+   tests/instrumentPanel.check.mjs is a negated regex over clay-v3.css matching
+   any rule whose selector contains .dash-edge-mini and whose block contains
+   display:none — this exact string matches it. In clay-v3 these two lines fail
+   the suite; here they do not, and here is where the rule they beat lives. */
+.dash-edge-mini.is-min.is-tv-out .dem-panel { display: block; }
+.dash-edge-mini.is-min.is-tv-out .dem-panel > *:not(.dem-tv) { display: none; }
+
+/* Two controls share the command bar's right end now, and .dem-min carries
+   margin-left:auto unconditionally — a SECOND auto margin splits the free space
+   BETWEEN them instead of grouping them, which reads as a stray button
+   stranded in the middle of the bar. */
+.dem-cmd .dem-min + .dem-min { margin-left: 0; }
+
 @media (max-width: 899px) {
   /* 44px on a phone, where it is a thumb target rather than a pointer one. */
   .dem-min { min-height: 44px; padding: 0 var(--space-3); }

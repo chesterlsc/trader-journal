@@ -108,12 +108,20 @@ assert.ok(
 );
 
 // ── 5. The board closes when a panel is off ───────────────────────────────────
-for (const sel of ["\\.dash-edge-mini\\[hidden\\]", "#dashPlaybook\\[hidden\\]"]) {
-  assert.ok(
-    new RegExp(`:has\\(${sel}\\)`).test(clay),
-    `no :has() reflow for ${sel} — a fresh account would show a hole in the board`
-  );
-}
+// The rail is the ONLY optional panel on this board: it ships `hidden` and stays
+// hidden without terminalPro, so without a reflow a fresh account shows a
+// four-column hole down the right. The ledger and the edge score always render
+// (the ledger has its own empty-state row), and the playbook and discipline
+// panels are display:none'd off this grid entirely — which is a stronger
+// guarantee than a reflow, so they are asserted that way instead.
+assert.ok(
+  /:has\(\.dash-edge-mini\[hidden\]\)/.test(clay),
+  "no :has() reflow for a hidden rail — a fresh account would show a hole in the board"
+);
+assert.ok(
+  /#dashboard\.is-active \.dash-board-slot,\n\s*#dashboard\.is-active #dashPlaybook \{ display: none/.test(clay),
+  "the playbook and discipline panels must be display:none'd off this board, not left unplaced"
+);
 
 // ── 6. NEVER display:none an ancestor of the Edge iframe ──────────────────────
 assert.ok(
@@ -131,12 +139,12 @@ const rowsOf = (block) => {
 const clayDecls = decls(clay);
 const tallRule = blockAt(clayDecls, clayDecls.indexOf("#dashboard.is-active {\n    grid-template-columns"));
 const tall = rowsOf(tallRule);
-assert.equal(tall, "36px 108px minmax(0, 0.51fr) minmax(0, 0.49fr)", "tall-screen track set changed");
+assert.equal(tall, "36px 108px minmax(0, 0.42fr) minmax(0, 0.58fr)", "tall-screen track set changed");
 const shortBlock = clay.slice(clay.indexOf(SHORT_Q));
 const shortDecls = decls(shortBlock);
 assert.equal(rowsOf(shortDecls), "32px 88px minmax(0, 0.48fr) minmax(0, 0.52fr)", "short-screen track set changed");
 // 1093 viewport - 32 padding-block - 36 row gaps = 1025 of track
-assert.equal(36 + 108 + Math.round(0.51 * 881) + Math.round(0.49 * 881), 1025, "tall budget does not close");
+assert.equal(36 + 108 + Math.round(0.42 * 881) + Math.round(0.58 * 881), 1025, "tall budget does not close");
 // 843 viewport - 32 - 36 = 775
 assert.equal(32 + 88 + Math.round(0.48 * 655) + Math.round(0.52 * 655), 775, "short budget does not close");
 assert.ok(

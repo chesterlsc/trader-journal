@@ -8256,6 +8256,7 @@ function renderAll() {
   renderCalendarView();
   renderDashMiniCal();
   renderDayBars(state.analytics);
+  renderDashLedger();
   hydrateSetupFilter();
   renderJournalTable();
   renderReflections();
@@ -9395,7 +9396,7 @@ function computeTraderScore({ winRate, profitFactor, avgWin, avgLoss, totalPnl, 
     { label: "Win %", value: clamp(winRate, 0, 100) },
     { label: "Profit factor", value: normalizeToScore(profitFactor, 0, 3) },
     { label: "Avg win/loss", value: normalizeToScore(avgWinLossRatio, 0, 2.5) },
-    { label: "Recovery", value: normalizeToScore(recoveryFactor, 0, 4) },
+    { label: "Recovery factor", value: normalizeToScore(recoveryFactor, 0, 4) },
     { label: "Max drawdown", value: clamp(100 - normalizeToScore(drawdownPercent, 0, 12), 0, 100) },
     { label: "Consistency", value: clamp(consistencyRatio * 100, 0, 100) }
   ];
@@ -9809,10 +9810,19 @@ function renderDashboardMetrics(analytics) {
   ui.dailyTradingScore.textContent = String(analytics.dailyTradingScore);
   ui.goalProgress.textContent = `${clamp(Math.round(analytics.goalProgress), 0, 300)}%`;
   if (ui.traderScoreValue) {
-    setCountUpValue(ui.traderScoreValue, analytics.traderScore.score.toFixed(1), {
+    // "81", not "81.0". A one-decimal composite implies a precision that six
+    // clamp()ed inputs do not have.
+    setCountUpValue(ui.traderScoreValue, String(Math.round(analytics.traderScore.score)), {
       value: analytics.traderScore.score,
-      format: (value) => value.toFixed(1)
+      format: (value) => String(Math.round(value))
     });
+  }
+  // The rail is a red-amber-green track; the dot is the score's own position on
+  // it, so the number and its standing are one read instead of two.
+  const scoreRail = document.getElementById("edgeScoreRail");
+  if (scoreRail) {
+    scoreRail.style.setProperty("--score-at", `${clamp(analytics.traderScore.score, 0, 100)}%`);
+    scoreRail.setAttribute("title", `Edge score ${Math.round(analytics.traderScore.score)} of 100`);
   }
   if (ui.traderScoreCaption) {
     ui.traderScoreCaption.textContent = analytics.traderScore.caption;
@@ -12386,6 +12396,23 @@ function renderDayBars(analytics) {
   }
   const days = [...analytics.dailyPnl].filter(([, pnl]) => pnl !== 0).slice(-30);
   const peak = Math.max(...days.map(([, pnl]) => Math.abs(pnl)), 1);
+  // The figures under the bars. A 30-bar chart says which day was biggest but
+  // never how big, and the panel had the room either way.
+  const values = days.map(([, pnl]) => pnl);
+  const green = values.filter((v) => v > 0).length;
+  const setFoot = (id, text, tone) => {
+    const node = document.getElementById(id);
+    if (!node) {
+      return;
+    }
+    setText(node, text);
+    if (tone !== undefined) {
+      toneBySign(node, tone);
+    }
+  };
+  setFoot("dayBarsBest", values.length ? formatSignedCurrency(Math.max(...values)) : "$0", values.length ? Math.max(...values) : 0);
+  setFoot("dayBarsWorst", values.length ? formatSignedCurrency(Math.min(...values)) : "$0", values.length ? Math.min(...values) : 0);
+  setFoot("dayBarsGreen", `${green}/${values.length}`);
   host.innerHTML = days
     .map(
       ([date, pnl]) =>
@@ -12394,6 +12421,54 @@ function renderDayBars(analytics) {
         ).toFixed(3)}" title="${escapeHtml(date)} · ${escapeHtml(formatSignedCurrency(pnl))}"></span>`
     )
     .join("");
+}
+
+/* THE REFERENCE'S LEDGER. getClosedTrades returns a FRESH array (trades.filter),
+   so sorting it in place cannot disturb state.trades. Field names come from the
+   real trade record: trade.date, trade.asset (there is NO trade.symbol) and
+   trade.netPnl. trade.closedAt is "" on legacy and imported rows, so nothing
+   keys on it — formatCompactTradeDate already falls back through createdAt /
+   closedAt / updatedAt. */
+function renderDashLedger() {
+  const host = document.getElementById("dashLedgerBody");
+  if (!host) {
+    return;
+  }
+  // THE ROW COUNT FOLLOWS THE PANEL. A constant cannot work: six rows left 61%
+  // of a 1999x1150 panel empty, and twenty overflowed the same panel by 218px
+  // at 1440x900, taking the dashboard's no-scroll promise with it. Estimating
+  // from a row height was no better — the guess was 3px light and still spilled.
+  // So the list is rendered long and then TRIMMED against the real box, which
+  // needs no constant and cannot drift when the type or padding changes.
+  const rows = getClosedTrades().sort(sortTradesDesc).slice(0, 24);
+  setHtml(
+    host,
+    rows.length
+      ? rows
+          .map(
+            (trade) =>
+              `<tr><td>${escapeHtml(formatCompactTradeDate(trade))}</td>` +
+              `<td>${escapeHtml(trade.asset || "\u2014")}</td>` +
+              `<td class="${trade.netPnl < 0 ? "is-neg" : "is-pos"}">${escapeHtml(
+                trade.netPnl === 0 ? formatCurrency(0) : formatSignedCurrency(trade.netPnl)
+              )}</td></tr>`
+          )
+          .join("")
+      : `<tr><td colspan="3" class="dash-ledger-empty">No closed trades yet.</td></tr>`
+  );
+
+  const panel = host.closest(".panel");
+  if (!panel || !rows.length) {
+    return;
+  }
+  // One row at a time off the bottom until the panel stops overflowing. The
+  // panel is overflow:hidden, so this is the difference between a list that
+  // ends cleanly and one that ends mid-row behind a clipped edge.
+  let guard = 24;
+  while (host.rows.length > 3 && panel.scrollHeight > panel.clientHeight && guard > 0) {
+    host.deleteRow(host.rows.length - 1);
+    guard -= 1;
+  }
 }
 
 function renderCalendarView() {

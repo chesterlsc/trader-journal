@@ -1742,6 +1742,33 @@
           </section>
 
           <section class="panel-grid panel-grid-analytics">
+            <!-- OUT OF THE DRAWER. The collapsible closes #dashDepth with a CHILD
+                 combinator, so this escapes the moment it stops being a
+                 descendant. It lands inside .panel-grid-analytics on purpose:
+                 the min-content blowout fix and the subtitle fix are BOTH
+                 selectored `#dashboard .panel-grid-analytics .panel-trader-score`
+                 and match nothing today. Any other home means widening two
+                 selectors and re-fighting a measured track-in-a-smaller-box
+                 regression.
+
+                 THREE CHILDREN, not four. .panel-trader-score is
+                 `grid-template-rows: auto minmax(0,1fr) auto`; a fourth child
+                 creates an implicit auto row, takes an extra gap and its own box
+                 out of the canvas, and on a short screen that is what drops the
+                 radar onto its 46px floor. The caption stays INSIDE
+                 .trader-score-foot where it already lives. -->
+            <article class="panel panel-chart panel-trader-score" id="dashEdgeScore">
+              <div class="panel-head"><h3>Edge score</h3></div>
+              <canvas id="traderScoreChart" width="900" height="320" data-height="240" aria-label="Edge score radar chart"></canvas>
+              <div class="trader-score-foot">
+                <div class="trader-score-value-wrap">
+                  <p class="metric-label">Your edge score</p>
+                  <p id="traderScoreValue" class="trader-score-value">0</p>
+                </div>
+                <span class="score-rail" id="edgeScoreRail" aria-hidden="true"></span>
+                <p id="traderScoreCaption" class="trader-score-caption">Add more trade data to build the score.</p>
+              </div>
+            </article>
             <article class="panel panel-chart panel-span-8">
               <div class="panel-head">
                 <h3>Equity Curve</h3>
@@ -1850,11 +1877,27 @@
                 role="img"
                 aria-label="Net profit or loss for each of the last 30 trading days"
               ></div>
+              <!-- The bars answer "what shape", these answer "how much". Best
+                   and Worst Day used to be two metric tiles taking a sixth of
+                   band B each; here they are captions on the chart that already
+                   plots them, which is where they were always owed. -->
+              <div class="day-bars-foot">
+                <span><i>Best</i><b id="dayBarsBest" class="pnl-positive">$0</b></span>
+                <span><i>Worst</i><b id="dayBarsWorst" class="pnl-negative">$0</b></span>
+                <span><i>Green days</i><b id="dayBarsGreen">0/0</b></span>
+              </div>
             </article>
-
-
-
-
+            <article class="panel" id="dashLedger">
+              <div class="panel-head"><h3>Recent trades</h3></div>
+              <!-- No span class on purpose: below 1240 every analytics panel is
+                   pinned full width by one rule, because .panel-grid-analytics
+                   is a 12-column bento at 1200 and a 2-column one at 1100, and a
+                   bare panel would come out 84px wide in the first. -->
+              <table class="dash-ledger">
+                <thead><tr><th scope="col">Close date</th><th scope="col">Symbol</th><th scope="col">Net P&amp;L</th></tr></thead>
+                <tbody id="dashLedgerBody"></tbody>
+              </table>
+            </article>
           </section>
 
           <div class="panel-grid panel-grid-bottom">
@@ -2006,23 +2049,6 @@
             </summary>
             <div class="panel-collapsible-body">
               <p class="depth-caption" id="depthCaptionScore"></p>
-          <article class="panel panel-chart panel-trader-score">
-              <div class="panel-head panel-head-inline">
-                <div>
-                  <h3>Trader Score</h3>
-                  <p>Composite read on win quality, recovery, and consistency.</p>
-                </div>
-                <button class="info-btn" type="button" data-score-info aria-label="How the scores are calculated">&#9432;</button>
-              </div>
-              <canvas id="traderScoreChart" width="900" height="320" data-height="240" aria-label="Trader score radar chart"></canvas> <!-- 240: the density pass cut this to 170, which pinned the radar on its 46px floor. Half the height back, and charts.js trims its own reserve to 90 for the rest. -->
-              <div class="trader-score-foot">
-                <div class="trader-score-value-wrap">
-                  <p class="metric-label">Trader Score</p>
-                  <p id="traderScoreValue" class="trader-score-value">0.0</p>
-                </div>
-                <p id="traderScoreCaption" class="trader-score-caption">Add more trade data to build the score.</p>
-              </div>
-            </article>
               <p class="depth-caption" id="depthCaptionPsych"></p>
           <article class="panel panel-chart panel-span-6">
               <div class="panel-head">

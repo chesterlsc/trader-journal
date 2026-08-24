@@ -3649,7 +3649,12 @@ button.session-hour-cell {
     grid-template-columns: repeat(12, minmax(0, 1fr));
     /* 1093 view box - 32 padding-block - 36 row gaps = 1025 of track.
        36 + 108 + 0.51x881 + 0.49x881 = 36 + 108 + 449.3 + 431.7 = 1025. */
-    grid-template-rows: 36px 108px minmax(0, 0.51fr) minmax(0, 0.49fr);
+    /* Band D is the CHART band and band E is the LEDGER band, and they do not
+       want the same height. Measured at 0.51/0.49 the Net Daily panel came out
+       309x441 — a portrait box holding a landscape chart, 36% ink. Shortening D
+       and lengthening E fixes the ratio at both ends: the charts stop being
+       stretched and the calendar and trade list get the rows they can fill. */
+    grid-template-rows: 36px 108px minmax(0, 0.42fr) minmax(0, 0.58fr);
     gap: 12px;
     /* padding-inline belongs to .view.is-active:not(#terminal) at (1,2,0),
        which centres on --shell-w. Only the block axis is ours; a padding
@@ -3721,6 +3726,10 @@ button.session-hour-cell {
   /* MANDATORY companion. The rule above is (1,2,0) and BEATS [hidden] at
      (0,1,0): without this a hidden #dashPlaybook stays a 629x432 ghost panel. */
   #dashboard.is-active #dashPlaybook[hidden] { display: none; }
+  /* The ledger is six rows in a 432px panel. Its slack is pooled BELOW the
+     table, which is what the reference does — rows do not stretch to fill. */
+  #dashboard.is-active #dashLedger .dash-ledger { flex: 0 0 auto; }
+  #dashboard.is-active .trader-score-foot { flex: 0 0 auto; }
 
   /* THE RULE: the last list in a panel is flex:1. A box cannot then be taller
      than its content, and its content cannot be shorter than the box. This is
@@ -3728,10 +3737,23 @@ button.session-hour-cell {
      tuning it away. The emptiness that remains is pooled in ONE place on
      purpose — beside the figure you read first — never distributed as slack
      into every box. Do not "fill" the band-B gap later; that is the design. */
+  /* .panel-trader-score ships its own `grid-template-rows: auto minmax(0,1fr)
+     auto`, but the flex rule above is (1,2,0) and overrides its display, so the
+     canvas has to claim the middle track as a flex item instead. Without this
+     it measured 435x155 and drawRadarChart pinned the radar to its 46px floor. */
+  #dashboard.is-active #traderScoreChart,
   #dashboard.is-active #equityChart,
-  #dashboard.is-active #dashDayBars,
   #dashboard.is-active .dash-playbook-grid,
   #dashboard.is-active #riskViolations { flex: 1 1 0; min-height: 0; }
+  /* THE BARS DO NOT STRETCH. flex:1 in a 449px panel made 10 bars into a 449px
+     bar chart that was mostly air — the "too big / blank space" complaint,
+     measured. They take the height the shape needs and the figures below take
+     the rest, so the panel is full of information instead of scaled-up bars. */
+  #dashboard.is-active #dashDayBars {
+    flex: 0 1 auto;
+    min-height: 0;
+    height: clamp(110px, 64%, 250px);
+  }
   /* .rule-cost-list is a GRANDCHILD; the flex item is .rule-cost, so that is
      what has to grow. */
   #dashboard.is-active .rule-cost {
@@ -3752,16 +3774,43 @@ button.session-hour-cell {
   /* The nine-figure stat strip under the curve. Explicit rows, because with
      `auto` the flex algorithm sizes the strip before the grid wraps and clips
      a row. */
+  /* Nine figures. On the reference board this panel is 469px wide, not the
+     1076px it had when it was the only chart on its row, so five columns
+     overprinted. Three columns of three, and the strip states its own height so
+     the flex algorithm cannot size it before the grid has wrapped. */
   #dashboard.is-active .eq-footnotes {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    grid-template-rows: 17px 17px;
-    row-gap: 6px;
-    column-gap: 16px;
-    flex: 0 0 40px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(3, 15px);
+    row-gap: 4px;
+    column-gap: 12px;
+    flex: 0 0 53px;
     align-content: center;
     margin: 0;
   }
+  /* One LINE per figure, not two. Stacking a label over a value needs ~22px a
+     row; laying them out as label-left / value-right fits the same nine figures
+     in 15px rows and gives the curve back 20px. */
+  #dashboard.is-active .eq-footnotes > article {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+    min-width: 0;
+  }
+  #dashboard.is-active .eq-footnotes .metric-label {
+    font-size: 9px;
+    line-height: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #dashboard.is-active .eq-footnotes .metric-value {
+    font-size: 11px;
+    line-height: 15px;
+    white-space: nowrap;
+  }
+  #dashboard.is-active .eq-footnotes .metric-delta { display: none; }
   #dashboard.is-active .eq-footnotes > * { margin: 0; padding: 0; }
 
   /* Chrome cull. A raised edge means "this is a panel" again, instead of being
@@ -3901,8 +3950,17 @@ button.session-hour-cell {
      which is what kills .panel-span-8's `grid-column: span 8` clamp without a
      new override. Before: both panels at x=794, stacked, splitting one row. */
   #dashboard.is-active .panel-grid-analytics { display: contents; }
-  #dashboard.is-active .panel-grid-analytics > .panel-span-8 { grid-area: 3 / 1 / 4 / 8; }
-  #dashboard.is-active .panel-grid-analytics > .panel-span-4 { grid-area: 3 / 8 / 4 / 11; }
+  /* THE REFERENCE'S BOARD, with the Release Edge at DOUBLE width.
+     Content region is lines 1-9 (8 cols, 1270px at 1999); the rail takes 9-13
+     (4 cols, 629px) and spans both bands. 1270 + 12 + 629 = 1911. */
+  /* SHAPE FOLLOWS CONTENT. Band D is short and wide, so the two TIME SERIES
+     live there — a curve and a 30-day bar chart both want landscape, and the
+     bars measured 0.68 (portrait) in the old arrangement. Band E is tall, so it
+     takes the three things that stack: a radar, a list and a month grid. */
+  #dashboard.is-active .panel-grid-analytics > .panel-span-8 { grid-area: 3 / 1 / 4 / 6; }
+  #dashboard.is-active .panel-grid-analytics > .panel-span-4 { grid-area: 3 / 6 / 4 / 9; }
+  #dashboard.is-active #dashEdgeScore { grid-area: 4 / 1 / 5 / 4; }
+  #dashboard.is-active #dashLedger { grid-area: 4 / 4 / 5 / 6; }
 
   /* LOAD BEARING. styles.css `.panel-chart canvas { display: block }` is
      (0,2,0) and BEATS the UA [hidden] rule — verified: hidden === true and
@@ -3911,7 +3969,11 @@ button.session-hour-cell {
      Its numbers survive as maxDrawdown and currentDrawdown in the stat strip. */
   #dashboard.is-active #drawdownChart { display: none; }
 
-  #dashboard.is-active .dash-board-slot { grid-area: 4 / 8 / 5 / 11; }
+  /* The reference has no playbook and no discipline panel on this board. They
+     keep rendering into hidden nodes — cheap, and nothing downstream reads a
+     null — but they do not take a track. NOT the rail: that holds the iframe. */
+  #dashboard.is-active .dash-board-slot,
+  #dashboard.is-active #dashPlaybook { display: none; }
   #dashboard.is-active #propTracker { grid-area: 4 / 1 / 5 / 4; }
   #dashboard.is-active:has(#propTracker:not([hidden])) #dashMiniCal { display: none; }
 
@@ -3921,7 +3983,7 @@ button.session-hour-cell {
      `grid-template-rows: auto minmax(0,1fr)` bounds the .dem-panel track, which
      is what makes the overflow-y:auto below actually bind. */
   #dashboard.is-active .dash-edge-mini {
-    grid-area: 3 / 11 / 5 / -1;
+    grid-area: 3 / 9 / 5 / -1;   /* 4 columns: twice the 2-column slot it had */
     grid-template-rows: auto minmax(0, 1fr);
     position: static;            /* kills sticky, grid-row 1/30 and the bleed */
     margin: 0;
@@ -3943,17 +4005,14 @@ button.session-hour-cell {
      they live here rather than in the base rules. */
   #dashboard.is-active .mini-cal-weekdays span { font-size: 10px; }
   #dashboard.is-active .mini-cal-day .mc-n { display: block; font: 500 9px/1 var(--font-mono); }
-  #dashboard.is-active #dashMiniCal  { grid-area: 4 / 1 / 5 / 4; }
-  #dashboard.is-active #dashPlaybook { grid-area: 4 / 4 / 5 / 8; }
+  #dashboard.is-active #dashMiniCal { grid-area: 4 / 6 / 5 / 9; }
 
   /* ── THE BOARD CLOSES WHEN A PANEL IS OFF ──────────────────────────────
      .dash-edge-mini ships `hidden` and renderPlaybook toggles
      #dashPlaybook.hidden. Without these, a fresh account shows a 309px hole
      down the right and a 629px hole in band D. */
   #dashboard.is-active:has(.dash-edge-mini[hidden]) .panel-grid-analytics > .panel-span-4,
-  #dashboard.is-active:has(.dash-edge-mini[hidden]) .dash-board-slot { grid-column-end: -1; }
-  #dashboard.is-active:has(#dashPlaybook[hidden]) #dashMiniCal { grid-column: 1 / 6; }
-  #dashboard.is-active:has(#dashPlaybook[hidden]) .dash-board-slot { grid-column-start: 6; }
+  #dashboard.is-active:has(.dash-edge-mini[hidden]) #dashMiniCal { grid-column-end: -1; }
 
   /* The calendar lost its surface with the wrapper that carried it. */
   #dashboard.is-active #dashMiniCal {
@@ -4033,6 +4092,85 @@ button.session-hour-cell {
 }
 
 
+
+/* The Net Daily panel's figures. One row, label over value, so the space the
+   bars do not need carries the numbers they cannot state. */
+.day-bars-foot {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.day-bars-foot span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.day-bars-foot i {
+  font: 500 11px/1 var(--font-mono);
+  font-style: normal;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+.day-bars-foot b {
+  font: 700 15px/1.1 var(--font-mono);
+  letter-spacing: -0.02em;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* ══ THE LEDGER ══════════════════════════════════════════════════════════
+   Four overrides, none of them cosmetic. styles.css styles `table` GLOBALLY —
+   min-width:980px, padded bordered cells, and a sticky uppercase thead with its
+   own background. Measured, this table renders 980px wide inside a 597px panel
+   without the first override. The reference is a table with nothing on it, so
+   undoing all of it IS the design. */
+.dash-ledger {
+  width: 100%;
+  min-width: 0;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.dash-ledger th,
+.dash-ledger td {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+.dash-ledger thead th {
+  position: static;
+  background: none;
+  text-transform: none;
+  letter-spacing: 0;
+  font: 500 11px/14px var(--font-mono);
+  color: var(--text-faint);
+}
+.dash-ledger td { font: 500 13px/16px var(--font-mono); color: var(--text); }
+.dash-ledger th:last-child,
+.dash-ledger td:last-child { text-align: right; }
+.dash-ledger .is-pos { color: var(--pnl-pos); }
+.dash-ledger .is-neg { color: var(--pnl-neg); }
+.dash-ledger-empty { color: var(--text-faint); }
+
+/* The edge score's rail: a red-amber-green track with the score as a dot. */
+.score-rail {
+  display: block;
+  position: relative;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--pnl-neg) 0%, #d9a441 50%, var(--pnl-pos) 100%);
+}
+.score-rail::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: clamp(0%, var(--score-at, 0%), 100%);
+  width: 9px;
+  height: 9px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--surface-1);
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    WATCH — the dashboard monitor, big.
