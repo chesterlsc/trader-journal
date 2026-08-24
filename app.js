@@ -10489,20 +10489,45 @@ function renderNowEvent() {
   } catch (error) {
     next = null;
   }
+  // The cell is two lines now: the event NAMES itself on the figure line and
+  // the timing rides underneath, instead of both being packed into one string
+  // that had to truncate the name to 12 characters to fit.
+  const sub = document.getElementById("dashNowEventSub");
   if (!next || !lead || lead.phase === "past" || !Number.isFinite(lead.ms) || lead.ms < 0) {
     node.textContent = "QUIET";
     node.classList.remove("is-hot", "is-pos", "is-neg");
     node.classList.add("is-idle");
+    if (sub) {
+      setText(sub, "NOTHING SCHEDULED");
+    }
     return;
   }
   const name = String(next.title || "EVENT").toUpperCase().replace(/\s+/g, " ").slice(0, 12).trim();
   const mins = Math.floor(lead.ms / 60000);
   const hot = lead.ms < 10 * 60000;
-  node.textContent = hot
-    ? `${name} · ${mins}:${String(Math.floor((lead.ms % 60000) / 1000)).padStart(2, "0")}`
-    : mins >= 90
-      ? `${name} · ${Math.round(mins / 60)}H`
-      : `${name} · ${mins}M`;
+  node.textContent = name;
+  if (sub) {
+    const when = hot
+      ? `${mins}:${String(Math.floor((lead.ms % 60000) / 1000)).padStart(2, "0")} AWAY`
+      : mins >= 90
+        ? `${Math.round(mins / 60)}H AWAY`
+        : `${mins}M AWAY`;
+    // The event's own local clock time, when it carries one, is the thing a
+    // trader actually plans around; the countdown is how urgent it is.
+    let at = "";
+    try {
+      const when24 = next.time || next.at || next.date;
+      if (when24) {
+        const d = new Date(when24);
+        if (!Number.isNaN(d.getTime())) {
+          at = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }).format(d) + " LOCAL · ";
+        }
+      }
+    } catch (error) {
+      /* an event without a parseable time still gets its countdown */
+    }
+    setText(sub, at + when);
+  }
   node.classList.toggle("is-hot", hot);
   node.classList.remove("is-idle", "is-pos", "is-neg");
 }

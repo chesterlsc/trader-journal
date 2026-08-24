@@ -3328,6 +3328,18 @@ button.session-hour-cell {
   white-space: nowrap;
 }
 
+/* Below 1240 the instrument grid is off and .dash-head reappears, so the
+   control cluster needs an honest shape inside the hero. 11px, not 10 — this is
+   a BASE rule and mobileFloors.check.mjs floors base type at 11px on a phone. */
+#dashboard .dash-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  font-size: 11px;
+}
+
 /* NET DAILY P&L SPINE. Bars grow from a centreline: profit up, loss down, both
    scaled against the month's own peak so the shape is a distribution rather
    than a ranking. --mag is written per bar by renderDayBars; 46% leaves the
@@ -3941,39 +3953,34 @@ button.session-hour-cell {
   .view.is-active#dashboard { padding-inline: var(--space-4); }
 
   /* ── BAND A: which book, which window ────────────────────────────────── */
-  #dashboard.is-active > .dash-head {
-    grid-area: 1 / 1 / 2 / -1;
-    align-items: center;
-    padding: 0;
-    gap: 12px;
-    flex-wrap: nowrap;
-  }
-  #dashboard.is-active .dash-hello { font-size: 13px; margin: 0; white-space: nowrap; }
-  #dashboard.is-active .dash-head .dash-greeting { display: flex; align-items: baseline; gap: 10px; flex: 0 1 auto; }
-  /* min-height:0 and padding-block:0 are load bearing: .btn ships a 52px box
-     that overflows a 36px row by 8px without them. */
-  #dashboard.is-active .dash-head .btn,
-  #dashboard.is-active .dash-head .nav-btn { min-height: 0; height: 30px; padding-block: 0; padding-inline: 12px; font-size: 12px; }
-  /* .dash-range-btn is neither .btn nor .nav-btn, so it kept its own 40px box
-     and was the last thing overflowing the 36px row. */
-  #dashboard.is-active .dash-head .dash-range { height: 26px; padding: 2px; align-self: center; }
-  #dashboard.is-active .dash-head .dash-range-btn { min-height: 0; height: 22px; padding: 0 10px; font-size: 11px; }
-  #dashboard.is-active .dash-head .kbd-hint { display: none; }
-  #dashboard.is-active .dash-live { margin-left: auto; max-width: 380px; overflow: hidden; }
+  /* THE COMMAND BAR IS GONE. Its controls moved onto the strip below, which is
+     the whole point of band A being ONE surface: the buttons now sit beside the
+     figure they act on instead of on a separate rail above it. The greeting and
+     the Session Intelligence link both live elsewhere already — renderGreeting
+     early-returns on a missing node, and Session Intelligence is a rail row. */
+  #dashboard.is-active > .dash-head { display: none; }
 
   /* ── BAND B: one raised surface, seven figures, ZERO DOM MOVES ─────────
      .dash-now is a CHILD of .dash-hero in index.html, so it cannot be placed
      on this grid, and display:contents on it would delete the surface it sits
      on. Instead the hero spans the full row and becomes the two-track grid;
      .dash-now takes track 2 and lays its own six cells out. */
+  /* BAND A IS ONE SURFACE. It SPANS rows 1-2 and eats the 12px gap between them
+     (36 + 12 + 108 = 156). The track set is deliberately NOT merged into a
+     single 156px row: both grid-template-rows strings are asserted by equality
+     in tests/instrumentPanel.check.mjs, and the span is what keeps that
+     arithmetic readable. */
   #dashboard.is-active .dash-hero {
-    grid-area: 2 / 1 / 3 / -1;
-    padding: 12px 0 12px 16px;
+    grid-area: 1 / 1 / 3 / -1;
+    padding: 12px 16px;
     display: grid;
-    grid-template-columns: 3fr 9fr;
+    grid-template-columns: minmax(260px, 3fr) minmax(0, 9fr) auto;
     grid-auto-rows: min-content;
     align-content: center;
     column-gap: 0;
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
   }
   #dashboard.is-active .dash-hero > * { grid-column: 1; }
   #dashboard.is-active .dash-hero .dash-now {   /* (1,3,0), beats the line above */
@@ -3990,6 +3997,40 @@ button.session-hour-cell {
     align-content: center;
   }
   #dashboard.is-active .dash-now > * { padding: 0 16px; border-left: 1px solid var(--line); }
+  /* Track 3. `order` gives the reference's visual sequence — import first, the
+     orange primary at the right end — while the DOM keeps log-before-import for
+     the three adjacent-sibling rules in styles.css that would silently cancel
+     if the source order flipped. */
+  #dashboard.is-active .dash-hero .dash-controls {
+    grid-column: 3;
+    grid-row: 1 / span 9;
+    align-self: center;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-left: 16px;
+    margin-top: 0;
+    border-left: 1px solid var(--line);
+  }
+  #dashboard.is-active .dash-controls #dashQuickImportBtn { order: -1; margin-left: 0; }
+  /* LOAD BEARING: .btn ships a 52px box and .dash-range-btn a 40px one, and both
+     overflow a 156px band that also has to carry a 48px headline. */
+  #dashboard.is-active .dash-controls .btn,
+  #dashboard.is-active .dash-controls .nav-btn { min-height: 0; height: 30px; padding-block: 0; padding-inline: 12px; font-size: 12px; }
+  #dashboard.is-active .dash-controls .dash-range { height: 26px; padding: 2px; align-self: center; }
+  #dashboard.is-active .dash-controls .dash-range-btn { min-height: 0; height: 22px; padding: 0 10px; font-size: 11px; }
+  #dashboard.is-active .dash-controls .kbd-hint { display: none; }
+  #dashboard.is-active .dash-hero #progressTradeSummary {
+    grid-column: 2 / -1;
+    grid-row: 10;
+    justify-self: end;
+    max-width: 380px;
+    margin: 8px 0 0;
+    overflow: hidden;
+  }
+  #dashboard.is-active .dash-now-sub { display: block; margin-top: 3px; }
+  #dashboard.is-active #dashNowEventSub { font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; }
   /* The hero's long tail. Each keeps rendering into a hidden node, which costs
      nothing; #dashSparkline stays in the DOM so ui.dashSparkline is never null. */
   #dashboard.is-active .dash-hero .dash-spark-wrap,
@@ -4158,7 +4199,20 @@ button.session-hour-cell {
    stepping down with it — same ranks, smaller steps. */
 @media (min-width: 1240px) and (max-height: 960px) {
   #dashboard.is-active { grid-template-rows: 32px 88px minmax(0, 0.48fr) minmax(0, 0.52fr); }
-  #dashboard.is-active .dash-hero { padding-block: 10px; }
+  #dashboard.is-active .dash-hero {
+    padding: 10px 16px;
+    grid-template-columns: minmax(240px, 3fr) minmax(0, 9fr);
+  }
+  /* At 900px tall the third track costs the strip more than the row can spare,
+     so the cluster drops to its own line under the figures. */
+  #dashboard.is-active .dash-hero .dash-controls {
+    grid-column: 1 / -1;
+    grid-row: 10;
+    justify-self: start;
+    padding-left: 0;
+    border-left: 0;
+    margin-top: 6px;
+  }
   #dashboard.is-active [data-metric="totalPnl"] { font-size: 34px; line-height: 38px; }
   #dashboard.is-active [data-metric="accountBalance"] { font-size: 12px; line-height: 14px; }
   #dashboard.is-active .dash-hero-equity { margin-top: 3px; }

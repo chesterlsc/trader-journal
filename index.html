@@ -1392,55 +1392,6 @@
               <h2 id="dashboardHeading" class="dash-hello">Welcome back.</h2>
             </div>
 
-            <!-- Compact live pair — patched by the SAME 5s loop that feeds the
-                 open-position ticker (renderTickerPair runs off
-                 refreshLivePrices); no second poll. 5s cadence, and it says so. -->
-
-            <article id="progressTradeSummary" class="dash-live" hidden aria-label="Open positions">
-              <p id="progressTradeLabel" class="visually-hidden">Open position</p>
-              <div id="progressTradeTrack" class="dash-live-track"></div>
-            </article>
-
-            <!-- The range pill and the EST chip live in the command bar, not on
-                 the hero. The chip qualifies figures across the whole view, and
-                 on the hero it sat 519px from the sentence it refers to. THE
-                 MOVE IS INERT: ui.balanceRangeButtons is a querySelectorAll
-                 captured once at module load and moving a node keeps its
-                 listeners, and syncBalanceRangeButtons() reads that same array. -->
-            <div class="dash-range" role="group" aria-label="Balance range">
-              <button class="dash-range-btn is-active" type="button" data-balance-range="1m" aria-pressed="true">1M</button>
-              <button class="dash-range-btn" type="button" data-balance-range="3m" aria-pressed="false">3M</button>
-              <button class="dash-range-btn" type="button" data-balance-range="all" aria-pressed="false">ALL</button>
-            </div>
-            <span class="dash-est-chip" id="dashEstChip" hidden>EST</span>
-
-            <button id="journalNewTradeBtn" class="btn primary dash-log-btn" type="button">
-              <span class="journal-action-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false">
-                  <path d="M12 5.75v12.5M5.75 12h12.5" />
-                </svg>
-              </span>
-              <span>Log a trade</span>
-              <!-- 1f #03: the cooldown speed bump. The word is the signal, not
-                   the colour — the button also gets a title describing the
-                   breach, and it still opens capture after one question. -->
-              <span class="dash-log-flag" id="dashLogCooldownFlag" hidden></span>
-              <span class="kbd-hint" aria-hidden="true">&#8984;K</span>
-            </button>
-
-            <!-- QUICK IMPORT, beside the action it belongs with. A broker
-                 export is the other way a trade enters the journal, so it sits
-                 next to Log a trade rather than being buried in Trade Review.
-                 Same dialog, one shared handler. -->
-            <button id="dashQuickImportBtn" class="btn dash-import-btn" type="button" aria-label="Quick import">
-              <span class="journal-action-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false">
-                  <path d="M12 15.25V4.75M8.25 11.5 12 15.25l3.75-3.75M4.75 15.75v2.5h14.5v-2.5" />
-                </svg>
-              </span>
-              <span>Quick import</span>
-            </button>
-
             <button class="nav-btn dash-session-link" id="dashSessionIntelligenceLink" type="button" data-target="session-intelligence">
               Session intelligence <span aria-hidden="true">&rarr;</span>
             </button>
@@ -1549,7 +1500,8 @@
                   <div><span class="dash-now-label" id="dashNowStreakLabel">Green streak</span>
                        <span class="dash-now-fig" id="dashNowStreak">0 DAYS</span></div>
                   <div><span class="dash-now-label">Next event</span>
-                       <span class="dash-now-fig" id="dashNowEvent">QUIET</span></div>
+                       <span class="dash-now-fig" id="dashNowEvent">QUIET</span>
+                       <span class="dash-now-sub" id="dashNowEventSub"></span></div>
                   <div><span class="dash-now-label">From highs</span>
                        <span class="dash-now-fig" id="dashNowHighs">AT HIGHS</span></div>
                 </div>
@@ -1560,6 +1512,50 @@
                   <span id="dashGroundLabel"></span>
                   <span id="dashGroundHiLo"></span>
                 </div>
+                <!-- BAND A'S RIGHT END. The controls sit on the same surface as
+                     the headline they qualify, instead of on a separate command
+                     bar above it. Every listener survives the move:
+                     #journalNewTradeBtn and #dashQuickImportBtn are resolved by
+                     getElementById, and [data-balance-range] is a module-load
+                     querySelectorAll snapshot that holds node identity.
+
+                     LOG A TRADE STAYS IMMEDIATELY BEFORE QUICK IMPORT IN THE DOM.
+                     styles.css has three adjacent-sibling rules
+                     (`.dash-log-btn + .dash-import-btn`) that give the pair one
+                     control-group height and make the secondary drop its label
+                     during a cooldown. Reversing the source order cancels all
+                     three silently; the visual order comes from `order` on the
+                     flex row instead. -->
+                <div class="dash-controls">
+                  <div class="dash-range" role="group" aria-label="Balance range">
+                    <button class="dash-range-btn is-active" type="button" data-balance-range="1m" aria-pressed="true">1M</button>
+                    <button class="dash-range-btn" type="button" data-balance-range="3m" aria-pressed="false">3M</button>
+                    <button class="dash-range-btn" type="button" data-balance-range="all" aria-pressed="false">ALL</button>
+                  </div>
+                  <span class="dash-est-chip" id="dashEstChip" hidden>EST</span>
+                  <button id="journalNewTradeBtn" class="btn primary dash-log-btn" type="button">
+                    <span class="journal-action-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M12 5.75v12.5M5.75 12h12.5" />
+                      </svg>
+                    </span>
+                    <span>Log a trade</span>
+                    <span class="dash-log-flag" id="dashLogCooldownFlag" hidden></span>
+                    <span class="kbd-hint" aria-hidden="true">&#8984;K</span>
+                  </button>
+                  <button id="dashQuickImportBtn" class="btn dash-import-btn" type="button" aria-label="Quick import">
+                    <span class="journal-action-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M12 15.25V4.75M8.25 11.5 12 15.25l3.75-3.75M4.75 15.75v2.5h14.5v-2.5" />
+                      </svg>
+                    </span>
+                    <span>Quick import</span>
+                  </button>
+                </div>
+                <article id="progressTradeSummary" class="dash-live" hidden aria-label="Open positions">
+                  <p id="progressTradeLabel" class="visually-hidden">Open position</p>
+                  <div id="progressTradeTrack" class="dash-live-track"></div>
+                </article>
               </article>
 
               <div class="mini-cal" id="dashMiniCal">
