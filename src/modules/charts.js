@@ -706,6 +706,17 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
       return;
     }
 
+    /* Hoisted here — BELOW `series` (it reads series.length, and putting it
+       above is a TDZ throw) and ABOVE the money-row search, which owns `rows`.
+       A SYMMETRIC depth axis needs a MIDDLE rule to put 0% on, so the shared
+       row count must be EVEN, and the search cannot know that unless it is told
+       before it runs.
+       `!bare` is not redundant with maxRows: a 90px sparkline still gets
+       maxRows 2, which alone would let a grey wash and an off-bitmap percent
+       column onto a box with 8px of right gutter. */
+    const hasDepth =
+      !bare && maxRows > 0 && Array.isArray(options.depth) && options.depth.length === series.length;
+
     // Drawdown is stored as a positive magnitude; the underwater treatment
     // plots it below a zero line so the shape reads as depth, not height.
     const plotted = options.underwater ? series.map((value) => -Math.abs(value)) : series;
@@ -736,6 +747,10 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
       const span = max - min;
       let best = null;
       for (let n = maxRows; n >= Math.min(3, maxRows); n -= 1) {
+        // An odd row count has no middle rule, so 0% would print nowhere: at
+        // rows=5 the axis reads 6.25 / 3.75 / 1.25 / -1.25 / -3.75 / -6.25 and
+        // the zero line floats between two rules.
+        if (hasDepth && n % 2) continue;
         const fits = options.underwater
           ? (s) => s * n >= -min
           : (s) => Math.floor(min / s) * s + s * n >= max;
@@ -755,6 +770,10 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
         min = best.lo;
         max = best.hi;
       }
+      // FAILURE PATH THE FILTER EXISTS TO PREVENT: if the even filter leaves
+      // only n=4 and niceStep returns null for it, `best` stays null and rows
+      // falls back to maxRows = 5 — odd, the exact case above.
+      if (hasDepth && rows % 2) rows -= 1;
     } else {
       const headroom = (max - min) * 0.14;
       min -= headroom;
@@ -769,31 +788,33 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
        searches only for its own step. That is what makes both label columns land
        on the same gridlines by construction rather than by luck.
 
-       Nothing below reads `min`/`max` and nothing above reads `depthFloor`.
+       Nothing below reads `min`/`max` and nothing above reads `depthHalf`.
        That is the whole independence guarantee.
 
-       ZERO SITS ON THE TOP RULE and the area hangs DOWN from it — the grey is
-       "how far below the peak". Depth is never positive, so a symmetric axis
-       would label rows the data cannot reach.
+       ZERO SITS ON THE MIDDLE RULE and the area fills DOWN from the series to
+       the plot floor. The axis is symmetric — +half at the top rule, -half at
+       the bottom — which is why the row count above must be EVEN. Depth is
+       never positive today, so the top half stays empty; that is the
+       Math.min(value, 0) clamp below, and it is the only thing holding it.
 
-       `!bare` is NOT redundant with `rows > 0`: a 90px sparkline still gets
-       maxRows 2, so the row count alone would let a grey wash and an off-bitmap
-       percent column onto a box with 8px of right gutter. */
-    const depth =
-      !bare && rows > 0 && Array.isArray(options.depth) && options.depth.length === series.length
-        ? options.depth
-        : null;
-    let depthFloor = 0;
+       This also fixes a real bug in passing. Under the old form a fresh journal
+       with an all-zero drawdown gave yForDepth(0) === top, so the polygon was
+       top -> top -> top and painted NOTHING. depthHalf is always >= 1, so the
+       area now runs from the middle rule to the floor. */
+    const depth = hasDepth ? options.depth : null;
+    let depthHalf = 0;
     if (depth) {
+      const half = rows / 2;
       const deepest = -Math.min(...depth, 0);
-      // No drawdown in the window: the series lies flat on the zero rule, so the
-      // axis only needs round labels to sit against. 1% a row.
-      const dstep = deepest > 0 ? niceStep(deepest, rows, (s) => s * rows >= deepest) : 1;
-      depthFloor = -(dstep || 1) * rows;
+      // No drawdown in the window: the series lies flat on the middle rule, so
+      // the axis only needs round labels to sit against. 1% a row.
+      const dstep = deepest > 0 ? niceStep(deepest, half, (s) => s * half >= deepest) : 1;
+      depthHalf = (dstep || 1) * half;
     }
 
     const yFor = (value) => bottom - ((value - min) / (max - min)) * plotH;
-    const yForDepth = (value) => top + (value / depthFloor) * plotH;
+    // +half -> top, 0 -> the MIDDLE rule, -half -> bottom.
+    const yForDepth = (value) => top + ((depthHalf - value) / (2 * depthHalf)) * plotH;
     const points = plotted.map((value, index) => ({
       x: left + (index / (plotted.length - 1)) * plotW,
       y: yFor(value)
@@ -810,7 +831,10 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
       formatter: formatCompactCurrency,
       // Same `t`, same loop, same `y` — so row i carries BOTH readings and the
       // two columns can never drift apart.
-      valueAtRight: depth ? (t) => depthFloor * t : null,
+      // t=0 -> +half, t=0.5 -> 0, t=1 -> -half. drawPlotFrame needs NO change:
+      // it already walks the same i/rows fraction for both label columns, which
+      // is what keeps them on one set of rules.
+      valueAtRight: depth ? (t) => depthHalf * (1 - 2 * t) : null,
       formatterRight: formatAxisPercent,
       rows
     });
@@ -841,9 +865,9 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
       }));
       ctx.save();
       ctx.beginPath();
-      ctx.moveTo(depthPoints[0].x, top);
+      ctx.moveTo(depthPoints[0].x, bottom);
       traceSmoothPath(ctx, depthPoints, false);
-      ctx.lineTo(depthPoints[depthPoints.length - 1].x, top);
+      ctx.lineTo(depthPoints[depthPoints.length - 1].x, bottom);
       ctx.closePath();
       ctx.fillStyle = colors.track;
       ctx.fill();
