@@ -3221,7 +3221,14 @@ button.session-hour-cell {
 #dashboard .mini-cal-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 4px;
+  /* THE 1px GAP IS THE SHARED HAIRLINE. The grid paints --line behind cells
+     that paint --surface-1, so every rule is drawn exactly once — no
+     border-collapse arithmetic and no doubled edges where two cells meet. */
+  gap: 1px;
+}
+#dashboard .mini-cal-grid {
+  background: var(--line);
+  border: 1px solid var(--line);
 }
 /* The grid is the only valve: it takes whatever the head, weekdays and foot
    leave of the 293, and 1fr rows split it evenly. A five row month gets
@@ -3250,7 +3257,12 @@ button.session-hour-cell {
    .is-trade gets a fill and an edge. */
 #dashboard .mini-cal-day {
   position: relative;
-  border-radius: 7px;
+  /* Square, and on its own fill. An untraded day is a CELL in a ruled table
+     now, not a bare numeral floating in a gap — which is what the render shows.
+     This reverses the earlier "only traded days get a surface" decision: the
+     ruling is what separates them now, and the tint still marks the trade. */
+  border-radius: 0;
+  background: var(--surface-1);
   border: 1px solid transparent;
   padding: 4px 6px;
   display: flex;
@@ -3265,7 +3277,6 @@ button.session-hour-cell {
   overflow: hidden;
   font: 400 11px/1 var(--font-mono);
   color: var(--text-faint);
-  background: none;
   text-align: left;
 }
 /* The index goes TOP-RIGHT in a traded tile: the money is the thing being read
@@ -3486,7 +3497,6 @@ button.session-hour-cell {
   #dashboard .dash-month-card .dash-hero { min-height: 0; padding-bottom: 0; }
   #dashboard .mini-cal-open,
   #dashboard .mini-cal-foot { padding-inline: 6px; }
-  #dashboard .mini-cal-day { border-radius: 8px; }
   #dashboard .mini-cal-foot { min-height: 44px; }
   #dashboard .mini-cal-footrow .month-card-mark { display: none; }
 }
@@ -4069,6 +4079,10 @@ button.session-hour-cell {
     align-content: center;
   }
   #dashboard.is-active .dash-now > * { padding: 0 16px; border-left: 1px solid var(--line); }
+  /* The first cell has nothing to its left to be divided FROM. With the rule
+     there the band reads as a strip of separate tiles; without it, one surface
+     split by hairlines, which is what the render shows. */
+  #dashboard.is-active .dash-now > *:first-child { border-left: 0; }
   /* Track 3. `order` gives the reference's visual sequence — import first, the
      orange primary at the right end — while the DOM keeps log-before-import for
      the three adjacent-sibling rules in styles.css that would silently cancel
@@ -4090,7 +4104,17 @@ button.session-hour-cell {
      overflow a 156px band that also has to carry a 48px headline. */
   #dashboard.is-active .dash-controls .btn,
   #dashboard.is-active .dash-controls .nav-btn { min-height: 0; height: 30px; padding-block: 0; padding-inline: 12px; font-size: 12px; }
-  #dashboard.is-active .dash-controls .dash-range { height: 26px; padding: 2px; align-self: center; }
+  #dashboard.is-active .dash-controls .dash-range {
+    height: 26px;
+    padding: 2px;
+    align-self: center;
+    /* The render's pill select. Restyling the EXISTING 1M/3M/ALL group rather
+       than adding selects with nothing behind them: all three ranges have real
+       state and a real handler. */
+    border: 1px solid var(--control-edge);
+    border-radius: 999px;
+    background: var(--surface-inset);
+  }
   #dashboard.is-active .dash-controls .dash-range-btn { min-height: 0; height: 22px; padding: 0 10px; font-size: 11px; }
   #dashboard.is-active .dash-controls .kbd-hint { display: none; }
   /* Desktop-only Market TV type. All three are under the 11px phone floor

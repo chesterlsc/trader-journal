@@ -14952,6 +14952,14 @@ function setTickerStale(stale) {
   document.querySelectorAll("[data-ticker-strip]").forEach((strip) => {
     strip.classList.toggle("is-stale", Boolean(stale));
   });
+  // The badge in the top bar states feed health, and until now it was wired to
+  // NOTHING — it said "Live" in every state, including while the tape beside it
+  // was frozen. A liveness indicator that cannot say "no" is decoration.
+  const live = document.getElementById("appLive");
+  if (live) {
+    live.dataset.feed = stale ? "stale" : "live";
+    setText(live, stale ? "Stale" : "Live");
+  }
 }
 
 // Delta magnitudes span BTC's ±100s and EURUSD's ±0.0004 — decimals follow
