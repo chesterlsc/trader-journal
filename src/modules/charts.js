@@ -535,6 +535,13 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
   // 2.5 x 10^k, so a 0.25 step at one decimal prints -0.3 / -0.5 / -0.8 on an
   // evenly spaced grid — the same silent lie the money axis was fixed to kill.
   // Number() drops the trailing zeros afterwards.
+  /** The P&L toggle, read defensively. charts.smoke.mjs drives this module in
+   *  node with no document at all, so a bare document.body.classList throws
+   *  before a single pixel is drawn. */
+  function pnlHidden() {
+    return typeof document !== "undefined" && Boolean(document.body?.classList.contains("is-pnl-hidden"));
+  }
+
   function formatAxisPercent(value) {
     return `${Number(value.toFixed(2))}%`;
   }
@@ -833,7 +840,12 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
          not the other is a privacy control that does not work. The axis keeps
          its rules and its spacing, so the curve stays exactly as readable; only
          the absolute numbers go. */
-      formatter: formatCompactCurrency,
+      /* The money axis states the P&L as plainly as the headline does — a curve
+         running $10K to $50K tells you the number whatever the figure above it
+         says. The axis keeps its rules and its spacing, so the SHAPE stays
+         exactly as readable; only the amounts go. The percent axis on the right
+         is untouched: a drawdown percentage is process, not takings. */
+      formatter: pnlHidden() ? () => "•••" : formatCompactCurrency,
       // Same `t`, same loop, same `y` — so row i carries BOTH readings and the
       // two columns can never drift apart.
       // t=0 -> +half, t=0.5 -> 0, t=1 -> -half. drawPlotFrame needs NO change:
@@ -947,7 +959,7 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
     const extremeIndex = findExtreme(plotted, options.extreme);
     if (points.length >= 5 && extremeIndex > 0 && extremeIndex < points.length - 1 && progress > 0.6) {
       drawExtremeMarker(ctx, points[extremeIndex], {
-        label: `${options.extremeLabel} ${formatCompactCurrency(plotted[extremeIndex])}`,
+        label: `${options.extremeLabel}${pnlHidden() ? "" : ` ${formatCompactCurrency(plotted[extremeIndex])}`}`,
         color: stroke,
         above: !options.underwater,
         top,

@@ -12412,9 +12412,17 @@ function renderDashMiniCal() {
     const avg = dayStats.size ? round(net / dayStats.size) : 0;
     // "GREEN DAYS 5 · AVG +$455" — the reference's wording. RED was a second
     // count of the same thing the tiles already show in colour.
-    ui.miniCalFoot.textContent = dayStats.size
-      ? `GREEN DAYS ${green} · AVG ${avg === 0 ? "$0" : (avg > 0 ? "+$" : "-$") + formatStatMoney(Math.abs(avg)).replace("$", "")}`
-      : "AWAITING FIRST TRADE";
+    // The AVG is money and the count is not, so they are separate nodes: the
+    // P&L toggle masks the figure and leaves "GREEN DAYS 4" readable, which is
+    // the whole point of a discipline control.
+    setHtml(
+      ui.miniCalFoot,
+      dayStats.size
+        ? `GREEN DAYS ${green} · AVG <span class="mc-avg">${escapeHtml(
+            avg === 0 ? "$0" : (avg > 0 ? "+$" : "-$") + formatStatMoney(Math.abs(avg)).replace("$", "")
+          )}</span>`
+        : "AWAITING FIRST TRADE"
+    );
   }
 
   const card = ui.dashMiniCal ? ui.dashMiniCal.closest(".dash-month-card") : null;
@@ -16966,9 +16974,16 @@ function setupPnlPrivacy() {
   const apply = (hidden) => {
     document.body.classList.toggle("is-pnl-hidden", hidden);
     btn.setAttribute("aria-pressed", hidden ? "true" : "false");
-    const label = hidden ? "Show net P&L" : "Hide net P&L";
+    // The control covers the balance as well as the P&L, so it says so.
+    const label = hidden ? "Show net P&L and balance" : "Hide net P&L and balance";
     btn.setAttribute("aria-label", label);
     btn.title = label;
+    // The canvas is not CSS: its money axis and its peak marker are painted
+    // text, so they only change on a repaint. Everything else on the board is
+    // masked by the class alone.
+    if (state.analytics) {
+      renderCharts(state.analytics, { force: true });
+    }
   };
   let saved = false;
   try {

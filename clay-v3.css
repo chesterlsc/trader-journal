@@ -4390,19 +4390,75 @@ button.session-hour-cell {
 .balance-eye[aria-pressed="true"] .eye-shut { display: inline; }
 .balance-eye[aria-pressed="true"] { color: var(--accent); }
 
-/* SCOPED TO #dashboard TOO. The instrument panel sets this figure's font with
-   `#dashboard.is-active [data-metric="totalPnl"]` at (1,1,1); an unscoped
-   body-class rule is (0,2,1) and LOSES — measured on the balance version of
-   this feature, where the mask painted its dots over a still-legible number. */
+/* WHAT "HIDDEN" HAS TO COVER. The account balance goes with the P&L: it is
+   starting capital PLUS the P&L, so leaving it up while the figure above it is
+   masked hands the number straight back to anyone who knows the account size.
+   One eye, both figures.
+
+   Masking the headline alone did not hide the P&L either:
+   the same number was still legible in the month net, the queue total, the
+   equity legend and the curve's own axis, so the toggle claimed something it
+   did not do. Every ABSOLUTE MONEY figure derived from P&L is masked.
+
+   WHAT STAYS, on purpose — this is a discipline control, and these are the
+   figures you are meant to still be reading: win rate, profit factor, trade
+   counts, streaks, the discipline scores, every date, and the SHAPE of the
+   equity curve. You can see that you are trading well without seeing what it
+   paid.
+
+   SCOPED UNDER #dashboard AS WELL. The panel styles several of these at (1,1,1)
+   and an unscoped body-class rule is (0,2,1) — that is how the first version
+   painted its dots over a still-legible number. */
 body.is-pnl-hidden [data-metric="totalPnl"],
-body.is-pnl-hidden #dashboard.is-active [data-metric="totalPnl"] {
+body.is-pnl-hidden [data-metric="accountBalance"],
+body.is-pnl-hidden [data-metric="expectancy"],
+body.is-pnl-hidden [data-metric="avgWinLoss"],
+body.is-pnl-hidden [data-metric="maxDrawdown"],
+body.is-pnl-hidden [data-metric="currentDrawdown"],
+body.is-pnl-hidden #dashHeroToday,
+body.is-pnl-hidden #dashHeroWeek,
+body.is-pnl-hidden #dashNowOpen,
+body.is-pnl-hidden #dashNowHighs,
+body.is-pnl-hidden #miniCalNet,
+body.is-pnl-hidden #dashQueueTotal,
+body.is-pnl-hidden #equityLegendValue,
+body.is-pnl-hidden #equityLegendDepth,
+body.is-pnl-hidden .mini-cal-day .mc-amt,
+body.is-pnl-hidden .mc-avg,
+body.is-pnl-hidden .dash-ledger td:nth-child(4),
+body.is-pnl-hidden #dashboard.is-active [data-metric="totalPnl"],
+body.is-pnl-hidden #dashboard.is-active [data-metric="accountBalance"],
+body.is-pnl-hidden #dashboard.is-active [data-metric="expectancy"],
+body.is-pnl-hidden #dashboard.is-active [data-metric="avgWinLoss"],
+body.is-pnl-hidden #dashboard.is-active [data-metric="maxDrawdown"],
+body.is-pnl-hidden #dashboard.is-active [data-metric="currentDrawdown"],
+body.is-pnl-hidden #dashboard.is-active #dashHeroToday,
+body.is-pnl-hidden #dashboard.is-active #dashHeroWeek,
+body.is-pnl-hidden #dashboard.is-active #dashNowOpen,
+body.is-pnl-hidden #dashboard.is-active #dashNowHighs,
+body.is-pnl-hidden #dashboard.is-active .mini-cal-day .mc-amt {
   position: relative;
-  /* The figure keeps its BOX, so the band does not jump as you toggle. */
+  /* Each figure keeps its BOX, so nothing on the board reflows on the toggle. */
   color: transparent;
 }
 body.is-pnl-hidden [data-metric="totalPnl"]::after,
-body.is-pnl-hidden #dashboard.is-active [data-metric="totalPnl"]::after {
-  content: "••••••";
+body.is-pnl-hidden [data-metric="accountBalance"]::after,
+body.is-pnl-hidden [data-metric="expectancy"]::after,
+body.is-pnl-hidden [data-metric="avgWinLoss"]::after,
+body.is-pnl-hidden [data-metric="maxDrawdown"]::after,
+body.is-pnl-hidden [data-metric="currentDrawdown"]::after,
+body.is-pnl-hidden #dashHeroToday::after,
+body.is-pnl-hidden #dashHeroWeek::after,
+body.is-pnl-hidden #dashNowOpen::after,
+body.is-pnl-hidden #dashNowHighs::after,
+body.is-pnl-hidden #miniCalNet::after,
+body.is-pnl-hidden #dashQueueTotal::after,
+body.is-pnl-hidden #equityLegendValue::after,
+body.is-pnl-hidden #equityLegendDepth::after,
+body.is-pnl-hidden .mini-cal-day .mc-amt::after,
+body.is-pnl-hidden .mc-avg::after,
+body.is-pnl-hidden .dash-ledger td:nth-child(4)::after {
+  content: "•••";
   position: absolute;
   inset: 0;
   display: flex;
@@ -4410,6 +4466,14 @@ body.is-pnl-hidden #dashboard.is-active [data-metric="totalPnl"]::after {
   color: var(--text-faint);
   letter-spacing: 0.04em;
 }
+/* The headline is 44px and carries the sign, so it gets the longer mask. */
+body.is-pnl-hidden [data-metric="totalPnl"]::after { content: "••••••"; }
+/* The queue's money column is right-aligned; its mask has to follow. */
+body.is-pnl-hidden .dash-ledger td:nth-child(4)::after,
+body.is-pnl-hidden #dashQueueTotal::after { justify-content: flex-end; }
+/* Calendar tiles pin their money bottom-left, so the mask sits where the figure
+   was rather than floating in the middle of the cell. */
+body.is-pnl-hidden .mini-cal-day .mc-amt::after { align-items: flex-end; }
 
 /* ══ THE LEDGER ══════════════════════════════════════════════════════════
    Four overrides, none of them cosmetic. styles.css styles `table` GLOBALLY —
