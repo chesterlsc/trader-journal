@@ -4351,65 +4351,65 @@ button.session-hour-cell {
   white-space: nowrap;
 }
 
-/* ══ HIDE THE BALANCE ═════════════════════════════════════════════════════
-   For screen-sharing and screenshots: the account SIZE goes, the performance
-   stays. Net P&L, the streak and every percentage are what people mean to show;
-   the balance is what they do not.
+/* ══ HIDE THE P&L ═════════════════════════════════════════════════════════
+   NOT a privacy control — a DISCIPLINE one. Traders hide the running figure so
+   the next decision is made on the setup in front of them rather than on how
+   the day is going so far. That is why it masks the P&L and leaves the account
+   balance, the win rate and the curve alone: the process figures are the ones
+   you are meant to still be reading.
 
-   MASKED IN CSS, NOT JS. renderDashboardMetrics rewrites the balance on every
-   5s price poll and renderEquityLegend on every render, so a JS-written mask
-   would be wiped within seconds. A ::after over a hidden figure cannot be. */
+   MASKED IN CSS, NOT JS. renderDashboardMetrics rewrites this figure on every
+   5s price poll, so a JS-written mask would be wiped within seconds. A ::after
+   over a transparent figure cannot be. */
+.dash-hero-headline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
 .balance-eye {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  margin-left: 8px;
+  width: 26px;
+  height: 26px;
+  flex: none;
   padding: 0;
   border: 0;
-  border-radius: 5px;
+  border-radius: 6px;
   background: none;
   color: var(--text-faint);
   cursor: pointer;
-  vertical-align: baseline;
 }
 .balance-eye:hover { background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text-soft); }
 .balance-eye:focus-visible { outline: 2px solid var(--focus-ring, var(--accent)); outline-offset: 1px; }
-.balance-eye svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-/* One icon at a time: open means "it is visible, click to hide". */
+.balance-eye svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+/* One icon at a time: open means "it is showing, click to hide". */
 .balance-eye .eye-shut { display: none; }
 .balance-eye[aria-pressed="true"] .eye-open { display: none; }
 .balance-eye[aria-pressed="true"] .eye-shut { display: inline; }
 .balance-eye[aria-pressed="true"] { color: var(--accent); }
 
-/* SCOPED TO #dashboard TOO. The instrument-panel rule that tones this figure is
-   `#dashboard.is-active [data-metric="accountBalance"]` at (1,1,1); an unscoped
-   body-class rule is (0,2,1) and LOSES — measured, the mask painted its dots
-   over a still-legible figure. Both selectors are listed so the mask also holds
-   anywhere the figure appears outside the dashboard grid. */
-body.is-balance-hidden [data-metric="accountBalance"],
-body.is-balance-hidden #equityLegendValue,
-body.is-balance-hidden #dashboard.is-active [data-metric="accountBalance"],
-body.is-balance-hidden #dashboard.is-active #equityLegendValue {
+/* SCOPED TO #dashboard TOO. The instrument panel sets this figure's font with
+   `#dashboard.is-active [data-metric="totalPnl"]` at (1,1,1); an unscoped
+   body-class rule is (0,2,1) and LOSES — measured on the balance version of
+   this feature, where the mask painted its dots over a still-legible number. */
+body.is-pnl-hidden [data-metric="totalPnl"],
+body.is-pnl-hidden #dashboard.is-active [data-metric="totalPnl"] {
   position: relative;
-  /* The figure keeps its BOX, so nothing reflows when it is masked — the row
-     does not jump as you toggle. */
+  /* The figure keeps its BOX, so the band does not jump as you toggle. */
   color: transparent;
 }
-body.is-balance-hidden [data-metric="accountBalance"]::after,
-body.is-balance-hidden #equityLegendValue::after,
-body.is-balance-hidden #dashboard.is-active [data-metric="accountBalance"]::after,
-body.is-balance-hidden #dashboard.is-active #equityLegendValue::after {
+body.is-pnl-hidden [data-metric="totalPnl"]::after,
+body.is-pnl-hidden #dashboard.is-active [data-metric="totalPnl"]::after {
   content: "••••••";
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   color: var(--text-faint);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
 }
-
 
 /* ══ THE LEDGER ══════════════════════════════════════════════════════════
    Four overrides, none of them cosmetic. styles.css styles `table` GLOBALLY —

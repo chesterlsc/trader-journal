@@ -16,3 +16,8 @@ tools/*.zip
 ssh-keygen -t ed25519 -C "your_email@example.com"
 ssh-keygen -t ed25519 -C "your_email@example.com".pub
 .claude/
+
+# Design-canvas scratch output. Landed in the working tree from a tool run,
+# not from this project, and got swept into a commit by `git add -A` — the
+# shipped-graph guard caught it at the push. Ignored so it cannot recur.
+scratch-preview/

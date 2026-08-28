@@ -535,13 +535,6 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
   // 2.5 x 10^k, so a 0.25 step at one decimal prints -0.3 / -0.5 / -0.8 on an
   // evenly spaced grid — the same silent lie the money axis was fixed to kill.
   // Number() drops the trailing zeros afterwards.
-  /** The privacy toggle, read defensively. charts.smoke.mjs drives this module
-   *  in node with no document, so a bare document.body.classList throws before
-   *  a single pixel is drawn. */
-  function balanceHidden() {
-    return typeof document !== "undefined" && Boolean(document.body?.classList.contains("is-balance-hidden"));
-  }
-
   function formatAxisPercent(value) {
     return `${Number(value.toFixed(2))}%`;
   }
@@ -840,7 +833,7 @@ export function createChartsModule({ ui, state, prefersReducedMotion, onScrub })
          not the other is a privacy control that does not work. The axis keeps
          its rules and its spacing, so the curve stays exactly as readable; only
          the absolute numbers go. */
-      formatter: balanceHidden() ? () => "•••" : formatCompactCurrency,
+      formatter: formatCompactCurrency,
       // Same `t`, same loop, same `y` — so row i carries BOTH readings and the
       // two columns can never drift apart.
       // t=0 -> +half, t=0.5 -> 0, t=1 -> -half. drawPlotFrame needs NO change:
