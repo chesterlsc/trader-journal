@@ -4406,6 +4406,11 @@ button.session-hour-cell {
    equity curve. You can see that you are trading well without seeing what it
    paid.
 
+   THE REVIEW QUEUE'S PER-TRADE COLUMN STAYS TOO. That panel is a work list —
+   you are there to journal individual trades, and what a trade made is part of
+   reviewing it. The running TOTAL beneath it is still masked, because that
+   aggregate is the figure this control exists to get out of your eyeline.
+
    SCOPED UNDER #dashboard AS WELL. The panel styles several of these at (1,1,1)
    and an unscoped body-class rule is (0,2,1) — that is how the first version
    painted its dots over a still-legible number. */
@@ -4425,7 +4430,6 @@ body.is-pnl-hidden #equityLegendValue,
 body.is-pnl-hidden #equityLegendDepth,
 body.is-pnl-hidden .mini-cal-day .mc-amt,
 body.is-pnl-hidden .mc-avg,
-body.is-pnl-hidden .dash-ledger td:nth-child(4),
 body.is-pnl-hidden #dashboard.is-active [data-metric="totalPnl"],
 body.is-pnl-hidden #dashboard.is-active [data-metric="accountBalance"],
 body.is-pnl-hidden #dashboard.is-active [data-metric="expectancy"],
@@ -4456,8 +4460,7 @@ body.is-pnl-hidden #dashQueueTotal::after,
 body.is-pnl-hidden #equityLegendValue::after,
 body.is-pnl-hidden #equityLegendDepth::after,
 body.is-pnl-hidden .mini-cal-day .mc-amt::after,
-body.is-pnl-hidden .mc-avg::after,
-body.is-pnl-hidden .dash-ledger td:nth-child(4)::after {
+body.is-pnl-hidden .mc-avg::after {
   content: "•••";
   position: absolute;
   inset: 0;
@@ -4468,8 +4471,7 @@ body.is-pnl-hidden .dash-ledger td:nth-child(4)::after {
 }
 /* The headline is 44px and carries the sign, so it gets the longer mask. */
 body.is-pnl-hidden [data-metric="totalPnl"]::after { content: "••••••"; }
-/* The queue's money column is right-aligned; its mask has to follow. */
-body.is-pnl-hidden .dash-ledger td:nth-child(4)::after,
+/* The queue TOTAL is right-aligned; its mask has to follow. */
 body.is-pnl-hidden #dashQueueTotal::after { justify-content: flex-end; }
 /* Calendar tiles pin their money bottom-left, so the mask sits where the figure
    was rather than floating in the middle of the cell. */
