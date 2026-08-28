@@ -1492,7 +1492,22 @@
                      to a 13px clause underneath. ui.metricNodes is a flat
                      querySelectorAll("[data-metric]"), so this node is picked up free. -->
                 <p class="metric-value dash-hero-value" data-metric="totalPnl">$0.00</p>
-                <p class="dash-hero-equity"><span class="dash-hero-tag" id="dashEquityTag">Account balance</span><span class="metric-value" data-metric="accountBalance">$0.00</span></p>
+                <p class="dash-hero-equity"><span class="dash-hero-tag" id="dashEquityTag">Account balance</span><span class="metric-value" data-metric="accountBalance">$0.00</span><!--
+                     PRIVACY TOGGLE. Masking is CSS-only (see clay-v3.css), so it
+                     survives every re-render without the renderers having to know
+                     about it — renderDashboardMetrics rewrites this figure on a
+                     5s price poll and would blow away a JS-written mask.
+                  --><button type="button" class="balance-eye" id="balanceEyeBtn" aria-pressed="false" aria-label="Hide account balance" title="Hide account balance">
+                    <svg class="eye-open" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+                      <circle cx="12" cy="12" r="3.2" />
+                    </svg>
+                    <svg class="eye-shut" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 4.5 20 19.5" />
+                      <path d="M9.9 6A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3.2 3.9" />
+                      <path d="M6.6 8.1A17.6 17.6 0 0 0 2.5 12S6 18.5 12 18.5a9.4 9.4 0 0 0 3.2-.55" />
+                    </svg>
+                  </button></p>
                 <span class="dash-hero-range" id="dashHeroRange" hidden></span>
                 <!-- THE NOW GRID. Six figures that can change within the hour,
                      which is the test for living on this card at all: monthly

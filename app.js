@@ -1303,6 +1303,7 @@ function init() {
   bindEvents();
   syncMobileNavState();
   setupRailPin();
+  setupBalancePrivacy();
   setupRailAccount();
   setupListClamps();
   setupChartResize();
@@ -16947,6 +16948,48 @@ function setupRailAccount() {
   paint();
   select.addEventListener("change", paint);
   new MutationObserver(paint).observe(select, { childList: true, subtree: true });
+}
+
+/* HIDE THE BALANCE. For screen-sharing: the account SIZE goes, the performance
+   stays — Net P&L, the streak and every percentage are what people mean to
+   show. The masking itself is CSS (see clay-v3.css), because the balance is
+   rewritten on every 5s price poll and a JS-written mask would be wiped within
+   seconds; this only owns the class, the button state and the preference.
+
+   It also re-renders the charts, because the equity plot's money axis states
+   the account size just as plainly as the figure does — hiding one and not the
+   other would be a privacy control that does not work. */
+function setupBalancePrivacy() {
+  const btn = document.getElementById("balanceEyeBtn");
+  if (!btn) {
+    return;
+  }
+  const apply = (hidden) => {
+    document.body.classList.toggle("is-balance-hidden", hidden);
+    btn.setAttribute("aria-pressed", hidden ? "true" : "false");
+    const label = hidden ? "Show account balance" : "Hide account balance";
+    btn.setAttribute("aria-label", label);
+    btn.title = label;
+    if (state.analytics) {
+      renderCharts(state.analytics, { force: true });
+    }
+  };
+  let saved = false;
+  try {
+    saved = window.localStorage.getItem("tj.balance.hidden") === "1";
+  } catch (error) {
+    saved = false;
+  }
+  apply(saved);
+  btn.addEventListener("click", () => {
+    const next = !document.body.classList.contains("is-balance-hidden");
+    apply(next);
+    try {
+      window.localStorage.setItem("tj.balance.hidden", next ? "1" : "0");
+    } catch (error) {
+      /* private mode: the choice holds for this session */
+    }
+  });
 }
 
 function setupRailPin() {
