@@ -109,109 +109,88 @@ assert.match(renderTiming, /report\.headline\.sentence/);
 assert.match(renderTiming, /report\.source\.topstepDetected/);
 assert.match(renderTiming, /report\.source\.label/);
 assert.match(renderTiming, /report\.coverage\.analyzed/);
-assert.match(renderTiming, /renderSessionTopstepExecution\(report\)/,
-  "the visible report must consume the Topstep lifecycle and data-quality contract");
+assert.match(renderTiming, /renderExitDiscipline\(report\)/,
+  "the exit pane must be scoped to the same report the header states");
 
-const timingSegmentSource = takeFunction(appSrc, "timingSegment");
-const topstepRendererSource = takeFunction(appSrc, "renderSessionTopstepExecution");
-assert.match(topstepRendererSource, /report\?\.dataQuality/);
-assert.match(topstepRendererSource, /report\?\.lifecycle/);
-assert.match(topstepRendererSource, /singleVsMultiFill/);
-assert.match(topstepRendererSource, /reversalLinked/);
-assert.match(topstepRendererSource, /exactNet/);
-assert.match(topstepRendererSource, /estimatedNet/);
-assert.match(topstepRendererSource, /grossOnly/);
-assert.match(topstepRendererSource, /brokerOnly/);
-assert.match(topstepRendererSource, /cannot measure time above breakeven, MFE, MAE, or winner giveback/i);
-
-function renderTopstepExecution(report) {
-  const node = () => ({
-    hidden: true,
-    textContent: "",
-    title: "",
-    classList: { remove() {}, add() {} }
-  });
-  const ui = {
-    sessionTopstepExecution: node(),
-    sessionTopstepExecutionConfidence: node(),
-    sessionTopstepExecutionSummary: node(),
-    sessionTopstepScaleInsight: node(),
-    sessionTopstepReversalInsight: node(),
-    sessionTopstepPnlBasisInsight: node(),
-    sessionTopstepExecutionNote: node()
-  };
-  const timingMoney = (value) => `${Number(value) >= 0 ? "+" : "-"}$${Math.abs(Number(value || 0)).toFixed(2)}`;
-  // eslint-disable-next-line no-new-func
-  const render = new Function(
-    "ui",
-    "timingMoney",
-    `${timingSegmentSource}\n${topstepRendererSource}\nreturn renderSessionTopstepExecution;`
-  )(ui, timingMoney);
-  render(report);
-  return ui;
+// WHO CLOSED IT replaced the Topstep execution prose pane. The evidence it
+// rests on still has to reach the screen: the closing-order disposition, the
+// hand-vs-bracket cost with its five-a-side gate, and the P&L basis.
+const exitRendererSource = takeFunction(appSrc, "renderExitDiscipline");
+assert.match(exitRendererSource, /summarizeExitDiscipline/);
+assert.match(exitRendererSource, /sessionReportTradeIds\(report\)/,
+  "the exit pane must count only the trades inside the report's own date range");
+assert.match(exitRendererSource, /summary\.comparable/,
+  "the hand-vs-bracket verdict must stay behind its sample gate");
+assert.match(exitRendererSource, /dataQuality\?\.pnlAndCosts/);
+for (const basis of ["exactNet", "estimatedNet", "grossOnly", "brokerOnly"]) {
+  assert.match(exitRendererSource, new RegExp(basis), `${basis} must survive into the exit pane's basis note`);
 }
 
-const tradesExecutionUi = renderTopstepExecution(tradesReport);
-assert.equal(tradesExecutionUi.sessionTopstepExecution.hidden, false);
-assert.match(tradesExecutionUi.sessionTopstepExecutionSummary.textContent, /3 paired Trades records analyzed/);
-assert.match(tradesExecutionUi.sessionTopstepScaleInsight.textContent, /do not include their opening-fill sequence/);
-assert.match(tradesExecutionUi.sessionTopstepPnlBasisInsight.textContent, /3 exact net/);
-
-const ordersExecutionUi = renderTopstepExecution(ordersReport);
-assert.equal(ordersExecutionUi.sessionTopstepExecution.hidden, false);
-assert.match(ordersExecutionUi.sessionTopstepExecutionSummary.textContent, /14 normalized Orders cycles analyzed/);
-assert.match(ordersExecutionUi.sessionTopstepPnlBasisInsight.textContent, /14 gross-only/);
-assert.match(ordersExecutionUi.sessionTopstepExecutionNote.textContent, /Endpoints still cannot measure time above breakeven, MFE, MAE, or winner giveback/);
+const summarizeSource = takeFunction(appSrc, "summarizeExitDiscipline");
+assert.match(summarizeSource, /manual\.count >= 5 && plannedCount >= 5/,
+  "five cycles a side stays the floor for calling a hand-close cost");
 
 // Execute the real scorecard renderer with small DOM-like nodes. This catches
 // the dangerous regression where engine provenance remains correct while the
 // last UI hop hardcodes "Net P&L" again.
 const scorecardSource = takeFunction(appSrc, "renderSessionScorecard");
+const ledgerOrder = /const SESSION_LEDGER_ORDER = (\[[^\]]*\]);/.exec(appSrc);
+assert.ok(ledgerOrder, "the sessions ledger must keep its fixed row order");
 const node = () => ({
   textContent: "",
   innerHTML: "",
+  title: "",
   classList: { toggle() {} }
 });
 function renderScorecard(report) {
   const ui = {
     sessionScorecard: node(),
-    sessionComparisonHeading: node(),
-    sessionSessionsConclusion: node(),
-    sessionSessionsConfidence: node(),
-    sessionBestSessionPnlLabel: node(),
-    sessionBestSessionPnl: node(),
-    sessionBestSessionExpectancy: node(),
-    sessionBestSessionTrades: node()
+    sessionLedgerBasis: node(),
+    sessionLedgerFoot: node()
   };
-  const timingConfidenceCopy = (confidence) => `${confidence.label} · n=${confidence.count}`;
   const setTimingValue = (target, text) => { if (target) target.textContent = text; };
   const timingTone = (value) => value > 0 ? "is-positive" : value < 0 ? "is-negative" : "is-flat";
   const timingMoney = (value) => `$${Number(value || 0).toFixed(2)}`;
   const escapeHtml = (value) => String(value ?? "");
-  const formatTimingDuration = (value) => `${Math.round(Number(value || 0) / 60000)}m`;
+  const timingWithheld = (count) => `Withheld n=${count}`;
+  const timingZoneLabel = (zone) => `${zone} (TZ)`;
+  const SESSION_LEDGER_ORDER = JSON.parse(ledgerOrder[1].replace(/'/g, '"'));
   // eslint-disable-next-line no-new-func
   const render = new Function(
     "ui",
-    "timingConfidenceCopy",
     "setTimingValue",
     "timingTone",
     "timingMoney",
     "escapeHtml",
-    "formatTimingDuration",
+    "timingWithheld",
+    "timingZoneLabel",
+    "SESSION_LEDGER_ORDER",
     `${scorecardSource}\nreturn renderSessionScorecard;`
-  )(ui, timingConfidenceCopy, setTimingValue, timingTone, timingMoney, escapeHtml, formatTimingDuration);
+  )(ui, setTimingValue, timingTone, timingMoney, escapeHtml, timingWithheld, timingZoneLabel, SESSION_LEDGER_ORDER);
   render(report);
   return ui;
 }
 
+// The ledger prints all four sessions in a fixed order, and the engine's
+// basis label must reach the reader rather than a hardcoded "Net P&L".
 for (const [report, expectedLabel] of [
   [tradesReport, "Net P&L"],
   [ordersReport, "Gross P&L"],
   [brokerOnlyReport, "Broker P&L"]
 ]) {
   const ui = renderScorecard(report);
-  assert.equal(ui.sessionComparisonHeading.textContent, `${expectedLabel} by entry session`);
-  assert.ok(ui.sessionScorecard.innerHTML.includes(expectedLabel), `${expectedLabel} must survive into hover/accessible detail copy`);
+  assert.equal(ui.sessionLedgerBasis.title, expectedLabel, `${expectedLabel} must stay reachable on the ledger`);
+  assert.equal(
+    (ui.sessionScorecard.innerHTML.match(/class="ledger-row/g) || []).length,
+    4,
+    "all four sessions print, including the ones with no trades"
+  );
+  if (report.sessions.some((row) => row.count && row.confidence.key === "reliable")) {
+    assert.ok(
+      ui.sessionScorecard.innerHTML.includes(expectedLabel),
+      `${expectedLabel} must survive into hover/accessible detail copy`
+    );
+  }
 }
 
 const almanacRenderer = takeFunction(appSrc, "renderSessionAlmanac");
@@ -220,7 +199,7 @@ const cfRenderer = takeFunction(appSrc, "renderSessionCounterfactual");
 assert.match(cfRenderer, /report\.pnl\.label/, "the counterfactual must state the report's P&L basis, never hardcode one");
 const durationRenderer = takeFunction(appSrc, "renderSessionDurations");
 assert.match(durationRenderer, /report\.pnl\.label/);
-assert.match(durationRenderer, /best\.pnlLabel/);
+assert.match(durationRenderer, /band\.pnlLabel/, "each hold band must carry its own P&L basis into its detail copy");
 assert.doesNotMatch(durationRenderer, /stayed profitable|profitable for\s+\$\{/i);
 const drawerRenderer = takeFunction(appSrc, "openSessionTradeDrawer");
 assert.match(drawerRenderer, /resolveTradePnl\(trade\)/);

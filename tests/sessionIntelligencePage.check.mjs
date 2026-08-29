@@ -115,10 +115,11 @@ for (const id of [
   "sessionTiltInsight",
   "sessionScorecard",
   "sessionDurationBands",
-  "sessionTopstepExecution",
+  "sessionExitBar",
   "sessionWinningHold",
   "sessionLosingHold",
-  "sessionBestDuration",
+  "sessionCoverageOldest",
+  "sessionCoverageScar",
   "sessionCoverageBar",
   "sessionJournaledCount",
   "sessionUnjournalledCount",
@@ -134,7 +135,7 @@ assert.match(
 );
 assert.match(
   sessionView,
-  /does not prove how long a trade spent above breakeven/i,
+  /not time spent above breakeven|does not prove how long a trade spent above breakeven/i,
   "hold-time wording must not overclaim intratrade profitability"
 );
 assert.match(

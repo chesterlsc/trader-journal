@@ -1516,7 +1516,7 @@ body.auth-locked .app-ticker { display: none !important; }
 @media (min-width: 1240px) {
   #session-intelligence.session-page.is-active {
     overflow-y: hidden;
-    grid-template-rows: max-content max-content minmax(0, 1fr) max-content;
+    grid-template-rows: max-content minmax(0, 1fr) max-content;
     row-gap: 12px;
     padding-top: 8px;
     padding-bottom: 14px;
@@ -1524,30 +1524,34 @@ body.auth-locked .app-ticker { display: none !important; }
 
   #session-intelligence .session-page-head {
     grid-template-columns: minmax(0, 1fr) auto;
-    align-items: end;
-    gap: 8px 26px;
-    padding: 2px 4px 10px;
+    align-items: center;
+    gap: 7px 24px;
+    padding: 2px 4px 8px;
   }
 
-  #session-intelligence .session-page-copy {
-    gap: 4px;
+  #session-intelligence .session-display {
+    font-size: 27px;
   }
 
-  #session-intelligence .session-page-copy h2 {
-    font-size: 24px;
-    line-height: 1.05;
+  #session-intelligence .session-metabar {
+    flex-wrap: nowrap;
+    font-size: 10.5px;
   }
 
-  #session-intelligence .session-headline {
-    font-size: 13.5px;
-    line-height: 1.45;
-    max-width: 900px;
+  /* The global 48px touch target is a phone rule; on the dashboard these two
+     selects are inline text and must not set the band's height. */
+  #session-intelligence .session-meta-select {
+    min-height: 0;
+    height: auto;
+    line-height: 1.3;
   }
 
-  #session-intelligence .session-context-field,
-  #session-intelligence .session-context-readout {
-    min-height: 44px;
-    padding-block: 5px;
+  /* The value speaks for itself at dashboard width; the label comes back in
+     the stacked layout below the breakpoint. */
+  #session-intelligence .session-meta-item[data-meta="range"] > .session-meta-label,
+  #session-intelligence .session-meta-item[data-meta="source"] > .session-meta-label,
+  #session-intelligence .session-meta-item[data-meta="count"] > .session-meta-label {
+    display: none;
   }
 
   #session-intelligence .session-almanac-layout {
@@ -1578,34 +1582,270 @@ body.auth-locked .app-ticker { display: none !important; }
     overflow-y: auto;
   }
 
-  #session-intelligence .session-almanac-margins {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    grid-template-rows: 100%;
-    align-items: stretch;
-    height: 234px;
-  }
-
-  #session-intelligence .session-almanac-margins > .session-margin-pane,
-  #session-intelligence .session-almanac-margins > .session-topstep-execution {
-    min-height: 0;
-    overflow-y: auto;
-  }
-
   #session-intelligence .session-duration-band {
     gap: 6px 12px;
   }
 }
 
+/* Laptop tier: the same dashboard, one size down, so 1440x800 still fits. */
+@media (min-width: 1240px) and (max-width: 1679px) {
+  #session-intelligence .session-page-head {
+    gap: 5px 18px;
+    padding-bottom: 6px;
+  }
+
+  #session-intelligence .session-display {
+    font-size: 22px;
+  }
+
+  #session-intelligence .session-metabar {
+    font-size: 10px;
+  }
+
+  #session-intelligence .session-meta-item {
+    padding-inline: 8px;
+  }
+
+  #session-intelligence .session-meta-item[data-meta="source"] > strong {
+    max-width: 16ch;
+  }
+}
+
+/* Below the dashboard breakpoint the band unstacks into readable rows. */
+@media (max-width: 1239px) {
+  .session-page-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .session-page-head > .session-page-kicker,
+  .session-page-head > .session-data-flag,
+  .session-page-head > .session-display,
+  .session-page-head > .session-metabar,
+  .session-page-head > .session-now-strip {
+    grid-area: auto;
+  }
+
+  .session-data-flag,
+  .session-metabar,
+  .session-now-strip {
+    grid-column: 1;
+    justify-self: start;
+    justify-content: flex-start;
+  }
+
+  .session-display {
+    overflow: visible;
+    white-space: normal;
+    text-wrap: balance;
+  }
+
+  .session-metabar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    width: 100%;
+    font-size: 11px;
+    border-block: 1px solid var(--line);
+  }
+
+  .session-meta-item {
+    display: grid;
+    align-content: center;
+    gap: 5px;
+    min-height: 52px;
+    padding: 8px 12px;
+    border-left: 0;
+    border-right: 1px solid var(--line);
+  }
+
+  .session-metabar > .session-meta-item:first-child {
+    padding-left: 12px;
+  }
+
+  .session-metabar > .session-meta-item:last-child {
+    padding-right: 12px;
+    border-right: 0;
+  }
+
+  .session-meta-item > strong,
+  .session-meta-select {
+    max-width: 100%;
+    font-size: 11.5px;
+  }
+}
+
+/* The header band: kicker, a two-tone display line, one inline mono meta
+   row, and the live clock. Three tight rows, no boxed cards. */
+/* Explicit placement: the caveat flag is optional, and auto-placement would
+   let its absence pull the display line up beside the kicker. */
 .session-page-head {
   display: grid;
-  gap: clamp(20px, 3vw, 34px);
-  padding: clamp(16px, 2.5vw, 30px) 4px 22px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 20px;
+  padding: clamp(10px, 1.6vw, 16px) 4px 12px;
   border-bottom: 1px solid var(--line);
 }
 
-.session-page-copy {
-  max-width: 980px;
-}.session-page-kicker,
+.session-page-head > .session-page-kicker {
+  grid-area: 1 / 1;
+}
+
+.session-page-head > .session-data-flag {
+  grid-area: 1 / 2;
+}
+
+.session-page-head > .session-display {
+  grid-area: 2 / 1;
+}
+
+.session-page-head > .session-metabar {
+  grid-area: 2 / 2;
+}
+
+.session-page-head > .session-now-strip {
+  grid-area: 3 / 2;
+}
+
+/* An honest caveat, never a "sample data" sticker: hidden when the report
+   carries none, and every string below is a counted figure. */
+.session-data-flag {
+  justify-self: end;
+  margin: 0;
+  padding: 3px 8px;
+  border: 1px solid var(--warn);
+  border-radius: 999px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font: 700 11px/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.session-data-flag[hidden] {
+  display: none;
+}
+
+.session-display {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font: 450 clamp(20px, 2.2vw, 30px)/1.06 var(--font-ui);
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.session-display-a {
+  color: var(--text-soft);
+}
+
+.session-display-b {
+  color: var(--text);
+  font-weight: 720;
+}
+
+.session-display-b::before {
+  content: " ";
+}
+
+.session-metabar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-self: end;
+  min-width: 0;
+  font: 600 11px/1.3 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.session-meta-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  padding: 1px 11px;
+  border-left: 1px solid var(--line);
+}
+
+.session-metabar > .session-meta-item:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.session-metabar > .session-meta-item:last-child {
+  padding-right: 0;
+}
+
+.session-meta-label {
+  flex: none;
+  color: var(--text-soft);
+  font-weight: 700;
+}
+
+.session-meta-item > strong {
+  overflow: hidden;
+  max-width: 22ch;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-meta-item > strong.is-positive {
+  color: var(--pnl-pos);
+}
+
+.session-meta-item > strong.is-negative {
+  color: var(--pnl-neg);
+}
+
+.session-confidence.is-reliable {
+  color: var(--pnl-pos);
+}
+
+.session-confidence.is-developing {
+  color: var(--accent);
+}
+
+.session-confidence.is-early {
+  color: var(--text-soft);
+}
+
+/* A real select stripped of chrome: the native menu and the change event are
+   untouched, only the box is gone. */
+.session-meta-select {
+  max-width: 17ch;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: inherit;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.session-meta-select:hover {
+  color: var(--accent);
+}
+
+.session-meta-select:focus-visible {
+  outline: none;
+  box-shadow: 0 2px 0 var(--accent);
+}
+
+.session-page-kicker,
 .session-visual-head > div > p,
 .session-queue-kicker {
   margin: 0;
@@ -1613,34 +1853,6 @@ body.auth-locked .app-ticker { display: none !important; }
   font: 700 11px/1.2 var(--font-mono);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-}
-
-.session-page-copy h2 {
-  margin: 7px 0 0;
-  color: var(--text);
-  font: 720 clamp(28px, 4vw, 44px)/1.02 var(--font-ui);
-  letter-spacing: -0.045em;
-}
-
-.session-headline {
-  max-width: 900px;
-  margin: 12px 0 0;
-  color: var(--text-soft);
-  font: 450 clamp(15px, 1.7vw, 19px)/1.55 var(--font-ui);
-  text-wrap: balance;
-}
-
-.session-context {
-  display: grid;
-  grid-template-columns:
-    minmax(150px, 0.9fr)
-    minmax(150px, 0.9fr)
-    minmax(150px, 1fr)
-    minmax(120px, 0.72fr)
-    minmax(120px, 0.72fr);
-  align-items: stretch;
-  min-width: 0;
-  border-block: 1px solid var(--line);
 }
 
 .session-context-field,
@@ -1653,10 +1865,6 @@ body.auth-locked .app-ticker { display: none !important; }
   margin: 0;
   padding: 9px 14px;
   border-right: 1px solid var(--line);
-}
-
-.session-context > :last-child {
-  border-right: 0;
 }
 
 .session-context-field > span,
@@ -1691,31 +1899,6 @@ body.auth-locked .app-ticker { display: none !important; }
   font: 650 12px/1.25 var(--font-ui);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.session-confidence {
-  justify-self: start;
-  padding: 4px 7px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-pill);
-  color: var(--text-soft);
-  font: 700 11px/1 var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.session-confidence.is-reliable {
-  border-color: var(--pnl-pos-line);
-  color: var(--pnl-pos);
-}
-
-.session-confidence.is-developing {
-  border-color: var(--line-accent);
-  color: var(--accent);
-}
-
-.session-confidence.is-early {
-  color: var(--text-soft);
 }
 
 /* Tabs -------------------------------------------------------------------- */
@@ -1974,34 +2157,75 @@ body.auth-locked .app-ticker { display: none !important; }
   font: 500 11px/1.5 var(--font-ui);
 }
 
-/* The almanac pane is the instrument itself: boxed like the side panes,
-   with the layout's own gap instead of the roomy stacked-page margin. */
+/* ── The almanac pane: the instrument itself ──────────────────────────────
+   A fixed-height box in the dashboard's main row. The matrix well is the
+   only thing that ever scrolls, and only sideways when the columns cannot
+   fit. Cell washes are P&L tokens behind a ::before layer whose opacity is
+   the cell's --almanac-heat, so both themes keep their own palette and no
+   colour is ever pinned per element. */
 .session-almanac-visual {
   margin-top: 0;
   background: var(--surface-1);
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 16px 18px;
+  padding: 12px 14px;
   display: grid;
-  gap: 12px;
-  align-content: start;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  row-gap: 10px;
+  min-height: 0;
 }
 
-/* ── The almanac: expectancy by weekday and hour ──────────────────────────
-   Wide content scrolls inside its own well; the matrix never widens the
-   page. Cell washes are the P&L tokens behind a ::before layer whose
-   opacity is the cell's --almanac-heat, so both themes keep their own
-   palette and no color is ever pinned per element. */
+.almanac-pane-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 40px;
+}
+
+.almanac-pane-title h4 {
+  margin: 0;
+  font: 700 14px/1.15 var(--font-ui);
+  color: var(--text);
+}
+
+.almanac-pane-title h4 span {
+  font-weight: 400;
+  color: var(--text-soft);
+}
+
+.almanac-pane-basis {
+  margin: 3px 0 0;
+  color: var(--text-faint);
+  font: 500 10px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.almanac-pane-edge {
+  margin: 0;
+  text-align: right;
+  color: var(--text-soft);
+  font: 600 10.5px/1.3 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
 .session-almanac-scroll {
-  overflow-x: auto;
-  padding-bottom: 6px;
+  overflow: auto;
+  min-height: 0;
+  padding-bottom: 2px;
 }
 
 .session-almanac-matrix {
   display: grid;
-  grid-template-columns: 44px minmax(76px, 0.9fr) repeat(10, minmax(66px, 1fr)) minmax(96px, auto);
-  gap: 4px;
-  min-width: 980px;
+  grid-template-columns:
+    38px minmax(64px, 0.8fr) repeat(10, minmax(62px, 1fr)) minmax(148px, 168px);
+  grid-template-rows: 20px repeat(var(--alm-rows, 5), minmax(44px, 1fr)) 32px;
+  gap: 5px 4px;
+  min-width: 940px;
+  min-height: 100%;
   align-items: stretch;
 }
 
@@ -2011,29 +2235,30 @@ body.auth-locked .app-ticker { display: none !important; }
 
 .almanac-col-label {
   align-self: end;
-  padding: 2px 2px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding-bottom: 3px;
   color: var(--text-soft);
-  font: 600 9.5px/1 var(--font-mono);
+  font: 600 10px/1 var(--font-mono);
   letter-spacing: 0.1em;
-  text-align: center;
+  text-transform: uppercase;
 }
 
-.almanac-col-net {
-  text-align: right;
+.almanac-col-margin {
+  justify-content: flex-end;
   color: var(--accent);
+  letter-spacing: 0.14em;
 }
 
-/* Vein and scar chips on the columns that clear the column floor. */
 .almanac-col-chip {
-  display: inline-block;
-  margin-left: 3px;
   padding: 2px 4px;
   border-radius: 3px;
-  font: 700 8px/1 var(--font-mono);
+  font: 700 8.5px/1 var(--font-mono);
   font-style: normal;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  vertical-align: 1px;
 }
 
 .almanac-col-chip.is-vein {
@@ -2054,17 +2279,18 @@ body.auth-locked .app-ticker { display: none !important; }
   color: var(--text-soft);
   font: 700 10px/1 var(--font-mono);
   letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .almanac-cell {
   position: relative;
-  min-height: 54px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: flex-start;
   gap: 3px;
-  padding: 7px 9px;
+  padding: 6px 9px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-inset);
@@ -2084,12 +2310,12 @@ body.auth-locked .app-ticker { display: none !important; }
 
 .almanac-cell.is-positive::before {
   background: var(--pnl-pos);
-  opacity: calc(0.08 + var(--almanac-heat, 0) * 0.2);
+  opacity: calc(0.08 + var(--almanac-heat, 0) * 0.24);
 }
 
 .almanac-cell.is-negative::before {
   background: var(--pnl-neg);
-  opacity: calc(0.08 + var(--almanac-heat, 0) * 0.2);
+  opacity: calc(0.08 + var(--almanac-heat, 0) * 0.24);
 }
 
 .almanac-cell.is-positive {
@@ -2100,9 +2326,18 @@ body.auth-locked .app-ticker { display: none !important; }
   border-color: var(--pnl-neg-line);
 }
 
+/* The proven vein and the deepest scar wear the brighter border. */
+.almanac-cell.is-vein {
+  border-color: var(--pnl-pos);
+}
+
+.almanac-cell.is-scar {
+  border-color: var(--pnl-neg);
+}
+
 .almanac-cell > strong {
   position: relative;
-  font: 700 13.5px/1 var(--font-mono);
+  font: 700 17px/1 var(--font-mono);
 }
 
 .almanac-cell.is-positive > strong {
@@ -2116,25 +2351,31 @@ body.auth-locked .app-ticker { display: none !important; }
 .almanac-cell > span {
   position: relative;
   color: var(--text-faint);
-  font: 500 9px/1 var(--font-mono);
+  font: 500 10px/1 var(--font-mono);
   letter-spacing: 0.05em;
 }
 
-/* Withheld, never estimated: machined hatching, count only. */
+/* Withheld, never estimated: hatched, the count then the word. */
 .almanac-cell.is-withheld {
-  background: repeating-linear-gradient(-45deg, transparent 0 5px, var(--chart-track) 5px 6px) var(--surface-inset);
+  background:
+    repeating-linear-gradient(-45deg, transparent 0 5px, var(--chart-track) 5px 6px)
+    var(--surface-inset);
 }
 
-.almanac-wh {
-  position: relative;
-  color: var(--text-faint);
-  font: 500 9.5px/1 var(--font-mono);
-  letter-spacing: 0.08em;
+.almanac-cell.is-withheld > strong {
+  color: var(--text-soft);
+  font-size: 13px;
 }
 
+.almanac-cell.is-withheld > span {
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Empty: a plain dark cell with a hairline, no text. */
 .almanac-cell.is-empty {
-  border-style: dashed;
-  opacity: 0.45;
+  background: var(--surface-0);
+  border-color: var(--line);
 }
 
 button.almanac-cell {
@@ -2154,7 +2395,7 @@ button.almanac-cell:focus-visible {
   outline-offset: 2px;
 }
 
-/* The clock's own cell. */
+/* The clock's own cell: accent marker top left, tilt owns top right. */
 .almanac-cell.is-now {
   box-shadow: inset 0 0 0 1px var(--line-accent);
 }
@@ -2163,7 +2404,7 @@ button.almanac-cell:focus-visible {
   content: "";
   position: absolute;
   top: 6px;
-  right: 6px;
+  left: 6px;
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -2182,85 +2423,342 @@ button.almanac-cell:focus-visible {
   50% { opacity: 0.35; }
 }
 
-/* Tilt marks stamped where revenge entries happened. */
 .almanac-tilt {
   position: absolute;
-  bottom: 5px;
+  top: 5px;
   right: 5px;
   padding: 2px 4px;
   border-radius: 3px;
   background: var(--warn-soft);
   color: var(--warn);
-  font: 700 8.5px/1 var(--font-mono);
+  font: 700 9px/1 var(--font-mono);
   font-style: normal;
+  letter-spacing: 0.02em;
 }
 
-.almanac-net,
+/* ── The almanac margin: what each weekday amounts to ─────────────────── */
+.almanac-margin {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 8px 6px 12px;
+  border-left: 1px solid var(--line-strong);
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.almanac-margin.is-empty {
+  border-left-color: var(--line);
+}
+
+.almanac-margin-top {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.almanac-margin-top strong {
+  font: 700 15px/1 var(--font-mono);
+  color: var(--text);
+}
+
+.almanac-margin.is-positive .almanac-margin-top strong {
+  color: var(--pnl-pos);
+}
+
+.almanac-margin.is-negative .almanac-margin-top strong {
+  color: var(--pnl-neg);
+}
+
+.almanac-margin.is-withheld .almanac-margin-top strong {
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.almanac-margin-top em {
+  font: 500 10px/1 var(--font-mono);
+  font-style: normal;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+.almanac-margin-tag {
+  align-self: flex-start;
+  padding: 2px 5px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--text-soft);
+  font: 700 8.5px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.almanac-margin-tag.is-today {
+  color: var(--accent);
+  border-color: var(--line-accent);
+}
+
+.almanac-margin-tag.is-best {
+  color: var(--pnl-pos);
+  border-color: var(--pnl-pos-line);
+  background: var(--pnl-pos-soft);
+}
+
+.almanac-margin-tag.is-worst {
+  color: var(--pnl-neg);
+  border-color: var(--pnl-neg-line);
+  background: var(--pnl-neg-soft);
+}
+
+.almanac-margin-tag.is-wh {
+  color: var(--text-faint);
+}
+
+.almanac-margin-bar {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--chart-track);
+  overflow: hidden;
+}
+
+.almanac-margin-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--text-soft);
+}
+
+.almanac-margin.is-positive .almanac-margin-bar i {
+  background: var(--pnl-pos);
+}
+
+.almanac-margin.is-negative .almanac-margin-bar i {
+  background: var(--pnl-neg);
+}
+
+.almanac-margin-say {
+  color: var(--text-faint);
+  font: 400 italic 10px/1.25 var(--font-mono);
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Footer net row ───────────────────────────────────────────────────── */
 .almanac-foot {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  color: var(--text-soft);
-  font: 600 11px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.almanac-net {
-  flex-direction: column;
-  align-items: flex-end;
   justify-content: center;
-  gap: 3px;
-  padding-right: 2px;
+  gap: 6px;
+  border-top: 1px solid var(--line-strong);
+  color: var(--text-soft);
+  font: 600 12px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
-.almanac-net strong.is-positive,
 .almanac-foot.is-positive {
   color: var(--pnl-pos);
 }
 
-.almanac-net strong.is-negative,
 .almanac-foot.is-negative {
   color: var(--pnl-neg);
 }
 
-.almanac-net span,
 .almanac-foot small {
   color: var(--text-faint);
-  font: 500 9px/1 var(--font-mono);
+  font: 500 9.5px/1 var(--font-mono);
   letter-spacing: 0.05em;
+}
+
+.almanac-foot.is-withheld {
+  color: var(--text-faint);
+  background:
+    repeating-linear-gradient(-45deg, transparent 0 5px, var(--chart-track) 5px 6px);
 }
 
 .almanac-foot-label {
   align-self: center;
+  border-top: 1px solid var(--line-strong);
+  padding-top: 8px;
 }
 
-.almanac-foot-net {
+.almanac-foot-total {
+  justify-content: flex-end;
+  padding-left: 12px;
+  border-left: 1px solid var(--line-strong);
   color: var(--text);
   font-weight: 700;
+  font-size: 13px;
 }
 
-.session-chart-legend .is-withheld::before {
-  background: repeating-linear-gradient(-45deg, transparent 0 3px, var(--chart-axis) 3px 4px);
+/* ── Legend strip ─────────────────────────────────────────────────────── */
+.almanac-legend {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 34px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  color: var(--text-faint);
+  font: 500 10px/1.2 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.almanac-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.almanac-legend-note {
+  margin-left: auto;
+  text-align: right;
+  color: var(--text-soft);
+}
+
+.almanac-sw {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  flex: none;
+}
+
+.almanac-sw.is-neg-2 {
+  background: var(--pnl-neg);
+  border-color: var(--pnl-neg-line);
+}
+
+.almanac-sw.is-neg-1 {
+  background: var(--pnl-neg-soft);
+  border-color: var(--pnl-neg-line);
+}
+
+.almanac-sw.is-pos-1 {
+  background: var(--pnl-pos-soft);
+  border-color: var(--pnl-pos-line);
+}
+
+.almanac-sw.is-pos-2 {
+  background: var(--pnl-pos);
+  border-color: var(--pnl-pos-line);
+}
+
+.almanac-sw.is-wh {
+  background:
+    repeating-linear-gradient(-45deg, transparent 0 4px, var(--chart-axis) 4px 5px)
+    var(--surface-inset);
+}
+
+.almanac-sw.is-tilt {
+  border: 0;
+  background: none;
+  width: auto;
+  color: var(--warn);
+  font: 700 10px/1 var(--font-mono);
+  font-style: normal;
+}
+
+/* Laptop heights: the same instrument, one size down. */
+@media (max-height: 900px) {
+  .session-almanac-visual {
+    padding: 8px 12px;
+    row-gap: 8px;
+  }
+
+  .almanac-pane-head {
+    min-height: 32px;
+  }
+
+  .almanac-pane-title h4 {
+    font-size: 13px;
+  }
+
+  .almanac-pane-basis {
+    display: none;
+  }
+
+  .session-almanac-matrix {
+    grid-template-rows: 18px repeat(var(--alm-rows, 5), minmax(44px, 1fr)) 32px;
+    gap: 4px;
+  }
+
+  .almanac-cell {
+    padding: 5px 7px;
+    gap: 2px;
+  }
+
+  .almanac-cell > strong {
+    font-size: 14px;
+  }
+
+  .almanac-cell > span {
+    font-size: 9.5px;
+  }
+
+  .almanac-margin {
+    gap: 3px;
+    padding-block: 4px;
+  }
+
+  .almanac-margin-top strong {
+    font-size: 13px;
+  }
+
+  .almanac-margin-tag,
+  .almanac-margin-say {
+    display: none;
+  }
+
+  .almanac-legend {
+    min-height: 26px;
+    padding-top: 6px;
+    gap: 12px;
+    font-size: 9.5px;
+  }
+}
+
+/* Phone: the 11px microtype floor wins over every density tier above. */
+@media (max-width: 720px) {
+  .almanac-cell > span,
+  .almanac-col-label,
+  .almanac-row-label,
+  .almanac-col-chip,
+  .almanac-margin-top em,
+  .almanac-margin-tag,
+  .almanac-margin-say,
+  .almanac-foot small,
+  .almanac-tilt,
+  .almanac-legend,
+  .almanac-sw.is-tilt,
+  .almanac-pane-basis,
+  .almanac-pane-edge {
+    font-size: 11px;
+  }
 }
 
 /* ── One-surface layout: matrix left, engine and radar right ─────────────── */
 .session-now-strip {
   display: flex;
+  grid-column: 2;
   justify-content: flex-end;
+  justify-self: end;
 }
 
 .session-now-chip {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 12px;
+  padding: 4px 10px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 7px;
   background: var(--surface-1);
   color: var(--text-soft);
-  font: 600 11px/1 var(--font-mono);
+  font: 600 11px/1.15 var(--font-mono);
   letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
 }
@@ -2485,95 +2983,7 @@ button.almanac-cell:focus-visible {
   flex-wrap: wrap;
 }
 
-.session-coverage-line {
-  margin: 0;
-  color: var(--text-soft);
-  font: 500 12px/1.5 var(--font-ui);
-}
-
-.session-coverage-line strong {
-  color: var(--text);
-  font: 700 15px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.session-queue-slot {
-  display: grid;
-}
-
 /* The margin panes: the almanac keeps the ledgers in its margins. */
-.session-almanac-margins {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 14px;
-  align-items: start;
-}
-
-.session-margin-pane {
-  background: var(--surface-1);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 16px;
-  display: grid;
-  gap: 12px;
-}
-
-.session-margin-head p {
-  margin: 0 0 2px;
-  color: var(--text-soft);
-  font: 700 10px/1 var(--font-mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.session-margin-head h4 {
-  margin: 0;
-  color: var(--text);
-  font: 600 14px/1.3 var(--font-ui);
-}
-
-.session-margin-note {
-  margin: 0;
-  color: var(--text-faint);
-  font: 500 11px/1.5 var(--font-ui);
-}
-
-.session-hold-compare {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.session-hold-figure {
-  display: grid;
-  gap: 3px;
-}
-
-.session-hold-figure > span {
-  color: var(--text-soft);
-  font: 600 9.5px/1 var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.session-hold-figure strong {
-  color: var(--text);
-  font: 700 16px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.session-hold-figure strong.is-positive {
-  color: var(--pnl-pos);
-}
-
-.session-hold-figure strong.is-negative {
-  color: var(--pnl-neg);
-}
-
-.session-hold-figure small {
-  color: var(--text-faint);
-  font: 500 10px/1.4 var(--font-ui);
-}
 
 /* ── The counterfactual engine ───────────────────────────────────────────── */
 .session-cf-chart {
@@ -2688,6 +3098,497 @@ button.almanac-cell:focus-visible {
 }
 
 /* ── The tilt radar ──────────────────────────────────────────────────────── */
+
+/* ══ THE BOTTOM STRIP ═══════════════════════════════════════════════════════
+   Four ledgers on one skeleton: a hairline head, a body that owns any
+   overflow, a hairline foot. The HEIGHT is set once on the container, so no
+   pane can push the page into a scrollbar no matter what the data does. */
+.session-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.strip-pane {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-1);
+}
+
+.strip-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.strip-title {
+  margin: 0;
+  color: var(--text);
+  font: 700 11px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.strip-caps {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.strip-cap {
+  overflow: hidden;
+  color: var(--text-soft);
+  font: 600 10px/1.2 var(--font-mono);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The body is the ONLY scroll surface in this region. */
+.strip-body {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+}
+
+.strip-foot {
+  margin: 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+  color: var(--text-faint);
+  font: 600 9.5px/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.strip-empty {
+  margin: 0;
+  align-self: center;
+  color: var(--text-faint);
+  font: 500 11px/1.45 var(--font-ui);
+}
+
+/* Below a sample floor a figure is not printed small, it is not printed. */
+.strip-withheld {
+  color: var(--text-faint);
+  font: 600 10px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ── Hold time ───────────────────────────────────────────────────────────── */
+.hold-medians {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: end;
+  gap: 0 16px;
+}
+
+.hold-med {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hold-med-end {
+  justify-items: end;
+  text-align: right;
+}
+
+.hold-med strong {
+  color: var(--text);
+  font: 700 22px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.hold-med strong.is-positive { color: var(--pnl-pos); }
+.hold-med strong.is-negative { color: var(--pnl-neg); }
+
+.hold-med span {
+  color: var(--text-soft);
+  font: 600 9.5px/1.2 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hold-bands {
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  min-width: 0;
+}
+
+.hold-band {
+  display: grid;
+  grid-template-columns: minmax(0, 92px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+  min-width: 0;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+
+.hold-band.is-best {
+  border-color: var(--pnl-pos-line);
+  background: var(--pnl-pos-soft);
+}
+
+.hold-band-label {
+  overflow: hidden;
+  color: var(--text-soft);
+  font: 600 10px/1.2 var(--font-mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hold-band.is-best .hold-band-label { color: var(--text); }
+
+.hold-band-bar {
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+}
+
+.hold-band-bar::before {
+  display: block;
+  width: calc(var(--fill, 0) * 100%);
+  min-width: 2px;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--line-strong);
+  content: "";
+}
+
+.hold-band.is-positive .hold-band-bar::before { background: var(--pnl-pos); }
+.hold-band.is-negative .hold-band-bar::before { background: var(--pnl-neg); }
+
+.hold-band-val {
+  color: var(--text);
+  font: 700 11.5px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.hold-band.is-positive .hold-band-val { color: var(--pnl-pos); }
+.hold-band.is-negative .hold-band-val { color: var(--pnl-neg); }
+
+/* ── Sessions ledger ─────────────────────────────────────────────────────── */
+.session-ledger {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ledger-row {
+  display: grid;
+  grid-template-columns: minmax(0, 66px) minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+  min-width: 0;
+}
+
+.ledger-name {
+  overflow: hidden;
+  color: var(--text-soft);
+  font: 600 10px/1.2 var(--font-mono);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ledger-bar {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+}
+
+.ledger-bar::before {
+  display: block;
+  width: calc(var(--fill, 0) * 100%);
+  min-width: 2px;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--line-strong);
+  content: "";
+}
+
+.ledger-row.is-positive .ledger-bar::before { background: var(--pnl-pos); }
+.ledger-row.is-negative .ledger-bar::before { background: var(--pnl-neg); }
+
+.ledger-val {
+  min-width: 68px;
+  color: var(--text);
+  font: 700 12.5px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ledger-row.is-positive .ledger-val { color: var(--pnl-pos); }
+.ledger-row.is-negative .ledger-val { color: var(--pnl-neg); }
+
+.ledger-n {
+  min-width: 40px;
+  color: var(--text-faint);
+  font: 600 10px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ── Who closed it ───────────────────────────────────────────────────────── */
+.exit-bar {
+  display: flex;
+  height: 12px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+}
+
+.exit-seg {
+  min-width: 2px;
+  height: 100%;
+}
+
+.exit-seg.is-target { background: var(--pnl-pos); }
+.exit-seg.is-manual { background: var(--warn); }
+.exit-seg.is-stop   { background: var(--pnl-neg); }
+.exit-seg.is-mixed  { background: var(--line-strong); }
+
+.exit-shares {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.exit-share {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.exit-share strong {
+  color: var(--text);
+  font: 700 15px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.exit-share.is-target strong { color: var(--pnl-pos); }
+.exit-share.is-manual strong { color: var(--warn); }
+.exit-share.is-stop   strong { color: var(--pnl-neg); }
+.exit-share.is-mixed  strong { color: var(--text-soft); }
+
+.exit-share span {
+  overflow: hidden;
+  color: var(--text-soft);
+  font: 600 9.5px/1.2 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exit-cost {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-inset);
+}
+
+.exit-cost-label {
+  color: var(--text-soft);
+  font: 600 9.5px/1.25 var(--font-mono);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.exit-cost-value {
+  color: var(--text);
+  font: 700 15px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.exit-cost-value.is-positive { color: var(--pnl-pos); }
+.exit-cost-value.is-negative { color: var(--pnl-neg); }
+
+/* ── Journal coverage ────────────────────────────────────────────────────── */
+.cov-figures {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 0;
+  min-width: 0;
+}
+
+.cov-figures strong {
+  color: var(--text);
+  font: 700 26px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.cov-of {
+  color: var(--text-faint);
+  font: 600 15px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.cov-pct {
+  margin-left: auto;
+  color: var(--text-soft);
+  font: 700 15px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.cov-pct.is-positive { color: var(--pnl-pos); }
+.cov-pct.is-warn     { color: var(--warn); }
+
+.cov-streak { color: var(--accent); }
+
+.cov-flag {
+  padding: 1px 5px;
+  border: 1px solid var(--warn);
+  border-radius: 4px;
+  color: var(--warn);
+  font-size: 9px;
+  line-height: 1.4;
+  letter-spacing: 0.07em;
+}
+
+.cov-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+}
+
+.cov-bar > span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.cov-rows {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  min-width: 0;
+}
+
+.cov-rows > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cov-rows > div:last-child { border-bottom: 0; }
+
+.cov-rows dt {
+  color: var(--text-soft);
+  font: 600 9.5px/1.3 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cov-rows dd {
+  overflow: hidden;
+  margin: 0;
+  color: var(--text);
+  font: 700 10.5px/1.3 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+  #session-intelligence .session-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    height: 216px;
+  }
+
+/* Laptop: 1440x800 leaves about 710px of viewport after chrome. The strip
+   gives back 40px and steps its three display figures down; only the hold
+   band well loses rows, and it scrolls. */
+@media (min-width: 1240px) and (max-height: 900px) {
+  #session-intelligence .session-strip { height: 176px; }
+  #session-intelligence .hold-med strong { font-size: 19px; }
+  #session-intelligence .cov-figures strong { font-size: 21px; }
+  #session-intelligence .exit-share strong { font-size: 13px; }
+  #session-intelligence .session-ledger { gap: 2px; }
+  #session-intelligence .ledger-row { min-height: 22px; }
+}
+
+/* Microtype floor. Nothing under 11px once the strip stacks. */
+@media (max-width: 640px) {
+  .strip-cap,
+  .strip-foot,
+  .strip-withheld,
+  .hold-med span,
+  .hold-band-label,
+  .hold-band-val,
+  .ledger-name,
+  .ledger-n,
+  .exit-share span,
+  .exit-cost-label,
+  .cov-flag,
+  .cov-rows dt,
+  .cov-rows dd {
+    font-size: 11px;
+  }
+
+  .hold-band {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 4px;
+  }
+
+  .hold-band-bar { grid-column: 1 / -1; }
+
+  .exit-shares { flex-wrap: wrap; }
+}
 
 /* One details panel at a time, opened only after an almanac cell is selected. */
 .session-trade-drawer {
@@ -3055,33 +3956,6 @@ button.almanac-cell:focus-visible {
     grid-column: 1 / -1;
   }
 
-  .session-context {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .session-context > * {
-    border-top: 1px solid var(--line);
-  }
-
-  .session-context > :nth-child(-n + 2) {
-    border-top: 0;
-  }
-
-  .session-context > :nth-child(even) {
-    border-right: 0;
-  }
-
-  .session-context > :nth-child(3),
-  .session-context > :nth-child(4),
-  .session-context > :nth-child(5) {
-    grid-column: auto;
-  }
-
-  .session-context > :nth-child(5) {
-    grid-column: 1 / -1;
-    border-right: 0;
-  }
-
   .session-score-row,
   .session-duration-band {
     grid-template-columns: minmax(135px, 0.75fr) minmax(160px, 1.4fr);
@@ -3135,18 +4009,14 @@ button.almanac-cell:focus-visible {
   }
 
   /* The matrix keeps its instrument density inside its own scroller, but
-     every label steps up to the 11px phone floor. */
-  .almanac-col-label,
-  .almanac-row-label,
-  .almanac-cell > span,
-  .almanac-wh,
-  .almanac-tilt,
-  .almanac-net span,
-  .almanac-foot small,
-  .session-margin-head p,
-  .session-hold-figure > span,
-  .session-hold-figure small,
-  .session-cf-chip {
+     every label steps up to the 11px phone floor. */.almanac-col-label,
+.almanac-row-label,
+.almanac-cell > span,
+.almanac-wh,
+.almanac-tilt,
+.almanac-net span,
+.almanac-foot small,
+.session-cf-chip {
     font-size: 11px;
   }
 
@@ -3193,22 +4063,6 @@ button.almanac-cell:focus-visible {
 
 
 @media (max-width: 520px) {
-  .session-context {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .session-context > *,
-  .session-context > :nth-child(-n + 2),
-  .session-context > :nth-child(even),
-  .session-context > :nth-child(5) {
-    grid-column: auto;
-    border-top: 1px solid var(--line);
-    border-right: 0;
-  }
-
-  .session-context > :first-child {
-    border-top: 0;
-  }
 
   .session-context-field,
   .session-context-readout {

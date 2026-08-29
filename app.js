@@ -601,12 +601,14 @@ const ui = {
   sessionTimingSource: document.getElementById("sessionTimingSource"),
   sessionTimingCoverage: document.getElementById("sessionTimingCoverage"),
   sessionImportedSource: document.getElementById("sessionImportedSource"),
+  sessionDataFlag: document.getElementById("sessionDataFlag"),
   sessionAnalyzedCount: document.getElementById("sessionAnalyzedCount"),
   sessionHeaderNet: document.getElementById("sessionHeaderNet"),
   sessionConfidence: document.getElementById("sessionConfidence"),
   sessionComparisonHeading: document.getElementById("sessionComparisonHeading"),
   sessionAlmanacNow: document.getElementById("sessionAlmanacNow"),
   sessionAlmanacEdgeline: document.getElementById("sessionAlmanacEdgeline"),
+  sessionAlmanacBasis: document.getElementById("sessionAlmanacBasis"),
   sessionAlmanacMatrix: document.getElementById("sessionAlmanacMatrix"),
   sessionAlmanacNote: document.getElementById("sessionAlmanacNote"),
   sessionCfConclusion: document.getElementById("sessionCfConclusion"),
@@ -627,25 +629,30 @@ const ui = {
   sessionWinningHoldMeta: document.getElementById("sessionWinningHoldMeta"),
   sessionLosingHold: document.getElementById("sessionLosingHold"),
   sessionLosingHoldMeta: document.getElementById("sessionLosingHoldMeta"),
-  sessionBestDuration: document.getElementById("sessionBestDuration"),
-  sessionBestDurationMeta: document.getElementById("sessionBestDurationMeta"),
   sessionScorecard: document.getElementById("sessionScorecard"),
-  sessionTopstepExecution: document.getElementById("sessionTopstepExecution"),
-  sessionTopstepExecutionConfidence: document.getElementById("sessionTopstepExecutionConfidence"),
-  sessionTopstepExecutionSummary: document.getElementById("sessionTopstepExecutionSummary"),
-  sessionTopstepScaleInsight: document.getElementById("sessionTopstepScaleInsight"),
-  sessionTopstepExitInsight: document.getElementById("sessionTopstepExitInsight"),
-  sessionTopstepExitCost: document.getElementById("sessionTopstepExitCost"),
-  sessionTopstepReversalInsight: document.getElementById("sessionTopstepReversalInsight"),
-  sessionTopstepPnlBasisInsight: document.getElementById("sessionTopstepPnlBasisInsight"),
-  sessionTopstepExecutionNote: document.getElementById("sessionTopstepExecutionNote"),
+  sessionHoldBasis: document.getElementById("sessionHoldBasis"),
+  sessionHoldRatio: document.getElementById("sessionHoldRatio"),
+  sessionHoldRatioMeta: document.getElementById("sessionHoldRatioMeta"),
+  sessionLedgerBasis: document.getElementById("sessionLedgerBasis"),
+  sessionLedgerFoot: document.getElementById("sessionLedgerFoot"),
+  sessionExitBasis: document.getElementById("sessionExitBasis"),
+  sessionExitEmpty: document.getElementById("sessionExitEmpty"),
+  sessionExitBar: document.getElementById("sessionExitBar"),
+  sessionExitShares: document.getElementById("sessionExitShares"),
+  sessionExitCostRow: document.getElementById("sessionExitCostRow"),
+  sessionExitCostLabel: document.getElementById("sessionExitCostLabel"),
+  sessionExitCostValue: document.getElementById("sessionExitCostValue"),
+  sessionExitFoot: document.getElementById("sessionExitFoot"),
+  sessionCoverageTotal: document.getElementById("sessionCoverageTotal"),
+  sessionCoverageStreak: document.getElementById("sessionCoverageStreak"),
+  sessionCoverageOldest: document.getElementById("sessionCoverageOldest"),
+  sessionCoverageScar: document.getElementById("sessionCoverageScar"),
   sessionDurationBands: document.getElementById("sessionDurationBands"),
   sessionReportTimeZone: document.getElementById("sessionReportTimeZone"),
   sessionTradeDrawer: document.getElementById("sessionTradeDrawer"),
   sessionTradeDrawerTitle: document.getElementById("sessionTradeDrawerTitle"),
   sessionTradeDrawerBody: document.getElementById("sessionTradeDrawerBody"),
   sessionTradeDrawerClose: document.getElementById("sessionTradeDrawerClose"),
-  sessionCoverageConclusion: document.getElementById("sessionCoverageConclusion"),
   sessionJournaledCount: document.getElementById("sessionJournaledCount"),
   sessionUnjournalledCount: document.getElementById("sessionUnjournalledCount"),
   sessionCoveragePercent: document.getElementById("sessionCoveragePercent"),
@@ -8712,21 +8719,43 @@ function renderSessionTiming(report) {
   }
   if (ui.sessionHeadline) ui.sessionHeadline.textContent = report.headline.sentence;
   if (ui.sessionImportedSource) {
-    ui.sessionImportedSource.textContent = report.source.topstepDetected
-      ? `${report.source.label} · detected`
+    ui.sessionImportedSource.textContent = report.source.label;
+    ui.sessionImportedSource.title = report.source.topstepDetected
+      ? `${report.source.label} · Topstep export detected`
       : report.source.label;
   }
-  if (ui.sessionAnalyzedCount) ui.sessionAnalyzedCount.textContent = `${report.coverage.analyzed} analyzed`;
+  if (ui.sessionAnalyzedCount) {
+    ui.sessionAnalyzedCount.textContent = `${report.coverage.analyzed} closed trades`;
+    ui.sessionAnalyzedCount.title = `${report.coverage.analyzed} of ${report.coverage.total} closed · ${report.coverage.timed} with entry times · ${report.coverage.durationKnown} measured holds`;
+  }
+  // The mockup's "sample data" sticker would be a lie over a live account.
+  // This slot carries a counted caveat instead, and hides when there is none.
+  if (ui.sessionDataFlag) {
+    const coverage = report.coverage;
+    const flag = report.pnl.isEstimated
+      ? "P&L estimated, not broker net"
+      : coverage.missingPnl > 0
+        ? `${coverage.missingPnl} trades without P&L`
+        : coverage.unresolved > 0
+          ? `${coverage.unresolved} trades without entry time`
+          : coverage.assumed > 0
+            ? `${coverage.assumed} entry times assumed`
+            : report.timeZones.source.requiresConfirmation
+              ? "Source timezone unconfirmed"
+              : "";
+    ui.sessionDataFlag.textContent = flag;
+    ui.sessionDataFlag.hidden = !flag;
+  }
   if (ui.sessionHeaderNet) {
     setTimingValue(
       ui.sessionHeaderNet,
-      report.coverage.analyzed ? timingMoney(report.pnl.value) : "—",
+      report.coverage.analyzed ? timingMoney(report.pnl.value) : "n/a",
       report.coverage.analyzed ? timingTone(report.pnl.value) : ""
     );
     ui.sessionHeaderNet.title = report.pnl.label;
   }
   if (ui.sessionConfidence) {
-    ui.sessionConfidence.textContent = report.confidence.label;
+    ui.sessionConfidence.textContent = `${report.confidence.label} (n=${report.confidence.count})`;
     ui.sessionConfidence.classList.remove("is-early", "is-developing", "is-reliable");
     ui.sessionConfidence.classList.add(`is-${report.confidence.key === "none" ? "early" : report.confidence.key}`);
     ui.sessionConfidence.title = timingConfidenceCopy(report.confidence);
@@ -8739,11 +8768,7 @@ function renderSessionTiming(report) {
   renderSessionCounterfactual(report);
   renderSessionTilt(report);
   renderSessionScorecard(report);
-  renderSessionTopstepExecution(report);
-  // Kept out of renderSessionTopstepExecution on purpose: that function is
-  // extracted and evaluated in isolation by its own integration check, so a
-  // call to a sibling declared elsewhere in the module would break it.
-  renderExitDiscipline();
+  renderExitDiscipline(report);
   renderSessionDurations(report);
   renderSessionCoverage(report);
 }
@@ -8806,193 +8831,6 @@ function summarizeExitDiscipline(trades) {
   };
 }
 
-function renderExitDiscipline() {
-  if (!ui.sessionTopstepExitInsight && !ui.sessionTopstepExitCost) {
-    return;
-  }
-  const summary = summarizeExitDiscipline(getClosedTrades());
-  if (!summary) {
-    if (ui.sessionTopstepExitInsight) {
-      ui.sessionTopstepExitInsight.textContent = "Import a Topstep Orders export to see whether the bracket or your hand closed each trade.";
-    }
-    if (ui.sessionTopstepExitCost) {
-      ui.sessionTopstepExitCost.textContent = "Awaiting completed cycles";
-    }
-    return;
-  }
-
-  if (ui.sessionTopstepExitInsight) {
-    const share = (row) => Math.round((row.count / summary.known) * 100);
-    ui.sessionTopstepExitInsight.textContent = summary.rows
-      .map((row) => `${row.label} ${share(row)}% (n=${row.count})`)
-      .join(" · ");
-  }
-
-  if (ui.sessionTopstepExitCost) {
-    if (!summary.manual || summary.manual.count === 0) {
-      ui.sessionTopstepExitCost.textContent = `Every cycle closed on a bracket across ${summary.known} exits. Nothing was closed by hand.`;
-    } else if (!summary.comparable) {
-      ui.sessionTopstepExitCost.textContent = `${summary.manual.count} closed by hand at ${timingMoney(summary.manual.expectancy)} per cycle. A verdict needs five a side; the bracket has ${summary.plannedCount}.`;
-    } else {
-      const gap = summary.gap;
-      const total = round(Math.abs(gap) * summary.manual.count);
-      // Magnitudes, not signed figures: "runs +$162 behind" states the
-      // direction twice and contradicts itself once.
-      ui.sessionTopstepExitCost.textContent = gap < 0
-        ? `Closing by hand runs ${formatCurrency(Math.abs(gap))} per cycle behind letting the bracket work, which is ${formatCurrency(total)} across the ${summary.manual.count} you closed yourself.`
-        : `Closing by hand runs ${formatCurrency(Math.abs(gap))} per cycle ahead of the bracket across ${summary.manual.count} cycles. Your discretion is beating your plan here.`;
-    }
-  }
-}
-
-function renderSessionTopstepExecution(report) {
-  if (!ui.sessionTopstepExecution) return;
-  const quality = report?.dataQuality;
-  const lifecycle = report?.lifecycle;
-  const topstepTrades = Number(quality?.topstepTrades || 0);
-  const topstepOrders = Number(quality?.topstepOrders || 0);
-  const topstepTotal = topstepTrades + topstepOrders;
-  const visible = Boolean(report?.source?.topstepDetected && topstepTotal > 0);
-  ui.sessionTopstepExecution.hidden = !visible;
-  if (!visible) return;
-
-  const reliableFloor = Math.max(1, Number(report.minimumReliableSamples || 5));
-  const confidenceKey = topstepTotal >= reliableFloor
-    ? "reliable"
-    : topstepTotal >= Math.max(2, Math.ceil(reliableFloor / 2))
-      ? "developing"
-      : "early";
-  if (ui.sessionTopstepExecutionConfidence) {
-    const needed = Math.max(0, reliableFloor - topstepTotal);
-    const confidenceLabel = confidenceKey === "reliable"
-      ? "Reliable sample"
-      : confidenceKey === "developing"
-        ? "Developing"
-        : "Early signal";
-    ui.sessionTopstepExecutionConfidence.textContent = `${confidenceLabel} · n=${topstepTotal}`;
-    ui.sessionTopstepExecutionConfidence.title = needed
-      ? `${needed} more Topstep cycles needed for the reliable sample floor.`
-      : `Meets the ${reliableFloor}-cycle sample floor.`;
-    ui.sessionTopstepExecutionConfidence.classList.remove("is-early", "is-developing", "is-reliable");
-    ui.sessionTopstepExecutionConfidence.classList.add(`is-${confidenceKey}`);
-  }
-
-  if (ui.sessionTopstepExecutionSummary) {
-    const sourceParts = [];
-    if (topstepTrades) sourceParts.push(`${topstepTrades} paired ${topstepTrades === 1 ? "Trades record" : "Trades records"}`);
-    if (topstepOrders) sourceParts.push(`${topstepOrders} normalized ${topstepOrders === 1 ? "Orders cycle" : "Orders cycles"}`);
-    const scope = sourceParts.join(" and ");
-    ui.sessionTopstepExecutionSummary.textContent = topstepOrders
-      ? `${scope} analyzed. Orders cycles expose execution structure; fill counts describe what executed, not trader intent.`
-      : `${scope} analyzed. Paired Trades preserve timing, broker P&L, and cost evidence, but not the underlying fill sequence.`;
-  }
-
-  if (ui.sessionTopstepScaleInsight) {
-    const entryRows = lifecycle?.entryStructure?.segments || [];
-    const single = timingSegment(entryRows, "single-fill-entry");
-    const multi = timingSegment(entryRows, "multi-fill-entry");
-    const reentry = timingSegment(entryRows, "re-entry-after-partial-exit");
-    const comparison = lifecycle?.entryStructure?.singleVsMultiFill;
-    const reentrySuffix = reentry?.count
-      ? ` ${reentry.count} ${reentry.count === 1 ? "cycle reopened" : "cycles reopened"} quantity after a partial exit.`
-      : "";
-    if (!topstepOrders) {
-      ui.sessionTopstepScaleInsight.textContent = "Paired Trades do not include their opening-fill sequence; import Orders to study fill structure.";
-    } else if (comparison?.reliable && comparison.favoredKey) {
-      const favored = comparison.favoredKey === single?.key ? single : multi;
-      ui.sessionTopstepScaleInsight.textContent = `${favored?.label || "One entry structure"} has ${timingMoney(Math.abs(comparison.expectancyDelta))} higher expectancy than the alternative (n=${single?.count || 0} vs n=${multi?.count || 0}).${reentrySuffix}`;
-    } else if (comparison?.available) {
-      ui.sessionTopstepScaleInsight.textContent = `Single- vs multi-fill entry is developing (n=${single?.count || 0} vs n=${multi?.count || 0}); each needs ${comparison.sampleFloor} cycles.${reentrySuffix}`;
-    } else if (Number(lifecycle?.coverage?.entryStructureKnown || 0) > 0) {
-      ui.sessionTopstepScaleInsight.textContent = `${multi?.count || 0} of ${lifecycle.coverage.entryStructureKnown} cycles used multiple opening fills. A comparison needs both structures.${reentrySuffix}`;
-    } else {
-      ui.sessionTopstepScaleInsight.textContent = "Opening-fill structure was not preserved for these cycles.";
-    }
-  }
-
-  if (ui.sessionTopstepReversalInsight) {
-    const reversal = lifecycle?.reversal;
-    const comparison = reversal?.comparison;
-    const linked = Number(lifecycle?.coverage?.reversalLinked || 0);
-    const linkedRow = timingSegment(reversal?.segments, "reversal-linked");
-    const standaloneRow = timingSegment(reversal?.segments, "standalone-orders");
-    if (!topstepOrders) {
-      ui.sessionTopstepReversalInsight.textContent = "Reversal links require normalized Orders cycles with persisted source-order fingerprints.";
-    } else if (comparison?.reliable && comparison.favoredKey) {
-      const favored = comparison.favoredKey === linkedRow?.key ? linkedRow : standaloneRow;
-      ui.sessionTopstepReversalInsight.textContent = `${favored?.label || "One cycle group"} has ${timingMoney(Math.abs(comparison.expectancyDelta))} higher expectancy (n=${linkedRow?.count || 0} vs n=${standaloneRow?.count || 0}).`;
-    } else if (linked > 0) {
-      ui.sessionTopstepReversalInsight.textContent = `${linked} ${linked === 1 ? "cycle shares" : "cycles share"} a source-order fingerprint with another cycle. A reliable comparison needs ${comparison?.sampleFloor || reliableFloor} linked and standalone cycles.`;
-    } else {
-      ui.sessionTopstepReversalInsight.textContent = "No shared-fill reversal links were found in this date range.";
-    }
-  }
-
-  if (ui.sessionTopstepPnlBasisInsight) {
-    const pnl = quality?.pnlAndCosts;
-    if (!pnl?.total) {
-      ui.sessionTopstepPnlBasisInsight.textContent = "No completed Topstep P&L is available in this range.";
-    } else {
-      const netCount = Number(pnl.exactNet || 0) + Number(pnl.estimatedNet || 0);
-      const basisParts = [];
-      if (pnl.exactNet) basisParts.push(`${pnl.exactNet} exact net`);
-      if (pnl.estimatedNet) basisParts.push(`${pnl.estimatedNet} estimated net`);
-      if (pnl.grossOnly) basisParts.push(`${pnl.grossOnly} gross-only`);
-      if (pnl.brokerOnly) basisParts.push(`${pnl.brokerOnly} broker-only`);
-      if (pnl.missing) basisParts.push(`${pnl.missing} missing`);
-      const costCopy = netCount === pnl.total
-        ? "Every cycle includes an evidenced or provenance-stamped cost basis."
-        : `${pnl.total - netCount} ${pnl.total - netCount === 1 ? "cycle remains" : "cycles remain"} outside a net basis and are never relabeled net.`;
-      ui.sessionTopstepPnlBasisInsight.textContent = `${basisParts.join(" · ")}. ${costCopy}`;
-    }
-  }
-
-  if (ui.sessionTopstepExecutionNote) {
-    const execution = quality?.execution;
-    const complete = Number(execution?.complete || 0);
-    const total = Number(execution?.total || topstepTotal);
-    const excluded = Number(quality?.rawOrderRowsExcluded || 0);
-    const excludedCopy = excluded
-      ? ` ${excluded} non-normalized or incomplete ${excluded === 1 ? "row stays" : "rows stay"} outside cycle analytics.`
-      : "";
-    ui.sessionTopstepExecutionNote.textContent = `Complete entry, exit, and hold timing is available for ${complete} of ${total} Topstep cycles.${excludedCopy} Endpoints still cannot measure time above breakeven, MFE, MAE, or winner giveback.`;
-  }
-}
-
-function renderSessionScorecard(report) {
-  if (!ui.sessionScorecard) return;
-  if (ui.sessionComparisonHeading) ui.sessionComparisonHeading.textContent = `${report.pnl.label} by entry session`;
-  const active = report.sessions.filter((row) => row.count > 0);
-  if (!active.length) {
-    ui.sessionScorecard.innerHTML = '<p class="session-empty-copy">Import timestamped closed trades to compare Asia, London, New York, and off-session entries.</p>';
-    return;
-  }
-  const peak = Math.max(...active.map((row) => Math.abs(row.pnl)), 1);
-  ui.sessionScorecard.innerHTML = report.sessions.map((row) => {
-    const reliable = row.confidence.key === "reliable";
-    const tone = !row.count ? "is-empty" : reliable ? timingTone(row.pnl) : "is-early";
-    const magnitude = row.count ? Math.abs(row.pnl) / peak : 0;
-    const details = row.count
-      ? `${row.label}: ${timingMoney(row.pnl)} ${row.pnlLabel}, ${timingMoney(row.expectancy)} expectancy, ${Math.round(row.winRate)}% win rate, average hold ${formatTimingDuration(row.avgHoldMs)}, ${timingConfidenceCopy(row.confidence)}`
-      : `${row.label}: no trades`;
-    return `
-      <article class="session-score-row ${tone}" role="listitem" tabindex="${row.count ? "0" : "-1"}" title="${escapeHtml(details)}" aria-label="${escapeHtml(details)}" style="--session-score-size:${magnitude.toFixed(3)}">
-        <div class="session-score-main">
-          <strong class="session-score-name">${escapeHtml(row.label)}</strong>
-          <span class="session-score-pnl">${row.count ? escapeHtml(timingMoney(row.pnl)) : "—"}</span>
-        </div>
-        <span class="session-score-track" aria-hidden="true"><span class="session-score-fill"></span></span>
-        <p class="session-score-meta">${row.count ? `n=${row.count} · ${escapeHtml(row.confidence.label)}` : "No trades"}</p>
-      </article>`;
-  }).join("");
-}
-
-/* ══ THE ALMANAC ═══════════════════════════════════════════════════════════
-   The pure module buckets every analyzed trade with a broker entry timestamp
-   into one weekday-by-hour cell of the report timezone. These renderers only
-   state those results: cells publish at the reliable floor, columns at three
-   times it, and everything thinner is withheld, never estimated. */
-
 function almanacCellName(cell) {
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const start = String(cell.hour).padStart(2, "0");
@@ -9040,20 +8878,22 @@ function renderSessionAlmanacNow(report) {
     const nowCell = cellByKey.get(nowKey);
     const reliable = nowCell?.confidence.key === "reliable";
     const clock = `Now ${now.label} ${String(now.hour).padStart(2, "0")}:${String(now.minute).padStart(2, "0")} ${zoneShort}`;
-    const minutesLeft = `${60 - now.minute}m left in this cell`;
+    const remaining = `${60 - now.minute}m remaining`;
     if (nowCell && reliable && nowCell.expectancy > 0) {
       nowTone = "is-positive";
-      nowText = `${clock} · in the vein · pays ${timingMoney(nowCell.expectancy)}/trade ${nowCell.pnlLabel.toLowerCase()} · ${minutesLeft}`;
+      nowText = `${clock} · inside the proven vein · ${remaining}`;
     } else if (nowCell && redKeys.has(nowCell.key)) {
       nowTone = "is-negative";
-      nowText = `${clock} · in a scar · bills ${timingMoney(Math.abs(nowCell.expectancy))}/trade ${nowCell.pnlLabel.toLowerCase()} · ${minutesLeft}`;
+      nowText = `${clock} · inside a scar · ${remaining}`;
     } else if (nowCell && reliable) {
-      nowText = `${clock} · flat · this cell has paid ${timingMoney(0)}/trade across n=${nowCell.count} · ${minutesLeft}`;
-    } else if (nowCell) {
-      nowText = `${clock} · uncharted · n=${nowCell.count} here, below the reliable floor`;
+      nowText = `${clock} · flat cell · ${remaining}`;
     } else {
-      nowText = `${clock} · uncharted · you have not traded this cell`;
+      nowText = `${clock} · uncharted · ${remaining}`;
     }
+    // The figures the chip stopped printing stay one hover away.
+    ui.sessionAlmanacNow.title = nowCell
+      ? `${timingMoney(nowCell.expectancy)}/trade across n=${nowCell.count} · ${nowCell.pnlLabel}`
+      : "No trades recorded in this cell";
   }
   setTimingValue(ui.sessionAlmanacNow, nowText, nowTone);
   if (ui.sessionAlmanacMatrix) {
@@ -9073,28 +8913,33 @@ function renderSessionAlmanac(report) {
   const cellByKey = new Map(cells.map((cell) => [cell.key, cell]));
   const tiltByKey = new Map((report.tilt?.cells || []).map((cell) => [cell.key, cell.count]));
   const redKeys = new Set(almanac.redCells.map((cell) => cell.key));
-  const reliableCells = cells.filter((cell) => cell.confidence.key === "reliable");
-  const best = reliableCells.filter((cell) => cell.expectancy > 0).sort((a, b) => b.expectancy - a.expectancy)[0] || null;
-  const worst = reliableCells.filter((cell) => cell.expectancy < 0).sort((a, b) => a.expectancy - b.expectancy)[0] || null;
+  const publishedCells = cells.filter((cell) => cell.confidence.key === "reliable");
+  const best = publishedCells.filter((cell) => cell.expectancy > 0).sort((a, b) => b.expectancy - a.expectancy)[0] || null;
+  const worst = publishedCells.filter((cell) => cell.expectancy < 0).sort((a, b) => a.expectancy - b.expectancy)[0] || null;
+  const columnFloor = almanac.columnSampleFloor;
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dayHours = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+  const overnightHours = [17, 18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5, 6];
+  const nowSlot = almanacNowSlot(report.reportTimeZone);
 
-  if (ui.sessionAlmanacEdgeline) {
-    ui.sessionAlmanacEdgeline.textContent = !cells.length
-      ? "Import closed trades to chart your weeks."
-      : [
-          best
-            ? `Vein ${almanacCellName(best)} · ${timingMoney(best.expectancy)}/trade ${best.pnlLabel.toLowerCase()}`
-            : "Vein not proven yet",
-          worst
-            ? `Scar ${almanacCellName(worst)} · ${timingMoney(worst.expectancy)}/trade`
-            : "No reliable scar",
-          `${reliableCells.length} of ${cells.length} cells at the ${almanac.cellSampleFloor}-trade floor`
-        ].join(" · ");
+  // Columns publish at three times the cell floor, same as the footer.
+  const publishedCols = (report.hours || []).filter((row) => row.count >= columnFloor);
+  const veinCol = publishedCols.filter((row) => row.expectancy > 0).sort((a, b) => b.expectancy - a.expectancy)[0] || null;
+  const scarCol = publishedCols.filter((row) => row.expectancy < 0).sort((a, b) => a.expectancy - b.expectancy)[0] || null;
+
+  if (ui.sessionAlmanacBasis) {
+    const zone = (timingZoneLabel(report.reportTimeZone).match(/\(([^)]+)\)$/) || [])[1] || "";
+    ui.sessionAlmanacBasis.textContent = `$/trade · entry time${zone ? ` · ${zone}` : ""}`;
   }
-
-  // The note refreshes before any early return so a filter change that
-  // empties the range never leaves the previous range's copy behind.
+  if (ui.sessionAlmanacEdgeline) {
+    ui.sessionAlmanacEdgeline.textContent = [
+      veinCol ? `Edge window ${veinCol.label}` : "Edge window not proven",
+      scarCol ? `Scar ${scarCol.label}` : "No proven scar"
+    ].join(" · ");
+  }
+  // The floors, stated once, in the legend where the hatch swatch sits.
   if (ui.sessionAlmanacNote) {
-    ui.sessionAlmanacNote.textContent = `${timingZoneLabel(report.reportTimeZone)} · Cells publish at ${almanac.cellSampleFloor} trades and columns at ${almanac.columnSampleFloor}; thinner samples are withheld, never estimated. Click a cell to inspect its trades.`;
+    ui.sessionAlmanacNote.textContent = `Cells n<${almanac.cellSampleFloor}, columns n<${columnFloor} · withheld, never estimated`;
   }
 
   if (!cells.length) {
@@ -9103,13 +8948,20 @@ function renderSessionAlmanac(report) {
     return;
   }
 
-  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const dayHours = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
-  const overnightHours = [17, 18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5, 6];
   const weekdayByDay = new Map(almanac.weekdays.map((row) => [row.day, row]));
   const days = [1, 2, 3, 4, 5, 6, 0].filter((day) => (day >= 1 && day <= 5) || weekdayByDay.has(day));
-  const maxHeat = Math.max(...reliableCells.map((cell) => Math.abs(cell.expectancy)), 1);
-  const columnFloor = almanac.columnSampleFloor;
+  const maxHeat = Math.max(...publishedCells.map((cell) => Math.abs(cell.expectancy)), 1);
+
+  // A weekday's percentile is its $/trade against the published-cell
+  // distribution, suppressed below four cells because a percentile over three
+  // points is noise. The exact fraction travels in the title.
+  const percentileOf = (expectancy) => {
+    if (publishedCells.length < 4) return null;
+    const below = publishedCells.filter((cell) => cell.expectancy < expectancy).length;
+    return { pct: Math.round((below / publishedCells.length) * 100), below, of: publishedCells.length };
+  };
+  const publishedDays = almanac.weekdays.filter((row) => row.count >= columnFloor);
+  const rankOrder = [...publishedDays].sort((a, b) => a.expectancy - b.expectancy);
 
   const combine = (keys) => {
     let pnl = 0;
@@ -9130,7 +8982,7 @@ function renderSessionAlmanac(report) {
   };
 
   const tiltMark = (count, name) => count
-    ? `<i class="almanac-tilt" title="${escapeHtml(`${count} revenge ${count === 1 ? "entry" : "entries"} in ${name}`)}">${count}</i>`
+    ? `<i class="almanac-tilt" title="${escapeHtml(`${count} revenge ${count === 1 ? "entry" : "entries"} in ${name}`)}">&#9650;${count}</i>`
     : "";
 
   const cellButton = (cell, key, name) => {
@@ -9138,15 +8990,17 @@ function renderSessionAlmanac(report) {
       return `<span class="almanac-cell is-empty" data-almanac-slot="${key}" aria-hidden="true"></span>`;
     }
     const reliable = cell.confidence.key === "reliable";
-    const tone = reliable ? (cell.expectancy > 0 ? "is-positive" : cell.expectancy < 0 ? "is-negative" : "is-flat") : "is-withheld";
+    let tone = reliable ? (cell.expectancy > 0 ? "is-positive" : cell.expectancy < 0 ? "is-negative" : "is-flat") : "is-withheld";
+    if (best && cell.key === best.key) tone += " is-vein";
+    if (worst && cell.key === worst.key) tone += " is-scar";
     const heat = reliable ? Math.min(Math.abs(cell.expectancy) / maxHeat, 1) : 0;
     const selected = state.sessionIntelligence.selectedCell === key;
     const details = reliable
       ? `${name}: ${timingMoney(cell.expectancy)} expectancy per trade (${cell.pnlLabel}), ${Math.round(cell.winRate)}% win rate, ${timingTradeCount(cell.count)}, ${cell.confidence.label}`
       : `${name}: ${timingTradeCount(cell.count)}, below the ${almanac.cellSampleFloor}-trade floor · figures withheld, never estimated`;
     const body = reliable
-      ? `<strong>${escapeHtml(timingMoney(Math.round(cell.expectancy)))}</strong><span>n=${cell.count} · ${Math.round(cell.winRate)}%</span>`
-      : `<span class="almanac-wh">wh · ${cell.count}</span>`;
+      ? `<strong>${escapeHtml(timingMoney(Math.round(cell.expectancy)))}</strong><span>n=${cell.count} · win ${Math.round(cell.winRate)}%</span>`
+      : `<strong>n=${cell.count}</strong><span>Withheld</span>`;
     return `
       <button
         class="almanac-cell ${tone}"
@@ -9160,41 +9014,74 @@ function renderSessionAlmanac(report) {
       >${body}${tiltMark(tiltByKey.get(key) || 0, name)}</button>`;
   };
 
-  // Column chips mark the proven vein and the deepest scar among columns
-  // that clear the column floor, mirroring the cells' own rule.
-  const publishedCols = (report.hours || []).filter((row) => row.count >= columnFloor);
-  const veinCol = publishedCols.filter((row) => row.expectancy > 0).sort((a, b) => b.expectancy - a.expectancy)[0] || null;
-  const scarCol = publishedCols.filter((row) => row.expectancy < 0).sort((a, b) => a.expectancy - b.expectancy)[0] || null;
   const colChip = (hour) => veinCol && veinCol.hour === hour
-    ? ' <i class="almanac-col-chip is-vein">vein</i>'
+    ? ' <i class="almanac-col-chip is-vein">Vein</i>'
     : scarCol && scarCol.hour === hour
-      ? ' <i class="almanac-col-chip is-scar">scar</i>'
+      ? ' <i class="almanac-col-chip is-scar">Scar</i>'
       : "";
-  // A vein or scar column living in the folded overnight hours still gets
-  // its chip, on the OFF-HRS header, with the actual hour in the title.
+  // A vein or scar hiding in the folded overnight hours still gets its chip.
   const offChips = [
     veinCol && !dayHours.includes(veinCol.hour)
-      ? ` <i class="almanac-col-chip is-vein" title="${escapeHtml(`Vein column: ${formatTimingHourRange(veinCol.label)}`)}">vein</i>`
+      ? ` <i class="almanac-col-chip is-vein" title="${escapeHtml(`Vein column: ${veinCol.label}`)}">Vein</i>`
       : "",
     scarCol && !dayHours.includes(scarCol.hour)
-      ? ` <i class="almanac-col-chip is-scar" title="${escapeHtml(`Scar column: ${formatTimingHourRange(scarCol.label)}`)}">scar</i>`
+      ? ` <i class="almanac-col-chip is-scar" title="${escapeHtml(`Scar column: ${scarCol.label}`)}">Scar</i>`
       : ""
   ].join("");
   const header = [
     '<span class="almanac-corner" aria-hidden="true"></span>',
-    `<span class="almanac-col-label">OFF-HRS${offChips}</span>`,
+    `<span class="almanac-col-label">OVN${offChips}</span>`,
     ...dayHours.map((hour) => `<span class="almanac-col-label">${String(hour).padStart(2, "0")}:00${colChip(hour)}</span>`),
-    '<span class="almanac-col-label almanac-col-net">NET</span>'
+    '<span class="almanac-col-label almanac-col-margin">Almanac margin</span>'
   ].join("");
 
-  const rows = days.map((day) => {
+  const marginCell = (day) => {
     const weekday = weekdayByDay.get(day);
+    if (!weekday || !weekday.count) return '<div class="almanac-margin is-empty" aria-hidden="true"></div>';
+    const isToday = Boolean(nowSlot && nowSlot.day === day);
+    if (weekday.count < columnFloor) {
+      const note = `${dayNames[day]}: ${timingTradeCount(weekday.count)}, below the ${columnFloor}-trade column floor. Figures withheld, never estimated.`;
+      return `<div class="almanac-margin is-withheld" title="${escapeHtml(note)}">
+        <span class="almanac-margin-top"><strong>n=${weekday.count}</strong></span>
+        <span class="almanac-margin-tag ${isToday ? "is-today" : "is-wh"}">${isToday ? "Today" : "Withheld"}</span>
+        <span class="almanac-margin-say">Column floor is ${columnFloor}</span>
+      </div>`;
+    }
+    const tone = weekday.pnl > 0 ? "is-positive" : weekday.pnl < 0 ? "is-negative" : "is-flat";
+    const pct = percentileOf(weekday.expectancy);
+    const rankIndex = rankOrder.findIndex((row) => row.day === day);
+    const fill = rankOrder.length > 1 ? Math.round((rankIndex / (rankOrder.length - 1)) * 100) : 100;
+    const tag = isToday
+      ? { text: "Today", cls: "is-today" }
+      : rankOrder.length > 1 && rankIndex === rankOrder.length - 1 && weekday.expectancy > 0
+        ? { text: "Best day", cls: "is-best" }
+        : rankOrder.length > 1 && rankIndex === 0 && weekday.expectancy < 0
+          ? { text: "Worst day", cls: "is-worst" }
+          : null;
+    // First true clause of three, every one read off a counted field.
+    const say = weekday.largestWinnerSharePct !== null && weekday.largestWinnerSharePct >= 60
+      ? `One winner is ${Math.round(weekday.largestWinnerSharePct)}% of gross`
+      : weekday.distinctDays >= 3
+        ? `${weekday.profitableDays} of ${weekday.distinctDays} days green`
+        : `Win ${Math.round(weekday.winRate)}% on n=${weekday.count}`;
+    const note = [
+      `${dayNames[day]}: ${timingMoney(weekday.pnl)} ${weekday.pnlLabel.toLowerCase()} across ${timingTradeCount(weekday.count)}, ${timingMoney(weekday.expectancy)} per trade.`,
+      pct ? `Its $/trade sits above ${pct.below} of ${pct.of} published cells.` : "",
+      rankOrder.length > 1 ? `Rank ${rankIndex + 1} of ${rankOrder.length} charted weekdays by $/trade.` : ""
+    ].filter(Boolean).join(" ");
+    return `<div class="almanac-margin ${tone}" title="${escapeHtml(note)}">
+      <span class="almanac-margin-top"><strong>${escapeHtml(timingMoney(weekday.pnl))}</strong>${pct ? `<em>P${pct.pct}</em>` : ""}</span>
+      ${tag ? `<span class="almanac-margin-tag ${tag.cls}">${tag.text}</span>` : '<span class="almanac-margin-tag" aria-hidden="true" style="visibility:hidden">.</span>'}
+      <span class="almanac-margin-bar"><i style="width:${fill}%"></i></span>
+      <span class="almanac-margin-say">${escapeHtml(say)}</span>
+    </div>`;
+  };
+
+  const rows = days.map((day) => {
     const overnightKeys = overnightHours.map((hour) => `${day}-${hour}`);
     const overnight = combine(overnightKeys);
     const overnightRed = overnightKeys.filter((key) => redKeys.has(key));
-    // Calendar-day grouping, labeled as exactly that: this row's small hours
-    // plus this row's evening. A "17:00 to 07:00" claim would describe a
-    // window this cell does not contain.
+    // Calendar-day grouping, labeled as exactly that.
     const overnightName = `${dayNames[day]} off-hours (00:00 to 07:00 and 17:00 to 24:00)`;
     const redSuffix = overnightRed.length
       ? ` · includes ${overnightRed.length} red ${overnightRed.length === 1 ? "cell" : "cells"} the counterfactual skips`
@@ -9213,15 +9100,10 @@ function renderSessionAlmanac(report) {
       ? ""
       : overnight.count >= almanac.cellSampleFloor
         ? `<strong>${escapeHtml(timingMoney(Math.round(overnight.pnl)))}</strong><span>n=${overnight.count}</span>`
-        : `<span class="almanac-wh">wh · ${overnight.count}</span>`;
+        : `<strong>n=${overnight.count}</strong><span>Withheld</span>`;
     const overnightCell = overnight.count
       ? `<button class="almanac-cell almanac-overnight ${overnightTone}" type="button" data-almanac-cell="ovn-${day}" data-almanac-slot="ovn-${day}" aria-selected="${state.sessionIntelligence.selectedCell === `ovn-${day}`}" style="--almanac-heat:0" title="${escapeHtml(overnightDetails)}" aria-label="${escapeHtml(overnightDetails)}">${overnightBody}${tiltMark(overnight.tilts, overnightName)}</button>`
       : `<span class="almanac-cell almanac-overnight is-empty" data-almanac-slot="ovn-${day}" aria-hidden="true"></span>`;
-    const net = weekday && weekday.count >= columnFloor
-      ? `<strong class="${weekday.pnl > 0 ? "is-positive" : weekday.pnl < 0 ? "is-negative" : ""}">${escapeHtml(timingMoney(weekday.pnl))}</strong><span>n=${weekday.count}</span>`
-      : weekday
-        ? `<span class="almanac-wh">wh · ${weekday.count}</span>`
-        : '<span class="almanac-wh">—</span>';
     return [
       `<span class="almanac-row-label">${dayNames[day]}</span>`,
       overnightCell,
@@ -9229,43 +9111,43 @@ function renderSessionAlmanac(report) {
         const key = `${day}-${hour}`;
         return cellButton(cellByKey.get(key), key, almanacCellName({ day, hour }));
       }),
-      `<span class="almanac-net">${net}</span>`
+      marginCell(day)
     ].join("");
   }).join("");
 
   const hoursByHour = new Map((report.hours || []).map((row) => [row.hour, row]));
   const overnightTotal = combine(days.flatMap((day) => overnightHours.map((hour) => `${day}-${hour}`)));
-  const footerCells = dayHours.map((hour) => {
-    const row = hoursByHour.get(hour);
-    if (!row || !row.count) return '<span class="almanac-foot">—</span>';
-    if (row.count < columnFloor) return `<span class="almanac-foot almanac-wh">wh · ${row.count}</span>`;
+  const footCell = (row, label) => {
+    if (!row || !row.count) return '<span class="almanac-foot">n/a</span>';
+    if (row.count < columnFloor) {
+      const note = `${label}: ${timingTradeCount(row.count)}, below the ${columnFloor}-trade column floor. Withheld, never estimated.`;
+      return `<span class="almanac-foot is-withheld" title="${escapeHtml(note)}">n=${row.count}</span>`;
+    }
     const tone = row.pnl > 0 ? "is-positive" : row.pnl < 0 ? "is-negative" : "";
-    return `<span class="almanac-foot ${tone}">${escapeHtml(timingMoney(Math.round(row.pnl)))}<small>${row.count}</small></span>`;
-  }).join("");
-  const overnightFoot = !overnightTotal.count
-    ? '<span class="almanac-foot">—</span>'
-    : overnightTotal.count < columnFloor
-      ? `<span class="almanac-foot almanac-wh">wh · ${overnightTotal.count}</span>`
-      : `<span class="almanac-foot ${overnightTotal.pnl > 0 ? "is-positive" : overnightTotal.pnl < 0 ? "is-negative" : ""}">${escapeHtml(timingMoney(Math.round(overnightTotal.pnl)))}<small>${overnightTotal.count}</small></span>`;
-  // The grand corner sums the charted population only, so rows and columns
-  // reconcile with it; analyzed trades without an entry timestamp are named
-  // rather than silently folded in.
+    return `<span class="almanac-foot ${tone}">${escapeHtml(timingMoney(Math.round(row.pnl)))}<small>n=${row.count}</small></span>`;
+  };
+
+  // The corner sums the charted population only, so rows and columns
+  // reconcile with it; analyzed trades with no entry time are named in the
+  // tooltip rather than folded in silently.
   const chartedNet = Math.round(almanac.weekdays.reduce((sum, row) => sum + row.pnl, 0) * 100) / 100;
   const chartedCount = almanac.weekdays.reduce((sum, row) => sum + row.count, 0);
   const offMap = Math.max(0, report.coverage.analyzed - chartedCount);
   const cornerTitle = offMap
-    ? `${offMap} analyzed ${offMap === 1 ? "trade has" : "trades have"} no charted entry time and ${offMap === 1 ? "is" : "are"} not in any cell; the report net of ${timingMoney(report.pnl.value)} includes ${offMap === 1 ? "it" : "them"}.`
-    : `Every analyzed trade is charted; this matches the report net of ${timingMoney(report.pnl.value)}.`;
+    ? `${chartedCount} charted trades. ${offMap} analyzed ${offMap === 1 ? "trade has" : "trades have"} no entry time and ${offMap === 1 ? "is" : "are"} in no cell; the report net of ${timingMoney(report.pnl.value)} includes ${offMap === 1 ? "it" : "them"}.`
+    : `${chartedCount} charted trades; this matches the report net of ${timingMoney(report.pnl.value)}.`;
   const footer = [
-    '<span class="almanac-row-label almanac-foot-label">NET</span>',
-    overnightFoot,
-    footerCells,
-    `<span class="almanac-net almanac-foot-net" title="${escapeHtml(cornerTitle)}">${escapeHtml(timingMoney(chartedNet))}<small>Σ ${chartedCount}${offMap ? ` · ${offMap} off-map` : ""}</small></span>`
+    '<span class="almanac-row-label almanac-foot-label">Net</span>',
+    footCell(overnightTotal.count ? overnightTotal : null, "Off-hours"),
+    ...dayHours.map((hour) => footCell(hoursByHour.get(hour), `${String(hour).padStart(2, "0")}:00`)),
+    `<span class="almanac-foot almanac-foot-total" title="${escapeHtml(cornerTitle)}">&Sigma; weekdays = ${escapeHtml(timingMoney(chartedNet))}</span>`
   ].join("");
 
+  ui.sessionAlmanacMatrix.style.setProperty("--alm-rows", String(days.length));
   ui.sessionAlmanacMatrix.innerHTML = `${header}${rows}${footer}`;
   renderSessionAlmanacNow(report);
 }
+
 
 /* THE COUNTERFACTUAL ENGINE. Two equity lines over the same fills: as
    traded, and with reliable red-cell entries skipped. The gap is stated as
@@ -9380,90 +9262,308 @@ function renderSessionTilt(report) {
   }
 }
 
+/* The report's own trades, by id. journalCoverage already partitions every
+   analyzed record into journalled and unjournalled, so their union IS the
+   analyzed set: no second pass over state.trades, no new report field. */
+function sessionReportTradeIds(report) {
+  const coverage = report?.journalCoverage;
+  return new Set([
+    ...(coverage?.journalledTradeIds || []),
+    ...(coverage?.unjournalledTradeIds || [])
+  ].map(String));
+}
+
+// Withheld is a word, not a number. One helper so every pane spells the floor
+// the same way and none of them invents an estimate to fill the gap.
+function timingWithheld(count, floor, what) {
+  return `<span class="strip-withheld" title="${escapeHtml(`n=${count}, publishes at ${floor} ${what}`)}">Withheld</span>`;
+}
+
+/* Consecutive trading days, walked back from the newest analyzed day, on
+   which every closed trade carries a note. */
+function journalStreakDays(trades) {
+  const byDay = new Map();
+  trades.forEach((trade) => {
+    const day = String(trade.date || "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
+    byDay.set(day, (byDay.get(day) ?? true) && isTradeJournalled(trade));
+  });
+  let streak = 0;
+  for (const day of [...byDay.keys()].sort().reverse()) {
+    if (!byDay.get(day)) break;
+    streak += 1;
+  }
+  return streak;
+}
+
 function renderSessionDurations(report) {
   if (!ui.sessionDurationBands) return;
-  const { winners, losers, comparison, bands } = report.duration;
-  const best = report.duration.bestBand || report.duration.strongestObservedBand;
-  const sessionHold = report.interactions?.sessionHold;
-  const bestSessionHold = sessionHold?.bestCell || sessionHold?.strongestObservedCell;
-  setTimingValue(
-    ui.sessionWinningHold,
-    formatTimingDuration(winners.medianMs),
-    winners.confidence.key === "reliable" ? "is-positive" : ""
-  );
-  if (ui.sessionWinningHoldMeta) {
-    ui.sessionWinningHoldMeta.textContent = winners.count
-      ? `Median · ${timingConfidenceCopy(winners.confidence)}`
-      : "No measured profitable holds";
+  const { winners, losers, bands, bestBand } = report.duration;
+  const floor = Math.max(1, Number(report.minimumReliableSamples || 5));
+
+  // A median of four holds is an anecdote, not a median. Same floor as
+  // every other published figure on this page.
+  const median = (row, tone) => {
+    if (!row.count) return { text: "n/a", tone: "", title: "No measured holds" };
+    if (row.count < floor) {
+      return { text: "Withheld", tone: "", title: `n=${row.count}, publishes at ${floor} measured holds` };
+    }
+    return { text: formatTimingDuration(row.medianMs), tone, title: `n=${row.count}` };
+  };
+  const win = median(winners, "is-positive");
+  const loss = median(losers, "is-negative");
+  setTimingValue(ui.sessionWinningHold, win.text, win.tone);
+  setTimingValue(ui.sessionLosingHold, loss.text, loss.tone);
+  if (ui.sessionWinningHold) ui.sessionWinningHold.title = win.title;
+  if (ui.sessionLosingHold) ui.sessionLosingHold.title = loss.title;
+  if (ui.sessionWinningHoldMeta) ui.sessionWinningHoldMeta.textContent = "winners median";
+  if (ui.sessionLosingHoldMeta) ui.sessionLosingHoldMeta.textContent = "losers median";
+
+  // The ratio exists only when BOTH medians are published.
+  const bothPublished = winners.count >= floor && losers.count >= floor &&
+    winners.medianMs > 0 && losers.medianMs > 0;
+  if (ui.sessionHoldRatio) {
+    if (!bothPublished) {
+      setTimingValue(ui.sessionHoldRatio, "n/a", "");
+      if (ui.sessionHoldRatioMeta) ui.sessionHoldRatioMeta.textContent = "no paired medians";
+    } else {
+      const longer = losers.medianMs >= winners.medianMs;
+      const ratio = longer ? losers.medianMs / winners.medianMs : winners.medianMs / losers.medianMs;
+      setTimingValue(ui.sessionHoldRatio, `${ratio.toFixed(1)}×`, "");
+      if (ui.sessionHoldRatioMeta) {
+        ui.sessionHoldRatioMeta.textContent = ratio < 1.05
+          ? "held the same"
+          : longer ? "losers held longer" : "winners held longer";
+      }
+    }
   }
-  setTimingValue(
-    ui.sessionLosingHold,
-    formatTimingDuration(losers.medianMs),
-    losers.confidence.key === "reliable" ? "is-negative" : ""
-  );
-  if (ui.sessionLosingHoldMeta) {
-    ui.sessionLosingHoldMeta.textContent = losers.count
-      ? `Median · ${timingConfidenceCopy(losers.confidence)}`
-      : "No measured losing holds";
-  }
-  setTimingValue(
-    ui.sessionBestDuration,
-    best?.label || "—",
-    best?.confidence.key === "reliable" ? timingTone(best.pnl) : ""
-  );
-  if (ui.sessionBestDurationMeta) {
-    ui.sessionBestDurationMeta.textContent = best
-      ? `${timingMoney(best.pnl)} ${best.pnlLabel.toLowerCase()} · ${timingConfidenceCopy(best.confidence)}${bestSessionHold?.durationKey === best.key ? ` · strongest in ${bestSessionHold.sessionLabel}` : ""}`
-      : "No measured holds yet";
+  if (ui.sessionHoldBasis) {
+    ui.sessionHoldBasis.textContent = "";
+    ui.sessionHoldBasis.title = report.pnl.label;
   }
 
-  const heading = document.getElementById("sessionDurationHeading");
-  if (heading) heading.textContent = `${report.pnl.label} by duration range`;
   const active = bands.filter((band) => band.count > 0);
   if (!active.length) {
-    ui.sessionDurationBands.innerHTML = '<p class="session-empty-copy">No measured holding-time ranges yet.</p>';
+    ui.sessionDurationBands.innerHTML = '<p class="strip-empty">No measured holds in this range.</p>';
     return;
   }
-  const peak = Math.max(...active.map((band) => Math.abs(band.pnl)), 1);
-  ui.sessionDurationBands.innerHTML = bands.map((band) => {
+  const published = active.filter((band) => band.confidence.key === "reliable");
+  const peak = Math.max(...published.map((band) => Math.abs(band.pnl)), 1);
+  ui.sessionDurationBands.innerHTML = active.map((band) => {
     const reliable = band.confidence.key === "reliable";
-    const tone = !band.count ? "is-empty" : reliable ? timingTone(band.pnl) : "is-early";
-    const magnitude = band.count ? Math.abs(band.pnl) / peak : 0;
-    const details = band.count
-      ? `${band.label}: ${timingMoney(band.pnl)} ${band.pnlLabel}, ${timingMoney(band.expectancy)} expectancy, ${timingTradeCount(band.count)}, ${band.confidence.label}`
-      : `${band.label}: no trades`;
-    return `
-      <article class="session-duration-band ${tone}" role="listitem" tabindex="${band.count ? "0" : "-1"}" title="${escapeHtml(details)}" aria-label="${escapeHtml(details)}" style="--session-duration-size:${magnitude.toFixed(3)}">
-        <div class="session-duration-band-head">
-          <strong>${escapeHtml(band.label)}</strong>
-          <span>${band.count ? escapeHtml(timingMoney(band.pnl)) : "—"}</span>
-        </div>
-        <span class="session-duration-track" aria-hidden="true"><span class="session-duration-fill"></span></span>
-        <p class="session-duration-band-meta">${band.count ? `n=${band.count} · ${escapeHtml(band.confidence.label)}` : "No trades"}</p>
-      </article>`;
+    const isBest = Boolean(bestBand && band.key === bestBand.key);
+    const tone = reliable ? timingTone(band.pnl) : "";
+    const fill = reliable ? Math.abs(band.pnl) / peak : 0;
+    const value = reliable
+      ? `<span class="hold-band-val">${escapeHtml(timingMoney(band.pnl))}</span>`
+      : `<span class="hold-band-val">${timingWithheld(band.count, floor, "trades")}</span>`;
+    const label = `${band.label}${isBest ? " · best" : ""}`;
+    const detail = reliable
+      ? `${band.label}: ${timingMoney(band.pnl)} ${band.pnlLabel}, ${timingMoney(band.expectancy)} per trade, n=${band.count}`
+      : `${band.label}: n=${band.count}, publishes at ${floor}`;
+    return `<div class="hold-band ${tone}${isBest ? " is-best" : ""}" role="listitem" style="--fill:${fill.toFixed(3)}" title="${escapeHtml(detail)}">
+        <span class="hold-band-label">${escapeHtml(label)}</span>
+        <span class="hold-band-bar" aria-hidden="true"></span>
+        ${value}
+      </div>`;
   }).join("");
+}
+
+function renderSessionScorecard(report) {
+  if (!ui.sessionScorecard) return;
+  // Declared here, not at module scope: init() runs above this point in
+  // the file, so a module-level const would be in TDZ on the first render.
+  const SESSION_LEDGER_ORDER = ["new-york", "london", "asia", "off-session"];
+  const floor = Math.max(1, Number(report.minimumReliableSamples || 5));
+  const byKey = new Map(report.sessions.map((row) => [row.key, row]));
+  const rows = SESSION_LEDGER_ORDER.map((key) => byKey.get(key)).filter(Boolean);
+  const published = rows.filter((row) => row.confidence.key === "reliable");
+  const peak = Math.max(...published.map((row) => Math.abs(row.pnl)), 1);
+
+  // The four rows always print, n=0 included: a hole in a fixed grid reads
+  // as a bug, and "no trades here" is itself a finding.
+  ui.sessionScorecard.innerHTML = rows.map((row) => {
+    const reliable = row.confidence.key === "reliable";
+    const tone = reliable ? timingTone(row.pnl) : "";
+    const fill = reliable ? Math.abs(row.pnl) / peak : 0;
+    const value = !row.count
+      ? '<span class="ledger-val">n/a</span>'
+      : reliable
+        ? `<span class="ledger-val">${escapeHtml(timingMoney(row.pnl))}</span>`
+        : `<span class="ledger-val">${timingWithheld(row.count, floor, "trades")}</span>`;
+    const detail = row.count
+      ? `${row.label}: ${timingMoney(row.pnl)} ${row.pnlLabel}, ${timingMoney(row.expectancy)} per trade, ${Math.round(row.winRate)}% win rate, n=${row.count}`
+      : `${row.label}: no trades`;
+    return `<div class="ledger-row ${tone}" role="listitem" style="--fill:${fill.toFixed(3)}" title="${escapeHtml(detail)}">
+        <span class="ledger-name">${escapeHtml(row.label)}</span>
+        <span class="ledger-bar" aria-hidden="true"></span>
+        ${value}
+        <span class="ledger-n">n=${row.count}</span>
+      </div>`;
+  }).join("");
+
+  if (ui.sessionLedgerBasis) {
+    ui.sessionLedgerBasis.textContent = "";
+    ui.sessionLedgerBasis.title = report.pnl.label;
+  }
+  // The verdict clause is derived or it does not exist.
+  if (ui.sessionLedgerFoot) {
+    const zone = (timingZoneLabel(report.reportTimeZone).match(/\(([^)]+)\)$/) || [])[1] || report.reportTimeZone;
+    const best = published.filter((row) => row.pnl > 0).sort((a, b) => b.pnl - a.pnl)[0];
+    const worst = published.filter((row) => row.pnl < 0).sort((a, b) => a.pnl - b.pnl)[0];
+    ui.sessionLedgerFoot.textContent = best && worst
+      ? `Entry session, ${zone} · ${best.label} carries the book, ${worst.label} bleeds it.`
+      : `Entry session, ${zone}.`;
+  }
+}
+
+function renderExitDiscipline(report) {
+  if (!ui.sessionExitBar) return;
+  const EXIT_SEGMENTS = [
+    { key: "target", cls: "is-target", label: "bracket target" },
+    { key: "manual", cls: "is-manual", label: "by hand" },
+    { key: "stop", cls: "is-stop", label: "the stop" },
+    { key: "mixed", cls: "is-mixed", label: "split exit" }
+  ];
+  // Scoped to the report's own trades: an unfiltered pass would contradict
+  // the date range stated in the header above it.
+  const ids = sessionReportTradeIds(report);
+  const summary = summarizeExitDiscipline(
+    getClosedTrades().filter((trade) => ids.has(String(trade.id)))
+  );
+  const show = (node, on) => { if (node) node.hidden = !on; };
+
+  if (ui.sessionExitBasis) {
+    ui.sessionExitBasis.textContent = summary ? `n=${summary.known}` : "";
+    ui.sessionExitBasis.title = summary ? `${summary.known} cycles carry a closing-order disposition` : "";
+  }
+  if (ui.sessionExitFoot) {
+    const pnl = report?.dataQuality?.pnlAndCosts;
+    ui.sessionExitFoot.title = pnl?.total
+      ? `P&L basis: ${pnl.exactNet || 0} exact net, ${pnl.estimatedNet || 0} estimated net, ${pnl.grossOnly || 0} gross only, ${pnl.brokerOnly || 0} broker only.`
+      : "";
+  }
+
+  // No Orders export: the pane keeps its column and says so in words.
+  if (!summary) {
+    show(ui.sessionExitEmpty, true);
+    show(ui.sessionExitBar, false);
+    show(ui.sessionExitShares, false);
+    show(ui.sessionExitCostRow, false);
+    return;
+  }
+  show(ui.sessionExitEmpty, false);
+  show(ui.sessionExitBar, true);
+  show(ui.sessionExitShares, true);
+  show(ui.sessionExitCostRow, true);
+
+  const present = EXIT_SEGMENTS
+    .map((seg) => ({ ...seg, row: summary.rows.find((row) => row.key === seg.key) }))
+    .filter((seg) => seg.row);
+  ui.sessionExitBar.innerHTML = present.map((seg) =>
+    `<span class="exit-seg ${seg.cls}" style="flex:${(seg.row.count / summary.known).toFixed(4)}" title="${escapeHtml(`${seg.label}: n=${seg.row.count}, ${timingMoney(seg.row.pnl)}`)}"></span>`
+  ).join("");
+  ui.sessionExitShares.innerHTML = present.map((seg) =>
+    `<span class="exit-share ${seg.cls}"><strong>${Math.round((seg.row.count / summary.known) * 100)}%</strong><span>${escapeHtml(seg.label)}</span></span>`
+  ).join("");
+
+  // Expectancy gap times the cycles actually closed by hand. Never a claim
+  // about trades that were not taken.
+  if (!summary.manual) {
+    ui.sessionExitCostLabel.textContent = "Every cycle closed on a bracket";
+    setTimingValue(ui.sessionExitCostValue, "n/a", "");
+    ui.sessionExitCostValue.title = `${summary.known} cycles, none closed by hand`;
+  } else if (!summary.comparable) {
+    ui.sessionExitCostLabel.textContent = "Cost of closing by hand needs 5 a side";
+    ui.sessionExitCostValue.innerHTML = timingWithheld(
+      Math.min(summary.manual.count, summary.plannedCount), 5, "cycles a side"
+    );
+    ui.sessionExitCostValue.classList.remove("is-positive", "is-negative");
+    ui.sessionExitCostValue.title = `${summary.manual.count} by hand, ${summary.plannedCount} on the bracket`;
+  } else {
+    const total = round(summary.gap * summary.manual.count);
+    ui.sessionExitCostLabel.textContent = "Cost of closing by hand vs bracket baseline";
+    setTimingValue(ui.sessionExitCostValue, timingMoney(total), timingTone(total));
+    ui.sessionExitCostValue.title = `${timingMoney(summary.gap)} per cycle across ${summary.manual.count} closed by hand`;
+  }
 }
 
 function renderSessionCoverage(report) {
   const coverage = report.journalCoverage;
-  if (ui.sessionCoverageConclusion) {
-    ui.sessionCoverageConclusion.textContent = !coverage.total
-      ? "No closed trades are available in this date range."
-      : coverage.unjournalled === 0
-        ? "Every analyzed trade has journal context."
-        : `${coverage.unjournalled} ${coverage.unjournalled === 1 ? "trade still needs" : "trades still need"} journal context.`;
-  }
+  const pct = Math.round(coverage.completionPercent);
   if (ui.sessionJournaledCount) ui.sessionJournaledCount.textContent = String(coverage.journalled);
-  if (ui.sessionUnjournalledCount) ui.sessionUnjournalledCount.textContent = String(coverage.unjournalled);
-  if (ui.sessionCoveragePercent) ui.sessionCoveragePercent.textContent = `${Math.round(coverage.completionPercent)}%`;
-  if (ui.sessionMissingDataCount) ui.sessionMissingDataCount.textContent = String(coverage.importedMissingOrIncomplete);
-  if (ui.sessionCoverageBar) {
-    ui.sessionCoverageBar.setAttribute("aria-valuenow", String(Math.round(coverage.completionPercent)));
-    ui.sessionCoverageBar.style.setProperty("--session-coverage", `${coverage.completionPercent}%`);
+  if (ui.sessionCoverageTotal) ui.sessionCoverageTotal.textContent = `/${coverage.total}`;
+  if (ui.sessionUnjournalledCount) {
+    ui.sessionUnjournalledCount.textContent = coverage.unjournalled
+      ? `${coverage.unjournalled} trades`
+      : "none";
   }
+  if (ui.sessionCoveragePercent) {
+    ui.sessionCoveragePercent.textContent = `${pct}%`;
+    ui.sessionCoveragePercent.classList.toggle("is-positive", coverage.total > 0 && pct >= 80);
+    ui.sessionCoveragePercent.classList.toggle("is-warn", coverage.total > 0 && pct < 80);
+  }
+  if (ui.sessionCoverageBar) ui.sessionCoverageBar.setAttribute("aria-valuenow", String(pct));
   if (ui.sessionCoverageBarFill) ui.sessionCoverageBarFill.style.width = `${coverage.completionPercent}%`;
-}
 
+  if (ui.sessionCoverageStreak) {
+    const ids = sessionReportTradeIds(report);
+    const streak = journalStreakDays(getClosedTrades().filter((trade) => ids.has(String(trade.id))));
+    ui.sessionCoverageStreak.hidden = streak < 1;
+    ui.sessionCoverageStreak.textContent = `Streak ${streak} ${streak === 1 ? "day" : "days"}`;
+  }
+
+  // The oldest trade still waiting: journalCoverage.nextTradeId is already
+  // the oldest-first head of the queue.
+  if (ui.sessionCoverageOldest) {
+    const trade = coverage.nextTradeId
+      ? state.trades.find((row) => String(row.id) === String(coverage.nextTradeId))
+      : null;
+    if (!trade) {
+      ui.sessionCoverageOldest.textContent = coverage.total ? "none" : "n/a";
+      ui.sessionCoverageOldest.title = "";
+    } else {
+      const timing = resolveTradeTiming(trade, { sourceTimeZone: state.settings.topstepSourceTimeZone });
+      const when = timing.entryMs === null
+        ? String(trade.date || "date unknown")
+        : new Intl.DateTimeFormat("en-US", {
+            timeZone: report.reportTimeZone, weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+          }).format(new Date(timing.entryMs));
+      const money = resolveTradePnl(trade);
+      ui.sessionCoverageOldest.textContent =
+        `${when} · ${trade.asset || "unknown"} · ${money.value === null ? "n/a" : timingMoney(money.value)}`;
+      ui.sessionCoverageOldest.title = `Trade ${trade.id}`;
+    }
+  }
+
+  // Red cells carry no tradeIds, so intersect their keys back through the
+  // cells, which do.
+  if (ui.sessionCoverageScar) {
+    const redKeys = new Set((report.almanac?.redCells || []).map((cell) => cell.key));
+    if (!redKeys.size) {
+      ui.sessionCoverageScar.textContent = "no scar cells yet";
+      ui.sessionCoverageScar.title = "A cell becomes a scar only at the reliable floor with negative expectancy";
+    } else {
+      const unjournalled = new Set((coverage.unjournalledTradeIds || []).map(String));
+      const scarUnjournalled = (report.almanac.cells || [])
+        .filter((cell) => redKeys.has(cell.key))
+        .flatMap((cell) => cell.tradeIds || [])
+        .filter((id) => unjournalled.has(String(id)));
+      ui.sessionCoverageScar.textContent = `${new Set(scarUnjournalled.map(String)).size} of ${coverage.unjournalled}`;
+      ui.sessionCoverageScar.title = `Unjournalled trades sitting inside the ${redKeys.size} reliable red cells`;
+    }
+  }
+
+  if (ui.sessionMissingDataCount) {
+    const missing = Number(coverage.importedMissingOrIncomplete || 0);
+    const excluded = Number(report.dataQuality?.rawOrderRowsExcluded || 0);
+    ui.sessionMissingDataCount.hidden = missing < 1;
+    ui.sessionMissingDataCount.textContent = `${missing} incomplete`;
+    ui.sessionMissingDataCount.title = excluded
+      ? `${missing} imported rows missing or incomplete · ${excluded} raw order rows stay outside cycle analytics`
+      : `${missing} imported rows missing or incomplete`;
+  }
+}
 function openSessionTradeDrawer(cellKey) {
   const report = state.analytics?.sessionTiming;
   const cells = report?.almanac?.cells || [];

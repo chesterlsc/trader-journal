@@ -210,7 +210,7 @@
     <link rel="stylesheet" href="clay-v2.css?v=20260823-morningread" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260829-almanac4" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260829-ref3" />
   </head>
   <body>
     <div id="tjv" aria-hidden="true">
@@ -2140,80 +2140,90 @@
 
         <section class="view session-page" id="session-intelligence" aria-labelledby="sessionTimingHeading">
           <header class="session-page-head">
-            <div class="session-page-copy">
-              <p class="session-page-kicker">Timing edge</p>
-              <h2 id="sessionTimingHeading">Session intelligence</h2>
-              <p class="session-headline" id="sessionHeadline" aria-live="polite">
-                Import closed trades to reveal when your trading performs best.
-              </p>
-            </div>
+            <p class="session-page-kicker">Timing edge <span aria-hidden="true">&middot;</span> The time almanac</p>
 
-            <div class="session-context" aria-label="Session intelligence report settings">
-              <label class="session-context-field">
-                <span>Date range</span>
-                <select id="sessionDateRange">
-                  <option value="all" selected>All closed trades</option>
+            <p class="session-data-flag" id="sessionDataFlag" hidden></p>
+
+            <h2 class="session-display" id="sessionTimingHeading">
+              <span class="session-display-a">A calendar shows the days.</span>
+              <span class="session-display-b">An almanac knows their weather.</span>
+            </h2>
+
+            <div class="session-metabar" role="group" aria-label="Report settings and totals">
+              <span class="session-meta-item" data-meta="range">
+                <span class="session-meta-label">Range</span>
+                <select id="sessionDateRange" class="session-meta-select" aria-label="Date range">
+                  <option value="all" selected>All trades</option>
                   <option value="30d">Last 30 days</option>
                   <option value="90d">Last 90 days</option>
+                  <option value="ytd">Year to date</option>
                 </select>
-              </label>
-              <label class="session-context-field">
-                <span>Report timezone</span>
-                <select id="sessionReportTimeZone">
-                  <option value="America/New_York" selected>New York (ET)</option>
-                  <option value="America/Chicago">Chicago (CT)</option>
-                  <option value="Asia/Manila">Manila (PHT)</option>
+              </span>
+              <span class="session-meta-item" data-meta="tz">
+                <span class="session-meta-label">TZ</span>
+                <select id="sessionReportTimeZone" class="session-meta-select" aria-label="Report timezone">
+                  <option value="America/New_York" selected>New York ET</option>
+                  <option value="America/Chicago">Chicago CT</option>
+                  <option value="Asia/Manila">Manila PHT</option>
                 </select>
-              </label>
-              <div class="session-context-readout">
-                <span>Imported source</span>
+              </span>
+              <span class="session-meta-item" data-meta="source">
+                <span class="session-meta-label">Source</span>
                 <strong id="sessionImportedSource">No imports yet</strong>
-              </div>
-              <div class="session-context-readout">
-                <span>Closed trades</span>
-                <strong id="sessionAnalyzedCount">0 analyzed</strong>
-              </div>
-              <div class="session-context-readout">
-                <span>Confidence</span>
+              </span>
+              <span class="session-meta-item" data-meta="count">
+                <span class="session-meta-label">Trades</span>
+                <strong id="sessionAnalyzedCount">0 closed trades</strong>
+              </span>
+              <span class="session-meta-item" data-meta="confidence">
+                <span class="session-meta-label">Confidence</span>
                 <strong class="session-confidence is-early" id="sessionConfidence">Needs trades</strong>
-              </div>
-              <div class="session-context-readout">
-                <span>Net</span>
-                <strong id="sessionHeaderNet">&mdash;</strong>
-              </div>
+              </span>
+              <span class="session-meta-item" data-meta="net">
+                <span class="session-meta-label">Net</span>
+                <strong id="sessionHeaderNet">n/a</strong>
+              </span>
             </div>
 
+            <div class="session-now-strip">
+              <span class="session-now-chip" id="sessionAlmanacNow">Import timestamped trades to arm the clock</span>
+            </div>
+
+            <p class="session-headline visually-hidden" id="sessionHeadline" aria-live="polite">
+              Import closed trades to reveal when your trading performs best.
+            </p>
             <span class="visually-hidden" id="sessionTimingSource">Awaiting timestamped imports</span>
             <span class="visually-hidden" id="sessionTimingCoverage">No settled trades in this account yet</span>
           </header>
 
-          <div class="session-now-strip">
-            <span class="session-now-chip" id="sessionAlmanacNow">Import timestamped trades to arm the clock</span>
-          </div>
-
           <div class="session-almanac-layout">
             <section class="session-visual session-almanac-visual" aria-labelledby="sessionAlmanacHeading">
-              <header class="session-visual-head">
-                <div>
-                  <p>The almanac</p>
-                  <h4 id="sessionAlmanacHeading">Expectancy by weekday and hour</h4>
+              <header class="almanac-pane-head">
+                <div class="almanac-pane-title">
+                  <h4 id="sessionAlmanacHeading">The almanac <span>Expectancy by weekday &times; hour</span></h4>
+                  <p class="almanac-pane-basis" id="sessionAlmanacBasis">$/trade &middot; entry time</p>
                 </div>
-                <p class="session-almanac-edgeline" id="sessionAlmanacEdgeline">Import closed trades to chart your weeks.</p>
+                <p class="almanac-pane-edge" id="sessionAlmanacEdgeline">Edge window not proven</p>
               </header>
+
               <div class="session-almanac-scroll">
-                <div class="session-almanac-matrix" id="sessionAlmanacMatrix" aria-live="polite">
+                <div class="session-almanac-matrix" id="sessionAlmanacMatrix" aria-live="polite" style="--alm-rows:5">
                   <p class="session-empty-copy">Import timestamped closed trades to build the almanac.</p>
                 </div>
               </div>
-              <div class="session-almanac-legendrow">
-                <div class="session-chart-legend" aria-label="Cell colors">
-                  <span class="is-positive">Pays</span>
-                  <span class="is-negative">Bills</span>
-                  <span class="is-withheld">Withheld, never estimated</span>
-                </div>
-                <p class="session-visual-note" id="sessionAlmanacNote" aria-live="polite">
-                  Cells publish at 5 trades and columns at 15; thinner samples are withheld, never estimated. Click a cell to inspect its trades.
-                </p>
+
+              <div class="almanac-legend">
+                <span class="almanac-legend-item">
+                  <i class="almanac-sw is-neg-2"></i><i class="almanac-sw is-neg-1"></i><i class="almanac-sw is-pos-1"></i><i class="almanac-sw is-pos-2"></i>
+                  Expectancy $/trade &middot; wash intensity = magnitude
+                </span>
+                <span class="almanac-legend-item">
+                  <i class="almanac-sw is-wh"></i><span id="sessionAlmanacNote">Cells n&lt;5, columns n&lt;15 &middot; withheld, never estimated</span>
+                </span>
+                <span class="almanac-legend-item">
+                  <i class="almanac-sw is-tilt">&#9650;</i>Tilt entries in cell (within 5m of a loss)
+                </span>
+                <span class="almanac-legend-note">Hours prove entry time only &middot; not the path traded inside them</span>
               </div>
             </section>
 
@@ -2274,121 +2284,104 @@
             </aside>
           </div>
 
-          <div class="session-almanac-margins">
-            <section class="session-margin-pane" aria-labelledby="sessionDurationHeading">
-              <header class="session-margin-head">
-                <p>Hold time</p>
-                <h4 id="sessionDurationHeading">Net result by duration range</h4>
-              </header>
-              <div class="session-hold-compare" role="list" aria-label="Holding time medians">
-                <div class="session-hold-figure" role="listitem">
-                  <span>Winners</span>
-                  <strong id="sessionWinningHold">&mdash;</strong>
-                  <small id="sessionWinningHoldMeta">Median hold</small>
-                </div>
-                <div class="session-hold-figure" role="listitem">
-                  <span>Losers</span>
-                  <strong id="sessionLosingHold">&mdash;</strong>
-                  <small id="sessionLosingHoldMeta">Median hold</small>
-                </div>
-                <div class="session-hold-figure" role="listitem">
-                  <span>Best band</span>
-                  <strong id="sessionBestDuration">&mdash;</strong>
-                  <small id="sessionBestDurationMeta">No measured holds yet</small>
-                </div>
-              </div>
-              <div class="session-duration-bands" id="sessionDurationBands" role="list" aria-live="polite">
-                <p class="session-empty-copy">No measured holding-time ranges yet.</p>
-              </div>
-              <p class="session-margin-note">
-                Topstep entry and exit data proves total hold duration. It does not prove how long a trade spent above breakeven.
-              </p>
-            </section>
+          <div class="session-strip" id="sessionStrip">
 
-            <section class="session-margin-pane" aria-labelledby="sessionComparisonHeading">
-              <header class="session-margin-head">
-                <p>Sessions ledger</p>
-                <h4 id="sessionComparisonHeading">Net result by entry session</h4>
+            <!-- HOLD TIME. Two medians, their ratio, and the bands that have
+                 trades in them. A median of four holds is an anecdote. -->
+            <section class="strip-pane" id="sessionHoldPane" aria-labelledby="sessionDurationHeading">
+              <header class="strip-head">
+                <h4 class="strip-title" id="sessionDurationHeading">Hold time</h4>
+                <span class="strip-caps"><span class="strip-cap" id="sessionHoldBasis"></span></span>
               </header>
-              <div class="session-scorecard" id="sessionScorecard" role="list" aria-live="polite">
-                <p class="session-empty-copy">Import timestamped closed trades to compare trading sessions.</p>
-              </div>
-            </section>
-
-            <aside
-                class="session-topstep-execution"
-                id="sessionTopstepExecution"
-                aria-labelledby="sessionTopstepExecutionHeading"
-                hidden
-              >
-                <header class="session-topstep-head">
-                  <div>
-                    <p>Topstep execution</p>
-                    <h4 id="sessionTopstepExecutionHeading">Execution quality from normalized trade cycles</h4>
+              <div class="strip-body">
+                <div class="hold-medians">
+                  <div class="hold-med">
+                    <strong id="sessionWinningHold">&mdash;</strong>
+                    <span id="sessionWinningHoldMeta">winners median</span>
                   </div>
-                  <span class="session-confidence is-early" id="sessionTopstepExecutionConfidence">Needs cycles</span>
-                </header>
-                <p class="session-topstep-summary" id="sessionTopstepExecutionSummary">
-                  Completed Topstep cycles will reveal how scale management, reversals, and P&amp;L evidence affect this report.
+                  <div class="hold-med">
+                    <strong id="sessionLosingHold">&mdash;</strong>
+                    <span id="sessionLosingHoldMeta">losers median</span>
+                  </div>
+                  <div class="hold-med hold-med-end">
+                    <strong id="sessionHoldRatio">&mdash;</strong>
+                    <span id="sessionHoldRatioMeta">no paired medians</span>
+                  </div>
+                </div>
+                <div class="hold-bands" id="sessionDurationBands" role="list"></div>
+              </div>
+              <p class="strip-foot">Fills prove total hold only &middot; not time spent above breakeven.</p>
+            </section>
+
+            <!-- SESSIONS LEDGER. Fixed rows in reading order; the order is
+                 the argument. -->
+            <section class="strip-pane" id="sessionLedgerPane" aria-labelledby="sessionComparisonHeading">
+              <header class="strip-head">
+                <h4 class="strip-title" id="sessionComparisonHeading">Sessions ledger</h4>
+                <span class="strip-caps"><span class="strip-cap" id="sessionLedgerBasis"></span></span>
+              </header>
+              <div class="strip-body">
+                <div class="session-ledger" id="sessionScorecard" role="list"></div>
+              </div>
+              <p class="strip-foot" id="sessionLedgerFoot">Entry session</p>
+            </section>
+
+            <!-- WHO CLOSED IT. The one question only a fill log answers:
+                 every closing order carries the disposition that created it,
+                 so the bar is evidence, not self report. -->
+            <section class="strip-pane" id="sessionExitPane" aria-labelledby="sessionExitHeading">
+              <header class="strip-head">
+                <h4 class="strip-title" id="sessionExitHeading">Who closed it</h4>
+                <span class="strip-caps"><span class="strip-cap" id="sessionExitBasis"></span></span>
+              </header>
+              <div class="strip-body">
+                <p class="strip-empty" id="sessionExitEmpty">
+                  Import a Topstep Orders export to see whether the bracket or your hand closed each trade.
                 </p>
-                <dl class="session-topstep-signals">
-                  <div>
-                    <dt>Opening fill structure</dt>
-                    <dd id="sessionTopstepScaleInsight">Awaiting completed cycles</dd>
-                  </div>
-                  <div>
-                    <dt>Position reversals</dt>
-                    <dd id="sessionTopstepReversalInsight">Awaiting completed cycles</dd>
-                  </div>
-                  <div>
-                    <dt>P&amp;L basis</dt>
-                    <dd id="sessionTopstepPnlBasisInsight">Broker result when available</dd>
-                  </div>
-                  <!-- Who closed the trade. Only an Orders export knows this:
-                       every filled order carries the disposition that created
-                       it, so a closing fill says whether the bracket worked or
-                       the trader reached in. -->
-                  <div>
-                    <dt>Who closed it</dt>
-                    <dd id="sessionTopstepExitInsight">Awaiting completed cycles</dd>
-                  </div>
-                  <div>
-                    <dt>Cost of closing by hand</dt>
-                    <dd id="sessionTopstepExitCost">Awaiting completed cycles</dd>
-                  </div>
+                <div class="exit-bar" id="sessionExitBar" role="img" aria-label="Share of closes by origin" hidden></div>
+                <div class="exit-shares" id="sessionExitShares" hidden></div>
+                <div class="exit-cost" id="sessionExitCostRow" hidden>
+                  <span class="exit-cost-label" id="sessionExitCostLabel">Cost of closing by hand vs bracket baseline</span>
+                  <span class="exit-cost-value" id="sessionExitCostValue">&mdash;</span>
+                </div>
+              </div>
+              <p class="strip-foot" id="sessionExitFoot">From Topstep Orders export &middot; closing order origin, per trade.</p>
+            </section>
+
+            <!-- JOURNAL COVERAGE. The almanac's own supply line. -->
+            <section class="strip-pane" id="sessionCoveragePane" aria-labelledby="sessionCoverageHeading">
+              <header class="strip-head">
+                <h4 class="strip-title" id="sessionCoverageHeading">Journal coverage</h4>
+                <span class="strip-caps">
+                  <span class="strip-cap cov-flag" id="sessionMissingDataCount" hidden></span>
+                  <span class="strip-cap cov-streak" id="sessionCoverageStreak" hidden></span>
+                </span>
+              </header>
+              <div class="strip-body">
+                <p class="cov-figures">
+                  <strong id="sessionJournaledCount">0</strong>
+                  <span class="cov-of" id="sessionCoverageTotal">/0</span>
+                  <span class="cov-pct" id="sessionCoveragePercent">0%</span>
+                </p>
+                <div
+                  class="cov-bar"
+                  id="sessionCoverageBar"
+                  role="progressbar"
+                  aria-label="Journal completion"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-valuenow="0"
+                ><span id="sessionCoverageBarFill"></span></div>
+                <dl class="cov-rows">
+                  <div><dt>awaiting context</dt><dd id="sessionUnjournalledCount">0</dd></div>
+                  <div><dt>oldest unjournalled</dt><dd id="sessionCoverageOldest">&mdash;</dd></div>
+                  <div><dt>scar cells unjournalled</dt><dd id="sessionCoverageScar">&mdash;</dd></div>
                 </dl>
-                <p class="session-topstep-note" id="sessionTopstepExecutionNote">
-                  Open, incomplete, cancelled, and rejected order rows stay outside completed-cycle performance.
-                </p>
-              </aside>
-
-            <section class="session-margin-pane" aria-labelledby="sessionCoverageHeading">
-              <header class="session-margin-head">
-                <p>Journal coverage</p>
-                <h4 id="sessionCoverageHeading">Imported trade coverage</h4>
-              </header>
-              <p class="session-coverage-line">
-                <strong id="sessionJournaledCount">0</strong> journaled &middot;
-                <strong id="sessionUnjournalledCount">0</strong> waiting &middot;
-                <strong id="sessionCoveragePercent">0%</strong> complete
-              </p>
-              <div
-                class="session-coverage-bar"
-                id="sessionCoverageBar"
-                role="progressbar"
-                aria-label="Journal completion"
-                aria-valuemin="0"
-                aria-valuemax="100"
-                aria-valuenow="0"
-              >
-                <span id="sessionCoverageBarFill"></span>
               </div>
-              <p class="session-margin-note" id="sessionCoverageConclusion">Your journal coverage will appear here.</p>
-              <p class="session-margin-note"><strong id="sessionMissingDataCount">0</strong> imported rows missing or incomplete. The almanac only knows what the journal tells it.</p>
+              <p class="strip-foot">The almanac only knows what the journal tells it.</p>
             </section>
-          </div>
 
-          
+          </div>
 
           <aside class="session-trade-drawer" id="sessionTradeDrawer" aria-labelledby="sessionTradeDrawerTitle" hidden>
                 <header>
@@ -4275,6 +4268,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260829-almanac4"></script>
+    <script type="module" src="app.js?v=20260829-ref4"></script>
   </body>
 </html>
