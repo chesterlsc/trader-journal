@@ -210,22 +210,20 @@ for (const [report, expectedLabel] of [
   [brokerOnlyReport, "Broker P&L"]
 ]) {
   const ui = renderScorecard(report);
-  assert.equal(ui.sessionBestSessionPnlLabel.textContent, expectedLabel);
   assert.equal(ui.sessionComparisonHeading.textContent, `${expectedLabel} by entry session`);
   assert.ok(ui.sessionScorecard.innerHTML.includes(expectedLabel), `${expectedLabel} must survive into hover/accessible detail copy`);
 }
 
-const hourRenderer = takeFunction(appSrc, "renderSessionHourRail");
-assert.match(hourRenderer, /report\.pnl\.label/);
-assert.match(hourRenderer, /best\.pnlLabel/);
-assert.match(hourRenderer, /weakest\.pnlLabel/);
+const almanacRenderer = takeFunction(appSrc, "renderSessionAlmanac");
+assert.match(almanacRenderer, /cell\.pnlLabel/, "almanac cells must carry the engine's net/gross/broker basis into their detail copy");
+const cfRenderer = takeFunction(appSrc, "renderSessionCounterfactual");
+assert.match(cfRenderer, /report\.pnl\.label/, "the counterfactual must state the report's P&L basis, never hardcode one");
 const durationRenderer = takeFunction(appSrc, "renderSessionDurations");
 assert.match(durationRenderer, /report\.pnl\.label/);
 assert.match(durationRenderer, /best\.pnlLabel/);
-assert.match(durationRenderer, /Profitable trades are normally held/);
 assert.doesNotMatch(durationRenderer, /stayed profitable|profitable for\s+\$\{/i);
 const drawerRenderer = takeFunction(appSrc, "openSessionTradeDrawer");
 assert.match(drawerRenderer, /resolveTradePnl\(trade\)/);
-assert.match(drawerRenderer, /pnl\.label\.toLowerCase\(\)/, "hour drawer must carry the same net/gross/broker label as the report");
+assert.match(drawerRenderer, /pnl\.label\.toLowerCase\(\)/, "the cell drawer must carry the same net/gross/broker label as the report");
 
 console.log("sessionIntelligenceIntegration.check.mjs: OK — boot cache, Topstep source/timezone, and visible P&L provenance stay connected");

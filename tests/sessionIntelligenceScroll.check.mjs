@@ -97,6 +97,26 @@ check(
   "mobile anchor/focus scrolling must use the same 124px + safe-area dock clearance"
 );
 
+// At dashboard width (>=1240px) the page becomes the viewport: the view's
+// own scrolling stops and the matrix well, the side column, and each margin
+// pane own any overflow, so nothing is ever unreachable while the page
+// itself never scrolls.
+const dashboardCss = blocksFor(clay, /@media\s*\(min-width:\s*1240px\)/).join("\n");
+const dashboardSessionRules = ruleBodies(dashboardCss, "#session-intelligence.session-page.is-active").join("\n");
+check(/overflow-y\s*:\s*hidden\b/.test(dashboardSessionRules), "the dashboard view must not scroll at >=1240px");
+check(
+  /grid-template-rows\s*:[^;]*minmax\(0,\s*1fr\)/.test(dashboardSessionRules),
+  "the dashboard needs a flexible main row so the fixed viewport height distributes instead of clipping"
+);
+check(
+  /overflow\s*:\s*auto\b/.test(ruleBodies(dashboardCss, ".session-almanac-scroll").join("\n")),
+  "the matrix well must own its overflow once the page stops scrolling"
+);
+check(
+  /overflow-y\s*:\s*auto\b/.test(ruleBodies(dashboardCss, ".session-almanac-side").join("\n")),
+  "the side column must own its overflow once the page stops scrolling"
+);
+
 if (failures.length) {
   assert.fail(`Session Intelligence scroll contract failed:\n- ${failures.join("\n- ")}`);
 }

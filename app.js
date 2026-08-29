@@ -27,7 +27,7 @@ import {
   buildSessionTimingReport,
   resolveTradePnl,
   resolveTradeTiming
-} from "./src/lib/sessionReport.js?v=20260822-session-topstep4";
+} from "./src/lib/sessionReport.js?v=20260828-almanac1";
 import {
   normalizeMarketSymbol,
   fetchLivePricesFromBackend
@@ -128,7 +128,6 @@ const DEFAULT_SETTINGS = {
   // Session Intelligence keeps its compact filters with the journal so a
   // return visit opens on the same evidence window and entry-hour metric.
   sessionDateRange: "all",
-  sessionEntryMetric: "pnl",
   // Multi-account. Seeded empty and filled by ensureAccounts() on the first
   // load, because the migration needs the trader's real starting balance and
   // that is not known at module-evaluation time.
@@ -300,8 +299,7 @@ const state = {
   // exactly like every other series and keep its draw-in guard honest.
   playbook: { setup: "", curve: [], dates: [], key: "line" },
   sessionIntelligence: {
-    activeTab: "sessions",
-    selectedHour: null
+    selectedCell: null
   },
   analytics: null
 };
@@ -408,11 +406,6 @@ const ui = {
   playbookShots: document.getElementById("playbookShots"),
   playbookBackBtn: document.getElementById("playbookBackBtn"),
   playbookJournalBtn: document.getElementById("playbookJournalBtn"),
-  dashUnjournalled: document.getElementById("dashUnjournalled"),
-  dashUnjournalledCount: document.getElementById("dashUnjournalledCount"),
-  dashUnjournalledList: document.getElementById("dashUnjournalledList"),
-  dashJournalStreak: document.getElementById("dashJournalStreak"),
-  dashJournalBars: document.getElementById("dashJournalBars"),
   balanceCard: document.querySelector(".metric-card-balance"),
   balanceOverrideNote: document.getElementById("balanceOverrideNote"),
   scoreInfoDialog: document.getElementById("scoreInfoDialog"),
@@ -597,11 +590,11 @@ const ui = {
   journalVoiceActions: document.getElementById("journalVoiceActions"),
   journalVoiceDeleteBtn: document.getElementById("journalVoiceDeleteBtn"),
   journalVoiceQuota: document.getElementById("journalVoiceQuota"),
-  dashJournalCta: document.getElementById("dashJournalCta"),
-  dashJournalCtaCount: document.getElementById("dashJournalCtaCount"),
 
-  // Dedicated Session Intelligence page. The four tab panels each keep one
-  // conclusion, three or fewer primary values, and one visualization.
+  // Dedicated Session Intelligence page: one no-scroll dashboard. A compact
+  // header band with the report meta, a live now-chip, the almanac matrix
+  // beside the counterfactual engine and tilt radar, four ledger panes below,
+  // and a trade drawer opened from matrix cells.
   sessionIntelligenceView: document.getElementById("session-intelligence"),
   sessionHeadline: document.getElementById("sessionHeadline"),
   sessionDateRange: document.getElementById("sessionDateRange"),
@@ -609,33 +602,33 @@ const ui = {
   sessionTimingCoverage: document.getElementById("sessionTimingCoverage"),
   sessionImportedSource: document.getElementById("sessionImportedSource"),
   sessionAnalyzedCount: document.getElementById("sessionAnalyzedCount"),
+  sessionHeaderNet: document.getElementById("sessionHeaderNet"),
   sessionConfidence: document.getElementById("sessionConfidence"),
-  sessionTabs: Array.from(document.querySelectorAll("[data-session-tab]")),
-  sessionPanels: Array.from(document.querySelectorAll("[data-session-panel]")),
-  sessionSessionsConclusion: document.getElementById("sessionSessionsConclusion"),
-  sessionSessionsConfidence: document.getElementById("sessionSessionsConfidence"),
   sessionComparisonHeading: document.getElementById("sessionComparisonHeading"),
-  sessionBestSessionPnlLabel: document.getElementById("sessionBestSessionPnlLabel"),
-  sessionBestSessionPnl: document.getElementById("sessionBestSessionPnl"),
-  sessionBestSessionExpectancy: document.getElementById("sessionBestSessionExpectancy"),
-  sessionBestSessionTrades: document.getElementById("sessionBestSessionTrades"),
-  sessionEntryConclusion: document.getElementById("sessionEntryConclusion"),
-  sessionBestHour: document.getElementById("sessionBestHour"),
-  sessionBestHourMeta: document.getElementById("sessionBestHourMeta"),
-  sessionWorstHour: document.getElementById("sessionWorstHour"),
-  sessionWorstHourMeta: document.getElementById("sessionWorstHourMeta"),
-  sessionEntryMetricButtons: Array.from(document.querySelectorAll("[data-entry-metric]")),
+  sessionAlmanacNow: document.getElementById("sessionAlmanacNow"),
+  sessionAlmanacEdgeline: document.getElementById("sessionAlmanacEdgeline"),
+  sessionAlmanacMatrix: document.getElementById("sessionAlmanacMatrix"),
+  sessionAlmanacNote: document.getElementById("sessionAlmanacNote"),
+  sessionCfConclusion: document.getElementById("sessionCfConclusion"),
+  sessionCfReal: document.getElementById("sessionCfReal"),
+  sessionCfRealMeta: document.getElementById("sessionCfRealMeta"),
+  sessionCfGhost: document.getElementById("sessionCfGhost"),
+  sessionCfGhostMeta: document.getElementById("sessionCfGhostMeta"),
+  sessionCfGap: document.getElementById("sessionCfGap"),
+  sessionCounterfactualChart: document.getElementById("sessionCounterfactualChart"),
+  sessionCfLedger: document.getElementById("sessionCfLedger"),
+  sessionTiltCount: document.getElementById("sessionTiltCount"),
+  sessionTiltNetLabel: document.getElementById("sessionTiltNetLabel"),
+  sessionTiltNet: document.getElementById("sessionTiltNet"),
+  sessionTiltWin: document.getElementById("sessionTiltWin"),
+  sessionTiltBaseline: document.getElementById("sessionTiltBaseline"),
+  sessionTiltInsight: document.getElementById("sessionTiltInsight"),
   sessionWinningHold: document.getElementById("sessionWinningHold"),
   sessionWinningHoldMeta: document.getElementById("sessionWinningHoldMeta"),
   sessionLosingHold: document.getElementById("sessionLosingHold"),
   sessionLosingHoldMeta: document.getElementById("sessionLosingHoldMeta"),
   sessionBestDuration: document.getElementById("sessionBestDuration"),
   sessionBestDurationMeta: document.getElementById("sessionBestDurationMeta"),
-  sessionHoldConclusion: document.getElementById("sessionHoldConclusion"),
-  sessionHourRail: document.getElementById("sessionHourRail"),
-  sessionHourEmpty: document.getElementById("sessionHourEmpty"),
-  sessionProfitClockHeading: document.getElementById("sessionProfitClockHeading"),
-  sessionTimingInsight: document.getElementById("sessionTimingInsight"),
   sessionScorecard: document.getElementById("sessionScorecard"),
   sessionTopstepExecution: document.getElementById("sessionTopstepExecution"),
   sessionTopstepExecutionConfidence: document.getElementById("sessionTopstepExecutionConfidence"),
@@ -659,7 +652,6 @@ const ui = {
   sessionCoverageBar: document.getElementById("sessionCoverageBar"),
   sessionCoverageBarFill: document.getElementById("sessionCoverageBarFill"),
   sessionMissingDataCount: document.getElementById("sessionMissingDataCount"),
-  sessionCoverageBadge: document.getElementById("sessionCoverageBadge"),
 
   tradeForm: document.getElementById("tradeForm"),
   tradeSubmitBtn: document.getElementById("tradeSubmitBtn"),
@@ -1666,16 +1658,9 @@ function bindEvents() {
   document.getElementById("tabBarImportBtn")?.addEventListener("click", openTradeImport);
   ui.sessionDateRange?.addEventListener("change", handleSessionIntelligenceFilterChange);
   ui.sessionReportTimeZone?.addEventListener("change", handleSessionIntelligenceFilterChange);
-  ui.sessionTabs.forEach((button) => {
-    button.addEventListener("click", () => activateSessionIntelligenceTab(button.dataset.sessionTab));
-    button.addEventListener("keydown", handleSessionIntelligenceTabKeydown);
-  });
-  ui.sessionEntryMetricButtons.forEach((button) => {
-    button.addEventListener("click", () => handleSessionEntryMetricChange(button.dataset.entryMetric));
-  });
-  ui.sessionHourRail?.addEventListener("click", (event) => {
-    const hour = event.target.closest("[data-session-hour]");
-    if (hour) openSessionTradeDrawer(Number(hour.dataset.sessionHour));
+  ui.sessionAlmanacMatrix?.addEventListener("click", (event) => {
+    const cell = event.target.closest("[data-almanac-cell]");
+    if (cell) openSessionTradeDrawer(cell.dataset.almanacCell);
   });
   ui.sessionTradeDrawerClose?.addEventListener("click", closeSessionTradeDrawer);
   ui.sessionTradeDrawer?.addEventListener("click", (event) => {
@@ -1893,20 +1878,6 @@ function bindEvents() {
     scrollDashboardTo(ui.dashPlaybook);
   });
   ui.playbookJournalBtn?.addEventListener("click", openPlaybookInJournal);
-  // 1c: every route into the queue opens the same close sheet for that trade.
-  ui.dashUnjournalledList?.addEventListener("click", (event) => {
-    const row = event.target.closest("[data-unjournalled-trade]");
-    if (row) {
-      openJournalSheet(row.dataset.unjournalledTrade);
-    }
-  });
-  // Mobile: one pill instead of the row list, pointed at the oldest trade
-  // still waiting. Saving advances the queue, so repeated taps clear it.
-  ui.dashJournalCta?.addEventListener("click", () => {
-    const reportNext = state.analytics?.sessionTiming?.journalCoverage?.nextTradeId;
-    const pending = getUnjournalledTrades();
-    openJournalSheet(reportNext || pending[pending.length - 1]?.id);
-  });
   // Overflow menu is a <details>; close it on outside click and on Escape.
   // Every flyout in the rail shares one dismissal contract: outside click,
   // Escape with focus returned to the summary, and close on choosing. Bound
@@ -1933,9 +1904,12 @@ function bindEvents() {
   });
   // The greeting carries a live session countdown; a minute tick is enough,
   // and the NOW grid's event cell rides the same clock above its hot window.
+  // The almanac's now-chip and is-now cell ride it too, from the cached
+  // report — no matrix rebuild, no recompute.
   window.setInterval(() => {
     renderGreeting();
     renderNowEvent();
+    renderSessionAlmanacNow(state.analytics?.sessionTiming);
   }, 60000);
   // Inside ten minutes the event cell counts seconds; above it, the minute
   // tick owns the cell and this loop costs one class check.
@@ -8699,47 +8673,6 @@ function handleSessionIntelligenceFilterChange() {
   renderAll();
 }
 
-function handleSessionEntryMetricChange(metric) {
-  if (!["pnl", "expectancy", "winRate"].includes(metric) || metric === state.settings.sessionEntryMetric) {
-    return;
-  }
-  state.settings = normalizeSettings({ ...state.settings, sessionEntryMetric: metric });
-  persistState();
-  renderAll();
-}
-
-function activateSessionIntelligenceTab(tab) {
-  const activeTab = ["sessions", "entry-time", "hold-time", "journal-coverage"].includes(tab)
-    ? tab
-    : "sessions";
-  state.sessionIntelligence.activeTab = activeTab;
-  ui.sessionTabs.forEach((button) => {
-    const active = button.dataset.sessionTab === activeTab;
-    button.classList.toggle("is-active", active);
-    button.setAttribute("aria-selected", String(active));
-    button.tabIndex = active ? 0 : -1;
-  });
-  ui.sessionPanels.forEach((panel) => {
-    panel.hidden = panel.dataset.sessionPanel !== activeTab;
-  });
-  if (activeTab !== "entry-time") closeSessionTradeDrawer();
-}
-
-function handleSessionIntelligenceTabKeydown(event) {
-  const current = ui.sessionTabs.indexOf(event.currentTarget);
-  if (current < 0) return;
-  let next = current;
-  if (event.key === "ArrowRight") next = (current + 1) % ui.sessionTabs.length;
-  else if (event.key === "ArrowLeft") next = (current + ui.sessionTabs.length - 1) % ui.sessionTabs.length;
-  else if (event.key === "Home") next = 0;
-  else if (event.key === "End") next = ui.sessionTabs.length - 1;
-  else return;
-  event.preventDefault();
-  const button = ui.sessionTabs[next];
-  activateSessionIntelligenceTab(button.dataset.sessionTab);
-  button.focus();
-}
-
 function timingConfidenceCopy(confidence) {
   if (!confidence || confidence.count === 0) return "No data";
   const more = confidence.neededForReliable > 0
@@ -8784,6 +8717,14 @@ function renderSessionTiming(report) {
       : report.source.label;
   }
   if (ui.sessionAnalyzedCount) ui.sessionAnalyzedCount.textContent = `${report.coverage.analyzed} analyzed`;
+  if (ui.sessionHeaderNet) {
+    setTimingValue(
+      ui.sessionHeaderNet,
+      report.coverage.analyzed ? timingMoney(report.pnl.value) : "—",
+      report.coverage.analyzed ? timingTone(report.pnl.value) : ""
+    );
+    ui.sessionHeaderNet.title = report.pnl.label;
+  }
   if (ui.sessionConfidence) {
     ui.sessionConfidence.textContent = report.confidence.label;
     ui.sessionConfidence.classList.remove("is-early", "is-developing", "is-reliable");
@@ -8794,16 +8735,17 @@ function renderSessionTiming(report) {
   if (ui.sessionTimingCoverage) {
     ui.sessionTimingCoverage.textContent = `${report.coverage.timed} of ${report.coverage.total} entry times · ${report.coverage.durationKnown} measured holds`;
   }
+  renderSessionAlmanac(report);
+  renderSessionCounterfactual(report);
+  renderSessionTilt(report);
   renderSessionScorecard(report);
   renderSessionTopstepExecution(report);
   // Kept out of renderSessionTopstepExecution on purpose: that function is
   // extracted and evaluated in isolation by its own integration check, so a
   // call to a sibling declared elsewhere in the module would break it.
   renderExitDiscipline();
-  renderSessionHourRail(report);
   renderSessionDurations(report);
   renderSessionCoverage(report);
-  activateSessionIntelligenceTab(state.sessionIntelligence.activeTab);
 }
 
 function timingSegment(rows, key) {
@@ -9020,30 +8962,6 @@ function renderSessionTopstepExecution(report) {
 function renderSessionScorecard(report) {
   if (!ui.sessionScorecard) return;
   if (ui.sessionComparisonHeading) ui.sessionComparisonHeading.textContent = `${report.pnl.label} by entry session`;
-  const observed = report.bestSession || report.bestObservedSession;
-  if (!observed) {
-    if (ui.sessionSessionsConclusion) ui.sessionSessionsConclusion.textContent = "Import closed trades to compare your sessions.";
-    if (ui.sessionSessionsConfidence) ui.sessionSessionsConfidence.textContent = `A reliable session needs at least ${report.minimumReliableSamples} trades.`;
-    setTimingValue(ui.sessionBestSessionPnl, "—");
-    setTimingValue(ui.sessionBestSessionExpectancy, "—");
-    if (ui.sessionBestSessionTrades) ui.sessionBestSessionTrades.textContent = "0";
-  } else {
-    const reliable = observed.confidence.key === "reliable";
-    const positive = observed.pnl > 0;
-    if (ui.sessionSessionsConclusion) {
-      ui.sessionSessionsConclusion.textContent = reliable && positive
-        ? `Your best session is ${observed.label}.`
-        : positive
-          ? `${observed.label} is a ${observed.confidence.key === "early" ? "promising early" : "developing"} signal.`
-          : `No session is profitable yet; ${observed.label} is least negative.`;
-    }
-    if (ui.sessionSessionsConfidence) ui.sessionSessionsConfidence.textContent = timingConfidenceCopy(observed.confidence);
-    if (ui.sessionBestSessionPnlLabel) ui.sessionBestSessionPnlLabel.textContent = observed.pnlLabel;
-    const metricTone = reliable ? timingTone(observed.pnl) : "";
-    setTimingValue(ui.sessionBestSessionPnl, timingMoney(observed.pnl), metricTone);
-    setTimingValue(ui.sessionBestSessionExpectancy, timingMoney(observed.expectancy), metricTone);
-    if (ui.sessionBestSessionTrades) ui.sessionBestSessionTrades.textContent = String(observed.count);
-  }
   const active = report.sessions.filter((row) => row.count > 0);
   if (!active.length) {
     ui.sessionScorecard.innerHTML = '<p class="session-empty-copy">Import timestamped closed trades to compare Asia, London, New York, and off-session entries.</p>';
@@ -9069,131 +8987,396 @@ function renderSessionScorecard(report) {
   }).join("");
 }
 
-function entryMetricValue(row, metric) {
-  if (metric === "winRate") return row.winRate;
-  return metric === "expectancy" ? row.expectancy : row.pnl;
+/* ══ THE ALMANAC ═══════════════════════════════════════════════════════════
+   The pure module buckets every analyzed trade with a broker entry timestamp
+   into one weekday-by-hour cell of the report timezone. These renderers only
+   state those results: cells publish at the reliable floor, columns at three
+   times it, and everything thinner is withheld, never estimated. */
+
+function almanacCellName(cell) {
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const start = String(cell.hour).padStart(2, "0");
+  const end = String((cell.hour + 1) % 24).padStart(2, "0");
+  return `${dayNames[cell.day]} ${formatTimingHourRange(`${start}:00-${end}:00`)}`;
 }
 
-function entryMetricText(row, metric) {
-  if (!row.count) return "—";
-  return metric === "winRate" ? `${Math.round(row.winRate)}%` : timingMoney(entryMetricValue(row, metric));
+function almanacNowSlot(timeZone) {
+  try {
+    const values = {};
+    new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23"
+    }).formatToParts(new Date()).forEach((part) => {
+      if (part.type !== "literal") values[part.type] = part.value;
+    });
+    const day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(values.weekday);
+    const hour = Number(values.hour);
+    const minute = Number(values.minute);
+    if (day < 0 || !Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+    return { day, hour, minute, label: values.weekday };
+  } catch {
+    return null;
+  }
 }
 
-function timingCrossDayCopy(row) {
-  if (!row || !row.distinctDays || row.profitableDayRate === null || row.profitableDayRate === undefined) return "";
-  return `${Math.round(row.profitableDayRate)}% profitable across ${row.distinctDays} active ${row.distinctDays === 1 ? "date" : "dates"}`;
-}
-
-function renderSessionHourRail(report) {
-  if (!report || !ui.sessionHourRail || !ui.sessionHourEmpty) return;
-  const metric = state.settings.sessionEntryMetric;
-  if (ui.sessionProfitClockHeading) {
-    ui.sessionProfitClockHeading.textContent = metric === "winRate"
-      ? "Win rate by entry hour"
-      : metric === "expectancy"
-        ? "Expectancy by entry hour"
-        : `${report.pnl.label} by entry hour`;
-  }
-  ui.sessionEntryMetricButtons.forEach((button) => {
-    const active = button.dataset.entryMetric === metric;
-    button.classList.toggle("is-active", active);
-    button.setAttribute("aria-pressed", String(active));
-    if (button.dataset.entryMetric === "pnl") button.textContent = report.pnl.label;
-  });
-
-  const best = report.entryTime.bestHour || report.entryTime.strongestObservedHour;
-  const weakest = report.entryTime.weakestHour || report.entryTime.weakestObservedHour;
-  if (ui.sessionEntryConclusion) {
-    ui.sessionEntryConclusion.textContent = !best
-      ? "Import timestamped trades to reveal your strongest entry window."
-      : best.pnl <= 0
-        ? "No profitable entry window has emerged yet."
-        : best.confidence.key === "reliable"
-          ? `Your best entry window is ${formatTimingHourRange(best.label)}.`
-          : `${formatTimingHourRange(best.label)} is a ${best.confidence.key === "early" ? "promising early" : "developing"} signal.`;
-  }
-  setTimingValue(
-    ui.sessionBestHour,
-    best ? formatTimingHourRange(best.label) : "—",
-    best?.confidence.key === "reliable" ? timingTone(best.pnl) : ""
-  );
-  if (ui.sessionBestHourMeta) {
-    const crossDay = timingCrossDayCopy(best);
-    ui.sessionBestHourMeta.textContent = best
-      ? `${timingMoney(best.pnl)} ${best.pnlLabel.toLowerCase()} · ${Math.round(best.winRate)}% win${crossDay ? ` · ${crossDay}` : ""} · ${timingConfidenceCopy(best.confidence)}`
-      : "No timestamped entries yet";
-  }
-  setTimingValue(
-    ui.sessionWorstHour,
-    weakest ? formatTimingHourRange(weakest.label) : "—",
-    weakest?.confidence.key === "reliable" ? "is-negative" : ""
-  );
-  if (ui.sessionWorstHourMeta) {
-    ui.sessionWorstHourMeta.textContent = weakest
-      ? `${timingMoney(weakest.pnl)} ${weakest.pnlLabel.toLowerCase()} · ${Math.round(weakest.winRate)}% win · ${timingConfidenceCopy(weakest.confidence)}`
-      : "No losing entry window yet";
-  }
-
-  const active = report.hours.filter((row) => row.count > 0);
-  ui.sessionHourEmpty.hidden = active.length > 0;
-  ui.sessionHourRail.hidden = active.length === 0;
-  if (!active.length) {
-    ui.sessionHourRail.innerHTML = "";
-    if (ui.sessionTimingInsight) {
-      ui.sessionTimingInsight.textContent = report.timeZones.source.requiresConfirmation
-        ? "A zone-less Topstep export needs its source clock confirmed during import before entry hours can be analyzed."
-        : "Import trades with broker entry timestamps to build the 24-hour profit timeline.";
+/* The live clock. Recomputed on a minute tick as well as on render, so the
+   chip's minutes-left and the matrix's is-now cell never go stale while the
+   page sits open. Reads only the cached report; never rebuilds the matrix. */
+function renderSessionAlmanacNow(report) {
+  const almanac = report?.almanac;
+  if (!ui.sessionAlmanacNow || !almanac) return;
+  const cellByKey = new Map(almanac.cells.map((cell) => [cell.key, cell]));
+  const redKeys = new Set(almanac.redCells.map((cell) => cell.key));
+  const now = almanacNowSlot(report.reportTimeZone);
+  const zoneShort = (timingZoneLabel(report.reportTimeZone).match(/\(([^)]+)\)$/) || [])[1] || report.reportTimeZone;
+  let nowText = "The clock reads against your own cells";
+  let nowTone = "";
+  let nowKey = null;
+  if (now) {
+    nowKey = `${now.day}-${now.hour}`;
+    const nowCell = cellByKey.get(nowKey);
+    const reliable = nowCell?.confidence.key === "reliable";
+    const clock = `Now ${now.label} ${String(now.hour).padStart(2, "0")}:${String(now.minute).padStart(2, "0")} ${zoneShort}`;
+    const minutesLeft = `${60 - now.minute}m left in this cell`;
+    if (nowCell && reliable && nowCell.expectancy > 0) {
+      nowTone = "is-positive";
+      nowText = `${clock} · in the vein · pays ${timingMoney(nowCell.expectancy)}/trade ${nowCell.pnlLabel.toLowerCase()} · ${minutesLeft}`;
+    } else if (nowCell && redKeys.has(nowCell.key)) {
+      nowTone = "is-negative";
+      nowText = `${clock} · in a scar · bills ${timingMoney(Math.abs(nowCell.expectancy))}/trade ${nowCell.pnlLabel.toLowerCase()} · ${minutesLeft}`;
+    } else if (nowCell && reliable) {
+      nowText = `${clock} · flat · this cell has paid ${timingMoney(0)}/trade across n=${nowCell.count} · ${minutesLeft}`;
+    } else if (nowCell) {
+      nowText = `${clock} · uncharted · n=${nowCell.count} here, below the reliable floor`;
+    } else {
+      nowText = `${clock} · uncharted · you have not traded this cell`;
     }
+  }
+  setTimingValue(ui.sessionAlmanacNow, nowText, nowTone);
+  if (ui.sessionAlmanacMatrix) {
+    ui.sessionAlmanacMatrix.querySelectorAll(".almanac-cell.is-now").forEach((el) => el.classList.remove("is-now"));
+    if (now) {
+      const dayHours = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+      const slot = dayHours.includes(now.hour) ? nowKey : `ovn-${now.day}`;
+      ui.sessionAlmanacMatrix.querySelector(`[data-almanac-slot="${slot}"]`)?.classList.add("is-now");
+    }
+  }
+}
+
+function renderSessionAlmanac(report) {
+  const almanac = report?.almanac;
+  if (!ui.sessionAlmanacMatrix || !almanac) return;
+  const cells = almanac.cells;
+  const cellByKey = new Map(cells.map((cell) => [cell.key, cell]));
+  const tiltByKey = new Map((report.tilt?.cells || []).map((cell) => [cell.key, cell.count]));
+  const redKeys = new Set(almanac.redCells.map((cell) => cell.key));
+  const reliableCells = cells.filter((cell) => cell.confidence.key === "reliable");
+  const best = reliableCells.filter((cell) => cell.expectancy > 0).sort((a, b) => b.expectancy - a.expectancy)[0] || null;
+  const worst = reliableCells.filter((cell) => cell.expectancy < 0).sort((a, b) => a.expectancy - b.expectancy)[0] || null;
+
+  if (ui.sessionAlmanacEdgeline) {
+    ui.sessionAlmanacEdgeline.textContent = !cells.length
+      ? "Import closed trades to chart your weeks."
+      : [
+          best
+            ? `Vein ${almanacCellName(best)} · ${timingMoney(best.expectancy)}/trade ${best.pnlLabel.toLowerCase()}`
+            : "Vein not proven yet",
+          worst
+            ? `Scar ${almanacCellName(worst)} · ${timingMoney(worst.expectancy)}/trade`
+            : "No reliable scar",
+          `${reliableCells.length} of ${cells.length} cells at the ${almanac.cellSampleFloor}-trade floor`
+        ].join(" · ");
+  }
+
+  // The note refreshes before any early return so a filter change that
+  // empties the range never leaves the previous range's copy behind.
+  if (ui.sessionAlmanacNote) {
+    ui.sessionAlmanacNote.textContent = `${timingZoneLabel(report.reportTimeZone)} · Cells publish at ${almanac.cellSampleFloor} trades and columns at ${almanac.columnSampleFloor}; thinner samples are withheld, never estimated. Click a cell to inspect its trades.`;
+  }
+
+  if (!cells.length) {
+    ui.sessionAlmanacMatrix.innerHTML = '<p class="session-empty-copy">Import timestamped closed trades to build the almanac.</p>';
+    renderSessionAlmanacNow(report);
     return;
   }
 
-  const peak = metric === "winRate"
-    ? 100
-    : Math.max(...active.map((row) => Math.abs(entryMetricValue(row, metric))), 1);
-  ui.sessionHourRail.innerHTML = report.hours.map((row) => {
-    const value = entryMetricValue(row, metric);
-    const reliable = row.confidence.key === "reliable";
-    const toneValue = metric === "winRate" ? value - 50 : value;
-    const tone = !row.count ? "is-empty" : reliable ? timingTone(toneValue) : "is-early";
-    const magnitude = row.count ? Math.min(Math.abs(value) / peak, 1) : 0;
-    const details = row.count
-      ? `${formatTimingHourRange(row.label)}: ${timingMoney(row.pnl)} ${row.pnlLabel}, ${timingMoney(row.expectancy)} expectancy, ${Math.round(row.winRate)}% win rate, ${timingTradeCount(row.count)}, ${row.confidence.label}`
-      : `${formatTimingHourRange(row.label)}: no trades`;
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dayHours = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+  const overnightHours = [17, 18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5, 6];
+  const weekdayByDay = new Map(almanac.weekdays.map((row) => [row.day, row]));
+  const days = [1, 2, 3, 4, 5, 6, 0].filter((day) => (day >= 1 && day <= 5) || weekdayByDay.has(day));
+  const maxHeat = Math.max(...reliableCells.map((cell) => Math.abs(cell.expectancy)), 1);
+  const columnFloor = almanac.columnSampleFloor;
+
+  const combine = (keys) => {
+    let pnl = 0;
+    let count = 0;
+    let tilts = 0;
+    const labels = new Set();
+    keys.forEach((key) => {
+      const cell = cellByKey.get(key);
+      if (cell) {
+        pnl += cell.pnl;
+        count += cell.count;
+        labels.add(cell.pnlLabel);
+      }
+      tilts += tiltByKey.get(key) || 0;
+    });
+    const pnlLabel = labels.size === 1 ? [...labels][0] : labels.size ? "Mixed-basis P&L" : "P&L";
+    return { pnl: Math.round(pnl * 100) / 100, count, tilts, pnlLabel };
+  };
+
+  const tiltMark = (count, name) => count
+    ? `<i class="almanac-tilt" title="${escapeHtml(`${count} revenge ${count === 1 ? "entry" : "entries"} in ${name}`)}">${count}</i>`
+    : "";
+
+  const cellButton = (cell, key, name) => {
+    if (!cell || !cell.count) {
+      return `<span class="almanac-cell is-empty" data-almanac-slot="${key}" aria-hidden="true"></span>`;
+    }
+    const reliable = cell.confidence.key === "reliable";
+    const tone = reliable ? (cell.expectancy > 0 ? "is-positive" : cell.expectancy < 0 ? "is-negative" : "is-flat") : "is-withheld";
+    const heat = reliable ? Math.min(Math.abs(cell.expectancy) / maxHeat, 1) : 0;
+    const selected = state.sessionIntelligence.selectedCell === key;
+    const details = reliable
+      ? `${name}: ${timingMoney(cell.expectancy)} expectancy per trade (${cell.pnlLabel}), ${Math.round(cell.winRate)}% win rate, ${timingTradeCount(cell.count)}, ${cell.confidence.label}`
+      : `${name}: ${timingTradeCount(cell.count)}, below the ${almanac.cellSampleFloor}-trade floor · figures withheld, never estimated`;
+    const body = reliable
+      ? `<strong>${escapeHtml(timingMoney(Math.round(cell.expectancy)))}</strong><span>n=${cell.count} · ${Math.round(cell.winRate)}%</span>`
+      : `<span class="almanac-wh">wh · ${cell.count}</span>`;
     return `
       <button
-        class="session-hour-cell ${tone}"
+        class="almanac-cell ${tone}"
         type="button"
-        role="listitem"
-        data-session-hour="${row.hour}"
-        aria-selected="${state.sessionIntelligence.selectedHour === row.hour}"
+        data-almanac-cell="${key}"
+        data-almanac-slot="${key}"
+        aria-selected="${selected}"
+        style="--almanac-heat:${heat.toFixed(3)}"
         aria-label="${escapeHtml(details)}"
         title="${escapeHtml(details)}"
-        ${row.count ? "" : 'aria-disabled="true" tabindex="-1"'}
-        style="--session-hour-size:${magnitude.toFixed(3)}"
-      >
-        <span class="session-hour-bar" aria-hidden="true"><span class="session-hour-fill"></span></span>
-        <span class="session-hour-label">${String(row.hour).padStart(2, "0")}</span>
-        <span class="session-hour-value">${escapeHtml(entryMetricText(row, metric))}</span>
-      </button>`;
+      >${body}${tiltMark(tiltByKey.get(key) || 0, name)}</button>`;
+  };
+
+  // Column chips mark the proven vein and the deepest scar among columns
+  // that clear the column floor, mirroring the cells' own rule.
+  const publishedCols = (report.hours || []).filter((row) => row.count >= columnFloor);
+  const veinCol = publishedCols.filter((row) => row.expectancy > 0).sort((a, b) => b.expectancy - a.expectancy)[0] || null;
+  const scarCol = publishedCols.filter((row) => row.expectancy < 0).sort((a, b) => a.expectancy - b.expectancy)[0] || null;
+  const colChip = (hour) => veinCol && veinCol.hour === hour
+    ? ' <i class="almanac-col-chip is-vein">vein</i>'
+    : scarCol && scarCol.hour === hour
+      ? ' <i class="almanac-col-chip is-scar">scar</i>'
+      : "";
+  // A vein or scar column living in the folded overnight hours still gets
+  // its chip, on the OFF-HRS header, with the actual hour in the title.
+  const offChips = [
+    veinCol && !dayHours.includes(veinCol.hour)
+      ? ` <i class="almanac-col-chip is-vein" title="${escapeHtml(`Vein column: ${formatTimingHourRange(veinCol.label)}`)}">vein</i>`
+      : "",
+    scarCol && !dayHours.includes(scarCol.hour)
+      ? ` <i class="almanac-col-chip is-scar" title="${escapeHtml(`Scar column: ${formatTimingHourRange(scarCol.label)}`)}">scar</i>`
+      : ""
+  ].join("");
+  const header = [
+    '<span class="almanac-corner" aria-hidden="true"></span>',
+    `<span class="almanac-col-label">OFF-HRS${offChips}</span>`,
+    ...dayHours.map((hour) => `<span class="almanac-col-label">${String(hour).padStart(2, "0")}:00${colChip(hour)}</span>`),
+    '<span class="almanac-col-label almanac-col-net">NET</span>'
+  ].join("");
+
+  const rows = days.map((day) => {
+    const weekday = weekdayByDay.get(day);
+    const overnightKeys = overnightHours.map((hour) => `${day}-${hour}`);
+    const overnight = combine(overnightKeys);
+    const overnightRed = overnightKeys.filter((key) => redKeys.has(key));
+    // Calendar-day grouping, labeled as exactly that: this row's small hours
+    // plus this row's evening. A "17:00 to 07:00" claim would describe a
+    // window this cell does not contain.
+    const overnightName = `${dayNames[day]} off-hours (00:00 to 07:00 and 17:00 to 24:00)`;
+    const redSuffix = overnightRed.length
+      ? ` · includes ${overnightRed.length} red ${overnightRed.length === 1 ? "cell" : "cells"} the counterfactual skips`
+      : "";
+    const overnightDetails = overnight.count
+      ? overnight.count >= almanac.cellSampleFloor
+        ? `${overnightName}: ${timingMoney(overnight.pnl)} ${overnight.pnlLabel.toLowerCase()} across ${timingTradeCount(overnight.count)}${redSuffix}`
+        : `${overnightName}: ${timingTradeCount(overnight.count)}, below the ${almanac.cellSampleFloor}-trade floor${redSuffix}`
+      : `${overnightName}: no trades`;
+    const overnightTone = overnightRed.length
+      ? "is-negative"
+      : overnight.count < almanac.cellSampleFloor
+        ? overnight.count ? "is-withheld" : "is-empty"
+        : overnight.pnl > 0 ? "is-positive" : overnight.pnl < 0 ? "is-negative" : "is-flat";
+    const overnightBody = !overnight.count
+      ? ""
+      : overnight.count >= almanac.cellSampleFloor
+        ? `<strong>${escapeHtml(timingMoney(Math.round(overnight.pnl)))}</strong><span>n=${overnight.count}</span>`
+        : `<span class="almanac-wh">wh · ${overnight.count}</span>`;
+    const overnightCell = overnight.count
+      ? `<button class="almanac-cell almanac-overnight ${overnightTone}" type="button" data-almanac-cell="ovn-${day}" data-almanac-slot="ovn-${day}" aria-selected="${state.sessionIntelligence.selectedCell === `ovn-${day}`}" style="--almanac-heat:0" title="${escapeHtml(overnightDetails)}" aria-label="${escapeHtml(overnightDetails)}">${overnightBody}${tiltMark(overnight.tilts, overnightName)}</button>`
+      : `<span class="almanac-cell almanac-overnight is-empty" data-almanac-slot="ovn-${day}" aria-hidden="true"></span>`;
+    const net = weekday && weekday.count >= columnFloor
+      ? `<strong class="${weekday.pnl > 0 ? "is-positive" : weekday.pnl < 0 ? "is-negative" : ""}">${escapeHtml(timingMoney(weekday.pnl))}</strong><span>n=${weekday.count}</span>`
+      : weekday
+        ? `<span class="almanac-wh">wh · ${weekday.count}</span>`
+        : '<span class="almanac-wh">—</span>';
+    return [
+      `<span class="almanac-row-label">${dayNames[day]}</span>`,
+      overnightCell,
+      ...dayHours.map((hour) => {
+        const key = `${day}-${hour}`;
+        return cellButton(cellByKey.get(key), key, almanacCellName({ day, hour }));
+      }),
+      `<span class="almanac-net">${net}</span>`
+    ].join("");
   }).join("");
 
-  if (ui.sessionTimingInsight) {
-    const consistency = report.entryTime?.consistency;
-    const consistent = consistency?.mostConsistentHour || consistency?.strongestObservedHour;
-    const crossDay = timingCrossDayCopy(consistent);
-    const consistencyLabel = consistent?.consistencyConfidence?.key === "reliable" && consistent.consistentPositive
-      ? "Repeatable edge"
-      : Number(consistent?.distinctDays || 0) >= 2
-        ? "Developing cross-day signal"
-        : "Early observation";
-    const consistencyCopy = consistent && crossDay
-      ? `${consistencyLabel}: ${formatTimingHourRange(consistent.label)} is ${crossDay}.`
-      : "Cross-day consistency needs timestamps on multiple active dates.";
-    const concentrated = consistency?.concentrationRiskHours?.find((row) => row.hour === best?.hour) || null;
-    const concentrationCopy = concentrated
-      ? ` One winner contributes ${Math.round(concentrated.largestWinnerSharePct)}% of gross profit in the leading hour, so treat it as concentrated.`
+  const hoursByHour = new Map((report.hours || []).map((row) => [row.hour, row]));
+  const overnightTotal = combine(days.flatMap((day) => overnightHours.map((hour) => `${day}-${hour}`)));
+  const footerCells = dayHours.map((hour) => {
+    const row = hoursByHour.get(hour);
+    if (!row || !row.count) return '<span class="almanac-foot">—</span>';
+    if (row.count < columnFloor) return `<span class="almanac-foot almanac-wh">wh · ${row.count}</span>`;
+    const tone = row.pnl > 0 ? "is-positive" : row.pnl < 0 ? "is-negative" : "";
+    return `<span class="almanac-foot ${tone}">${escapeHtml(timingMoney(Math.round(row.pnl)))}<small>${row.count}</small></span>`;
+  }).join("");
+  const overnightFoot = !overnightTotal.count
+    ? '<span class="almanac-foot">—</span>'
+    : overnightTotal.count < columnFloor
+      ? `<span class="almanac-foot almanac-wh">wh · ${overnightTotal.count}</span>`
+      : `<span class="almanac-foot ${overnightTotal.pnl > 0 ? "is-positive" : overnightTotal.pnl < 0 ? "is-negative" : ""}">${escapeHtml(timingMoney(Math.round(overnightTotal.pnl)))}<small>${overnightTotal.count}</small></span>`;
+  // The grand corner sums the charted population only, so rows and columns
+  // reconcile with it; analyzed trades without an entry timestamp are named
+  // rather than silently folded in.
+  const chartedNet = Math.round(almanac.weekdays.reduce((sum, row) => sum + row.pnl, 0) * 100) / 100;
+  const chartedCount = almanac.weekdays.reduce((sum, row) => sum + row.count, 0);
+  const offMap = Math.max(0, report.coverage.analyzed - chartedCount);
+  const cornerTitle = offMap
+    ? `${offMap} analyzed ${offMap === 1 ? "trade has" : "trades have"} no charted entry time and ${offMap === 1 ? "is" : "are"} not in any cell; the report net of ${timingMoney(report.pnl.value)} includes ${offMap === 1 ? "it" : "them"}.`
+    : `Every analyzed trade is charted; this matches the report net of ${timingMoney(report.pnl.value)}.`;
+  const footer = [
+    '<span class="almanac-row-label almanac-foot-label">NET</span>',
+    overnightFoot,
+    footerCells,
+    `<span class="almanac-net almanac-foot-net" title="${escapeHtml(cornerTitle)}">${escapeHtml(timingMoney(chartedNet))}<small>Σ ${chartedCount}${offMap ? ` · ${offMap} off-map` : ""}</small></span>`
+  ].join("");
+
+  ui.sessionAlmanacMatrix.innerHTML = `${header}${rows}${footer}`;
+  renderSessionAlmanacNow(report);
+}
+
+/* THE COUNTERFACTUAL ENGINE. Two equity lines over the same fills: as
+   traded, and with reliable red-cell entries skipped. The gap is stated as
+   arithmetic on trades that happened, with the caveat pinned beside it. */
+function renderSessionCounterfactual(report) {
+  const cf = report?.counterfactual;
+  const almanac = report?.almanac;
+  if (!ui.sessionCounterfactualChart || !cf) return;
+
+  setTimingValue(ui.sessionCfReal, cf.tradeCount ? timingMoney(cf.real) : "—", cf.tradeCount ? timingTone(cf.real) : "");
+  if (ui.sessionCfRealMeta) {
+    ui.sessionCfRealMeta.textContent = cf.tradeCount
+      ? `${cf.tradeCount} analyzed fills · ${report.pnl.label}`
+      : "Every analyzed fill";
+  }
+  setTimingValue(ui.sessionCfGhost, cf.available ? timingMoney(cf.hypothetical) : "—", cf.available ? timingTone(cf.hypothetical) : "");
+  if (ui.sessionCfGhostMeta) {
+    ui.sessionCfGhostMeta.textContent = cf.available
+      ? `${cf.skippedTrades} of ${cf.tradeCount} fills skipped`
+      : "Hypothetical, not advice";
+  }
+  setTimingValue(ui.sessionCfGap, cf.available ? timingMoney(cf.recovered) : "—", cf.available ? timingTone(cf.recovered) : "");
+  if (ui.sessionCfConclusion) {
+    ui.sessionCfConclusion.textContent = !cf.tradeCount
+      ? "Import closed trades to run the engine."
+      : cf.available
+        ? `The same fills, minus your ${cf.redCellCount} red ${cf.redCellCount === 1 ? "cell" : "cells"}: ${timingMoney(cf.recovered)} stays on the curve.`
+        : `No reliable red cells to skip. As traded is the honest line; a red cell needs ${report.minimumReliableSamples} trades of reliable negative expectancy.`;
+  }
+
+  if (ui.sessionCfLedger) {
+    ui.sessionCfLedger.innerHTML = cf.available && almanac
+      ? almanac.redCells.map((cell) => `
+          <span class="session-cf-chip" title="${escapeHtml(`${cell.pnlLabel} · ${timingMoney(cell.expectancy)}/trade expectancy`)}">
+            <strong>${escapeHtml(almanacCellName(cell))}</strong>
+            ${escapeHtml(timingMoney(cell.pnl))} · n=${cell.count}
+          </span>`).join("")
       : "";
-    ui.sessionTimingInsight.textContent = `${timingZoneLabel(report.reportTimeZone)} · ${consistencyCopy}${concentrationCopy} Click an hour to inspect the underlying trades.`;
+  }
+
+  if (!cf.available || cf.points.length < 2) {
+    ui.sessionCounterfactualChart.innerHTML = '<p class="session-empty-copy">Reliable red cells will draw the second line.</p>';
+    return;
+  }
+
+  const width = 720;
+  const height = 240;
+  const pad = 10;
+  const values = cf.points.flatMap((point) => [point.real, point.hypothetical]).concat(0);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const x = (index) => (index / (cf.points.length - 1)) * width;
+  const y = (value) => pad + ((max - value) / span) * (height - pad * 2);
+  const path = (key) => cf.points
+    .map((point, index) => `${index ? "L" : "M"}${x(index).toFixed(2)},${y(point[key]).toFixed(2)}`)
+    .join("");
+  const gap = `${path("hypothetical")}${cf.points
+    .map((point, index) => {
+      const at = cf.points.length - 1 - index;
+      return `L${x(at).toFixed(2)},${y(cf.points[at].real).toFixed(2)}`;
+    })
+    .join("")}Z`;
+  // A skipped red-cell trade can be a winner, dipping the hypothetical line
+  // below the real one; a uniformly green ribbon would paint that stretch as
+  // gain. Mixed-sign gaps get a neutral fill instead.
+  const gapMixed = cf.points.some((point) => point.hypothetical < point.real);
+  ui.sessionCounterfactualChart.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">
+      <path class="session-cf-gap-fill${gapMixed ? " is-mixed" : ""}" d="${gap}"></path>
+      <line class="session-cf-zero" x1="0" x2="${width}" y1="${y(0).toFixed(2)}" y2="${y(0).toFixed(2)}"></line>
+      <path class="session-cf-line is-real" pathLength="1" d="${path("real")}"></path>
+      <path class="session-cf-line is-ghost" pathLength="1" d="${path("hypothetical")}"></path>
+    </svg>`;
+}
+
+/* THE TILT RADAR. Entries stamped within minutes of a losing exit. The
+   count and its summed P&L are a census; per-entry inferences publish only
+   at the reliable floor, like every other figure on this page. */
+function renderSessionTilt(report) {
+  const tilt = report?.tilt;
+  if (!ui.sessionTiltCount || !tilt) return;
+  const flagged = tilt.count > 0;
+  const tiltReliable = tilt.confidence?.key === "reliable";
+
+  ui.sessionTiltCount.textContent = String(tilt.count);
+  ui.sessionTiltCount.classList.toggle("is-warn", flagged);
+  if (ui.sessionTiltNetLabel) {
+    ui.sessionTiltNetLabel.textContent = flagged ? (tilt.pnlLabel || report.pnl.label) : "Net result";
+  }
+  setTimingValue(ui.sessionTiltNet, flagged ? timingMoney(tilt.pnl) : "\u2014", flagged ? timingTone(tilt.pnl) : "");
+  setTimingValue(
+    ui.sessionTiltWin,
+    !flagged ? "\u2014" : tiltReliable ? `${Math.round(tilt.winRate)}%` : "wh",
+    flagged && tiltReliable && tilt.winRate < tilt.baselineWinRate ? "is-negative" : ""
+  );
+  const baselineReliable = tilt.baselineCount >= report.minimumReliableSamples;
+  setTimingValue(ui.sessionTiltBaseline, baselineReliable ? `${Math.round(tilt.baselineWinRate)}%` : "\u2014");
+
+  if (ui.sessionTiltInsight) {
+    const top = tilt.cells[0];
+    const withheldNote = tiltReliable
+      ? ""
+      : ` Per-entry figures are withheld below the ${report.minimumReliableSamples}-trade floor.`;
+    ui.sessionTiltInsight.textContent = !report.coverage.analyzed
+      ? "Import closed trades to sweep for revenge entries."
+      : !flagged
+        ? `No entries within ${tilt.windowMinutes} minutes of a losing exit in this range.`
+        : top
+          ? `${tilt.count} ${tilt.count === 1 ? "entry" : "entries"} chased a loss within ${tilt.windowMinutes} minutes; ${top.count} of ${tilt.count} land on ${almanacCellName(top)}.${withheldNote}`
+          : `${tilt.count} ${tilt.count === 1 ? "entry" : "entries"} chased a loss within ${tilt.windowMinutes} minutes.${withheldNote}`;
   }
 }
 
@@ -9203,19 +9386,6 @@ function renderSessionDurations(report) {
   const best = report.duration.bestBand || report.duration.strongestObservedBand;
   const sessionHold = report.interactions?.sessionHold;
   const bestSessionHold = sessionHold?.bestCell || sessionHold?.strongestObservedCell;
-  if (ui.sessionHoldConclusion) {
-    const holdComparison = winners.count && losers.count
-      ? comparison.meaningful
-        ? `Profitable trades are normally held ${formatTimingDuration(Math.abs(comparison.differenceMs))} ${comparison.direction} than losing trades.`
-        : "Profitable and losing trades are currently held for a similar amount of time."
-      : "Add measured profitable and losing trades to compare holding behavior.";
-    const interactionCopy = bestSessionHold?.count && bestSessionHold.pnl > 0
-      ? bestSessionHold.confidence.key === "reliable"
-        ? ` ${bestSessionHold.sessionLabel} entries held ${bestSessionHold.durationLabel.toLowerCase()} are the strongest reliable combination (${timingMoney(bestSessionHold.expectancy)} expectancy, n=${bestSessionHold.count}).`
-        : ` Early interaction signal: ${bestSessionHold.sessionLabel} entries held ${bestSessionHold.durationLabel.toLowerCase()} lead so far, but only across n=${bestSessionHold.count}.`
-      : "";
-    ui.sessionHoldConclusion.textContent = `${holdComparison}${interactionCopy}`;
-  }
   setTimingValue(
     ui.sessionWinningHold,
     formatTimingDuration(winners.medianMs),
@@ -9292,23 +9462,36 @@ function renderSessionCoverage(report) {
     ui.sessionCoverageBar.style.setProperty("--session-coverage", `${coverage.completionPercent}%`);
   }
   if (ui.sessionCoverageBarFill) ui.sessionCoverageBarFill.style.width = `${coverage.completionPercent}%`;
-  if (ui.sessionCoverageBadge) {
-    ui.sessionCoverageBadge.hidden = coverage.unjournalled === 0;
-    ui.sessionCoverageBadge.textContent = String(coverage.unjournalled);
-  }
 }
 
-function openSessionTradeDrawer(hour) {
+function openSessionTradeDrawer(cellKey) {
   const report = state.analytics?.sessionTiming;
-  const row = report?.hours?.find((entry) => entry.hour === hour && entry.count > 0);
+  const cells = report?.almanac?.cells || [];
+  // "ovn-<day>" is the off-hours aggregate: every cell of that calendar day
+  // outside the hourly columns, merged so its trades stay inspectable.
+  const ovnMatch = /^ovn-([0-6])$/.exec(String(cellKey || ""));
+  let row = null;
+  let title = "";
+  if (ovnMatch) {
+    const day = Number(ovnMatch[1]);
+    const members = cells.filter((entry) => entry.day === day && (entry.hour >= 17 || entry.hour <= 6) && entry.count > 0);
+    if (members.length) {
+      const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      row = { tradeIds: members.flatMap((entry) => entry.tradeIds) };
+      title = `${dayNames[day]} off-hours`;
+    }
+  } else {
+    row = cells.find((entry) => entry.key === cellKey && entry.count > 0) || null;
+    if (row) title = almanacCellName(row);
+  }
   if (!row || !ui.sessionTradeDrawer || !ui.sessionTradeDrawerBody) return;
-  state.sessionIntelligence.selectedHour = hour;
+  state.sessionIntelligence.selectedCell = cellKey;
   sessionTradeDrawerOpener = document.activeElement;
-  ui.sessionHourRail?.querySelectorAll("[data-session-hour]").forEach((button) => {
-    button.setAttribute("aria-selected", String(Number(button.dataset.sessionHour) === hour));
+  ui.sessionAlmanacMatrix?.querySelectorAll("[data-almanac-cell]").forEach((button) => {
+    button.setAttribute("aria-selected", String(button.dataset.almanacCell === cellKey));
   });
   if (ui.sessionTradeDrawerTitle) {
-    ui.sessionTradeDrawerTitle.textContent = `${formatTimingHourRange(row.label)} · ${timingZoneLabel(report.reportTimeZone)}`;
+    ui.sessionTradeDrawerTitle.textContent = `${title} · ${timingZoneLabel(report.reportTimeZone)}`;
   }
   const trades = row.tradeIds
     .map((id) => state.trades.find((trade) => String(trade.id) === String(id)))
@@ -9339,7 +9522,7 @@ function openSessionTradeDrawer(hour) {
             <button class="session-drawer-action" type="button" data-session-journal-trade="${escapeHtml(String(trade.id || ""))}">${journalled ? "Edit journal" : "Journal trade"}</button>
           </article>`;
       }).join("")
-    : '<p class="session-drawer-empty">The trades behind this hour are no longer available.</p>';
+    : '<p class="session-drawer-empty">The trades behind this selection are no longer available.</p>';
   ui.sessionTradeDrawer.hidden = false;
   ui.sessionTradeDrawerClose?.focus();
 }
@@ -9347,8 +9530,8 @@ function openSessionTradeDrawer(hour) {
 function closeSessionTradeDrawer() {
   if (!ui.sessionTradeDrawer || ui.sessionTradeDrawer.hidden) return;
   ui.sessionTradeDrawer.hidden = true;
-  state.sessionIntelligence.selectedHour = null;
-  ui.sessionHourRail?.querySelectorAll("[data-session-hour]").forEach((button) => {
+  state.sessionIntelligence.selectedCell = null;
+  ui.sessionAlmanacMatrix?.querySelectorAll("[data-almanac-cell]").forEach((button) => {
     button.setAttribute("aria-selected", "false");
   });
   if (sessionTradeDrawerOpener instanceof HTMLElement && sessionTradeDrawerOpener.isConnected) {
@@ -11000,15 +11183,10 @@ function getUnjournalledTrades() {
 
 function renderUnjournalled() {
   const allPending = getUnjournalledTrades();
-  const scopedIds = new Set(
-    state.analytics?.sessionTiming?.journalCoverage?.unjournalledTradeIds?.map(String) || []
-  );
-  const pending = state.analytics?.sessionTiming
-    ? allPending.filter((trade) => scopedIds.has(String(trade.id)))
-    : allPending;
-
   // Desktop top bar and mobile dock carry the same count — 1f #01 asks for the
-  // badge in the nav AND the dock, and a phone only ever sees the dock.
+  // badge in the nav AND the dock, and a phone only ever sees the dock. The
+  // queue card itself is gone: the almanac dashboard shows coverage, and the
+  // journal review screen is the route into the debt.
   [ui.navUnjournalledBadge, ui.tabBarUnjournalledBadge].forEach((badge) => {
     if (!badge) {
       return;
@@ -11020,109 +11198,8 @@ function renderUnjournalled() {
       `${allPending.length} trade${allPending.length === 1 ? "" : "s"} without a note`
     );
   });
-
-  if (!ui.dashUnjournalled || !ui.dashUnjournalledList) {
-    return;
-  }
-
-  // This is a task tray now, not a permanent dashboard metric. With no debt it
-  // disappears; the counted nav badges already provide the persistent route
-  // into Trade Review without spending a full card on "all clear".
-  ui.dashUnjournalled.hidden = pending.length === 0;
-  if (ui.dashJournalCta) {
-    ui.dashJournalCta.hidden = pending.length === 0;
-    if (ui.dashJournalCtaCount) {
-      ui.dashJournalCtaCount.textContent = String(pending.length);
-    }
-  }
-  if (!pending.length) {
-    ui.dashUnjournalledList.innerHTML = "";
-    return;
-  }
-
-  ui.dashUnjournalled.classList.remove("is-clear");
-  const lede = ui.dashUnjournalled.querySelector(".dash-unj-lede");
-  if (ui.dashUnjournalledCount) {
-    ui.dashUnjournalledCount.textContent = `${pending.length} trade${pending.length === 1 ? "" : "s"}`;
-  }
-  if (lede) {
-    lede.textContent = "Closed, but you never said why. Two minutes each.";
-  }
-
-  ui.dashUnjournalledList.innerHTML = pending
-    .slice(0, 3)
-    .map((trade) => {
-      const net = Number(trade.netPnl) || 0;
-      const tone = net > 0 ? "pnl-positive" : net < 0 ? "pnl-negative" : "";
-      const symbol = escapeHtml(trade.asset || "—");
-      return `
-        <button class="dash-unj-row" type="button" data-unjournalled-trade="${escapeHtml(String(trade.id || ""))}">
-          <span class="dash-unj-symbol">${symbol}</span>
-          <span class="dash-unj-net ${tone}">${net === 0 ? formatCurrency(0) : formatSignedCurrency(net)}</span>
-          <span class="dash-unj-date">${escapeHtml(formatCompactTradeDate(trade))}</span>
-          <span class="dash-unj-chevron" aria-hidden="true">›</span>
-          <span class="visually-hidden">Journal this ${symbol} trade</span>
-        </button>
-      `;
-    })
-    .join("");
-
-  renderJournalStreak();
 }
 
-// JOURNAL STREAK = consecutive TRADING days, counting back from the most
-// recent day that has closed trades, on which every closed trade has a note.
-function buildJournalDays() {
-  const byDate = new Map();
-  getClosedTrades().forEach((trade) => {
-    const day = byDate.get(trade.date) || { date: trade.date, total: 0, journalled: 0 };
-    day.total += 1;
-    if (isTradeJournalled(trade)) {
-      day.journalled += 1;
-    }
-    byDate.set(trade.date, day);
-  });
-  return Array.from(byDate.values()).sort((a, b) => (a.date < b.date ? 1 : -1));
-}
-
-function renderJournalStreak() {
-  const days = buildJournalDays();
-
-  let streak = 0;
-  for (const day of days) {
-    if (day.total > 0 && day.journalled === day.total) {
-      streak += 1;
-    } else {
-      break;
-    }
-  }
-
-  if (ui.dashJournalStreak) {
-    ui.dashJournalStreak.textContent = `${streak} day${streak === 1 ? "" : "s"}`;
-  }
-
-  if (!ui.dashJournalBars) {
-    return;
-  }
-
-  // Seven most recent trading days, oldest → newest. Bar height is the trade
-  // count for that day; the tone says whether they were all journalled.
-  const recent = days.slice(0, 7).reverse();
-  const peak = Math.max(...recent.map((day) => day.total), 1);
-  ui.dashJournalBars.innerHTML = recent
-    .map((day) => {
-      const complete = day.journalled === day.total;
-      const height = 10 + Math.round((day.total / peak) * 16);
-      return `<span class="dash-unj-bar ${complete ? "is-done" : "is-missing"}" style="height:${height}px"></span>`;
-    })
-    .join("");
-  ui.dashJournalBars.setAttribute(
-    "aria-label",
-    recent.length
-      ? `Last ${recent.length} trading day${recent.length === 1 ? "" : "s"}: ${recent.filter((day) => day.journalled === day.total).length} fully journalled`
-      : "No trading days yet"
-  );
-}
 
 /* Any path targeting a panel inside the Desk settings details must open the
    details first, or the scroll lands on a closed summary and the form the
@@ -14045,9 +14122,6 @@ function normalizeSettings(input) {
     sessionDateRange: ["30d", "90d", "ytd", "all"].includes(value.sessionDateRange)
       ? value.sessionDateRange
       : DEFAULT_SETTINGS.sessionDateRange,
-    sessionEntryMetric: ["pnl", "expectancy", "winRate"].includes(value.sessionEntryMetric)
-      ? value.sessionEntryMetric
-      : DEFAULT_SETTINGS.sessionEntryMetric,
     // Multi-account. Absent on every journal written before this ships;
     // ensureAccounts() fills it from the trader's existing starting balance on
     // the first load, so nothing has to be re-entered.

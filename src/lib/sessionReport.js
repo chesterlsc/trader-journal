@@ -1605,6 +1605,175 @@ function pathDependentCapabilities(records) {
   };
 }
 
+const WEEKDAY_SHORT = Object.freeze(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]);
+export const TILT_WINDOW_MINUTES = 5;
+
+/* THE ALMANAC. Every analyzed trade with a resolved entry timestamp lands in
+   one weekday-by-hour cell of the report timezone's calendar. Cells reuse the
+   same accumulator/finalize machinery as every other bucket, so they carry
+   the identical confidence, per-day consistency and tradeId evidence. A cell
+   below the reliable floor is withheld by the renderer, never estimated. */
+function almanacRecordSlot(record, reportTimeZone) {
+  if (record.pnl.value === null || record.timing.entryMs === null) return null;
+  const local = getZonedDateParts(record.timing.entryMs, reportTimeZone);
+  if (!local) return null;
+  const day = WEEKDAY_INDEX[local.weekday];
+  return Number.isInteger(day) ? { day, hour: local.hour } : null;
+}
+
+function buildAlmanac(records, reportTimeZone, minimumReliableSamples) {
+  const cellBuckets = new Map();
+  const weekdayBuckets = new Map();
+  for (const record of records) {
+    const slot = almanacRecordSlot(record, reportTimeZone);
+    if (!slot) continue;
+    const cellKey = `${slot.day}-${slot.hour}`;
+    if (!cellBuckets.has(cellKey)) {
+      cellBuckets.set(cellKey, {
+        day: slot.day,
+        hour: slot.hour,
+        ...createAccumulator(`${WEEKDAY_SHORT[slot.day]} ${hourLabel(slot.hour)}`)
+      });
+    }
+    addToAccumulator(cellBuckets.get(cellKey), record.pnl, record.timing.durationMs, record.tradeRef, record.dateKey);
+    if (!weekdayBuckets.has(slot.day)) {
+      weekdayBuckets.set(slot.day, { day: slot.day, ...createAccumulator(WEEKDAY_SHORT[slot.day]) });
+    }
+    addToAccumulator(weekdayBuckets.get(slot.day), record.pnl, record.timing.durationMs, record.tradeRef, record.dateKey);
+  }
+  const cells = [...cellBuckets.values()]
+    .map((bucket) => finalizeAccumulator(bucket, minimumReliableSamples, {
+      key: `${bucket.day}-${bucket.hour}`,
+      day: bucket.day,
+      hour: bucket.hour
+    }))
+    .sort((left, right) => left.day - right.day || left.hour - right.hour);
+  const weekdays = [...weekdayBuckets.values()]
+    .map((bucket) => finalizeAccumulator(bucket, minimumReliableSamples, { day: bucket.day }))
+    .sort((left, right) => left.day - right.day);
+  // A red cell must clear the same reliable floor a published figure does:
+  // negative expectancy on a thin sample is an observation, not a scar.
+  const redCells = cells
+    .filter((cell) => cell.confidence.key === "reliable" && cell.expectancy < 0)
+    .map((cell) => ({
+      key: cell.key,
+      day: cell.day,
+      hour: cell.hour,
+      label: cell.label,
+      pnl: cell.pnl,
+      count: cell.count,
+      expectancy: cell.expectancy,
+      pnlLabel: cell.pnlLabel
+    }));
+  return {
+    timeZone: reportTimeZone,
+    cellSampleFloor: minimumReliableSamples,
+    columnSampleFloor: minimumReliableSamples * 3,
+    cells,
+    weekdays,
+    redCells
+  };
+}
+
+/* THE COUNTERFACTUAL ENGINE. The same fills, re-summed with entries taken in
+   reliable red cells skipped. It is arithmetic over trades that actually
+   happened, never a promise: skipping a losing hour in hindsight cannot
+   prove the remaining trades would have printed the same, and the caveat
+   travels with the numbers. Red cells partition trades, so nothing is ever
+   skipped twice. */
+function buildCounterfactual(records, almanac, minimumReliableSamples) {
+  const redKeys = new Set(almanac.redCells.map((cell) => cell.key));
+  const ordered = records
+    .filter((record) => record.pnl.value !== null)
+    .sort((left, right) =>
+      (left.timing.entryMs ?? Number.MAX_SAFE_INTEGER) - (right.timing.entryMs ?? Number.MAX_SAFE_INTEGER) ||
+      String(left.dateKey || "9999-99-99").localeCompare(String(right.dateKey || "9999-99-99")) ||
+      left.sourceIndex - right.sourceIndex);
+  const points = [];
+  let real = 0;
+  let hypothetical = 0;
+  let skippedTrades = 0;
+  const skippedTradeIds = [];
+  for (const record of ordered) {
+    const slot = almanacRecordSlot(record, almanac.timeZone);
+    const skipped = Boolean(slot && redKeys.has(`${slot.day}-${slot.hour}`));
+    real += record.pnl.value;
+    if (skipped) {
+      skippedTrades += 1;
+      if (record.id) skippedTradeIds.push(record.id);
+    } else {
+      hypothetical += record.pnl.value;
+    }
+    points.push({
+      dateKey: record.dateKey,
+      real: roundTo(real),
+      hypothetical: roundTo(hypothetical),
+      skipped
+    });
+  }
+  return {
+    available: almanac.redCells.length > 0 && ordered.length >= minimumReliableSamples,
+    redCellCount: almanac.redCells.length,
+    tradeCount: ordered.length,
+    skippedTrades,
+    skippedTradeIds,
+    real: roundTo(real),
+    hypothetical: roundTo(hypothetical),
+    recovered: roundTo(hypothetical - real),
+    points,
+    caveat: "Counterfactual: the same fills with reliable red-cell entries skipped. Hypothetical, not advice. Past cells do not promise future weather, and skipped entries cannot prove the remaining trades would have filled the same."
+  };
+}
+
+/* THE TILT RADAR. An entry stamped within minutes of a losing exit is
+   evidence of state, not of strategy. Only broker timestamps are consulted;
+   a trade is never guessed into the pattern. */
+function buildTiltRadar(records, reportTimeZone, minimumReliableSamples) {
+  const analyzed = records.filter((record) => record.pnl.value !== null);
+  const lossExits = analyzed
+    .filter((record) => record.pnl.value < 0 && record.timing.exitMs !== null)
+    .map((record) => ({ exitMs: record.timing.exitMs, sourceIndex: record.sourceIndex }))
+    .sort((left, right) => left.exitMs - right.exitMs);
+  const windowMs = TILT_WINDOW_MINUTES * MINUTE_MS;
+  const bucket = createAccumulator("Revenge entries");
+  const cellCounts = new Map();
+  for (const record of analyzed) {
+    if (record.timing.entryMs === null) continue;
+    // Identity is the record, never the id string: id-less imports would
+    // otherwise self-match every loss and silently drop real revenge entries.
+    const trigger = lossExits.some((loss) =>
+      loss.sourceIndex !== record.sourceIndex &&
+      record.timing.entryMs >= loss.exitMs &&
+      record.timing.entryMs - loss.exitMs <= windowMs);
+    if (!trigger) continue;
+    addToAccumulator(bucket, record.pnl, record.timing.durationMs, record.tradeRef, record.dateKey);
+    const slot = almanacRecordSlot(record, reportTimeZone);
+    if (slot) {
+      const key = `${slot.day}-${slot.hour}`;
+      cellCounts.set(key, (cellCounts.get(key) || 0) + 1);
+    }
+  }
+  const wins = analyzed.filter((record) => record.pnl.value > 0).length;
+  const summary = finalizeAccumulator(bucket, minimumReliableSamples, {});
+  return {
+    windowMinutes: TILT_WINDOW_MINUTES,
+    count: summary.count,
+    pnl: summary.pnl,
+    expectancy: summary.expectancy,
+    winRate: summary.winRate,
+    baselineWinRate: analyzed.length ? roundTo((wins / analyzed.length) * 100) : 0,
+    baselineCount: analyzed.length,
+    confidence: summary.confidence,
+    pnlLabel: summary.pnlLabel,
+    tradeIds: summary.tradeIds,
+    sourceIndexes: summary.sourceIndexes,
+    cells: [...cellCounts.entries()].map(([key, count]) => {
+      const [day, hour] = key.split("-").map(Number);
+      return { key, day, hour, count };
+    }).sort((left, right) => right.count - left.count)
+  };
+}
+
 export function buildSessionTimingReport(trades, options = {}) {
   const reportTimeZone = requireTimeZone(options.reportTimeZone, DEFAULT_REPORT_TIME_ZONE);
   const configuredSourceZone = String(options.sourceTimeZone || "").trim();
@@ -1787,6 +1956,9 @@ export function buildSessionTimingReport(trades, options = {}) {
   );
   const sessionHold = buildSessionHoldInteraction(records, minimumReliableSamples);
   const pathDependent = pathDependentCapabilities(records);
+  const almanac = buildAlmanac(records, reportTimeZone, minimumReliableSamples);
+  const counterfactual = buildCounterfactual(records, almanac, minimumReliableSamples);
+  const tilt = buildTiltRadar(records, reportTimeZone, minimumReliableSamples);
 
   const bestObservedSession = rankedRow(sessionRows);
   const bestSession = rankedRow(sessionRows, { reliable: true, positive: true });
@@ -1938,6 +2110,9 @@ export function buildSessionTimingReport(trades, options = {}) {
     dataQuality,
     interactions: { sessionHold },
     pathDependent,
+    almanac,
+    counterfactual,
+    tilt,
     journalCoverage,
     coverage,
     // Compatibility aliases used by the existing chart/renderer while the

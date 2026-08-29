@@ -79,7 +79,6 @@ const CLIENT_OWNED_SETTINGS = [
   'timingReportTimeZone',
   'topstepSourceTimeZone',
   'sessionDateRange',
-  'sessionEntryMetric',
 ];
 
 // Ceiling on the client-owned block so a runaway client cannot grow the

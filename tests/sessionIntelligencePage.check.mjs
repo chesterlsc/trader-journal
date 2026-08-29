@@ -2,9 +2,9 @@
 //
 // The calculation engine and Topstep reconstruction have their own fixture
 // suites. This check guards the integration points that are easiest to regress
-// during a visual cleanup: the route, the four-tab information hierarchy,
-// saved filters, the hourly disclosure drawer, journal-queue placement, and
-// the one-time source-timezone gate in the import flow.
+// during a visual cleanup: the route, the single almanac surface and its
+// honesty copy, saved filters, the cell disclosure drawer, journal-queue
+// placement, and the one-time source-timezone gate in the import flow.
 //
 // Run: node tests/sessionIntelligencePage.check.mjs
 import assert from "node:assert/strict";
@@ -84,7 +84,7 @@ for (const forbidden of [
   /data-session-tab=/,
   /data-session-panel=/,
   /id="sessionScorecard"/,
-  /id="sessionHourRail"/,
+  /id="sessionAlmanacMatrix"/,
   /id="sessionDurationBands"/,
   /id="dashUnjournalled"/,
   /panel-session-intelligence/
@@ -92,63 +92,67 @@ for (const forbidden of [
   assert.doesNotMatch(dashboard, forbidden, "the full timing report or journal queue leaked back onto the dashboard");
 }
 
-// --- 3. Four tabs, each with one conclusion and one visualization ----------
-const expectedTabs = ["sessions", "entry-time", "hold-time", "journal-coverage"];
-const tabNames = [...sessionView.matchAll(/data-session-tab="([^"]+)"/g)].map((match) => match[1]);
-const panelNames = [...sessionView.matchAll(/data-session-panel="([^"]+)"/g)].map((match) => match[1]);
-assert.deepEqual(tabNames, expectedTabs, "Session Intelligence must have exactly the four briefed tabs, in order");
-assert.deepEqual(panelNames, expectedTabs, "each Session Intelligence tab must own exactly one panel");
-assert.match(sessionView, /class="session-tab is-active"[\s\S]*aria-selected="true"[\s\S]*data-session-tab="sessions"/);
-assert.match(appSrc, /ui\.sessionTabs\.forEach\(\(button\) => \{[\s\S]*activateSessionIntelligenceTab\(button\.dataset\.sessionTab\)/);
-const activateTab = takeFunction(appSrc, "activateSessionIntelligenceTab");
-assert.match(activateTab, /aria-selected/);
-assert.match(activateTab, /\.hidden\s*=/, "tab activation must show only its matching panel");
-
-const panelStarts = expectedTabs.map((name) => {
-  const match = new RegExp(`<section\\b[^>]*data-session-panel="${name}"[^>]*>`).exec(sessionView);
-  assert.ok(match, `missing ${name} panel`);
-  return { name, index: match.index };
-});
-const panelByName = new Map(panelStarts.map((item, index) => [
-  item.name,
-  sessionView.slice(item.index, panelStarts[index + 1]?.index ?? sessionView.length)
-]));
-
-const visualizationIds = new Map([
-  ["sessions", "sessionScorecard"],
-  ["entry-time", "sessionHourRail"],
-  ["hold-time", "sessionDurationBands"],
-  ["journal-coverage", "sessionCoverageBar"]
-]);
-for (const name of expectedTabs) {
-  const panel = panelByName.get(name);
-  assert.equal(countClassToken(panel, "session-conclusion"), 1, `${name}: needs one clear conclusion`);
-  const metricCount = countClassToken(panel, "session-primary-metric");
-  assert.ok(metricCount > 0 && metricCount <= 3, `${name}: expected 1–3 primary metrics, found ${metricCount}`);
-  assert.equal(countClassToken(panel, "session-visual"), 1, `${name}: needs exactly one primary visualization`);
-  assert.match(panel, new RegExp(`id="${visualizationIds.get(name)}"`), `${name}: visualization mount changed or disappeared`);
-  assert.doesNotMatch(panel, /<table\b|<canvas\b/, `${name}: default panel must not fall back to a dense table or extra chart`);
+// --- 3. One surface: the almanac, its engine, its radar, its margins -------
+assert.equal(count(sessionView, /data-session-tab=/g), 0, "the almanac page has no sub-tabs");
+assert.equal(count(sessionView, /data-session-panel=/g), 0, "no hidden panels; everything lives on the one surface");
+assert.doesNotMatch(appSrc, /activateSessionIntelligenceTab/, "tab machinery must not survive the one-surface design");
+for (const id of [
+  "sessionAlmanacMatrix",
+  "sessionAlmanacNow",
+  "sessionAlmanacEdgeline",
+  "sessionAlmanacNote",
+  "sessionCounterfactualChart",
+  "sessionCfGap",
+  "sessionCfReal",
+  "sessionCfGhost",
+  "sessionCfLedger",
+  "sessionCfConclusion",
+  "sessionTiltCount",
+  "sessionTiltNetLabel",
+  "sessionTiltNet",
+  "sessionTiltWin",
+  "sessionTiltBaseline",
+  "sessionTiltInsight",
+  "sessionScorecard",
+  "sessionDurationBands",
+  "sessionTopstepExecution",
+  "sessionWinningHold",
+  "sessionLosingHold",
+  "sessionBestDuration",
+  "sessionCoverageBar",
+  "sessionJournaledCount",
+  "sessionUnjournalledCount",
+  "sessionCoveragePercent",
+  "sessionMissingDataCount"
+]) {
+  assert.equal(count(sessionView, new RegExp(`id="${id}"`, "g")), 1, `#${id} must appear exactly once on the surface`);
 }
-
 assert.match(
-  panelByName.get("sessions"),
-  /id="sessionBestSessionPnl"[\s\S]*id="sessionBestSessionExpectancy"[\s\S]*id="sessionBestSessionTrades"/,
-  "Sessions must keep only the three primary values from the brief"
-);
-assert.match(panelByName.get("entry-time"), /id="sessionBestHour"[\s\S]*id="sessionWorstHour"/);
-assert.match(
-  panelByName.get("hold-time"),
-  /id="sessionWinningHold"[\s\S]*id="sessionLosingHold"[\s\S]*id="sessionBestDuration"/,
-  "Hold time must compare profitable, losing, and best-duration results"
+  sessionView,
+  /withheld, never estimated/i,
+  "the withhold rule must be stated on the page, not only enforced in the engine"
 );
 assert.match(
-  panelByName.get("hold-time"),
+  sessionView,
   /does not prove how long a trade spent above breakeven/i,
   "hold-time wording must not overclaim intratrade profitability"
 );
+assert.match(
+  sessionView,
+  /Hypothetical, not advice/i,
+  "the counterfactual caveat must live in markup, not only in renderer copy"
+);
+assert.match(
+  sessionView,
+  /never guessed into the pattern/i,
+  "tilt wording must pin the broker-timestamps-only rule"
+);
+assert.doesNotMatch(sessionView, /<table\b|<canvas\b/, "the surface must not fall back to a dense table or extra chart");
 
-// --- 4. The operational queue lives only in Journal coverage ---------------
-const coveragePanel = panelByName.get("journal-coverage");
+// --- 4. Nothing beyond the reference: no queue, no leftover mounts ---------
+// The dashboard is exactly the reference surface. The journal queue's compact
+// coverage pane stays; the queue list itself does not, and no orphaned mount
+// may linger anywhere in the document.
 for (const id of [
   "dashUnjournalled",
   "dashUnjournalledCount",
@@ -158,51 +162,39 @@ for (const id of [
   "dashJournalStreak",
   "dashJournalBars"
 ]) {
-  assert.equal(count(html, new RegExp(`id="${id}"`, "g")), 1, `#${id} must not be duplicated`);
-  assert.match(coveragePanel, new RegExp(`id="${id}"`), `#${id} must live in Journal coverage`);
+  assert.equal(count(html, new RegExp(`id="${id}"`, "g")), 0, `#${id} must not exist anywhere; the queue is not part of the dashboard`);
 }
-assert.match(coveragePanel, /id="sessionJournaledCount"[\s\S]*id="sessionUnjournalledCount"[\s\S]*id="sessionCoveragePercent"/);
-assert.match(coveragePanel, /id="sessionMissingDataCount"/);
-assert.match(coveragePanel, /id="dashJournalCta"[\s\S]*Journal next trade/i);
+assert.match(sessionView, /id="sessionHeaderNet"/, "the header meta strip must state the report net");
 
-// --- 5. Filters and the one-at-a-time entry metric are saved + live --------
+// --- 5. Filters are saved and re-render live -------------------------------
 for (const id of ["sessionDateRange", "sessionReportTimeZone"]) {
   assert.match(sessionView, new RegExp(`id="${id}"`), `missing #${id} compact report control`);
 }
-assert.deepEqual(
-  [...sessionView.matchAll(/data-entry-metric="([^"]+)"/g)].map((match) => match[1]),
-  ["pnl", "expectancy", "winRate"],
-  "Entry time must offer exactly Net P&L, expectancy, and win rate"
-);
 assert.match(appSrc, /sessionDateRange:\s*"all"/);
-assert.match(appSrc, /sessionEntryMetric:\s*"pnl"/);
 assert.match(appSrc, /\["30d",\s*"90d",\s*"ytd",\s*"all"\]\.includes\(value\.sessionDateRange\)/);
-assert.match(appSrc, /\["pnl",\s*"expectancy",\s*"winRate"\]\.includes\(value\.sessionEntryMetric\)/);
-for (const key of ["timingReportTimeZone", "topstepSourceTimeZone", "sessionDateRange", "sessionEntryMetric"]) {
+for (const key of ["timingReportTimeZone", "topstepSourceTimeZone", "sessionDateRange"]) {
   assert.match(sanitizeSrc, new RegExp(`["']${key}["']`), `${key} must survive API persistence`);
 }
 
 assert.match(appSrc, /ui\.sessionDateRange\?\.addEventListener\("change", handleSessionIntelligenceFilterChange\)/);
 assert.match(appSrc, /ui\.sessionReportTimeZone\?\.addEventListener\("change", handleSessionIntelligenceFilterChange\)/);
-assert.match(appSrc, /button\.addEventListener\("click", \(\) => handleSessionEntryMetricChange\(button\.dataset\.entryMetric\)\)/);
-for (const name of ["handleSessionIntelligenceFilterChange", "handleSessionEntryMetricChange"]) {
-  const source = takeFunction(appSrc, name);
-  assert.match(source, /state\.settings\s*=\s*normalizeSettings\(/, `${name} must write normalized saved settings`);
-  assert.match(source, /persistState\(\)/, `${name} must remember the selection`);
-  assert.match(source, /renderAll\(\)/, `${name} must update calculations immediately`);
+{
+  const source = takeFunction(appSrc, "handleSessionIntelligenceFilterChange");
+  assert.match(source, /state\.settings\s*=\s*normalizeSettings\(/, "filter changes must write normalized saved settings");
+  assert.match(source, /persistState\(\)/, "filter changes must remember the selection");
+  assert.match(source, /renderAll\(\)/, "filter changes must update calculations immediately");
 }
 assert.match(appSrc, /buildSessionTimingReport\(ordered,\s*\{[\s\S]*reportTimeZone:[\s\S]*sourceTimeZone:[\s\S]*dateRange:/);
 
-// --- 6. Clicking an hour discloses only that hour's trades -----------------
-const entryPanel = panelByName.get("entry-time");
+// --- 6. Clicking an almanac cell discloses only that cell's trades ---------
 for (const id of ["sessionTradeDrawer", "sessionTradeDrawerTitle", "sessionTradeDrawerBody", "sessionTradeDrawerClose"]) {
-  assert.match(entryPanel, new RegExp(`id="${id}"`), `entry-time drawer is missing #${id}`);
+  assert.match(sessionView, new RegExp(`id="${id}"`), `the almanac cell drawer is missing #${id}`);
 }
-assert.match(appSrc, /ui\.sessionHourRail\?\.addEventListener\("click"/);
-assert.match(appSrc, /closest\("\[data-session-hour\]"\)/);
-assert.match(appSrc, /openSessionTradeDrawer\(Number\(hour\.dataset\.sessionHour\)\)/);
-const hourRenderer = takeFunction(appSrc, "renderSessionHourRail");
-assert.match(hourRenderer, /data-session-hour/, "hour renderer must emit the disclosure target used by the click handler");
+assert.match(appSrc, /ui\.sessionAlmanacMatrix\?\.addEventListener\("click"/);
+assert.match(appSrc, /closest\("\[data-almanac-cell\]"\)/);
+assert.match(appSrc, /openSessionTradeDrawer\(cell\.dataset\.almanacCell\)/);
+const matrixRenderer = takeFunction(appSrc, "renderSessionAlmanac");
+assert.match(matrixRenderer, /data-almanac-cell/, "the matrix renderer must emit the disclosure target used by the click handler");
 const openDrawer = takeFunction(appSrc, "openSessionTradeDrawer");
 takeFunction(appSrc, "closeSessionTradeDrawer");
 assert.match(openDrawer, /data-session-journal-trade/, "the drawer must offer the journal action for its listed trades");
@@ -263,5 +255,5 @@ assert.match(
 );
 
 console.log(
-  "sessionIntelligencePage.check.mjs: OK — dedicated route, four focused tabs, saved controls, hour drawer, coverage queue, and Topstep timezone gate"
+  "sessionIntelligencePage.check.mjs: OK — dedicated route, one almanac surface, saved controls, cell drawer, coverage queue, and Topstep timezone gate"
 );

@@ -210,7 +210,7 @@
     <link rel="stylesheet" href="clay-v2.css?v=20260823-morningread" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260823-morningread" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260829-almanac4" />
   </head>
   <body>
     <div id="tjv" aria-hidden="true">
@@ -2177,104 +2177,145 @@
                 <span>Confidence</span>
                 <strong class="session-confidence is-early" id="sessionConfidence">Needs trades</strong>
               </div>
+              <div class="session-context-readout">
+                <span>Net</span>
+                <strong id="sessionHeaderNet">&mdash;</strong>
+              </div>
             </div>
 
             <span class="visually-hidden" id="sessionTimingSource">Awaiting timestamped imports</span>
             <span class="visually-hidden" id="sessionTimingCoverage">No settled trades in this account yet</span>
           </header>
 
-          <nav class="session-tabs" role="tablist" aria-label="Session intelligence views">
-            <button
-              class="session-tab is-active"
-              id="sessionTabSessions"
-              type="button"
-              role="tab"
-              aria-selected="true"
-              aria-controls="sessionPanelSessions"
-              data-session-tab="sessions"
-            >Sessions</button>
-            <button
-              class="session-tab"
-              id="sessionTabEntryTime"
-              type="button"
-              role="tab"
-              aria-selected="false"
-              aria-controls="sessionPanelEntryTime"
-              tabindex="-1"
-              data-session-tab="entry-time"
-            >Entry time</button>
-            <button
-              class="session-tab"
-              id="sessionTabHoldTime"
-              type="button"
-              role="tab"
-              aria-selected="false"
-              aria-controls="sessionPanelHoldTime"
-              tabindex="-1"
-              data-session-tab="hold-time"
-            >Hold time</button>
-            <button
-              class="session-tab"
-              id="sessionTabJournalCoverage"
-              type="button"
-              role="tab"
-              aria-selected="false"
-              aria-controls="sessionPanelJournalCoverage"
-              tabindex="-1"
-              data-session-tab="journal-coverage"
-            >
-              Journal coverage
-              <span class="session-tab-badge" id="sessionCoverageBadge" hidden>0</span>
-            </button>
-          </nav>
+          <div class="session-now-strip">
+            <span class="session-now-chip" id="sessionAlmanacNow">Import timestamped trades to arm the clock</span>
+          </div>
 
-          <div class="session-panels" id="sessionTimingPanel">
-            <section
-              class="session-panel"
-              id="sessionPanelSessions"
-              role="tabpanel"
-              aria-labelledby="sessionTabSessions"
-              data-session-panel="sessions"
-            >
-              <header class="session-conclusion">
-                <p>Sessions</p>
-                <h3 id="sessionSessionsConclusion">Import closed trades to compare sessions.</h3>
-                <span id="sessionSessionsConfidence">Add closed trades to build a trustworthy comparison.</span>
+          <div class="session-almanac-layout">
+            <section class="session-visual session-almanac-visual" aria-labelledby="sessionAlmanacHeading">
+              <header class="session-visual-head">
+                <div>
+                  <p>The almanac</p>
+                  <h4 id="sessionAlmanacHeading">Expectancy by weekday and hour</h4>
+                </div>
+                <p class="session-almanac-edgeline" id="sessionAlmanacEdgeline">Import closed trades to chart your weeks.</p>
               </header>
-
-              <div class="session-primary-metrics" role="list" aria-label="Best session metrics">
-                <div class="session-primary-metric" role="listitem">
-                  <span id="sessionBestSessionPnlLabel">Net P&amp;L</span>
-                  <strong id="sessionBestSessionPnl">&mdash;</strong>
-                </div>
-                <div class="session-primary-metric" role="listitem">
-                  <span>Expectancy per trade</span>
-                  <strong id="sessionBestSessionExpectancy">&mdash;</strong>
-                </div>
-                <div class="session-primary-metric" role="listitem">
-                  <span>Trades in session</span>
-                  <strong id="sessionBestSessionTrades">0</strong>
+              <div class="session-almanac-scroll">
+                <div class="session-almanac-matrix" id="sessionAlmanacMatrix" aria-live="polite">
+                  <p class="session-empty-copy">Import timestamped closed trades to build the almanac.</p>
                 </div>
               </div>
-
-              <section class="session-visual" aria-labelledby="sessionComparisonHeading">
-                <header class="session-visual-head">
-                  <div>
-                    <p>Session comparison</p>
-                    <h4 id="sessionComparisonHeading">Net result by entry session</h4>
-                  </div>
-                  <div class="session-chart-legend" aria-label="Performance colors">
-                    <span class="is-positive">Positive</span>
-                    <span class="is-negative">Negative</span>
-                    <span>Insufficient data</span>
-                  </div>
-                </header>
-                <div class="session-scorecard" id="sessionScorecard" role="list" aria-live="polite">
-                  <p class="session-empty-copy">Import timestamped closed trades to compare trading sessions.</p>
+              <div class="session-almanac-legendrow">
+                <div class="session-chart-legend" aria-label="Cell colors">
+                  <span class="is-positive">Pays</span>
+                  <span class="is-negative">Bills</span>
+                  <span class="is-withheld">Withheld, never estimated</span>
                 </div>
+                <p class="session-visual-note" id="sessionAlmanacNote" aria-live="polite">
+                  Cells publish at 5 trades and columns at 15; thinner samples are withheld, never estimated. Click a cell to inspect its trades.
+                </p>
+              </div>
+            </section>
+
+            <aside class="session-almanac-side">
+              <section class="session-side-pane session-cf-pane" aria-labelledby="sessionCfHeading">
+                <header class="session-side-head">
+                  <div>
+                    <p>The counterfactual engine</p>
+                    <h4 id="sessionCfHeading">As traded vs red cells skipped</h4>
+                  </div>
+                  <span class="session-cf-gapchip">Gap <strong id="sessionCfGap">&mdash;</strong></span>
+                </header>
+                <div class="session-cf-chart" id="sessionCounterfactualChart" role="img" aria-label="Equity curves with and without red-cell entries">
+                  <p class="session-empty-copy">Reliable red cells will draw the second line.</p>
+                </div>
+                <div class="session-cf-stats" role="list" aria-label="Counterfactual figures">
+                  <span role="listitem" class="session-cf-stat is-real-stat">As traded <strong id="sessionCfReal">&mdash;</strong> <small id="sessionCfRealMeta">every analyzed fill</small></span>
+                  <span role="listitem" class="session-cf-stat is-ghost-stat">Red cells skipped <strong id="sessionCfGhost">&mdash;</strong> <small id="sessionCfGhostMeta">hypothetical, not advice</small></span>
+                </div>
+                <div class="session-cf-ledger" id="sessionCfLedger" aria-live="polite"></div>
+                <p class="session-side-note" id="sessionCfConclusion" aria-live="polite">A red cell needs 5 trades of reliable negative expectancy before it is skipped.</p>
+                <p class="session-side-note session-honesty-note">
+                  Counterfactual: the same fills with reliable red-cell entries skipped. Hypothetical, not advice. Past cells do not promise future weather.
+                </p>
               </section>
 
-              <aside
+              <section class="session-side-pane session-tilt-pane" aria-labelledby="sessionTiltHeading">
+                <header class="session-side-head">
+                  <div>
+                    <p>Tilt radar</p>
+                    <h4 id="sessionTiltHeading">Entries within 5 minutes of a loss</h4>
+                  </div>
+                  <span class="session-tilt-mark-note">Marked on matrix</span>
+                </header>
+                <div class="session-tilt-tiles" role="list" aria-label="Tilt figures">
+                  <div class="session-tilt-tile" role="listitem">
+                    <span>Revenge entries</span>
+                    <strong id="sessionTiltCount">0</strong>
+                  </div>
+                  <div class="session-tilt-tile" role="listitem">
+                    <span id="sessionTiltNetLabel">Net result</span>
+                    <strong id="sessionTiltNet">&mdash;</strong>
+                  </div>
+                  <div class="session-tilt-tile" role="listitem">
+                    <span>Win rate</span>
+                    <strong id="sessionTiltWin">&mdash;</strong>
+                  </div>
+                  <div class="session-tilt-tile" role="listitem">
+                    <span>Baseline win</span>
+                    <strong id="sessionTiltBaseline">&mdash;</strong>
+                  </div>
+                </div>
+                <p class="session-tilt-decode" id="sessionTiltInsight" aria-live="polite">
+                  Tilt marks are stamped on the almanac cells where they happened.
+                </p>
+                <p class="session-side-note">Broker timestamps only; a trade is never guessed into the pattern.</p>
+              </section>
+            </aside>
+          </div>
+
+          <div class="session-almanac-margins">
+            <section class="session-margin-pane" aria-labelledby="sessionDurationHeading">
+              <header class="session-margin-head">
+                <p>Hold time</p>
+                <h4 id="sessionDurationHeading">Net result by duration range</h4>
+              </header>
+              <div class="session-hold-compare" role="list" aria-label="Holding time medians">
+                <div class="session-hold-figure" role="listitem">
+                  <span>Winners</span>
+                  <strong id="sessionWinningHold">&mdash;</strong>
+                  <small id="sessionWinningHoldMeta">Median hold</small>
+                </div>
+                <div class="session-hold-figure" role="listitem">
+                  <span>Losers</span>
+                  <strong id="sessionLosingHold">&mdash;</strong>
+                  <small id="sessionLosingHoldMeta">Median hold</small>
+                </div>
+                <div class="session-hold-figure" role="listitem">
+                  <span>Best band</span>
+                  <strong id="sessionBestDuration">&mdash;</strong>
+                  <small id="sessionBestDurationMeta">No measured holds yet</small>
+                </div>
+              </div>
+              <div class="session-duration-bands" id="sessionDurationBands" role="list" aria-live="polite">
+                <p class="session-empty-copy">No measured holding-time ranges yet.</p>
+              </div>
+              <p class="session-margin-note">
+                Topstep entry and exit data proves total hold duration. It does not prove how long a trade spent above breakeven.
+              </p>
+            </section>
+
+            <section class="session-margin-pane" aria-labelledby="sessionComparisonHeading">
+              <header class="session-margin-head">
+                <p>Sessions ledger</p>
+                <h4 id="sessionComparisonHeading">Net result by entry session</h4>
+              </header>
+              <div class="session-scorecard" id="sessionScorecard" role="list" aria-live="polite">
+                <p class="session-empty-copy">Import timestamped closed trades to compare trading sessions.</p>
+              </div>
+            </section>
+
+            <aside
                 class="session-topstep-execution"
                 id="sessionTopstepExecution"
                 aria-labelledby="sessionTopstepExecutionHeading"
@@ -2320,201 +2361,46 @@
                   Open, incomplete, cancelled, and rejected order rows stay outside completed-cycle performance.
                 </p>
               </aside>
-            </section>
 
-            <section
-              class="session-panel"
-              id="sessionPanelEntryTime"
-              role="tabpanel"
-              aria-labelledby="sessionTabEntryTime"
-              data-session-panel="entry-time"
-              hidden
-            >
-              <header class="session-conclusion">
-                <p>Entry time</p>
-                <h3 id="sessionEntryConclusion">Import entry timestamps to reveal your strongest window.</h3>
-                <span>Hours use the first opening fill of each completed trade cycle.</span>
+            <section class="session-margin-pane" aria-labelledby="sessionCoverageHeading">
+              <header class="session-margin-head">
+                <p>Journal coverage</p>
+                <h4 id="sessionCoverageHeading">Imported trade coverage</h4>
               </header>
-
-              <div class="session-primary-metrics session-primary-metrics-two" role="list" aria-label="Entry time takeaways">
-                <div class="session-primary-metric" role="listitem">
-                  <span>Best entry window</span>
-                  <strong id="sessionBestHour">&mdash;</strong>
-                  <small id="sessionBestHourMeta">No timestamped entries yet</small>
-                </div>
-                <div class="session-primary-metric" role="listitem">
-                  <span>Weakest entry window</span>
-                  <strong id="sessionWorstHour">&mdash;</strong>
-                  <small id="sessionWorstHourMeta">No timestamped entries yet</small>
-                </div>
+              <p class="session-coverage-line">
+                <strong id="sessionJournaledCount">0</strong> journaled &middot;
+                <strong id="sessionUnjournalledCount">0</strong> waiting &middot;
+                <strong id="sessionCoveragePercent">0%</strong> complete
+              </p>
+              <div
+                class="session-coverage-bar"
+                id="sessionCoverageBar"
+                role="progressbar"
+                aria-label="Journal completion"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="0"
+              >
+                <span id="sessionCoverageBarFill"></span>
               </div>
+              <p class="session-margin-note" id="sessionCoverageConclusion">Your journal coverage will appear here.</p>
+              <p class="session-margin-note"><strong id="sessionMissingDataCount">0</strong> imported rows missing or incomplete. The almanac only knows what the journal tells it.</p>
+            </section>
+          </div>
 
-              <section class="session-visual" aria-labelledby="sessionProfitClockHeading">
-                <header class="session-visual-head">
-                  <div>
-                    <p>24-hour profit timeline</p>
-                    <h4 id="sessionProfitClockHeading">Performance by entry hour</h4>
-                  </div>
-                  <div class="session-metric-switch" role="group" aria-label="Entry time metric">
-                    <button class="is-active" type="button" data-entry-metric="pnl" aria-pressed="true">Net P&amp;L</button>
-                    <button type="button" data-entry-metric="expectancy" aria-pressed="false">Expectancy</button>
-                    <button type="button" data-entry-metric="winRate" aria-pressed="false">Win rate</button>
-                  </div>
-                </header>
-                <div class="session-hour-viewport" aria-label="Hourly profitability timeline">
-                  <div class="session-hour-rail" id="sessionHourRail" role="list"></div>
-                  <p class="session-hour-empty" id="sessionHourEmpty">
-                    Import trades with entry timestamps to build the hourly view.
-                  </p>
-                </div>
-                <p class="session-visual-note" id="sessionTimingInsight" aria-live="polite">
-                  Each important timing read will include its trade count and confidence.
-                </p>
-              </section>
+          
 
-              <aside class="session-trade-drawer" id="sessionTradeDrawer" aria-labelledby="sessionTradeDrawerTitle" hidden>
+          <aside class="session-trade-drawer" id="sessionTradeDrawer" aria-labelledby="sessionTradeDrawerTitle" hidden>
                 <header>
                   <div>
-                    <p>Entry window</p>
+                    <p>Almanac cell</p>
                     <h4 id="sessionTradeDrawerTitle">Trades</h4>
                   </div>
                   <button id="sessionTradeDrawerClose" type="button" aria-label="Close trade details">&times;</button>
                 </header>
                 <div id="sessionTradeDrawerBody"></div>
               </aside>
-            </section>
 
-            <section
-              class="session-panel"
-              id="sessionPanelHoldTime"
-              role="tabpanel"
-              aria-labelledby="sessionTabHoldTime"
-              data-session-panel="hold-time"
-              hidden
-            >
-              <header class="session-conclusion">
-                <p>Hold time</p>
-                <h3 id="sessionHoldConclusion">Import completed trades to compare holding times.</h3>
-                <span>Measured from first entry to final exit for completed trades.</span>
-              </header>
-
-              <div class="session-primary-metrics" role="list" aria-label="Holding time takeaways">
-                <div class="session-primary-metric" role="listitem">
-                  <span>Profitable trades</span>
-                  <strong id="sessionWinningHold">&mdash;</strong>
-                  <small id="sessionWinningHoldMeta">Median hold</small>
-                </div>
-                <div class="session-primary-metric" role="listitem">
-                  <span>Losing trades</span>
-                  <strong id="sessionLosingHold">&mdash;</strong>
-                  <small id="sessionLosingHoldMeta">Median hold</small>
-                </div>
-                <div class="session-primary-metric" role="listitem">
-                  <span>Best duration range</span>
-                  <strong id="sessionBestDuration">&mdash;</strong>
-                  <small id="sessionBestDurationMeta">No measured holds yet</small>
-                </div>
-              </div>
-
-              <section class="session-visual" aria-labelledby="sessionDurationHeading">
-                <header class="session-visual-head">
-                  <div>
-                    <p>Holding duration</p>
-                    <h4 id="sessionDurationHeading">Net result by duration range</h4>
-                  </div>
-                </header>
-                <div class="session-duration-bands" id="sessionDurationBands" role="list" aria-live="polite">
-                  <p class="session-empty-copy">No measured holding-time ranges yet.</p>
-                </div>
-                <p class="session-visual-note session-honesty-note">
-                  Topstep entry and exit data proves total hold duration. It does not prove how long a trade spent above breakeven.
-                </p>
-              </section>
-            </section>
-
-            <section
-              class="session-panel"
-              id="sessionPanelJournalCoverage"
-              role="tabpanel"
-              aria-labelledby="sessionTabJournalCoverage"
-              data-session-panel="journal-coverage"
-              hidden
-            >
-              <header class="session-conclusion">
-                <p>Journal coverage</p>
-                <h3 id="sessionCoverageConclusion">Your journal coverage will appear here.</h3>
-                <span>Complete the story behind imported trades without mixing notes into performance analytics.</span>
-              </header>
-
-              <div class="session-primary-metrics" role="list" aria-label="Journal coverage metrics">
-                <div class="session-primary-metric" role="listitem">
-                  <span>Journaled</span>
-                  <strong id="sessionJournaledCount">0</strong>
-                </div>
-                <div class="session-primary-metric" role="listitem">
-                  <span>Unjournalled</span>
-                  <strong id="sessionUnjournalledCount">0</strong>
-                </div>
-                <div class="session-primary-metric" role="listitem">
-                  <span>Completed</span>
-                  <strong id="sessionCoveragePercent">0%</strong>
-                </div>
-              </div>
-
-              <section class="session-visual session-coverage-visual" aria-labelledby="sessionCoverageHeading">
-                <header class="session-visual-head">
-                  <div>
-                    <p>Completion</p>
-                    <h4 id="sessionCoverageHeading">Imported trade coverage</h4>
-                  </div>
-                  <p><strong id="sessionMissingDataCount">0</strong> missing or incomplete</p>
-                </header>
-                <div
-                  class="session-coverage-bar"
-                  id="sessionCoverageBar"
-                  role="progressbar"
-                  aria-label="Journal completion"
-                  aria-valuemin="0"
-                  aria-valuemax="100"
-                  aria-valuenow="0"
-                >
-                  <span id="sessionCoverageBarFill"></span>
-                </div>
-              </section>
-
-              <section
-                class="dash-board dash-unjournalled session-journal-queue"
-                id="dashUnjournalled"
-                hidden
-                aria-labelledby="dashUnjournalledHeading"
-              >
-                <div class="dash-board-head">
-                  <div>
-                    <p class="session-queue-kicker">Next action</p>
-                    <h3 id="dashUnjournalledHeading">Trades waiting for context</h3>
-                  </div>
-                  <span class="dash-unj-count" id="dashUnjournalledCount">0 trades</span>
-                </div>
-                <p class="dash-unj-lede">Add the setup, execution note, and lesson while the trade is still fresh.</p>
-                <div class="dash-unj-list" id="dashUnjournalledList"></div>
-                <button class="dash-unj-cta" type="button" id="dashJournalCta" hidden>
-                  <span class="dash-unj-cta-count" id="dashJournalCtaCount">0</span>
-                  <span class="dash-unj-cta-label">Journal next trade</span>
-                  <span class="dash-unj-cta-chevron" aria-hidden="true">&rsaquo;</span>
-                </button>
-                <div class="dash-unj-foot">
-                  <div>
-                    <p class="dash-unj-streak-label">Journal streak</p>
-                    <p class="dash-unj-streak" id="dashJournalStreak">0 days</p>
-                  </div>
-                  <div class="dash-unj-bars" id="dashJournalBars" role="img" aria-label="Journalling history"></div>
-                </div>
-                <p class="dash-unj-rule">
-                  A day counts once every trade you closed that day carries a note. Days you did not trade are skipped.
-                </p>
-              </section>
-            </section>
-          </div>
         </section>
 
         <!-- 1f #04 Playbook pages. One page per setup, reached from the
@@ -4389,6 +4275,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260823-morningread"></script>
+    <script type="module" src="app.js?v=20260829-almanac4"></script>
   </body>
 </html>
