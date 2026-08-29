@@ -17230,16 +17230,34 @@ function syncChromeHeight() {
     document.querySelector(".tabbar"),
   ].filter(Boolean);
   if (!bars.length) return;
+  let settleRetries = 0;
   const publish = () => {
     const root = document.documentElement;
     const dock = document.querySelector(".tabbar");
     // bottom, not height: .topnav is sticky at top:18px, so its bottom edge is
     // the first free pixel and already carries that offset.
-    const bottom = bars.reduce((low, bar) => {
+    const measured = bars.reduce((low, bar) => {
       if (bar === dock) return low;
       const rect = bar.getBoundingClientRect();
       return rect.height > 0 ? Math.max(low, Math.round(rect.bottom)) : low;
     }, 0);
+    // A TOP BAR'S BOTTOM EDGE IS CHROME, NOT CONTENT, so it cannot sit a third
+    // of the way down the window. A larger number means the bar was measured
+    // before layout settled, which happens on a cold boot: the observer below
+    // watches SIZE, and a bar that was merely in the wrong PLACE never changes
+    // size again, so the bogus value would stick for the life of the tab. It
+    // pinned a fixed view 4172px down and collapsed it to 22px. Keep the last
+    // good value and try again next frame instead of publishing nonsense.
+    const ceiling = Math.max(160, Math.round(window.innerHeight * 0.35));
+    if (measured > ceiling) {
+      if (settleRetries < 10) {
+        settleRetries += 1;
+        window.requestAnimationFrame(publish);
+      }
+      return;
+    }
+    settleRetries = 0;
+    const bottom = measured;
     if (bottom > 0) {
       root.style.setProperty("--chrome-h", `${bottom}px`);
     } else if (document.querySelector(".rail")?.getBoundingClientRect().width > 0) {
@@ -17285,6 +17303,12 @@ function syncChromeHeight() {
     }
   };
   publish();
+  if (!state.chromeResizeBound) {
+    state.chromeResizeBound = true;
+    // Position, not size: a resize can move a bar without resizing it, and
+    // that is exactly the case the observer below sleeps through.
+    window.addEventListener("resize", publish);
+  }
   if (state.chromeObserver || typeof ResizeObserver !== "function") return;
   state.chromeObserver = new ResizeObserver(publish);
   // border-box, not the default content-box: a bar's padding is part of the

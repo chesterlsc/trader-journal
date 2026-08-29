@@ -1573,8 +1573,35 @@ body.auth-locked .app-ticker { display: none !important; }
     overflow-y: auto;
   }
 
+  /* The chart is the only elastic thing in the side column: it takes the
+     slack so the column itself never needs a scrollbar. */
+  #session-intelligence .session-almanac-side > .session-cf-pane {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  #session-intelligence .session-almanac-side > .session-tilt-pane {
+    flex: 0 0 auto;
+  }
+
+  #session-intelligence .session-cf-chart {
+    flex: 1 1 auto;
+    min-height: 96px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
   #session-intelligence .session-cf-chart svg {
-    height: 190px;
+    height: 100%;
+    min-height: 0;
+  }
+
+  #session-intelligence .session-cf-chart .session-empty-copy {
+    min-height: 0;
   }
 
   #session-intelligence .session-cf-ledger {
@@ -1584,6 +1611,23 @@ body.auth-locked .app-ticker { display: none !important; }
 
   #session-intelligence .session-duration-band {
     gap: 6px 12px;
+  }
+
+  #session-intelligence .session-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    height: 262px;
+  }
+
+  /* Below a wide desktop the matrix needs the pixels more than the side
+     column does: hiding a traded hour to save width is not an option. */
+  #session-intelligence .session-almanac-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+  }
+}
+
+@media (min-width: 1560px) {
+  #session-intelligence .session-almanac-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(400px, 440px);
   }
 }
 
@@ -2221,10 +2265,10 @@ body.auth-locked .app-ticker { display: none !important; }
 .session-almanac-matrix {
   display: grid;
   grid-template-columns:
-    38px minmax(64px, 0.8fr) repeat(10, minmax(62px, 1fr)) minmax(148px, 168px);
+    34px minmax(58px, 0.8fr) repeat(10, minmax(56px, 1fr)) minmax(124px, 158px);
   grid-template-rows: 20px repeat(var(--alm-rows, 5), minmax(44px, 1fr)) 32px;
   gap: 5px 4px;
-  min-width: 940px;
+  min-width: 830px;
   min-height: 100%;
   align-items: stretch;
 }
@@ -2683,7 +2727,7 @@ button.almanac-cell:focus-visible {
   }
 
   .session-almanac-matrix {
-    grid-template-rows: 18px repeat(var(--alm-rows, 5), minmax(44px, 1fr)) 32px;
+    grid-template-rows: 18px repeat(var(--alm-rows, 5), minmax(38px, 1fr)) 28px;
     gap: 4px;
   }
 
@@ -3545,21 +3589,25 @@ button.almanac-cell:focus-visible {
   white-space: nowrap;
 }
 
-  #session-intelligence .session-strip {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    height: 216px;
-  }
 
 /* Laptop: 1440x800 leaves about 710px of viewport after chrome. The strip
    gives back 40px and steps its three display figures down; only the hold
    band well loses rows, and it scrolls. */
 @media (min-width: 1240px) and (max-height: 900px) {
-  #session-intelligence .session-strip { height: 176px; }
+  #session-intelligence .session-strip { height: 210px; }
   #session-intelligence .hold-med strong { font-size: 19px; }
   #session-intelligence .cov-figures strong { font-size: 21px; }
   #session-intelligence .exit-share strong { font-size: 13px; }
   #session-intelligence .session-ledger { gap: 2px; }
   #session-intelligence .ledger-row { min-height: 22px; }
+
+  /* Every duration band the account actually traded has to fit: hiding a
+     band would be data hiding, so the rows get tighter instead. */
+  #session-intelligence .hold-bands { gap: 1px; }
+  #session-intelligence .hold-band { min-height: 18px; padding-block: 0; }
+  #session-intelligence .hold-medians { padding-bottom: 2px; }
+  #session-intelligence .cov-rows { gap: 1px; }
+  #session-intelligence .strip-pane { gap: 6px; padding-block: 8px; }
 }
 
 /* Microtype floor. Nothing under 11px once the strip stacks. */
