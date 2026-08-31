@@ -210,7 +210,7 @@
     <link rel="stylesheet" href="clay-v2.css?v=20260823-morningread" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260829-ref11" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260830-ref15" />
   </head>
   <body>
     <div id="tjv" aria-hidden="true">
@@ -2276,9 +2276,12 @@
                     <strong id="sessionTiltBaseline">&mdash;</strong>
                   </div>
                 </div>
-                <p class="session-tilt-decode" id="sessionTiltInsight" aria-live="polite">
-                  Tilt marks are stamped on the almanac cells where they happened.
-                </p>
+                <div class="session-tilt-read">
+                  <p class="session-tilt-decode" id="sessionTiltInsight" aria-live="polite">
+                    Tilt marks are stamped on the almanac cells where they happened.
+                  </p>
+                  <dl class="session-tilt-facts" id="sessionTiltFacts"></dl>
+                </div>
                 <p class="session-side-note">Broker timestamps only; a trade is never guessed into the pattern.</p>
               </section>
             </aside>
@@ -2382,6 +2385,11 @@
             </section>
 
           </div>
+
+          <footer class="session-status-bar">
+            <span class="session-status-left" id="sessionStatusLeft"></span>
+            <span class="session-status-right" id="sessionStatusRight"></span>
+          </footer>
 
           <aside class="session-trade-drawer" id="sessionTradeDrawer" aria-labelledby="sessionTradeDrawerTitle" hidden>
                 <header>
@@ -4268,6 +4276,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260829-ref5"></script>
+    <script type="module" src="app.js?v=20260830-ref12"></script>
   </body>
 </html>

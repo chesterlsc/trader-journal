@@ -625,6 +625,9 @@ const ui = {
   sessionTiltWin: document.getElementById("sessionTiltWin"),
   sessionTiltBaseline: document.getElementById("sessionTiltBaseline"),
   sessionTiltInsight: document.getElementById("sessionTiltInsight"),
+  sessionTiltFacts: document.getElementById("sessionTiltFacts"),
+  sessionStatusLeft: document.getElementById("sessionStatusLeft"),
+  sessionStatusRight: document.getElementById("sessionStatusRight"),
   sessionWinningHold: document.getElementById("sessionWinningHold"),
   sessionWinningHoldMeta: document.getElementById("sessionWinningHoldMeta"),
   sessionLosingHold: document.getElementById("sessionLosingHold"),
@@ -9146,6 +9149,29 @@ function renderSessionAlmanac(report) {
   ui.sessionAlmanacMatrix.style.setProperty("--alm-rows", String(days.length));
   ui.sessionAlmanacMatrix.innerHTML = `${header}${rows}${footer}`;
   renderSessionAlmanacNow(report);
+  renderSessionStatusBar(report);
+}
+
+/* The status bar carries the report's provenance and the live clock, so the
+   figures above it never repeat their own footnotes. Only shortcuts that
+   actually exist are advertised: the mockup's H / T / C do not. */
+function renderSessionStatusBar(report) {
+  if (ui.sessionStatusLeft) {
+    ui.sessionStatusLeft.textContent = [
+      "Almanac",
+      report.almanac?.cells?.length ? `${report.almanac.cells.length} charted cells` : "no charted cells",
+      "Cmd-K command bar"
+    ].join(" \u00b7 ");
+  }
+  if (!ui.sessionStatusRight) return;
+  const zone = (timingZoneLabel(report.reportTimeZone).match(/\(([^)]+)\)$/) || [])[1] || report.reportTimeZone;
+  const clock = almanacNowSlot(report.reportTimeZone);
+  ui.sessionStatusRight.textContent = [
+    `TZ ${zone}`,
+    report.source.label,
+    `n=${report.coverage.analyzed} ${report.confidence.label.toLowerCase()}`,
+    clock ? `${clock.label} ${String(clock.hour).padStart(2, "0")}:${String(clock.minute).padStart(2, "0")}` : ""
+  ].filter(Boolean).join(" \u00b7 ");
 }
 
 
@@ -9193,14 +9219,19 @@ function renderSessionCounterfactual(report) {
     return;
   }
 
+  // Room on the right for the axis ticks and on the left for nothing: the
+  // plot is drawn in its own coordinate space and the labels sit in the
+  // gutter, so preserveAspectRatio can stay off and the lines still scale.
   const width = 720;
   const height = 240;
-  const pad = 10;
+  const pad = 12;
+  const gutter = 46;
+  const plotW = width - gutter;
   const values = cf.points.flatMap((point) => [point.real, point.hypothetical]).concat(0);
   const min = Math.min(...values);
   const max = Math.max(...values);
   const span = max - min || 1;
-  const x = (index) => (index / (cf.points.length - 1)) * width;
+  const x = (index) => (index / (cf.points.length - 1)) * plotW;
   const y = (value) => pad + ((max - value) / span) * (height - pad * 2);
   const path = (key) => cf.points
     .map((point, index) => `${index ? "L" : "M"}${x(index).toFixed(2)},${y(point[key]).toFixed(2)}`)
@@ -9215,12 +9246,56 @@ function renderSessionCounterfactual(report) {
   // below the real one; a uniformly green ribbon would paint that stretch as
   // gain. Mixed-sign gaps get a neutral fill instead.
   const gapMixed = cf.points.some((point) => point.hypothetical < point.real);
+  // Y ticks on a round step, so the reader can price any point on the curve
+  // instead of only its two endpoints.
+  const niceStep = (range) => {
+    const raw = range / 4;
+    const mag = Math.pow(10, Math.floor(Math.log10(Math.max(raw, 1))));
+    return [1, 2, 2.5, 5, 10].map((m) => m * mag).find((step) => step >= raw) || mag * 10;
+  };
+  const step = niceStep(span);
+  const ticks = [];
+  for (let value = Math.ceil(min / step) * step; value <= max; value += step) {
+    ticks.push(value);
+  }
+  const tickLabel = (value) => {
+    const abs = Math.abs(value);
+    const short = abs >= 1000 ? `${Math.round(value / 100) / 10}k` : String(Math.round(value));
+    return value === 0 ? "$0" : short;
+  };
+  const axis = ticks.map((value) => `
+      <line class="session-cf-grid" x1="0" x2="${plotW.toFixed(2)}" y1="${y(value).toFixed(2)}" y2="${y(value).toFixed(2)}"></line>
+      <text class="session-cf-tick" x="${(plotW + 8).toFixed(2)}" y="${(y(value) + 3).toFixed(2)}">${escapeHtml(tickLabel(value))}</text>`).join("");
+
+  // The first skipped fill is where the two lines part company; mark it.
+  const firstSkip = cf.points.findIndex((point) => point.skipped);
+  const skipMark = firstSkip > 0 ? `
+      <line class="session-cf-skip" x1="${x(firstSkip).toFixed(2)}" x2="${x(firstSkip).toFixed(2)}" y1="${pad}" y2="${(height - pad - 14).toFixed(2)}"></line>
+      <text class="session-cf-skiplabel" x="${(x(firstSkip) + 5).toFixed(2)}" y="${pad + 9}">First skipped cell</text>` : "";
+
+  const last = cf.points[cf.points.length - 1];
+  const realY = y(last.real);
+  const ghostY = y(last.hypothetical);
+  // Nudge the two end labels apart when the lines finish close together, so
+  // they never overprint each other the way the mockup's do.
+  const apart = Math.abs(realY - ghostY) < 16;
+  const realLabelY = apart ? realY + (realY > ghostY ? 8 : -8) : realY;
+  const ghostLabelY = apart ? ghostY + (ghostY > realY ? 8 : -8) : ghostY;
+  const endLabels = `
+      <text class="session-cf-endlabel is-real" x="${(x(cf.points.length - 1) - 6).toFixed(2)}" y="${(realLabelY + 3).toFixed(2)}">${escapeHtml(timingMoney(last.real))} as traded</text>
+      <text class="session-cf-endlabel is-ghost" x="${(x(cf.points.length - 1) - 6).toFixed(2)}" y="${(ghostLabelY - 7).toFixed(2)}">${escapeHtml(timingMoney(last.hypothetical))} skipped</text>`;
+
   ui.sessionCounterfactualChart.innerHTML = `
-    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">
+    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(`As traded ${timingMoney(cf.real)} against ${timingMoney(cf.hypothetical)} with red-cell entries skipped`)}">
+      ${axis}
       <path class="session-cf-gap-fill${gapMixed ? " is-mixed" : ""}" d="${gap}"></path>
-      <line class="session-cf-zero" x1="0" x2="${width}" y1="${y(0).toFixed(2)}" y2="${y(0).toFixed(2)}"></line>
+      <line class="session-cf-zero" x1="0" x2="${plotW.toFixed(2)}" y1="${y(0).toFixed(2)}" y2="${y(0).toFixed(2)}"></line>
+      ${skipMark}
       <path class="session-cf-line is-real" pathLength="1" d="${path("real")}"></path>
       <path class="session-cf-line is-ghost" pathLength="1" d="${path("hypothetical")}"></path>
+      ${endLabels}
+      <text class="session-cf-xlabel" x="0" y="${height - 2}">oldest fill</text>
+      <text class="session-cf-xlabel is-end" x="${plotW.toFixed(2)}" y="${height - 2}">now</text>
     </svg>`;
 }
 
@@ -9259,6 +9334,23 @@ function renderSessionTilt(report) {
         : top
           ? `${tilt.count} ${tilt.count === 1 ? "entry" : "entries"} chased a loss within ${tilt.windowMinutes} minutes; ${top.count} of ${tilt.count} land on ${almanacCellName(top)}.${withheldNote}`
           : `${tilt.count} ${tilt.count === 1 ? "entry" : "entries"} chased a loss within ${tilt.windowMinutes} minutes.${withheldNote}`;
+  }
+
+  // The secondary facts the reference keeps beside the decode line. Every
+  // row is a count this report already carries.
+  if (ui.sessionTiltFacts) {
+    const top = tilt.cells[0];
+    const elsewhere = tilt.cells.slice(1).reduce((sum, cell) => sum + cell.count, 0);
+    const rows = flagged
+      ? [
+          top ? [`${almanacCellName(top)} cluster`, `${top.count} of ${tilt.count}`] : null,
+          elsewhere ? ["elsewhere", `${elsewhere} of ${tilt.count}`] : null,
+          ["baseline", `n=${tilt.baselineCount}`]
+        ].filter(Boolean)
+      : [["window", `within ${tilt.windowMinutes} min of a loss`]];
+    ui.sessionTiltFacts.innerHTML = rows
+      .map(([term, value]) => `<div><dt>${escapeHtml(term)}</dt><dd>${escapeHtml(value)}</dd></div>`)
+      .join("");
   }
 }
 
