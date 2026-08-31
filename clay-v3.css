@@ -3466,7 +3466,7 @@ button.almanac-cell:focus-visible {
 
 .ledger-row {
   display: grid;
-  grid-template-columns: minmax(0, 66px) minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 66px) minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   min-height: 26px;
@@ -3515,14 +3515,6 @@ button.almanac-cell:focus-visible {
 
 .ledger-row.is-positive .ledger-val { color: var(--pnl-pos); }
 .ledger-row.is-negative .ledger-val { color: var(--pnl-neg); }
-
-.ledger-n {
-  min-width: 40px;
-  color: var(--text-faint);
-  font: 600 10px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
 
 /* ── Who closed it ───────────────────────────────────────────────────────── */
 .exit-bar {
@@ -3733,20 +3725,18 @@ button.almanac-cell:focus-visible {
 }
 
 /* Microtype floor. Nothing under 11px once the strip stacks. */
-@media (max-width: 640px) {
-  .strip-cap,
-  .strip-foot,
-  .strip-withheld,
-  .hold-med span,
-  .hold-band-label,
-  .hold-band-val,
-  .ledger-name,
-  .ledger-n,
-  .exit-share span,
-  .exit-cost-label,
-  .cov-flag,
-  .cov-rows dt,
-  .cov-rows dd {
+@media (max-width: 640px) {.strip-cap,
+.strip-foot,
+.strip-withheld,
+.hold-med span,
+.hold-band-label,
+.hold-band-val,
+.ledger-name,
+.exit-share span,
+.exit-cost-label,
+.cov-flag,
+.cov-rows dt,
+.cov-rows dd {
     font-size: 11px;
   }
 

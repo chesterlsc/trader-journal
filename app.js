@@ -8758,7 +8758,7 @@ function renderSessionTiming(report) {
     ui.sessionHeaderNet.title = report.pnl.label;
   }
   if (ui.sessionConfidence) {
-    ui.sessionConfidence.textContent = `${report.confidence.label} (n=${report.confidence.count})`;
+    ui.sessionConfidence.textContent = report.confidence.label;
     ui.sessionConfidence.classList.remove("is-early", "is-developing", "is-reliable");
     ui.sessionConfidence.classList.add(`is-${report.confidence.key === "none" ? "early" : report.confidence.key}`);
     ui.sessionConfidence.title = timingConfidenceCopy(report.confidence);
@@ -8942,7 +8942,7 @@ function renderSessionAlmanac(report) {
   }
   // The floors, stated once, in the legend where the hatch swatch sits.
   if (ui.sessionAlmanacNote) {
-    ui.sessionAlmanacNote.textContent = `Cells n<${almanac.cellSampleFloor}, columns n<${columnFloor} · withheld, never estimated`;
+    ui.sessionAlmanacNote.textContent = "Thin samples withheld, never estimated";
   }
 
   if (!cells.length) {
@@ -9002,8 +9002,8 @@ function renderSessionAlmanac(report) {
       ? `${name}: ${timingMoney(cell.expectancy)} expectancy per trade (${cell.pnlLabel}), ${Math.round(cell.winRate)}% win rate, ${timingTradeCount(cell.count)}, ${cell.confidence.label}`
       : `${name}: ${timingTradeCount(cell.count)}, below the ${almanac.cellSampleFloor}-trade floor · figures withheld, never estimated`;
     const body = reliable
-      ? `<strong>${escapeHtml(timingMoney(Math.round(cell.expectancy)))}</strong><span>n=${cell.count} · win ${Math.round(cell.winRate)}%</span>`
-      : `<strong>n=${cell.count}</strong><span>Withheld</span>`;
+      ? `<strong>${escapeHtml(timingMoney(Math.round(cell.expectancy)))}</strong><span>win ${Math.round(cell.winRate)}%</span>`
+      : `<span>Withheld</span>`;
     return `
       <button
         class="almanac-cell ${tone}"
@@ -9045,9 +9045,8 @@ function renderSessionAlmanac(report) {
     if (weekday.count < columnFloor) {
       const note = `${dayNames[day]}: ${timingTradeCount(weekday.count)}, below the ${columnFloor}-trade column floor. Figures withheld, never estimated.`;
       return `<div class="almanac-margin is-withheld" title="${escapeHtml(note)}">
-        <span class="almanac-margin-top"><strong>n=${weekday.count}</strong></span>
         <span class="almanac-margin-tag ${isToday ? "is-today" : "is-wh"}">${isToday ? "Today" : "Withheld"}</span>
-        <span class="almanac-margin-say">Column floor is ${columnFloor}</span>
+        <span class="almanac-margin-say">Not enough trades yet</span>
       </div>`;
     }
     const tone = weekday.pnl > 0 ? "is-positive" : weekday.pnl < 0 ? "is-negative" : "is-flat";
@@ -9073,7 +9072,7 @@ function renderSessionAlmanac(report) {
       rankOrder.length > 1 ? `Rank ${rankIndex + 1} of ${rankOrder.length} charted weekdays by $/trade.` : ""
     ].filter(Boolean).join(" ");
     return `<div class="almanac-margin ${tone}" title="${escapeHtml(note)}">
-      <span class="almanac-margin-top"><strong>${escapeHtml(timingMoney(weekday.pnl))}</strong>${pct ? `<em>P${pct.pct}</em>` : ""}</span>
+      <span class="almanac-margin-top"><strong>${escapeHtml(timingMoney(weekday.pnl))}</strong></span>
       ${tag ? `<span class="almanac-margin-tag ${tag.cls}">${tag.text}</span>` : '<span class="almanac-margin-tag" aria-hidden="true" style="visibility:hidden">.</span>'}
       <span class="almanac-margin-bar"><i style="width:${fill}%"></i></span>
       <span class="almanac-margin-say">${escapeHtml(say)}</span>
@@ -9102,8 +9101,8 @@ function renderSessionAlmanac(report) {
     const overnightBody = !overnight.count
       ? ""
       : overnight.count >= almanac.cellSampleFloor
-        ? `<strong>${escapeHtml(timingMoney(Math.round(overnight.pnl)))}</strong><span>n=${overnight.count}</span>`
-        : `<strong>n=${overnight.count}</strong><span>Withheld</span>`;
+        ? `<strong>${escapeHtml(timingMoney(Math.round(overnight.pnl)))}</strong>`
+        : `<span>Withheld</span>`;
     const overnightCell = overnight.count
       ? `<button class="almanac-cell almanac-overnight ${overnightTone}" type="button" data-almanac-cell="ovn-${day}" data-almanac-slot="ovn-${day}" aria-selected="${state.sessionIntelligence.selectedCell === `ovn-${day}`}" style="--almanac-heat:0" title="${escapeHtml(overnightDetails)}" aria-label="${escapeHtml(overnightDetails)}">${overnightBody}${tiltMark(overnight.tilts, overnightName)}</button>`
       : `<span class="almanac-cell almanac-overnight is-empty" data-almanac-slot="ovn-${day}" aria-hidden="true"></span>`;
@@ -9124,10 +9123,10 @@ function renderSessionAlmanac(report) {
     if (!row || !row.count) return '<span class="almanac-foot">n/a</span>';
     if (row.count < columnFloor) {
       const note = `${label}: ${timingTradeCount(row.count)}, below the ${columnFloor}-trade column floor. Withheld, never estimated.`;
-      return `<span class="almanac-foot is-withheld" title="${escapeHtml(note)}">n=${row.count}</span>`;
+      return `<span class="almanac-foot is-withheld" title="${escapeHtml(note)}"></span>`;
     }
     const tone = row.pnl > 0 ? "is-positive" : row.pnl < 0 ? "is-negative" : "";
-    return `<span class="almanac-foot ${tone}">${escapeHtml(timingMoney(Math.round(row.pnl)))}<small>n=${row.count}</small></span>`;
+    return `<span class="almanac-foot ${tone}">${escapeHtml(timingMoney(Math.round(row.pnl)))}</span>`;
   };
 
   // The corner sums the charted population only, so rows and columns
@@ -9143,7 +9142,7 @@ function renderSessionAlmanac(report) {
     '<span class="almanac-row-label almanac-foot-label">Net</span>',
     footCell(overnightTotal.count ? overnightTotal : null, "Off-hours"),
     ...dayHours.map((hour) => footCell(hoursByHour.get(hour), `${String(hour).padStart(2, "0")}:00`)),
-    `<span class="almanac-foot almanac-foot-total" title="${escapeHtml(cornerTitle)}">&Sigma; weekdays = ${escapeHtml(timingMoney(chartedNet))}</span>`
+    `<span class="almanac-foot almanac-foot-total" title="${escapeHtml(cornerTitle)}">Total ${escapeHtml(timingMoney(chartedNet))}</span>`
   ].join("");
 
   ui.sessionAlmanacMatrix.style.setProperty("--alm-rows", String(days.length));
@@ -9169,7 +9168,7 @@ function renderSessionStatusBar(report) {
   ui.sessionStatusRight.textContent = [
     `TZ ${zone}`,
     report.source.label,
-    `n=${report.coverage.analyzed} ${report.confidence.label.toLowerCase()}`,
+    `${report.coverage.analyzed} trades · ${report.confidence.label.toLowerCase()}`,
     clock ? `${clock.label} ${String(clock.hour).padStart(2, "0")}:${String(clock.minute).padStart(2, "0")}` : ""
   ].filter(Boolean).join(" \u00b7 ");
 }
@@ -9186,13 +9185,13 @@ function renderSessionCounterfactual(report) {
   setTimingValue(ui.sessionCfReal, cf.tradeCount ? timingMoney(cf.real) : "—", cf.tradeCount ? timingTone(cf.real) : "");
   if (ui.sessionCfRealMeta) {
     ui.sessionCfRealMeta.textContent = cf.tradeCount
-      ? `${cf.tradeCount} analyzed fills · ${report.pnl.label}`
+      ? report.pnl.label
       : "Every analyzed fill";
   }
   setTimingValue(ui.sessionCfGhost, cf.available ? timingMoney(cf.hypothetical) : "—", cf.available ? timingTone(cf.hypothetical) : "");
   if (ui.sessionCfGhostMeta) {
     ui.sessionCfGhostMeta.textContent = cf.available
-      ? `${cf.skippedTrades} of ${cf.tradeCount} fills skipped`
+      ? `${cf.skippedTrades} trades skipped`
       : "Hypothetical, not advice";
   }
   setTimingValue(ui.sessionCfGap, cf.available ? timingMoney(cf.recovered) : "—", cf.available ? timingTone(cf.recovered) : "");
@@ -9209,7 +9208,7 @@ function renderSessionCounterfactual(report) {
       ? almanac.redCells.map((cell) => `
           <span class="session-cf-chip" title="${escapeHtml(`${cell.pnlLabel} · ${timingMoney(cell.expectancy)}/trade expectancy`)}">
             <strong>${escapeHtml(almanacCellName(cell))}</strong>
-            ${escapeHtml(timingMoney(cell.pnl))} · n=${cell.count}
+            ${escapeHtml(timingMoney(cell.pnl))}
           </span>`).join("")
       : "";
   }
@@ -9345,7 +9344,6 @@ function renderSessionTilt(report) {
       ? [
           top ? [`${almanacCellName(top)} cluster`, `${top.count} of ${tilt.count}`] : null,
           elsewhere ? ["elsewhere", `${elsewhere} of ${tilt.count}`] : null,
-          ["baseline", `n=${tilt.baselineCount}`]
         ].filter(Boolean)
       : [["window", `within ${tilt.windowMinutes} min of a loss`]];
     ui.sessionTiltFacts.innerHTML = rows
@@ -9490,7 +9488,6 @@ function renderSessionScorecard(report) {
         <span class="ledger-name">${escapeHtml(row.label)}</span>
         <span class="ledger-bar" aria-hidden="true"></span>
         ${value}
-        <span class="ledger-n">n=${row.count}</span>
       </div>`;
   }).join("");
 
@@ -9526,7 +9523,7 @@ function renderExitDiscipline(report) {
   const show = (node, on) => { if (node) node.hidden = !on; };
 
   if (ui.sessionExitBasis) {
-    ui.sessionExitBasis.textContent = summary ? `n=${summary.known}` : "";
+    ui.sessionExitBasis.textContent = "";
     ui.sessionExitBasis.title = summary ? `${summary.known} cycles carry a closing-order disposition` : "";
   }
   if (ui.sessionExitFoot) {
