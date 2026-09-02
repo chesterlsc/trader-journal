@@ -1,0 +1,851 @@
+<!doctype html>
+<!--
+  TRADER JOURNAL — FEATURE ADD · VARIATION 1 · "FRONT PAGE"
+  Production dashboard + time greeting + personal financial newspaper + AI micro desk.
+  Hero halved (~88px). Review queue narrowed 6/12 → 4/12; the two freed columns
+  go to NET DAILY P&L, which stops being a cramped strip and stands as a full
+  column beside the equity curve.
+
+  ★ SIGNATURE MOMENT — "THE DAWN HANDOFF":
+  The session dateline row is not printed alphabetically or east-to-west by
+  habit. It is printed in the order the tape actually moves at 05:00 Manila:
+  NEW YORK · CLOSING sits immediately beside SYDNEY · OPENING BELL, both
+  stamped NOW in the only accent colour on the page, with a single hairline
+  bracket drawn under the pair reading THE TAPE PASSES WESTWARD. One session
+  dies and the next one is born in the same two column-inches of newsprint,
+  at the exact minute the paper says "Good morning, Leon."
+
+  CONCEPT PREVIEW · SAMPLE DATA · NOTHING LIVE
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trader Journal — Front Page</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Sora:wght@400;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   CLAY V3 TOKENS — literal values
+   ============================================================ */
+:root{
+  --surface-0:#080b12;
+  --surface-1:#0c1119;
+  --surface-2:#111823;
+  --surface-3:#16202d;
+  --surface-inset:#05080e;
+  --line:#151d28;
+  --line-strong:#1b2532;
+  --text:#e6ecf5;
+  --text-soft:#8695a8;
+  --text-faint:#7c8b9e;
+  --accent:#f97316;          /* interaction + NOW only */
+  --accent-strong:#fb8b3a;
+  --pnl-pos:#34d399;
+  --pnl-neg:#f87171;
+  --warn:#f0b34e;
+  --info:#22d3ee;
+  --edge-light:rgba(214,222,235,.08);   /* machined top-edge highlight */
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"Sora","Avenir Next",Avenir,"Segoe UI",system-ui,sans-serif;
+  --serif:"Source Serif 4",Georgia,"Iowan Old Style","Times New Roman",serif;
+}
+
+/* ============================================================
+   FRAME
+   Page may scroll vertically. Never horizontally.
+   ============================================================ */
+*{box-sizing:border-box;margin:0;padding:0}
+html{overflow-x:hidden}
+body{
+  background:#080b12;                  /* literal --surface-0 */
+  color:var(--text);
+  font-family:var(--mono);
+  font-size:12px;
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum" 1;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+.app{display:grid;grid-template-columns:56px minmax(0,1fr);min-height:100vh}
+.main{min-width:0;display:flex;flex-direction:column}
+.mlabel{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint);font-weight:600}
+.pos{color:var(--pnl-pos)}
+.neg{color:var(--pnl-neg)}
+.flat{color:var(--text-soft)}
+
+/* ============================================================
+   LEFT ICON RAIL — 56px, honest app chrome
+   ============================================================ */
+.rail{
+  background:var(--surface-1);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:8px 0;position:sticky;top:0;height:100vh;
+}
+.rail .stamp{
+  width:34px;height:34px;border:1px solid var(--line-strong);border-radius:6px;
+  display:grid;place-items:center;margin-bottom:10px;background:var(--surface-2);
+  font-family:var(--sans);font-weight:700;font-size:13px;color:var(--text);
+  box-shadow:inset 0 1px 0 var(--edge-light);
+}
+.rail .glyph{width:34px;height:34px;border-radius:6px;display:grid;place-items:center;color:var(--text-faint);opacity:.7}
+.rail .glyph.active{color:var(--accent);opacity:1;background:var(--surface-2)}
+.rail .glyph svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5}
+.rail .spacer{flex:1}
+
+/* ============================================================
+   TOP LIVE TICKER BAR
+   ============================================================ */
+.tickerbar{
+  display:flex;align-items:center;gap:12px;min-width:0;height:36px;flex:none;
+  background:var(--surface-1);border-bottom:1px solid var(--line);padding:0 10px;
+  position:sticky;top:0;z-index:6;
+}
+.chip-live{
+  display:inline-flex;align-items:center;gap:6px;flex:none;
+  font-size:10px;letter-spacing:.14em;font-weight:700;color:var(--info);
+  border:1px solid rgba(34,211,238,.35);border-radius:3px;padding:2px 7px;
+  background:rgba(34,211,238,.06);
+}
+.chip-live .dot{width:6px;height:6px;border-radius:50%;background:var(--info);animation:blink 1.6s steps(2) infinite}
+@keyframes blink{50%{opacity:.25}}
+.tickerscroll{flex:1;min-width:0;overflow:hidden}
+.tickertrack{display:flex;width:max-content;gap:34px;white-space:nowrap;animation:tape 46s linear infinite}
+@keyframes tape{to{transform:translateX(-50%)}}
+.tick{display:inline-flex;gap:8px;font-size:11px;color:var(--text-soft)}
+.tick b{color:var(--text);font-weight:600}
+.honesty{flex:none;font-size:9px;letter-spacing:.16em;color:var(--text-faint);border:1px dashed var(--line-strong);border-radius:3px;padding:2px 7px}
+.clock{flex:none;font-size:11px;color:var(--text-soft)}
+.clock b{color:var(--text)}
+
+/* buttons */
+.btn-k{
+  flex:none;display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+  background:var(--accent);color:#0a0602;border:none;border-radius:4px;
+  font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.04em;padding:5px 11px;
+}
+.btn-k:hover{background:var(--accent-strong)}
+.btn-k kbd{font-size:9px;background:rgba(0,0,0,.22);border-radius:2px;padding:1px 4px}
+.btn-ghost{
+  flex:none;background:transparent;color:var(--text-soft);cursor:pointer;
+  border:1px solid var(--line-strong);border-radius:4px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.06em;padding:4px 9px;
+}
+.btn-ghost:hover{color:var(--text);background:var(--surface-2)}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:4px;overflow:hidden;flex:none}
+.seg button{background:transparent;border:0;cursor:pointer;color:var(--text-faint);font-family:var(--mono);font-size:10px;letter-spacing:.08em;padding:4px 8px}
+.seg button.on{background:var(--surface-3);color:var(--text)}
+
+/* raised panel shell */
+.panel{
+  background:var(--surface-1);border:1px solid var(--line);border-radius:6px;
+  box-shadow:inset 0 1px 0 var(--edge-light);
+  display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;
+}
+.panel-head{
+  display:flex;align-items:center;gap:10px;flex:none;
+  padding:8px 10px;border-bottom:1px solid var(--line);background:var(--surface-2);
+}
+.panel-title{font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.02em}
+.panel-meta{margin-left:auto;display:flex;align-items:center;gap:8px}
+
+.page{padding:8px 10px 14px;display:flex;flex-direction:column;gap:8px}
+
+/* ============================================================
+   HERO — HALVED. 88px, one-line composition.
+   Was a ~176px strip with a 56px headline. Now 34px headline,
+   balance inline, now-figures compact on one baseline.
+   ============================================================ */
+.hero{
+  min-height:88px;display:flex;align-items:center;gap:18px;padding:0 14px;flex-wrap:wrap;
+  background:linear-gradient(180deg,var(--surface-2),var(--surface-1));
+  border:1px solid var(--line);border-radius:6px;box-shadow:inset 0 1px 0 var(--edge-light);
+}
+.hero-net{display:flex;flex-direction:column;gap:1px;flex:none}
+.hero-net .v{font-size:34px;font-weight:800;line-height:1;color:var(--pnl-pos);letter-spacing:-.01em}
+.hero-bal{display:flex;align-items:center;gap:8px;flex:none;padding-left:18px;border-left:1px solid var(--line-strong)}
+.hero-bal .v{font-size:15px;font-weight:700}
+.hero-bal .st{font-size:10px;color:var(--text-faint)}
+.eye{background:transparent;border:0;cursor:pointer;color:var(--text-faint);display:grid;place-items:center}
+.eye svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5}
+.eye:hover{color:var(--text)}
+.hero-cols{display:flex;gap:0;flex:1;min-width:0;flex-wrap:wrap}
+.hero-col{padding:0 16px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:3px;min-width:0}
+.hero-col b{font-size:13px;font-weight:700;line-height:1}
+.hero-col i{font-style:normal;font-size:9px;letter-spacing:.1em;color:var(--text-faint)}
+.hero-ctrl{display:flex;align-items:center;gap:8px;flex:none;margin-left:auto}
+.chip-est{font-size:10px;letter-spacing:.1em;color:var(--warn);border:1px solid rgba(240,179,78,.32);background:rgba(240,179,78,.07);border-radius:3px;padding:3px 7px}
+
+/* ============================================================
+   FEATURE 2 — THE NEWSPAPER BAND (full content width)
+   ear line → masthead → session datelines → fold → AI micro desk
+   ============================================================ */
+.paper{
+  background:var(--surface-1);border:1px solid var(--line-strong);border-radius:6px;
+  box-shadow:inset 0 1px 0 var(--edge-light);padding:10px 16px 12px;
+}
+/* — ear line: the greeting — */
+.ear{display:flex;align-items:baseline;gap:12px;padding-bottom:6px}
+.greet{font-family:var(--sans);font-size:16px;font-weight:600;color:var(--text);letter-spacing:.01em}
+.ear-r{margin-left:auto;display:flex;align-items:center;gap:10px}
+.ear-note{font-size:9px;letter-spacing:.16em;color:var(--text-faint);text-transform:uppercase}
+
+/* — masthead — */
+.masthead{border-top:2px solid var(--line-strong);border-bottom:1px solid var(--line);padding:8px 0 6px;text-align:center}
+.masthead h1{
+  font-family:var(--serif);font-weight:700;font-size:38px;line-height:1;
+  letter-spacing:.16em;color:var(--text);text-transform:uppercase;
+}
+.dateline{
+  margin-top:5px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap;
+  font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-faint);
+}
+.dateline span{white-space:nowrap}
+.dateline em{font-style:normal;color:var(--text-soft)}
+
+/* — session dateline row: FOUR newspaper columns — */
+.sessions{
+  position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  margin-top:8px;padding-bottom:22px;
+}
+.sess{padding:8px 14px 10px;border-left:1px solid var(--line);min-width:0}
+.sess:first-child{border-left:0;padding-left:0}
+.sess-city{font-family:var(--serif);font-size:19px;font-weight:700;letter-spacing:.1em;line-height:1.1;color:var(--text-soft)}
+.sess-state{margin-top:5px;display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--text-faint)}
+.sess-count{margin-top:6px;font-size:16px;font-weight:700;line-height:1;color:var(--text-soft)}
+.sess-win{margin-top:4px;font-size:9px;letter-spacing:.1em;color:var(--text-faint)}
+/* the two NOW sessions — the only accent on the page */
+.sess.now .sess-city{color:var(--text)}
+.sess.now .sess-state{color:var(--accent-strong);font-size:11px}
+.sess.now .sess-count{color:var(--accent-strong);font-size:20px}
+.sess.now .sess-win{color:var(--text-soft)}
+.sess.now{background:linear-gradient(180deg,rgba(249,115,22,.13),rgba(249,115,22,.02) 72%);box-shadow:inset 0 3px 0 var(--accent)}
+.now-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(249,115,22,.18);animation:blink 1.3s steps(2) infinite}
+/* ★ THE DAWN HANDOFF bracket, drawn under the NY | SYDNEY pair only */
+.handoff{
+  position:absolute;left:0;bottom:0;width:50%;height:22px;
+  border-left:2px solid var(--accent);border-right:2px solid var(--accent);
+  border-bottom:2px solid var(--accent);
+  display:flex;align-items:flex-end;justify-content:center;
+}
+.handoff span{
+  transform:translateY(50%);background:var(--surface-1);padding:0 12px;
+  font-size:11px;font-weight:800;letter-spacing:.22em;color:var(--accent-strong);white-space:nowrap;
+}
+/* westward travel: a mark that slides NY → SYDNEY along the bracket */
+.handoff::before{
+  content:"";position:absolute;top:-1px;left:0;width:26px;height:3px;
+  background:linear-gradient(90deg,transparent,var(--accent-strong));
+  animation:westward 4.2s linear infinite;
+}
+@keyframes westward{from{left:0}to{left:calc(100% - 26px)}}
+
+/* — the fold — */
+.fold{display:flex;align-items:center;gap:12px;margin-top:10px;border-top:3px double var(--line-strong);padding-top:7px}
+.fold h2{font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:.28em;text-transform:uppercase}
+.ai-tag{font-size:9px;letter-spacing:.16em;color:var(--text-faint);border:1px dashed var(--line-strong);border-radius:3px;padding:2px 7px}
+.fold .mlabel{margin-left:auto}
+
+/* — FEATURE 3 — AI micro desk: four broadsheet columns — */
+.desk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:8px}
+.col{padding:0 18px;border-left:1px solid var(--line);min-width:0}
+.col:first-child{border-left:0;padding-left:0}
+.col:last-child{padding-right:0}
+.kicker{font-size:10px;font-weight:800;letter-spacing:.22em}
+.kicker.bull{color:var(--pnl-pos)}
+.kicker.bear{color:var(--pnl-neg)}
+.col h3{font-family:var(--serif);font-size:26px;font-weight:700;line-height:1.05;letter-spacing:.02em;margin-top:2px}
+.col-px{display:flex;align-items:baseline;gap:8px;margin-top:2px;font-size:12px;color:var(--text-soft)}
+.col-px b{color:var(--text);font-weight:700;font-size:14px}
+.conf{margin-top:9px;display:flex;align-items:baseline;gap:8px}
+.conf .n{font-size:22px;font-weight:800;line-height:1}
+.conf .l{font-size:9px;letter-spacing:.16em;color:var(--text-faint)}
+.meter{margin-top:5px;height:3px;background:var(--surface-inset);border:1px solid var(--line);border-radius:2px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--text-soft)}   /* neutral, never accent */
+.col p{
+  margin-top:9px;font-family:var(--serif);font-size:13.5px;line-height:1.5;
+  color:#c6d2e2;text-align:justify;hyphens:auto;
+}
+.col p::first-letter{
+  float:left;font-family:var(--serif);font-weight:700;font-size:32px;line-height:.86;
+  padding:2px 6px 0 0;color:var(--text);
+}
+.col-foot{margin-top:8px;padding-top:6px;border-top:1px solid var(--line);display:flex;gap:10px;font-size:9px;letter-spacing:.1em;color:var(--text-faint)}
+.col-foot b{color:var(--text-soft);font-weight:600}
+
+/* ============================================================
+   ANALYTICS GRID — 12 columns.
+   Review queue: 6/12 → 4/12 (ordered). The two freed columns
+   are handed to NET DAILY P&L (3/12 → 3/12 + wider equity 5/12).
+   ============================================================ */
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px}
+.c5{grid-column:span 5}.c4{grid-column:span 4}.c3{grid-column:span 3}.c12{grid-column:span 12}
+.row-a > *{min-height:430px}
+.row-b > *{min-height:330px}
+
+/* equity + drawdown */
+.eq-body{padding:10px 12px 6px;flex:1;display:flex;flex-direction:column;min-height:0;gap:6px}
+.eq-chart{position:relative;flex:1;min-height:0}
+.eq-chart svg{width:100%;height:100%;display:block}
+.eq-ylab{position:absolute;left:2px;font-size:9px;color:var(--text-faint)}
+.eq-xlab{position:absolute;bottom:-2px;font-size:9px;letter-spacing:.1em;color:var(--text-faint)}
+.eq-last{position:absolute;right:4px;top:2px;text-align:right;font-size:15px;font-weight:800;color:var(--text)}
+.eq-last small{display:block;font-size:9px;letter-spacing:.14em;color:var(--pnl-pos);font-weight:700}
+.dd-strip{position:relative;height:38px;flex:none;background:var(--surface-inset);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.dd-strip svg{width:100%;height:100%;display:block}
+.dd-tag{position:absolute;right:6px;top:3px;font-size:9px;letter-spacing:.12em;color:var(--text-faint)}
+.eq-stats{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--line);flex:none}
+.eq-stat{padding:8px 10px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:3px;min-width:0}
+.eq-stat:first-child{border-left:0}
+.eq-stat .v{font-size:14px;font-weight:700;white-space:nowrap}
+.eq-stat .sub{font-size:9px;color:var(--text-faint);letter-spacing:.06em}
+
+/* net daily p&l bars */
+.bars-body{padding:12px 12px 8px;flex:1;display:flex;flex-direction:column;min-height:0}
+.bars{flex:1;display:grid;grid-template-columns:repeat(13,minmax(0,1fr));gap:5px;align-items:end;min-height:0}
+.bar{display:flex;flex-direction:column;justify-content:flex-end;height:100%;position:relative}
+.bar .up{background:var(--pnl-pos);border-radius:2px 2px 0 0;opacity:.88}
+.bar .dn{background:var(--pnl-neg);border-radius:0 0 2px 2px;opacity:.88}
+.bar .zero{border-top:1px solid var(--line-strong)}
+.bar .up-slot{height:150px;display:flex;flex-direction:column;justify-content:flex-end}
+.bar .dn-slot{height:58px}
+.bar .d{margin-top:6px;font-size:9px;color:var(--text-faint);text-align:center;letter-spacing:.04em}
+.bar.today .up{background:var(--accent);opacity:1;height:2px}
+.bars-foot{flex:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.bf{display:flex;flex-direction:column;gap:3px}
+.bf b{font-size:13px;font-weight:700}
+
+/* review queue — NEW day-grouped form, narrowed to 4/12 */
+.q-body{flex:1;min-height:0;display:flex;flex-direction:column}
+.qtable{width:100%;border-collapse:collapse;table-layout:fixed}
+.qtable th{
+  text-align:left;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint);
+  font-weight:600;padding:7px 8px;border-bottom:1px solid var(--line-strong);background:var(--surface-2);
+}
+.qtable td{padding:7px 8px;border-bottom:1px solid var(--line);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qtable tr:hover td{background:var(--surface-2)}
+.qtable .num{text-align:right;font-weight:700}
+.q-date{color:var(--text);font-weight:600}
+.q-reason{color:var(--text-soft);font-size:10.5px}
+.q-src{font-size:9px;letter-spacing:.1em;color:var(--warn);border:1px solid rgba(240,179,78,.28);border-radius:3px;padding:1px 5px;background:rgba(240,179,78,.06)}
+.q-foot{
+  flex:none;margin-top:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:8px 10px;border-top:1px solid var(--line-strong);background:var(--surface-2);
+}
+.q-foot .tot{margin-left:auto;font-size:13px;font-weight:800;color:var(--pnl-pos)}
+
+/* calendar */
+.cal-body{padding:10px 12px 12px;flex:1;display:flex;flex-direction:column;min-height:0;gap:6px}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-dow span{font-size:9px;letter-spacing:.14em;color:var(--text-faint);text-align:center}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:1fr;gap:4px;flex:1;min-height:0}
+.cell{
+  background:var(--surface-inset);border:1px solid var(--line);border-radius:4px;
+  padding:4px 5px;display:flex;flex-direction:column;gap:2px;min-width:0;overflow:hidden;
+}
+.cell .n{font-size:10px;color:var(--text-faint)}
+.cell .p{font-size:11px;font-weight:700;line-height:1}
+.cell .t{font-size:8px;color:var(--text-faint);letter-spacing:.06em}
+.cell.win{background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.24)}
+.cell.loss{background:rgba(248,113,113,.08);border-color:rgba(248,113,113,.24)}
+.cell.carry{opacity:.62}
+.cell.mute{opacity:.28}
+.cell.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px rgba(249,115,22,.28)}
+.cal-foot{display:flex;gap:10px;flex-wrap:wrap;flex:none;font-size:10px;color:var(--text-soft);border-top:1px solid var(--line);padding-top:7px}
+.cal-foot b{color:var(--text)}
+
+/* market TV — monogram bug only, no real network branding */
+.tv-body{padding:10px;flex:1;display:flex;flex-direction:column;min-height:0}
+.tv-screen{position:relative;flex:1;min-height:0;background:var(--surface-inset);border:1px solid var(--line-strong);border-radius:4px;overflow:hidden}
+.tv-feed{position:absolute;inset:0;display:flex;flex-direction:column}
+.tv-topline{display:flex;align-items:center;gap:8px;padding:8px 10px}
+.tv-bug{font-family:var(--sans);font-weight:800;font-size:12px;letter-spacing:.1em;color:var(--text);border:1px solid var(--line-strong);border-radius:3px;padding:2px 6px;background:var(--surface-2)}
+.tv-livechip{display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:800;letter-spacing:.14em;color:#031013;background:var(--info);border-radius:2px;padding:2px 6px}
+.tv-livechip i{width:5px;height:5px;border-radius:50%;background:#031013;animation:blink 1.2s steps(2) infinite}
+.tv-clock{margin-left:auto;font-size:10px;color:var(--text-faint)}
+.tv-main{flex:1;display:flex;align-items:center;gap:14px;padding:0 14px;min-height:0}
+.tv-quote .sym{font-size:9px;letter-spacing:.16em;color:var(--text-faint);display:block}
+.tv-quote .px{font-size:30px;font-weight:800;line-height:1.05}
+.tv-quote .chg{font-size:12px;font-weight:700;color:var(--pnl-pos)}
+.tv-spark{flex:1;height:62%;min-width:0}
+.tv-spark svg{width:100%;height:100%}
+.tv-lower3{flex:none;background:rgba(12,17,25,.92);border-top:1px solid var(--line-strong)}
+.l3-row{display:flex;align-items:center;gap:9px;padding:7px 10px}
+.l3-tag{font-size:9px;font-weight:800;letter-spacing:.16em;color:#0a0602;background:var(--accent);border-radius:2px;padding:2px 6px}
+.l3-head{font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:.02em}
+.tv-strip{border-top:1px solid var(--line);overflow:hidden;background:rgba(5,8,14,.9)}
+.tv-striptrack{display:flex;width:max-content;gap:26px;padding:3px 10px;font-size:9px;color:var(--text-soft);white-space:nowrap;animation:tape 34s linear infinite}
+.tv-screen::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(180deg,rgba(255,255,255,.014) 0 1px,transparent 1px 3px)}
+
+/* accounts / discipline dock */
+.dock-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px;flex:1;min-height:0}
+.dock-row{display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--surface-inset);border:1px solid var(--line);border-radius:4px}
+.dock-row .nm{font-weight:700;font-size:12px}
+.dock-row .rt{margin-left:auto;font-weight:700}
+.badge-live{display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:700;letter-spacing:.12em;color:var(--info);border:1px solid rgba(34,211,238,.3);border-radius:3px;padding:1px 6px}
+.badge-live i{width:5px;height:5px;border-radius:50%;background:var(--info)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:9.5px;letter-spacing:.1em;color:var(--text-soft);border:1px solid var(--line-strong);border-radius:3px;padding:3px 7px;background:var(--surface-2)}
+.chip b{color:var(--text)}
+.chip.warn{color:var(--warn);border-color:rgba(240,179,78,.3);background:rgba(240,179,78,.06)}
+.chip.pos{color:var(--pnl-pos);border-color:rgba(52,211,153,.28);background:rgba(52,211,153,.06)}
+
+/* ============================================================
+   1440 AND DOWN — compress, never clip, never scroll sideways
+   ============================================================ */
+@media (max-width:1700px){
+  .masthead h1{font-size:32px}
+  .col h3{font-size:22px}
+  .col p{font-size:12.5px}
+  .col{padding:0 12px}
+  .sess{padding:8px 10px 10px}
+  .sess-city{font-size:16px}
+  .hero-col{padding:0 11px}
+}
+@media (max-width:1500px){
+  .row-a > *{min-height:400px}
+  .eq-stats{grid-template-columns:repeat(4,1fr)}
+  .eq-stat{border-top:1px solid var(--line)}
+  .qtable td,.qtable th{padding:6px 5px}
+  .q-src{font-size:8.5px;letter-spacing:.03em;padding:1px 4px}
+  .col p{font-size:12px;line-height:1.45}
+  .hero-net .v{font-size:30px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ═══════════ LEFT ICON RAIL ═══════════ -->
+  <nav class="rail">
+    <div class="stamp">TJ</div>
+    <div class="glyph active" title="Dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+    <div class="glyph" title="Journal"><svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 4v13"/></svg></div>
+    <div class="glyph" title="Calendar"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+    <div class="glyph" title="Analytics"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg></div>
+    <div class="glyph" title="Playbook"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></div>
+    <div class="glyph" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.2 2.2M16.9 16.9l2.2 2.2M19.1 4.9l-2.2 2.2M7.1 16.9l-2.2 2.2"/></svg></div>
+    <div class="spacer"></div>
+    <div class="glyph" title="Theme"><svg viewBox="0 0 24 24"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg></div>
+  </nav>
+
+  <div class="main">
+
+    <!-- ═══════════ TOP LIVE TICKER BAR ═══════════ -->
+    <header class="tickerbar">
+      <span class="chip-live"><span class="dot"></span>LIVE</span>
+      <div class="tickerscroll">
+        <div class="tickertrack"><!-- run x2 for a seamless loop -->
+          <span class="tick"><b>M2K</b> Russell 3,024 <span class="pos">▲0.2%</span></span>
+          <span class="tick"><b>MGC</b> Gold 4,671 <span class="pos">▲0.24%</span></span>
+          <span class="tick"><b>MCL</b> Crude 82.94 <span class="neg">▼0.4%</span></span>
+          <span class="tick"><b>M6E</b> Euro FX 1.1660 <span class="pos">▲0.0008</span></span>
+          <span class="tick"><b>MBT</b> Bitcoin 111,890 <span class="neg">▼560</span></span>
+          <span class="tick"><b>M2K</b> Russell 3,024 <span class="pos">▲0.2%</span></span>
+          <span class="tick"><b>MGC</b> Gold 4,671 <span class="pos">▲0.24%</span></span>
+          <span class="tick"><b>MCL</b> Crude 82.94 <span class="neg">▼0.4%</span></span>
+          <span class="tick"><b>M6E</b> Euro FX 1.1660 <span class="pos">▲0.0008</span></span>
+          <span class="tick"><b>MBT</b> Bitcoin 111,890 <span class="neg">▼560</span></span>
+        </div>
+      </div>
+      <span class="honesty">CONCEPT PREVIEW · SAMPLE DATA · NOTHING LIVE</span>
+      <span class="clock">WED SEP 02 · <b>05:00</b> · MANILA</span>
+    </header>
+
+    <div class="page">
+
+      <!-- ═══════════ HERO — HALF HEIGHT (~88px) ═══════════ -->
+      <section class="hero">
+        <div class="hero-net">
+          <span class="mlabel">Net P&amp;L · All time</span>
+          <span class="v">+$3,253.00</span>
+        </div>
+        <div class="hero-bal">
+          <span class="mlabel">Balance</span>
+          <span class="v">$53,253.00</span>
+          <button class="eye" title="Hide balance" aria-label="Hide balance">
+            <svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/></svg>
+          </button>
+          <span class="st">START $50,000 · <span class="pos">+6.51%</span></span>
+        </div>
+        <div class="hero-cols">
+          <div class="hero-col"><span class="mlabel">Today</span><b class="flat">$0</b><i>NO TRADES</i></div>
+          <div class="hero-col"><span class="mlabel">This week</span><b class="pos">+$328</b><i>2 SESSIONS</i></div>
+          <div class="hero-col"><span class="mlabel">Open P&amp;L</span><b class="flat">FLAT</b><i>NO POSITIONS</i></div>
+          <div class="hero-col"><span class="mlabel">Green streak</span><b class="pos">4 DAYS</b><i>AUG 27 → SEP 1</i></div>
+          <div class="hero-col"><span class="mlabel">Next event</span><b>GDP Q/Q</b><i>9H AWAY</i></div>
+          <div class="hero-col"><span class="mlabel">Risk state</span><b class="pos">AT HIGHS</b><i>CURR DD $0.00</i></div>
+        </div>
+        <div class="hero-ctrl">
+          <button class="btn-ghost">QUICK IMPORT</button>
+          <span class="seg"><button class="on">1M</button><button>3M</button><button>ALL</button></span>
+          <span class="chip-est">EST</span>
+          <button class="btn-k">LOG A TRADE <kbd>⌘K</kbd></button>
+        </div>
+      </section>
+
+      <!-- ═══════════ FEATURE 2 · THE PERSONAL FINANCIAL NEWSPAPER ═══════════ -->
+      <section class="paper">
+
+        <!-- FEATURE 1 · the greeting, set as the paper's ear line -->
+        <div class="ear">
+          <span class="greet">Good morning, Leon.</span>
+          <span class="ear-note">Your desk is open · nothing traded yet today</span>
+          <span class="ear-r">
+            <span class="ear-note">Printed for one reader</span>
+            <span class="honesty">CONCEPT PREVIEW · SAMPLE DATA · NOTHING LIVE</span>
+          </span>
+        </div>
+
+        <!-- masthead -->
+        <div class="masthead">
+          <h1>The Private Ledger</h1>
+          <div class="dateline">
+            <span><em>Wednesday, September 2, 2026</em></span><span>·</span>
+            <span>05:00 GMT+8</span><span>·</span>
+            <span>Manila Desk</span><span>·</span>
+            <span>Vol. I · No. 12</span><span>·</span>
+            <span>Dawn Edition</span>
+          </div>
+        </div>
+
+        <!-- ★ SESSION DATELINE ROW — printed in the order the tape moves.
+             NEW YORK closing and SYDNEY opening are set side by side. -->
+        <div class="sessions">
+
+          <article class="sess now">
+            <div class="sess-city">NEW&nbsp;YORK</div>
+            <div class="sess-state"><span class="now-dot"></span>CLOSING · THE BELL FALLS</div>
+            <div class="sess-count">ENDS NOW</div>
+            <div class="sess-win">20:00 – 05:00 MNL · HANDING WEST</div>
+          </article>
+
+          <article class="sess now">
+            <div class="sess-city">SYDNEY</div>
+            <div class="sess-state"><span class="now-dot"></span>OPENING BELL · RINGING</div>
+            <div class="sess-count">OPEN NOW</div>
+            <div class="sess-win">05:00 – 14:00 MNL · THIN BID</div>
+          </article>
+
+          <article class="sess">
+            <div class="sess-city">TOKYO&nbsp;/&nbsp;ASIA</div>
+            <div class="sess-state">PRE-MARKET</div>
+            <div class="sess-count">IN 3H 00M</div>
+            <div class="sess-win">08:00 – 17:00 MNL · OPENS 08:00</div>
+          </article>
+
+          <article class="sess">
+            <div class="sess-city">LONDON</div>
+            <div class="sess-state">CLOSED</div>
+            <div class="sess-count">IN 10H 00M</div>
+            <div class="sess-win">15:00 – 24:00 MNL · OPENS 15:00</div>
+          </article>
+
+          <!-- the bracket only spans the first two columns -->
+          <div class="handoff"><span>★ THE DAWN HANDOFF · THE TAPE PASSES WESTWARD AT 05:00 ★</span></div>
+        </div>
+
+        <!-- the fold -->
+        <div class="fold">
+          <h2>AI Micro Desk</h2>
+          <span class="ai-tag">AI DESK · SAMPLE OUTPUT · NOT ADVICE</span>
+          <span class="mlabel">Bias run 05:00 MNL · 4 instruments · next run 08:00 Tokyo</span>
+        </div>
+
+        <!-- ═══════ FEATURE 3 · AI MICRO DESK — four broadsheet columns ═══════ -->
+        <div class="desk">
+
+          <article class="col">
+            <div class="kicker bull">BULLISH</div>
+            <h3>XAUUSD</h3>
+            <div class="col-px"><b>4,671.2</b><span class="pos">▲ 0.24% SESSION</span></div>
+            <div class="conf"><span class="n">78%</span><span class="l">CONFIDENCE</span></div>
+            <div class="meter"><i style="width:78%"></i></div>
+            <p>Gold carried yesterday's grind straight into the Sydney bell and has not given a tick of it back, holding its highs while the rest of the tape sleeps. The bid is thin until Tokyo arrives at 08:00, so the next three hours are a holding pattern rather than a trend. Structure only fails below 4,641; the GDP Q/Q print in nine hours is the one thing that can rewrite the day.</p>
+            <div class="col-foot"><span>INVALID <b>4,641</b></span><span>ROOM <b>30.2 PTS</b></span><span>RISK <b>14:00 GDP</b></span></div>
+          </article>
+
+          <article class="col">
+            <div class="kicker bull">BULLISH</div>
+            <h3>US100</h3>
+            <div class="col-px"><b>24,812</b><span class="pos">▲ OVERNIGHT DRIFT</span></div>
+            <div class="conf"><span class="n">64%</span><span class="l">CONFIDENCE</span></div>
+            <div class="meter"><i style="width:64%"></i></div>
+            <p>Overnight futures have drifted higher on light Asian volume, but breadth is narrow enough that a handful of names are doing all the lifting. Nothing here confirms until New York opens tonight and real size finally arrives to price it. Below 24,630 the drift is only noise and this call goes flat.</p>
+            <div class="col-foot"><span>INVALID <b>24,630</b></span><span>ROOM <b>182 PTS</b></span><span>CONFIRM <b>NY TONIGHT</b></span></div>
+          </article>
+
+          <article class="col">
+            <div class="kicker bear">BEARISH</div>
+            <h3>US30</h3>
+            <div class="col-px"><b>46,930</b><span class="neg">▼ LAGGING 3 SESSIONS</span></div>
+            <div class="conf"><span class="n">57%</span><span class="l">CONFIDENCE</span></div>
+            <div class="meter"><i style="width:57%"></i></div>
+            <p>The index has lagged US100 for three straight sessions and the cyclical block is doing most of the damage. Price sits under 47,120 supply, which has capped every attempt made at it this week. Conviction is deliberately low at fifty-seven percent — read this as a lean, not a stance.</p>
+            <div class="col-foot"><span>SUPPLY <b>47,120</b></span><span>GAP <b>190 PTS</b></span><span>CONVICTION <b>LOW</b></span></div>
+          </article>
+
+          <article class="col">
+            <div class="kicker bear">BEARISH</div>
+            <h3>BTCUSD</h3>
+            <div class="col-px"><b>111,890</b><span class="neg">▼ 560 OVERNIGHT</span></div>
+            <div class="conf"><span class="n">61%</span><span class="l">CONFIDENCE</span></div>
+            <div class="meter"><i style="width:61%"></i></div>
+            <p>Realized volatility is compressing into a tighter range with every session, and 113,200 has now rejected price on two separate attempts. Weekend liquidity is still thin enough that a single sweep can fake both directions before the real move. The bearish read is invalid on any close back above 113,200.</p>
+            <div class="col-foot"><span>INVALID <b>113,200</b></span><span>ROOM <b>1,310</b></span><span>VOL <b>COMPRESSING</b></span></div>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- ═══════════ ANALYTICS GRID — ROW A (queue narrowed to 4/12) ═══════════ -->
+      <div class="grid row-a">
+
+        <!-- EQUITY / DRAWDOWN — 5/12 -->
+        <section class="panel c5">
+          <div class="panel-head">
+            <span class="panel-title">Equity / Drawdown</span>
+            <span class="panel-meta">
+              <span class="mlabel">Aug 17 → Sep 1</span>
+              <span class="seg"><button class="on">1M</button><button>3M</button><button>ALL</button></span>
+            </span>
+          </div>
+          <div class="eq-body">
+            <div class="eq-chart">
+              <!-- $50,000 → $53,253 · y-scale $49,500–$53,500 · 13 closes -->
+              <svg viewBox="0 0 900 240" preserveAspectRatio="none" aria-label="Equity curve">
+                <line x1="0" y1="37.5"  x2="900" y2="37.5"  stroke="#151d28" stroke-width="1" vector-effect="non-scaling-stroke" stroke-dasharray="3 4"/>
+                <line x1="0" y1="92.5"  x2="900" y2="92.5"  stroke="#151d28" stroke-width="1" vector-effect="non-scaling-stroke" stroke-dasharray="3 4"/>
+                <line x1="0" y1="147.5" x2="900" y2="147.5" stroke="#151d28" stroke-width="1" vector-effect="non-scaling-stroke" stroke-dasharray="3 4"/>
+                <line x1="0" y1="202.5" x2="900" y2="202.5" stroke="#1b2532" stroke-width="1" vector-effect="non-scaling-stroke"/>
+                <polygon fill="rgba(52,211,153,.07)"
+                  points="40,202.5 110,163.2 180,106.2 250,96.1 320,86.6 390,77.5 460,53.6 530,75.3 600,97.3 670,58.5 740,41.6 810,32.6 880,23.6 880,235 40,235"/>
+                <polyline fill="none" stroke="#34d399" stroke-width="2" vector-effect="non-scaling-stroke"
+                  points="40,202.5 110,163.2 180,106.2 250,96.1 320,86.6 390,77.5 460,53.6 530,75.3 600,97.3 670,58.5 740,41.6 810,32.6 880,23.6"/>
+                <!-- $795 max drawdown: peak Aug 24 → trough Aug 26 -->
+                <line x1="460" y1="53.6" x2="600" y2="53.6" stroke="#f87171" stroke-width="1" vector-effect="non-scaling-stroke" stroke-dasharray="2 3"/>
+                <circle cx="460" cy="53.6" r="3" fill="#080b12" stroke="#8695a8" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+                <circle cx="600" cy="97.3" r="3" fill="#080b12" stroke="#f87171" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+                <circle cx="880" cy="23.6" r="4.5" fill="#f97316"/>
+                <circle cx="880" cy="23.6" r="4.5" fill="none" stroke="#f97316" stroke-width="1.5" vector-effect="non-scaling-stroke">
+                  <animate attributeName="r" values="4.5;12" dur="2.2s" repeatCount="indefinite"/>
+                  <animate attributeName="opacity" values=".85;0" dur="2.2s" repeatCount="indefinite"/>
+                </circle>
+              </svg>
+              <span class="eq-ylab" style="top:12%">$53K</span>
+              <span class="eq-ylab" style="top:35%">$52K</span>
+              <span class="eq-ylab" style="top:58%">$51K</span>
+              <span class="eq-ylab" style="top:81%">$50K</span>
+              <span class="eq-xlab" style="left:4%">AUG 17</span>
+              <span class="eq-xlab" style="left:48%">AUG 24</span>
+              <span class="eq-xlab" style="right:2%">SEP 1</span>
+              <div class="eq-last">$53,253<small>AT HIGHS</small></div>
+            </div>
+            <div class="dd-strip">
+              <!-- drawdown from peak · 0–2% scale · max −1.51% (Aug 26) -->
+              <svg viewBox="0 0 900 36" preserveAspectRatio="none" aria-label="Drawdown from peak">
+                <line x1="0" y1="2" x2="900" y2="2" stroke="#151d28" stroke-width="1" vector-effect="non-scaling-stroke"/>
+                <polygon fill="rgba(248,113,113,.2)" stroke="#f87171" stroke-width="1" vector-effect="non-scaling-stroke"
+                  points="40,2 460,2 530,14.75 600,27.7 670,4.87 740,2 880,2"/>
+              </svg>
+              <span class="dd-tag">DD FROM PEAK · 0–2% · MAX −1.51% · $795.00</span>
+            </div>
+          </div>
+          <div class="eq-stats">
+            <div class="eq-stat"><span class="mlabel">Trades</span><span class="v">58</span><span class="sub">12 DAYS</span></div>
+            <div class="eq-stat"><span class="mlabel">Win rate</span><span class="v">48.3%</span><span class="sub">28W · 29L · 1S</span></div>
+            <div class="eq-stat"><span class="mlabel">Profit fctr</span><span class="v">1.74</span><span class="sub">7,663 / 4,410</span></div>
+            <div class="eq-stat"><span class="mlabel">Expectancy</span><span class="v">$56.09</span><span class="sub">PER TRADE</span></div>
+            <div class="eq-stat"><span class="mlabel">Avg W / L</span><span class="v"><span class="pos">$274</span>/<span class="neg">$152</span></span><span class="sub">1.80 RATIO</span></div>
+            <div class="eq-stat"><span class="mlabel">Max DD</span><span class="v neg">$795.00</span><span class="sub">AUG 24→26</span></div>
+            <div class="eq-stat"><span class="mlabel">Curr DD</span><span class="v">$0.00</span><span class="sub">0.00%</span></div>
+          </div>
+        </section>
+
+        <!-- NET DAILY P&L — 3/12 (holds the two columns freed by the queue) -->
+        <section class="panel c3">
+          <div class="panel-head">
+            <span class="panel-title">Net Daily P&amp;L</span>
+            <span class="panel-meta"><span class="mlabel">13 sessions · Aug 17 → today</span></span>
+          </div>
+          <div class="bars-body">
+            <div class="bars">
+              <div class="bar" title="Aug 17 +$715 · 8 trades"><div class="up-slot"><div class="up" style="height:103.6px"></div></div><div class="zero"></div><div class="dn-slot"></div><span class="d">17</span></div>
+              <div class="bar" title="Aug 18 +$1,036 · 15 trades"><div class="up-slot"><div class="up" style="height:150px"></div></div><div class="zero"></div><div class="dn-slot"></div><span class="d">18</span></div>
+              <div class="bar" title="Aug 19 +$183 · 1 trade"><div class="up-slot"><div class="up" style="height:26.5px"></div></div><div class="zero"></div><div class="dn-slot"></div><span class="d">19</span></div>
+              <div class="bar" title="Aug 20 +$174 · 1 trade"><div class="up-slot"><div class="up" style="height:25.2px"></div></div><div class="zero"></div><div class="dn-slot"></div><span class="d">20</span></div>
+              <div class="bar" title="Aug 21 +$165 · 1 trade"><div class="up-slot"><div class="up" style="height:23.9px"></div></div><div class="zero"></div><div class="dn-slot"></div><span class="d">21</span></div>
+              <div class="bar" title="Aug 24 +$434 · 8 trades"><div class="up-slot"><div class="up" style="height:62.8px"></div></div><div class="zero"></div><div class="dn-slot"></div><span class="d">24</span></div>
+              <div class="bar" title="Aug 25 −$395 · 1 trade"><div class="up-slot"></div><div class="zero"></div><div class="dn-slot"><div class="dn" style="height:57.3px"></div></div><span class="d">25</span></div>
+              <div class="bar" title="Aug 26 −$400 · 3 trades"><div class="up-slot"></div><div class="zero"></div><div class="dn-slot"><div class="dn" style="height:58px"></div></div><span class="d">26</span></div>
+              <div class="bar" title="Aug 27 +$706 · 4 trades"><div class="up-slot"><div class="up" style="height:102.2px"></div></div><div class="zero"></div><div class="dn-slot"></div><span class="d">27</span></div>
+              <div class="bar" title="Aug 28 +$307 · 14 trades"><div class="up-slot"><div class="up" style="height:44.5px"></div></div><div class="zero"></div><div class="dn-slot"></div><span class="d">28</span></div>
+              <div class="bar" title="Aug 31 +$164 · 1 trade"><div class="up-slot"><div class="up" style="height:23.7px"></div></div><div class="zero"></div><div class="dn-slot"></div><span class="d">31</span></div>
+              <div class="bar" title="Sep 1 +$164 · 1 trade"><div class="up-slot"><div class="up" style="height:23.7px"></div></div><div class="zero"></div><div class="dn-slot"></div><span class="d">1</span></div>
+              <div class="bar today" title="Sep 2 · today · no trades"><div class="up-slot"><div class="up"></div></div><div class="zero"></div><div class="dn-slot"></div><span class="d">2</span></div>
+            </div>
+            <div class="bars-foot">
+              <div class="bf"><span class="mlabel">Best day</span><b class="pos">+$1,036</b><span class="mlabel">AUG 18 · 15T</span></div>
+              <div class="bf"><span class="mlabel">Worst day</span><b class="neg">−$400</b><span class="mlabel">AUG 26 · 3T</span></div>
+              <div class="bf"><span class="mlabel">Days green</span><b>10 / 12</b><span class="mlabel">83.3%</span></div>
+              <div class="bf"><span class="mlabel">Avg / day</span><b class="pos">+$271.08</b><span class="mlabel">4.83 TRADES</span></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- REVIEW QUEUE — narrowed 6/12 → 4/12, day-grouped -->
+        <section class="panel c4">
+          <div class="panel-head">
+            <span class="panel-title">Review Queue</span>
+            <span class="panel-meta">
+              <span class="chip warn">58 PENDING · 12 DAYS</span>
+              <button class="btn-ghost">REVIEW ALL</button>
+            </span>
+          </div>
+          <div class="q-body">
+            <table class="qtable">
+              <colgroup><col style="width:15%"><col style="width:11%"><col style="width:10%"><col style="width:20%"><col style="width:28%"><col style="width:16%"></colgroup>
+              <thead><tr><th>Date</th><th>Symbol</th><th>Trades</th><th style="text-align:right">Net P&amp;L</th><th>Reason</th><th>Source</th></tr></thead>
+              <tbody>
+                <tr><td class="q-date">Sep 1</td><td>MGC</td><td>1</td><td class="num pos">+$164.00</td><td class="q-reason">No journal entry</td><td><span class="q-src">ESTIMATED</span></td></tr>
+                <tr><td class="q-date">Aug 31</td><td>MGC</td><td>1</td><td class="num pos">+$164.00</td><td class="q-reason">No journal entry</td><td><span class="q-src">ESTIMATED</span></td></tr>
+                <tr><td class="q-date">Aug 28</td><td>MGC</td><td>14</td><td class="num pos">+$307.00</td><td class="q-reason">14 fills · unreviewed</td><td><span class="q-src">ESTIMATED</span></td></tr>
+                <tr><td class="q-date">Aug 27</td><td>MGC</td><td>4</td><td class="num pos">+$706.00</td><td class="q-reason">Best win · no notes</td><td><span class="q-src">ESTIMATED</span></td></tr>
+                <tr><td class="q-date">Aug 26</td><td>MGC</td><td>3</td><td class="num neg">−$400.00</td><td class="q-reason">Loss day · needs review</td><td><span class="q-src">ESTIMATED</span></td></tr>
+                <tr><td class="q-date">Aug 25</td><td>MGC</td><td>1</td><td class="num neg">−$395.00</td><td class="q-reason">Loss day · needs review</td><td><span class="q-src">ESTIMATED</span></td></tr>
+                <tr><td class="q-date">Aug 24</td><td>MGC</td><td>8</td><td class="num pos">+$434.00</td><td class="q-reason">8 fills · unreviewed</td><td><span class="q-src">ESTIMATED</span></td></tr>
+                <tr><td class="q-date">Aug 21</td><td>MGC</td><td>1</td><td class="num pos">+$165.00</td><td class="q-reason">No journal entry</td><td><span class="q-src">ESTIMATED</span></td></tr>
+                <tr><td class="q-date">Aug 20</td><td>MGC</td><td>1</td><td class="num pos">+$174.00</td><td class="q-reason">No journal entry</td><td><span class="q-src">ESTIMATED</span></td></tr>
+                <tr><td class="q-date">Aug 19</td><td>MGC</td><td>1</td><td class="num pos">+$183.00</td><td class="q-reason">No journal entry</td><td><span class="q-src">ESTIMATED</span></td></tr>
+              </tbody>
+            </table>
+            <div class="q-foot">
+              <span class="mlabel">10 of 12 days shown · 35 trades</span>
+              <span class="mlabel">Running total, shown rows</span>
+              <span class="tot">+$1,502.00</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ═══════════ ANALYTICS GRID — ROW B (below the fold) ═══════════ -->
+      <div class="grid row-b">
+
+        <!-- MONTH CALENDAR — September 2026 with August carry -->
+        <section class="panel c5">
+          <div class="panel-head">
+            <span class="panel-title">September 2026</span>
+            <span class="panel-meta">
+              <span class="chip">AUG <b class="pos">+$2,925</b> · 57T</span>
+              <span class="chip">SEP <b class="pos">+$164</b> · 1T</span>
+            </span>
+          </div>
+          <div class="cal-body">
+            <div class="cal-dow"><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span><span>SUN</span></div>
+            <div class="cal">
+              <!-- week 1 — August carry on the Monday -->
+              <div class="cell win carry"><span class="n">31 AUG</span><span class="p pos">+$164</span><span class="t">1 TRADE</span></div>
+              <div class="cell win"><span class="n">1</span><span class="p pos">+$164</span><span class="t">1 TRADE</span></div>
+              <div class="cell today"><span class="n">2</span><span class="p flat">$0</span><span class="t">TODAY · NO TRADES</span></div>
+              <div class="cell"><span class="n">3</span></div>
+              <div class="cell"><span class="n">4</span></div>
+              <div class="cell mute"><span class="n">5</span></div>
+              <div class="cell mute"><span class="n">6</span></div>
+              <!-- weeks 2–5 -->
+              <div class="cell"><span class="n">7</span></div><div class="cell"><span class="n">8</span></div><div class="cell"><span class="n">9</span></div><div class="cell"><span class="n">10</span></div><div class="cell"><span class="n">11</span></div><div class="cell mute"><span class="n">12</span></div><div class="cell mute"><span class="n">13</span></div>
+              <div class="cell"><span class="n">14</span></div><div class="cell"><span class="n">15</span></div><div class="cell"><span class="n">16</span></div><div class="cell"><span class="n">17</span></div><div class="cell"><span class="n">18</span></div><div class="cell mute"><span class="n">19</span></div><div class="cell mute"><span class="n">20</span></div>
+              <div class="cell"><span class="n">21</span></div><div class="cell"><span class="n">22</span></div><div class="cell"><span class="n">23</span></div><div class="cell"><span class="n">24</span></div><div class="cell"><span class="n">25</span></div><div class="cell mute"><span class="n">26</span></div><div class="cell mute"><span class="n">27</span></div>
+              <div class="cell"><span class="n">28</span></div><div class="cell"><span class="n">29</span></div><div class="cell"><span class="n">30</span></div><div class="cell mute"><span class="n">1 OCT</span></div><div class="cell mute"><span class="n">2</span></div><div class="cell mute"><span class="n">3</span></div><div class="cell mute"><span class="n">4</span></div>
+            </div>
+            <div class="cal-foot">
+              <span>ALL TIME <b class="pos">+$3,253</b></span><span>·</span>
+              <span>58 TRADES</span><span>·</span>
+              <span>12 TRADING DAYS</span><span>·</span>
+              <span>GREEN STREAK <b>4</b></span>
+            </div>
+          </div>
+        </section>
+
+        <!-- MARKET TV — monogram bug, LIVE chip, lower third -->
+        <section class="panel c4">
+          <div class="panel-head">
+            <span class="panel-title">Market TV</span>
+            <span class="panel-meta"><span class="mlabel">MKT · SIMULATED FEED</span><span class="tv-livechip"><i></i>LIVE</span></span>
+          </div>
+          <div class="tv-body">
+            <div class="tv-screen">
+              <div class="tv-feed">
+                <div class="tv-topline">
+                  <span class="tv-bug">MKT</span>
+                  <span class="tv-livechip"><i></i>LIVE</span>
+                  <span class="tv-clock">05:00 MNL · SYDNEY OPEN</span>
+                </div>
+                <div class="tv-main">
+                  <div class="tv-quote">
+                    <span class="sym">MGC · GOLD</span>
+                    <span class="px">4,671.2</span>
+                    <span class="chg">▲ 0.24% · +11.2 PTS</span>
+                  </div>
+                  <div class="tv-spark">
+                    <svg viewBox="0 0 300 90" preserveAspectRatio="none">
+                      <polygon fill="rgba(52,211,153,.08)" points="0,74 30,68 55,71 85,58 110,61 140,47 165,52 195,38 225,42 255,24 280,28 300,19 300,90 0,90"/>
+                      <polyline fill="none" stroke="#34d399" stroke-width="1.5" vector-effect="non-scaling-stroke"
+                        points="0,74 30,68 55,71 85,58 110,61 140,47 165,52 195,38 225,42 255,24 280,28 300,19"/>
+                    </svg>
+                  </div>
+                </div>
+                <div class="tv-lower3">
+                  <div class="l3-row">
+                    <span class="l3-tag">DEVELOPING</span>
+                    <span class="l3-head">SYDNEY OPEN: GOLD HOLDS 4,671 INTO GDP — DESKS EYE 14:00 PRINT</span>
+                  </div>
+                  <div class="tv-strip">
+                    <div class="tv-striptrack">
+                      <span>GDP Q/Q 14:00 MNL</span><span>FED SPEAKER 21:00 MNL</span><span>TOKYO CPI FRIDAY</span><span>MGC 4,671 ▲0.24%</span><span>MBT 111,890 ▼560 · VOL COMPRESSING</span><span>M2K 3,024 ▲0.2%</span>
+                      <span>GDP Q/Q 14:00 MNL</span><span>FED SPEAKER 21:00 MNL</span><span>TOKYO CPI FRIDAY</span><span>MGC 4,671 ▲0.24%</span><span>MBT 111,890 ▼560 · VOL COMPRESSING</span><span>M2K 3,024 ▲0.2%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ACCOUNTS / DISCIPLINE -->
+        <section class="panel c3">
+          <div class="panel-head">
+            <span class="panel-title">Accounts &amp; Discipline</span>
+            <span class="panel-meta"><span class="mlabel">1 funded</span></span>
+          </div>
+          <div class="dock-body">
+            <div class="dock-row">
+              <span class="nm">TOPSTEP-50K</span>
+              <span class="badge-live"><i></i>LIVE</span>
+              <span class="rt pos">+6.51%</span>
+            </div>
+            <div class="chips">
+              <span class="chip pos">RISK STATE <b>AT HIGHS</b></span>
+              <span class="chip">CURRENT DD <b>$0.00</b></span>
+              <span class="chip">MAX DD <b>$795.00</b></span>
+              <span class="chip pos">GREEN STREAK <b>4 DAYS</b></span>
+              <span class="chip">OPEN P&amp;L <b>FLAT</b></span>
+              <span class="chip warn">JOURNAL COVERAGE <b>0 of 58</b></span>
+              <span class="chip warn">58 TRADES <b>UNJOURNALED</b></span>
+              <span class="chip">SYMBOL FOCUS <b>MGC 58/58</b></span>
+              <span class="chip">TODAY <b>NO TRADES</b></span>
+              <span class="chip">NEXT EVENT <b>GDP 14:00</b></span>
+            </div>
+            <div class="dock-row" style="margin-top:auto">
+              <span class="mlabel">Every figure on this page is estimated sample data</span>
+              <span class="rt"><span class="honesty">NOTHING LIVE</span></span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

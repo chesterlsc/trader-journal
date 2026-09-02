@@ -1,0 +1,809 @@
+<!doctype html>
+<!--
+  TRADER JOURNAL — CONCEPT A · "MISSION DECK"
+  One pane of glass. Zero page scroll at 1999×1150 and 1440×900.
+
+  SIGNATURE MOMENT — "THE REVIEW TAPE":
+  The review queue is not a table. It is a LIVE TAPE printing across the full
+  width of the deck, just above the status bar: the trader's own 44 unjournaled
+  trades crossing the wire like news prints, each stamped EST, with the
+  +$346.00 running total riveted to the tape's end cap. Your unfinished
+  homework, broadcast to you on your own terminal.
+
+  CONCEPT PREVIEW · SAMPLE DATA · NOTHING LIVE
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trader Journal — Mission Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   CLAY V3 TOKENS
+   ============================================================ */
+:root{
+  --surface-0:#080b12;
+  --surface-1:#0c1119;
+  --surface-2:#111823;
+  --surface-3:#16202d;
+  --surface-inset:#05080e;
+  --line:#151d28;
+  --line-strong:#1b2532;
+  --text:#e6ecf5;
+  --text-soft:#8695a8;
+  --text-faint:#7c8b9e;
+  --accent:#f97316;
+  --accent-strong:#fb8b3a;
+  --pnl-pos:#34d399;
+  --pnl-neg:#f87171;
+  --warn:#f0b34e;
+  --info:#22d3ee;
+  --edge-light:rgba(214,222,235,.08);   /* machined top-edge highlight */
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"Sora","Avenir Next",Avenir,"Segoe UI",system-ui,sans-serif;
+}
+
+/* ============================================================
+   FRAME — no page scroll, ever
+   ============================================================ */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{overflow:hidden;height:100%}
+body{
+  background:#080b12; /* literal --surface-0: page keeps its own light */
+  color:var(--text);
+  font-family:var(--mono);
+  font-size:12px;
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum" 1;
+  -webkit-font-smoothing:antialiased;
+}
+.app{display:grid;grid-template-columns:56px minmax(0,1fr);height:100dvh}
+.main{display:grid;grid-template-rows:clamp(34px,3.6vh,40px) minmax(0,1fr) clamp(80px,9.2vh,106px) 28px;min-width:0}
+
+/* micro-label voice used everywhere */
+.mlabel{
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--text-faint);font-weight:600;
+}
+.pos{color:var(--pnl-pos)}
+.neg{color:var(--pnl-neg)}
+
+/* ============================================================
+   LEFT ICON RAIL
+   ============================================================ */
+.rail{
+  background:var(--surface-1);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;
+  padding:8px 0;gap:4px;
+}
+.rail .stamp{
+  width:34px;height:34px;border:1px solid var(--line-strong);border-radius:6px;
+  display:grid;place-items:center;margin-bottom:10px;
+  font-family:var(--sans);font-weight:700;font-size:13px;color:var(--text);
+  background:var(--surface-2);box-shadow:inset 0 1px 0 var(--edge-light);
+}
+.rail .glyph{
+  width:34px;height:34px;border-radius:6px;display:grid;place-items:center;
+  color:var(--text-faint);opacity:.72;
+}
+.rail .glyph.active{color:var(--accent);opacity:1;background:var(--surface-2)}
+.rail .glyph svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5}
+.rail .spacer{flex:1}
+
+/* ============================================================
+   TOP LIVE TICKER BAR
+   ============================================================ */
+.tickerbar{
+  display:flex;align-items:center;gap:12px;min-width:0;
+  background:var(--surface-1);border-bottom:1px solid var(--line);
+  padding:0 10px;
+}
+.chip-live{
+  display:inline-flex;align-items:center;gap:6px;flex:none;
+  font-size:10px;letter-spacing:.14em;font-weight:700;color:var(--info);
+  border:1px solid rgba(34,211,238,.35);border-radius:3px;padding:2px 7px;
+  background:rgba(34,211,238,.06);
+}
+.chip-live .dot{width:6px;height:6px;border-radius:50%;background:var(--info);animation:blink 1.6s steps(2) infinite}
+@keyframes blink{50%{opacity:.25}}
+.tickerscroll{flex:1;min-width:0;overflow:hidden;position:relative}
+.tickertrack{display:flex;width:max-content;gap:34px;animation:tape 42s linear infinite;white-space:nowrap}
+@keyframes tape{to{transform:translateX(-50%)}}
+.tick{display:inline-flex;gap:8px;font-size:11px;color:var(--text-soft)}
+.tick b{color:var(--text);font-weight:600}
+.honesty{
+  flex:none;font-size:9px;letter-spacing:.16em;color:var(--text-faint);
+  border:1px dashed var(--line-strong);border-radius:3px;padding:2px 7px;
+}
+.clock{flex:none;font-size:11px;color:var(--text-soft)}
+.clock b{color:var(--text)}
+.btn-k{
+  flex:none;display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+  background:var(--accent);color:#0a0602;border:none;border-radius:4px;
+  font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.04em;
+  padding:5px 11px;
+}
+.btn-k:hover{background:var(--accent-strong)}
+.btn-k kbd{font-size:9px;background:rgba(0,0,0,.22);border-radius:2px;padding:1px 4px}
+.btn-ghost{
+  flex:none;background:transparent;color:var(--text-soft);cursor:pointer;
+  border:1px solid var(--line-strong);border-radius:4px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.06em;padding:4px 9px;
+}
+.btn-ghost:hover{color:var(--text);background:var(--surface-2)}
+
+/* ============================================================
+   THE GLASS — fixed instrument grid
+   ============================================================ */
+.glass{
+  display:grid;min-height:0;min-width:0;
+  grid-template-columns:clamp(336px,21vw,420px) minmax(0,1fr) clamp(456px,31vw,620px);
+  grid-template-rows:minmax(0,55fr) minmax(0,45fr);
+  gap:8px;padding:8px;
+}
+.pane{
+  background:var(--surface-1);border:1px solid var(--line);border-radius:6px;
+  box-shadow:inset 0 1px 0 var(--edge-light);
+  display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden;
+}
+.pane-head{
+  flex:none;display:flex;align-items:center;gap:8px;height:26px;
+  padding:0 9px;background:var(--surface-2);border-bottom:1px solid var(--line);
+}
+.fkey{
+  font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--text-faint);
+  border:1px solid var(--line-strong);border-radius:2px;padding:1px 4px;
+  background:var(--surface-inset);
+}
+.pane-title{font-size:10px;letter-spacing:.16em;font-weight:700;color:var(--text-soft);text-transform:uppercase}
+.pane-meta{margin-left:auto;display:flex;align-items:center;gap:8px}
+
+/* ---------- F1 · P&L COMMAND ---------- */
+.p-hero{grid-column:1;grid-row:1}
+.hero-body{flex:1;display:flex;flex-direction:column;padding:12px 14px;min-height:0}
+.hero-net{
+  font-size:clamp(40px,3.1vw,60px);font-weight:800;line-height:1.02;
+  color:var(--pnl-pos);letter-spacing:-.01em;margin:4px 0 2px;
+}
+.hero-sub{font-size:11px;color:var(--text-faint);letter-spacing:.06em}
+.hero-bal{
+  display:flex;align-items:baseline;gap:10px;margin-top:clamp(8px,1.4vh,16px);
+  padding-top:clamp(8px,1.4vh,14px);border-top:1px solid var(--line);
+}
+.hero-bal .val{font-size:clamp(19px,1.35vw,26px);font-weight:700;color:var(--text)}
+.eye{
+  background:none;border:none;cursor:pointer;color:var(--text-faint);
+  display:inline-grid;place-items:center;padding:2px;
+}
+.eye:hover{color:var(--accent)}
+.eye svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.5}
+.hero-acct{
+  display:flex;align-items:center;gap:8px;margin-top:6px;font-size:10px;
+  letter-spacing:.1em;color:var(--text-soft);
+}
+.badge-live{
+  display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:700;
+  letter-spacing:.12em;color:var(--info);border:1px solid rgba(34,211,238,.35);
+  border-radius:2px;padding:1px 5px;
+}
+.badge-live i{width:5px;height:5px;border-radius:50%;background:var(--info);animation:blink 1.6s steps(2) infinite}
+.hero-days{
+  flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:0;
+  margin-top:clamp(8px,1.4vh,14px);border-top:1px solid var(--line);
+}
+.hero-days>div{
+  display:flex;flex-direction:column;justify-content:center;gap:2px;
+  padding:6px 0 6px 0;overflow:hidden;
+}
+.hero-days>div:nth-child(odd){border-right:1px solid var(--line);padding-right:12px}
+.hero-days>div:nth-child(even){padding-left:12px}
+.hero-days>div:nth-child(-n+2){border-bottom:1px solid var(--line)}
+.hero-days b{font-size:clamp(14px,1vw,18px);font-weight:700;color:var(--text);white-space:nowrap}
+.hero-days i{font-style:normal;font-size:9px;color:var(--text-faint);letter-spacing:.08em;white-space:nowrap}
+.hero-cta{display:flex;gap:8px;margin-top:auto;padding-top:10px}
+.hero-cta .btn-k{flex:1;justify-content:center;padding:8px 0}
+.hero-cta .btn-ghost{padding:8px 12px}
+
+/* ---------- F4 · NOW GRID ---------- */
+.p-now{grid-column:1;grid-row:2}
+.now-grid{
+  flex:1;display:grid;min-height:0;
+  grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,minmax(0,1fr));
+}
+.now-cell{
+  border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:8px 12px 6px;display:flex;flex-direction:column;justify-content:center;
+  gap:3px;min-height:0;overflow:hidden;
+}
+.now-cell:nth-child(2n){border-right:none}
+.now-cell:nth-last-child(-n+2){border-bottom:none}
+.now-val{font-size:clamp(15px,1.05vw,19px);font-weight:700;color:var(--text);white-space:nowrap}
+.now-note{font-size:10px;color:var(--text-faint);letter-spacing:.04em;white-space:nowrap}
+.streak-blocks{display:inline-flex;gap:3px;margin-left:6px;vertical-align:baseline}
+.streak-blocks i{width:8px;height:8px;background:var(--pnl-pos);border-radius:1px}
+.now-val.event{color:var(--warn)}
+
+/* ---------- F2 · EQUITY / DRAWDOWN ---------- */
+.p-equity{grid-column:2;grid-row:1}
+.range{display:flex;gap:4px}
+.range button{
+  background:transparent;border:1px solid var(--line-strong);border-radius:3px;
+  color:var(--text-faint);font-family:var(--mono);font-size:9px;font-weight:700;
+  letter-spacing:.08em;padding:2px 7px;cursor:pointer;
+}
+.range button.on{color:var(--accent);border-color:rgba(249,115,22,.5);background:rgba(249,115,22,.07)}
+.eq-body{flex:1;display:flex;flex-direction:column;min-height:0;padding:8px 10px 4px}
+.eq-chart{flex:1;position:relative;min-height:0}
+.eq-chart svg{position:absolute;inset:0;width:100%;height:100%}
+.eq-ylab{position:absolute;right:4px;font-size:9px;color:var(--text-faint);letter-spacing:.08em}
+.eq-xlab{position:absolute;bottom:0;font-size:9px;color:var(--text-faint);letter-spacing:.08em}
+.eq-last{
+  position:absolute;top:14%;right:6px;text-align:right;
+  font-size:11px;font-weight:700;color:var(--pnl-pos);
+}
+.eq-last small{display:block;font-weight:400;font-size:9px;color:var(--text-faint);letter-spacing:.1em}
+.dd-strip{flex:none;height:clamp(26px,4vh,38px);position:relative;margin-top:2px;border-top:1px solid var(--line)}
+.dd-strip svg{position:absolute;inset:0;width:100%;height:100%}
+.dd-tag{position:absolute;left:0;top:2px;font-size:8px;letter-spacing:.14em;color:var(--text-faint)}
+.eq-stats{
+  flex:none;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));
+  border-top:1px solid var(--line);background:var(--surface-inset);
+}
+.eq-stat{padding:7px clamp(6px,.5vw,10px) 6px;border-right:1px solid var(--line);min-width:0;overflow:hidden}
+.eq-stat:last-child{border-right:none}
+.eq-stat .v{font-size:clamp(12px,.85vw,15px);font-weight:700;color:var(--text);white-space:nowrap}
+.eq-stat .mlabel{display:block;margin-bottom:2px;white-space:nowrap;font-size:9px}
+
+/* ---------- F5 · TRADING DAYS · AUG ---------- */
+.p-cal{grid-column:2;grid-row:2}
+.cal{flex:1;display:grid;grid-template-rows:auto repeat(5,minmax(0,1fr));min-height:0;padding:0 1px}
+.cal-hrow,.cal-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
+.cal-hrow{border-bottom:1px solid var(--line)}
+.cal-hrow span{padding:4px 10px;font-size:9px;letter-spacing:.16em;color:var(--text-faint);font-weight:600}
+.cal-row{border-bottom:1px solid var(--line);min-height:0}
+.cal-row:last-child{border-bottom:none}
+.cal-cell{
+  border-right:1px solid var(--line);padding:5px 10px 4px;min-width:0;min-height:0;
+  display:flex;flex-direction:column;justify-content:center;gap:1px;overflow:hidden;
+  position:relative;
+}
+.cal-cell:last-child{border-right:none}
+.cal-day{position:absolute;top:4px;left:10px;font-size:9px;color:var(--text-faint)}
+.cal-pnl{font-size:clamp(12px,.9vw,15px);font-weight:700;white-space:nowrap;margin-top:8px}
+.cal-n{font-size:9px;color:var(--text-faint);letter-spacing:.06em;white-space:nowrap}
+.cal-cell.dim .cal-pnl{color:var(--line-strong);font-weight:400}
+.cal-cell.today{box-shadow:inset 0 0 0 1px var(--accent)}
+.cal-cell.today .cal-day{color:var(--accent);font-weight:700}
+.cal-foot{
+  flex:none;display:flex;gap:18px;align-items:center;padding:6px 12px;
+  border-top:1px solid var(--line);background:var(--surface-inset);
+  font-size:10px;letter-spacing:.1em;color:var(--text-soft);white-space:nowrap;overflow:hidden;
+}
+.cal-foot b{color:var(--text)}
+
+/* ---------- F3 · MARKET TV + THE WIRE ---------- */
+.p-tv{grid-column:3;grid-row:1 / span 2}
+.tv-body{flex:1;display:flex;flex-direction:column;min-height:0;padding:10px 10px 0}
+.tv-screen{
+  flex:none;position:relative;aspect-ratio:16/9;max-height:46%;width:100%;
+  background:var(--surface-inset);border:1px solid var(--line-strong);
+  border-radius:5px;overflow:hidden;
+}
+.tv-feed{position:absolute;inset:0;display:flex;flex-direction:column}
+.tv-topline{display:flex;align-items:center;gap:8px;padding:8px 10px}
+.tv-bug{
+  font-size:10px;font-weight:800;letter-spacing:.1em;color:var(--text);
+  border:1px solid var(--line-strong);border-radius:2px;padding:2px 6px;
+  background:rgba(12,17,25,.85);
+}
+.tv-clock{margin-left:auto;font-size:10px;color:var(--text-faint)}
+.tv-main{flex:1;display:flex;align-items:center;gap:14px;padding:0 14px;min-height:0}
+.tv-quote .sym{font-size:9px;letter-spacing:.16em;color:var(--text-faint);display:block}
+.tv-quote .px{font-size:clamp(24px,1.8vw,34px);font-weight:800;color:var(--text);line-height:1.05}
+.tv-quote .chg{font-size:12px;font-weight:700;color:var(--pnl-pos)}
+.tv-spark{flex:1;height:64%;min-width:0}
+.tv-spark svg{width:100%;height:100%}
+.tv-lower3{flex:none;background:rgba(12,17,25,.92);border-top:1px solid var(--line-strong)}
+.l3-row{display:flex;align-items:center;gap:8px;padding:5px 10px 4px}
+.l3-tag{
+  flex:none;font-size:8px;font-weight:800;letter-spacing:.14em;color:#0a0602;
+  background:var(--warn);border-radius:2px;padding:1px 5px;
+}
+.l3-head{font-family:var(--sans);font-weight:600;font-size:clamp(10px,.8vw,12px);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tv-strip{border-top:1px solid var(--line);overflow:hidden;background:rgba(5,8,14,.9)}
+.tv-striptrack{display:flex;width:max-content;gap:26px;padding:3px 0;font-size:9px;color:var(--text-soft);white-space:nowrap;animation:tape 30s linear infinite}
+/* scanlines + vignette: the screen glass */
+.tv-screen::before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:3;
+  background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.14) 2px 3px);
+}
+.tv-screen::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:3;
+  background:radial-gradient(120% 90% at 50% 45%,transparent 58%,rgba(0,0,0,.42) 100%);
+}
+.tv-livechip{
+  display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:800;
+  letter-spacing:.14em;color:#031013;background:var(--info);border-radius:2px;padding:2px 6px;
+}
+.tv-livechip i{width:5px;height:5px;border-radius:50%;background:#031013;animation:blink 1.2s steps(2) infinite}
+/* the wire */
+.wire{flex:1;display:flex;flex-direction:column;min-height:0;margin:10px -10px 0;border-top:1px solid var(--line)}
+.wire-head{
+  flex:none;display:flex;align-items:center;gap:8px;padding:6px 12px 5px;
+  background:var(--surface-inset);border-bottom:1px solid var(--line);
+}
+.wire-rows{flex:1;min-height:0;overflow-y:auto}
+.wire-row{
+  display:flex;align-items:center;gap:10px;padding:clamp(6px,1vh,10px) 12px;
+  border-bottom:1px solid var(--line);white-space:nowrap;min-width:0;
+}
+.wire-time{flex:none;width:64px;color:var(--text-faint);font-size:10px}
+.wire-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--text);font-weight:600}
+.wire-count{flex:none;font-size:11px;font-weight:700;color:var(--accent)}
+.imp{flex:none;font-size:8px;font-weight:800;letter-spacing:.12em;border-radius:2px;padding:1px 5px}
+.imp.high{color:#0a0602;background:var(--warn)}
+.imp.med{color:var(--text-faint);border:1px solid var(--line-strong)}
+.wire-note{
+  display:flex;gap:10px;align-items:baseline;padding:clamp(5px,.9vh,8px) 12px;
+  border-bottom:1px solid var(--line);font-size:10px;color:var(--text-soft);
+  white-space:nowrap;overflow:hidden;min-width:0;
+}
+.wire-note b{color:var(--text);font-weight:600}
+.wire-note .src{flex:none;color:var(--text-faint);font-size:9px;letter-spacing:.1em}
+
+/* ============================================================
+   F6 · THE REVIEW TAPE  — signature moment
+   ============================================================ */
+.tapebar{
+  display:flex;min-width:0;margin:0 8px 8px;
+  background:var(--surface-1);border:1px solid var(--line);border-radius:6px;
+  box-shadow:inset 0 1px 0 var(--edge-light);overflow:hidden;
+}
+.tape-cap{
+  flex:none;display:flex;flex-direction:column;justify-content:center;gap:3px;
+  padding:0 16px;border-right:1px solid var(--line-strong);background:var(--surface-2);
+}
+.tape-cap .n{font-size:clamp(20px,1.6vw,28px);font-weight:800;color:var(--accent)}
+.tape-cap .mlabel{white-space:nowrap}
+.tape-mid{flex:1;min-width:0;position:relative;overflow:hidden;background:var(--surface-inset)}
+.tape-mid::before,.tape-mid::after{
+  content:"";position:absolute;top:0;bottom:0;width:46px;z-index:2;pointer-events:none;
+}
+.tape-mid::before{left:0;background:linear-gradient(90deg,#05080e,transparent)}
+.tape-mid::after{right:0;background:linear-gradient(-90deg,#05080e,transparent)}
+.tape-track{
+  position:absolute;top:0;bottom:0;display:flex;align-items:center;gap:14px;
+  width:max-content;padding:0 14px;animation:tape 96s linear infinite;
+}
+.tapebar:hover .tape-track{animation-play-state:paused}
+.print{
+  flex:none;display:flex;align-items:baseline;gap:9px;white-space:nowrap;
+  border:1px solid var(--line);border-radius:4px;background:var(--surface-1);
+  padding:clamp(6px,1.1vh,10px) 12px;box-shadow:inset 0 1px 0 var(--edge-light);
+}
+.print .pd{font-size:9px;color:var(--text-faint);letter-spacing:.08em}
+.print .psym{font-size:11px;font-weight:700;color:var(--text)}
+.print .pside{font-size:9px;letter-spacing:.12em;color:var(--text-soft)}
+.print .ppnl{font-size:13px;font-weight:800}
+.print .pest{
+  font-size:8px;font-weight:800;letter-spacing:.12em;color:var(--warn);
+  border:1px dashed rgba(240,179,78,.5);border-radius:2px;padding:0 4px;
+}
+.print.older{opacity:.85}
+.print.note{border-style:dashed;color:var(--text-faint);font-size:10px;letter-spacing:.08em}
+.tape-total{
+  flex:none;display:flex;flex-direction:column;justify-content:center;gap:2px;
+  padding:0 16px;border-left:1px solid var(--line-strong);background:var(--surface-2);
+  text-align:right;
+}
+.tape-total .n{font-size:clamp(18px,1.45vw,26px);font-weight:800;color:var(--pnl-pos)}
+.tape-total a{color:var(--accent);font-size:10px;letter-spacing:.1em;text-decoration:none;font-weight:700}
+.tape-total a:hover{color:var(--accent-strong)}
+
+/* ============================================================
+   STATUS BAR — the compressed modules dock
+   ============================================================ */
+.statusbar{
+  display:flex;align-items:stretch;min-width:0;overflow:hidden;
+  background:var(--surface-1);border-top:1px solid var(--line);
+  font-size:10px;letter-spacing:.06em;color:var(--text-soft);
+}
+.seg{
+  display:flex;align-items:center;gap:6px;padding:0 12px;white-space:nowrap;
+  border-right:1px solid var(--line);
+}
+.seg b{color:var(--text);font-weight:700}
+.seg .ok{color:var(--pnl-pos)}
+.seg-spacer{flex:1;border-right:none}
+.seg.right{border-right:none;border-left:1px solid var(--line);color:var(--text-faint)}
+.meter{width:44px;height:4px;border-radius:2px;background:var(--surface-inset);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--pnl-pos)}
+
+/* 1440×900 fit: shave dense chrome */
+@media (max-width:1600px){
+  .seg.opt{display:none}
+  .tickertrack{animation-duration:34s}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ═══════════ LEFT ICON RAIL ═══════════ -->
+  <nav class="rail">
+    <div class="stamp">TJ</div>
+    <div class="glyph active" title="Deck"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+    <div class="glyph" title="Journal"><svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 4v13"/></svg></div>
+    <div class="glyph" title="Calendar"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+    <div class="glyph" title="Analytics"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg></div>
+    <div class="glyph" title="Playbook"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></div>
+    <div class="glyph" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.2 2.2M16.9 16.9l2.2 2.2M19.1 4.9l-2.2 2.2M7.1 16.9l-2.2 2.2"/></svg></div>
+    <div class="spacer"></div>
+    <div class="glyph" title="Theme"><svg viewBox="0 0 24 24"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg></div>
+  </nav>
+
+  <div class="main">
+
+    <!-- ═══════════ TOP LIVE TICKER BAR ═══════════ -->
+    <header class="tickerbar">
+      <span class="chip-live"><span class="dot"></span>LIVE</span>
+      <div class="tickerscroll">
+        <div class="tickertrack">
+          <!-- run x2 for seamless loop -->
+          <span class="tick"><b>TRADER JOURNAL</b> <span class="pos">▲3</span></span>
+          <span class="tick"><b>M2K</b> Russell 3,019 <span class="pos">▲0.3</span></span>
+          <span class="tick"><b>MGC</b> Gold 4,660 <span class="pos">▲3.5</span></span>
+          <span class="tick"><b>MCL</b> Crude 83.27 <span class="pos">▲0.01</span></span>
+          <span class="tick"><b>M6E</b> Euro FX 1.1652 <span class="pos">▲0.0002</span></span>
+          <span class="tick"><b>MBT</b> Bitcoin 112,450 <span class="pos">▲210</span></span>
+          <span class="tick"><b>TRADER JOURNAL</b> <span class="pos">▲3</span></span>
+          <span class="tick"><b>M2K</b> Russell 3,019 <span class="pos">▲0.3</span></span>
+          <span class="tick"><b>MGC</b> Gold 4,660 <span class="pos">▲3.5</span></span>
+          <span class="tick"><b>MCL</b> Crude 83.27 <span class="pos">▲0.01</span></span>
+          <span class="tick"><b>M6E</b> Euro FX 1.1652 <span class="pos">▲0.0002</span></span>
+          <span class="tick"><b>MBT</b> Bitcoin 112,450 <span class="pos">▲210</span></span>
+        </div>
+      </div>
+      <span class="honesty">CONCEPT PREVIEW · SAMPLE DATA · NOTHING LIVE</span>
+      <span class="clock">FRI AUG 28 · <b>18:42</b> · NY PM</span>
+      <button class="btn-ghost">IMPORT</button>
+      <button class="btn-k">LOG A TRADE <kbd>⌘K</kbd></button>
+    </header>
+
+    <!-- ═══════════ THE GLASS ═══════════ -->
+    <section class="glass">
+
+      <!-- F1 · P&L COMMAND -->
+      <article class="pane p-hero">
+        <div class="pane-head">
+          <span class="fkey">F1</span><span class="pane-title">P&amp;L Command</span>
+          <span class="pane-meta"><span class="mlabel">Since Aug 17</span></span>
+        </div>
+        <div class="hero-body">
+          <span class="mlabel">Net P&amp;L</span>
+          <div class="hero-net">+$2,808.00</div>
+          <div class="hero-sub">44 TRADES · 10 SESSIONS · MGC PRIMARY</div>
+          <div class="hero-bal">
+            <span class="mlabel">Balance</span>
+            <span class="val">$52,808.00</span>
+            <button class="eye" title="Hide balance" aria-label="Hide balance">
+              <svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/></svg>
+            </button>
+            <span class="hero-sub" style="margin-left:auto">START $50,000</span>
+          </div>
+          <div class="hero-acct">
+            TOPSTEP-50K <span class="badge-live"><i></i>LIVE</span>
+            <span style="margin-left:auto;color:var(--pnl-pos)">+5.62%</span>
+          </div>
+          <div class="hero-days">
+            <div><span class="mlabel">Best Day</span><b class="pos">+$1,036</b><i>AUG 18 · 15 TRADES</i></div>
+            <div><span class="mlabel">Worst Day</span><b class="neg">−$400</b><i>AUG 26 · 3 TRADES</i></div>
+            <div><span class="mlabel">Days Green</span><b>8 / 10</b><i>80% OF SESSIONS</i></div>
+            <div><span class="mlabel">Sym Focus</span><b>MGC</b><i>44 / 44 TRADES</i></div>
+          </div>
+          <div class="hero-cta">
+            <button class="btn-k">LOG A TRADE <kbd>⌘K</kbd></button>
+            <button class="btn-ghost">QUICK IMPORT</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- F2 · EQUITY / DRAWDOWN -->
+      <article class="pane p-equity">
+        <div class="pane-head">
+          <span class="fkey">F2</span><span class="pane-title">Equity / Drawdown</span>
+          <span class="pane-meta range">
+            <button>1M</button><button>3M</button><button class="on">ALL</button>
+          </span>
+        </div>
+        <div class="eq-body">
+          <div class="eq-chart">
+            <!-- Equity Aug 17→28: 50,000 → 52,808 · y-scale $45K–$55K · max dip $795 -->
+            <svg viewBox="0 0 820 280" preserveAspectRatio="none" aria-label="Equity curve">
+              <line x1="0" y1="30"  x2="820" y2="30"  stroke="#151d28" stroke-width="1" vector-effect="non-scaling-stroke"/>
+              <line x1="0" y1="150" x2="820" y2="150" stroke="#151d28" stroke-width="1" vector-effect="non-scaling-stroke" stroke-dasharray="3 4"/>
+              <line x1="0" y1="270" x2="820" y2="270" stroke="#1b2532" stroke-width="1" vector-effect="non-scaling-stroke"/>
+              <polygon fill="rgba(52,211,153,.07)" points="50,150 124,132.8 198,108 272,103.6 346,99.4 420,95.4 494,85 568,94.5 642,104.1 716,87.2 790,82.6 790,270 50,270"/>
+              <polyline fill="none" stroke="#34d399" stroke-width="2" vector-effect="non-scaling-stroke"
+                points="50,150 124,132.8 198,108 272,103.6 346,99.4 420,95.4 494,85 568,94.5 642,104.1 716,87.2 790,82.6"/>
+              <circle cx="494" cy="85" r="3" fill="#080b12" stroke="#8695a8" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+              <circle cx="642" cy="104.1" r="3" fill="#080b12" stroke="#f87171" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+              <circle cx="790" cy="82.6" r="4.5" fill="#f97316"/>
+              <circle cx="790" cy="82.6" r="4.5" fill="none" stroke="#f97316" stroke-width="1.5" vector-effect="non-scaling-stroke">
+                <animate attributeName="r" values="4.5;12" dur="2s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values=".8;0" dur="2s" repeatCount="indefinite"/>
+              </circle>
+            </svg>
+            <span class="eq-ylab" style="top:2%">$55K</span>
+            <span class="eq-ylab" style="top:48%">$50K</span>
+            <span class="eq-ylab" style="top:88%">$45K</span>
+            <span class="eq-xlab" style="left:5%">AUG 17</span>
+            <span class="eq-xlab" style="left:59%">AUG 24</span>
+            <span class="eq-xlab" style="right:2%">AUG 28</span>
+            <div class="eq-last">$52,808<small>NEW HIGH</small></div>
+          </div>
+          <div class="dd-strip">
+            <!-- Drawdown from peak, 0–2% scale: dips 0.75% (Aug 25) → 1.51% (Aug 26) → 0.17% → 0% -->
+            <svg viewBox="0 0 820 40" preserveAspectRatio="none" aria-label="Drawdown">
+              <line x1="0" y1="4" x2="820" y2="4" stroke="#151d28" stroke-width="1" vector-effect="non-scaling-stroke"/>
+              <polygon fill="rgba(248,113,113,.22)" stroke="#f87171" stroke-width="1" vector-effect="non-scaling-stroke"
+                points="50,4 494,4 568,17.5 642,31.2 716,7.1 790,4"/>
+            </svg>
+            <span class="dd-tag">DD FROM PEAK · 0–2% · MAX −1.51%</span>
+          </div>
+        </div>
+        <div class="eq-stats">
+          <div class="eq-stat"><span class="mlabel">Trades</span><span class="v">44</span></div>
+          <div class="eq-stat"><span class="mlabel">Win Rate</span><span class="v">47.7%</span></div>
+          <div class="eq-stat"><span class="mlabel">Profit Fctr</span><span class="v">1.86</span></div>
+          <div class="eq-stat"><span class="mlabel">Expectancy</span><span class="v">$63.82</span></div>
+          <div class="eq-stat"><span class="mlabel">Avg W / L</span><span class="v"><span class="pos">$289</span>/<span class="neg">$149</span></span></div>
+          <div class="eq-stat"><span class="mlabel">Max DD</span><span class="v neg">$795.00</span></div>
+          <div class="eq-stat"><span class="mlabel">Curr DD</span><span class="v">$0.00 <span class="mlabel">0.00%</span></span></div>
+        </div>
+      </article>
+
+      <!-- F3 · MARKET TV + THE WIRE -->
+      <article class="pane p-tv">
+        <div class="pane-head">
+          <span class="fkey">F3</span><span class="pane-title">Market TV</span>
+          <span class="pane-meta">
+            <span class="mlabel">BIZ-1 · SIMULATED FEED</span>
+            <span class="tv-livechip"><i></i>LIVE</span>
+          </span>
+        </div>
+        <div class="tv-body">
+          <div class="tv-screen">
+            <div class="tv-feed">
+              <div class="tv-topline">
+                <span class="tv-bug">BIZ-1</span>
+                <span class="tv-livechip"><i></i>LIVE</span>
+                <span class="tv-clock">18:42 NY</span>
+              </div>
+              <div class="tv-main">
+                <div class="tv-quote">
+                  <span class="sym">MGC · GOLD</span>
+                  <span class="px">4,660.0</span>
+                  <span class="chg">▲ 3.5 SESSION</span>
+                </div>
+                <div class="tv-spark">
+                  <svg viewBox="0 0 300 90" preserveAspectRatio="none">
+                    <polyline fill="none" stroke="#34d399" stroke-width="1.5" vector-effect="non-scaling-stroke"
+                      points="0,74 30,68 55,71 85,58 110,61 140,47 165,52 195,38 225,42 255,24 280,28 300,18"/>
+                    <polygon fill="rgba(52,211,153,.08)"
+                      points="0,74 30,68 55,71 85,58 110,61 140,47 165,52 195,38 225,42 255,24 280,28 300,18 300,90 0,90"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="tv-lower3">
+                <div class="l3-row">
+                  <span class="l3-tag">DEVELOPING</span>
+                  <span class="l3-head">GOLD HOLDS HIGHS AFTER +3.5 SESSION — DESKS EYE 8:30 GDP</span>
+                </div>
+                <div class="tv-strip">
+                  <div class="tv-striptrack">
+                    <span>GDP M/M 8:30 PM</span><span>FED CHAIR 10:00 PM</span><span>GDP PRICE INDEX 10:00 PM</span><span>MGC 4,660 ▲3.5</span><span>MBT 112,450 ▲210 · VOL COMPRESSING</span><span>M2K 3,019 ▲0.3</span>
+                    <span>GDP M/M 8:30 PM</span><span>FED CHAIR 10:00 PM</span><span>GDP PRICE INDEX 10:00 PM</span><span>MGC 4,660 ▲3.5</span><span>MBT 112,450 ▲210 · VOL COMPRESSING</span><span>M2K 3,019 ▲0.3</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="wire">
+            <div class="wire-head">
+              <span class="fkey">WIRE</span>
+              <span class="pane-title">Next Catalysts</span>
+              <span class="pane-meta mlabel">vs 18:42 clock</span>
+            </div>
+            <div class="wire-rows">
+              <div class="wire-row">
+                <span class="wire-time">8:30 PM</span>
+                <span class="wire-name">GDP M/M</span>
+                <span class="imp high">HIGH</span>
+                <span class="wire-count">IN 1H 48M</span>
+              </div>
+              <div class="wire-row">
+                <span class="wire-time">10:00 PM</span>
+                <span class="wire-name">Fed Chair speaks</span>
+                <span class="imp med">MED</span>
+                <span class="wire-count">IN 3H 18M</span>
+              </div>
+              <div class="wire-row">
+                <span class="wire-time">10:00 PM</span>
+                <span class="wire-name">Prelim GDP Price Index</span>
+                <span class="imp med">MED</span>
+                <span class="wire-count">IN 3H 18M</span>
+              </div>
+              <div class="wire-note"><span class="src">NOTE</span><span><b>GOLD</b> holding highs after +3.5 session</span></div>
+              <div class="wire-note"><span class="src">NOTE</span><span><b>BITCOIN</b> quiet, realized vol compressing</span></div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- F4 · NOW GRID -->
+      <article class="pane p-now">
+        <div class="pane-head">
+          <span class="fkey">F4</span><span class="pane-title">Now</span>
+          <span class="pane-meta"><span class="mlabel">Session · NY PM</span></span>
+        </div>
+        <div class="now-grid">
+          <div class="now-cell">
+            <span class="mlabel">Today</span>
+            <span class="now-val pos">+$190</span>
+            <span class="now-note">2 TRADES</span>
+          </div>
+          <div class="now-cell">
+            <span class="mlabel">This Week</span>
+            <span class="now-val pos">+$535</span>
+            <span class="now-note">5 SESSIONS</span>
+          </div>
+          <div class="now-cell">
+            <span class="mlabel">Open P&amp;L</span>
+            <span class="now-val">FLAT</span>
+            <span class="now-note">NO WORKING POSITIONS</span>
+          </div>
+          <div class="now-cell">
+            <span class="mlabel">Green Streak</span>
+            <span class="now-val">2 DAYS<span class="streak-blocks"><i></i><i></i></span></span>
+            <span class="now-note">AUG 27 · AUG 28</span>
+          </div>
+          <div class="now-cell">
+            <span class="mlabel">Next Event</span>
+            <span class="now-val event">GDP M/M</span>
+            <span class="now-note">2H AWAY · 8:30 PM</span>
+          </div>
+          <div class="now-cell">
+            <span class="mlabel">Risk State</span>
+            <span class="now-val pos">AT HIGHS</span>
+            <span class="now-note">DD $0.00 · LIMIT INTACT</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- F5 · TRADING DAYS · AUGUST 2026 -->
+      <article class="pane p-cal">
+        <div class="pane-head">
+          <span class="fkey">F5</span><span class="pane-title">Trading Days · August 2026</span>
+          <span class="pane-meta"><span class="mlabel">Mon–Fri</span></span>
+        </div>
+        <div class="cal">
+          <div class="cal-hrow"><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span></div>
+          <div class="cal-row">
+            <div class="cal-cell dim"><span class="cal-day">3</span><span class="cal-pnl">—</span></div>
+            <div class="cal-cell dim"><span class="cal-day">4</span><span class="cal-pnl">—</span></div>
+            <div class="cal-cell dim"><span class="cal-day">5</span><span class="cal-pnl">—</span></div>
+            <div class="cal-cell dim"><span class="cal-day">6</span><span class="cal-pnl">—</span></div>
+            <div class="cal-cell dim"><span class="cal-day">7</span><span class="cal-pnl">—</span></div>
+          </div>
+          <div class="cal-row">
+            <div class="cal-cell dim"><span class="cal-day">10</span><span class="cal-pnl">—</span></div>
+            <div class="cal-cell dim"><span class="cal-day">11</span><span class="cal-pnl">—</span></div>
+            <div class="cal-cell dim"><span class="cal-day">12</span><span class="cal-pnl">—</span></div>
+            <div class="cal-cell dim"><span class="cal-day">13</span><span class="cal-pnl">—</span></div>
+            <div class="cal-cell dim"><span class="cal-day">14</span><span class="cal-pnl">—</span></div>
+          </div>
+          <div class="cal-row">
+            <div class="cal-cell"><span class="cal-day">17</span><span class="cal-pnl pos">+$715</span><span class="cal-n">8 TRADES</span></div>
+            <div class="cal-cell"><span class="cal-day">18</span><span class="cal-pnl pos">+$1,036</span><span class="cal-n">15 TRADES</span></div>
+            <div class="cal-cell"><span class="cal-day">19</span><span class="cal-pnl pos">+$183</span><span class="cal-n">1 TRADE</span></div>
+            <div class="cal-cell"><span class="cal-day">20</span><span class="cal-pnl pos">+$174</span><span class="cal-n">1 TRADE</span></div>
+            <div class="cal-cell"><span class="cal-day">21</span><span class="cal-pnl pos">+$165</span><span class="cal-n">1 TRADE</span></div>
+          </div>
+          <div class="cal-row">
+            <div class="cal-cell"><span class="cal-day">24</span><span class="cal-pnl pos">+$434</span><span class="cal-n">8 TRADES</span></div>
+            <div class="cal-cell"><span class="cal-day">25</span><span class="cal-pnl neg">−$395</span><span class="cal-n">1 TRADE</span></div>
+            <div class="cal-cell"><span class="cal-day">26</span><span class="cal-pnl neg">−$400</span><span class="cal-n">3 TRADES</span></div>
+            <div class="cal-cell"><span class="cal-day">27</span><span class="cal-pnl pos">+$706</span><span class="cal-n">4 TRADES</span></div>
+            <div class="cal-cell today"><span class="cal-day">28</span><span class="cal-pnl pos">+$190</span><span class="cal-n">2 TRADES</span></div>
+          </div>
+          <div class="cal-row">
+            <div class="cal-cell dim"><span class="cal-day">31</span><span class="cal-pnl">—</span></div>
+            <div class="cal-cell dim"></div>
+            <div class="cal-cell dim"></div>
+            <div class="cal-cell dim"></div>
+            <div class="cal-cell dim"></div>
+          </div>
+        </div>
+        <div class="cal-foot">
+          <span>GREEN DAYS <b class="pos">8</b></span>
+          <span>RED DAYS <b class="neg">2</b></span>
+          <span>AVG DAY <b class="pos">+$281</b></span>
+          <span style="margin-left:auto">MONTH <b class="pos">+$2,808</b></span>
+        </div>
+      </article>
+
+    </section>
+
+    <!-- ═══════════ F6 · THE REVIEW TAPE (signature moment) ═══════════ -->
+    <section class="tapebar" aria-label="Review queue tape">
+      <div class="tape-cap">
+        <span class="mlabel">F6 · Review Tape</span>
+        <span class="n">44</span>
+        <span class="mlabel">Pending · All Est</span>
+      </div>
+      <div class="tape-mid">
+        <div class="tape-track">
+          <!-- newest→oldest, the visible tail of 44 · duplicated once for a seamless loop -->
+          <span class="print"><span class="pd">AUG 28 · 13:06</span><span class="psym">MGC</span><span class="pside">SHORT</span><span class="ppnl pos">+$60.00</span><span class="pest">EST</span></span>
+          <span class="print"><span class="pd">AUG 28 · 13:05</span><span class="psym">MGC</span><span class="pside">SHORT</span><span class="ppnl pos">+$130.00</span><span class="pest">EST</span></span>
+          <span class="print"><span class="pd">AUG 27 · 06:17</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl pos">+$315.00</span><span class="pest">EST</span></span>
+          <span class="print"><span class="pd">AUG 27 · 01:02</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl neg">−$132.00</span><span class="pest">EST</span></span>
+          <span class="print"><span class="pd">AUG 27 · 00:56</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl pos">+$61.00</span><span class="pest">EST</span></span>
+          <span class="print"><span class="pd">AUG 27 · 00:46</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl pos">+$462.00</span><span class="pest">EST</span></span>
+          <span class="print older"><span class="pd">AUG 26 · 07:25</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl neg">−$125.00</span><span class="pest">EST</span></span>
+          <span class="print older"><span class="pd">AUG 26 · 07:23</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl neg">−$275.00</span><span class="pest">EST</span></span>
+          <span class="print older"><span class="pd">AUG 26 · 07:02</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl">$0.00</span><span class="pest">EST</span></span>
+          <span class="print older"><span class="pd">AUG 26 · 06:42</span><span class="psym">MGC</span><span class="pside">SHORT</span><span class="ppnl neg">−$222.00</span><span class="pest">EST</span></span>
+          <span class="print older"><span class="pd">AUG 25 · 06:56</span><span class="psym">MGC</span><span class="pside">SHORT</span><span class="ppnl neg">−$395.00</span><span class="pest">EST</span></span>
+          <span class="print older"><span class="pd">AUG 24 · 07:53</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl pos">+$101.00</span><span class="pest">EST</span></span>
+          <span class="print older"><span class="pd">AUG 24 · 07:42</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl neg">−$50.00</span><span class="pest">EST</span></span>
+          <span class="print older"><span class="pd">AUG 24 · 07:21</span><span class="psym">MGC</span><span class="pside">SHORT</span><span class="ppnl neg">−$28.00</span><span class="pest">EST</span></span>
+          <span class="print note">⋯ 30 EARLIER PRINTS · +$444.00 ⋯</span>
+          <!-- loop copy -->
+          <span class="print"><span class="pd">AUG 28 · 13:06</span><span class="psym">MGC</span><span class="pside">SHORT</span><span class="ppnl pos">+$60.00</span><span class="pest">EST</span></span>
+          <span class="print"><span class="pd">AUG 28 · 13:05</span><span class="psym">MGC</span><span class="pside">SHORT</span><span class="ppnl pos">+$130.00</span><span class="pest">EST</span></span>
+          <span class="print"><span class="pd">AUG 27 · 06:17</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl pos">+$315.00</span><span class="pest">EST</span></span>
+          <span class="print"><span class="pd">AUG 27 · 01:02</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl neg">−$132.00</span><span class="pest">EST</span></span>
+          <span class="print"><span class="pd">AUG 27 · 00:56</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl pos">+$61.00</span><span class="pest">EST</span></span>
+          <span class="print"><span class="pd">AUG 27 · 00:46</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl pos">+$462.00</span><span class="pest">EST</span></span>
+          <span class="print older"><span class="pd">AUG 26 · 07:25</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl neg">−$125.00</span><span class="pest">EST</span></span>
+          <span class="print older"><span class="pd">AUG 26 · 07:23</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl neg">−$275.00</span><span class="pest">EST</span></span>
+          <span class="print older"><span class="pd">AUG 26 · 07:02</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl">$0.00</span><span class="pest">EST</span></span>
+          <span class="print older"><span class="pd">AUG 26 · 06:42</span><span class="psym">MGC</span><span class="pside">SHORT</span><span class="ppnl neg">−$222.00</span><span class="pest">EST</span></span>
+          <span class="print older"><span class="pd">AUG 25 · 06:56</span><span class="psym">MGC</span><span class="pside">SHORT</span><span class="ppnl neg">−$395.00</span><span class="pest">EST</span></span>
+          <span class="print older"><span class="pd">AUG 24 · 07:53</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl pos">+$101.00</span><span class="pest">EST</span></span>
+          <span class="print older"><span class="pd">AUG 24 · 07:42</span><span class="psym">MGC</span><span class="pside">LONG</span><span class="ppnl neg">−$50.00</span><span class="pest">EST</span></span>
+          <span class="print older"><span class="pd">AUG 24 · 07:21</span><span class="psym">MGC</span><span class="pside">SHORT</span><span class="ppnl neg">−$28.00</span><span class="pest">EST</span></span>
+          <span class="print note">⋯ 30 EARLIER PRINTS · +$444.00 ⋯</span>
+        </div>
+      </div>
+      <div class="tape-total">
+        <span class="mlabel">Running Total</span>
+        <span class="n">+$346.00</span>
+        <a href="#">REVIEW ALL →</a>
+      </div>
+    </section>
+
+    <!-- ═══════════ STATUS BAR · compressed modules dock ═══════════ -->
+    <footer class="statusbar">
+      <span class="seg"><span class="fkey">F7</span></span>
+      <span class="seg">DISCIPLINE <b>82</b><span class="meter"><i style="width:82%"></i></span></span>
+      <span class="seg">EDGE <b>71</b><span class="meter"><i style="width:71%"></i></span></span>
+      <span class="seg">CHECKLIST <b class="ok">5/5 ARMED</b></span>
+      <span class="seg">DAILY LOSS <b>$0</b> / $500</span>
+      <span class="seg">ACCT <b>TOPSTEP-50K</b> <span class="badge-live"><i></i>LIVE</span></span>
+      <span class="seg opt">PLAYBOOK · ORB PB <b>≈62%</b>·21 · NEWS FADE <b>≈42%</b>·12 · VWAP RC <b>≈45%</b>·11</span>
+      <span class="seg">AVG R <b class="ok">+0.43R</b></span>
+      <span class="seg opt">PSYCH <b>2 FLAGS</b></span>
+      <span class="seg-spacer seg"></span>
+      <span class="seg right">MISSION DECK · CONCEPT PREVIEW · SAMPLE DATA · NOTHING LIVE</span>
+    </footer>
+
+  </div>
+</div>
+</body>
+</html>

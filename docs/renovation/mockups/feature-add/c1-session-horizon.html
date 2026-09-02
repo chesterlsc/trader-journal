@@ -1,0 +1,977 @@
+<!doctype html>
+<!--
+  TRADER JOURNAL — CONCEPT 1 · "SESSION HORIZON"
+  Clay V3 gunmetal + burnt oxide. High-tech instrument cards. Dark only.
+
+  ★ SIGNATURE MOMENT — "THE LIGHT SEAM"
+  One continuous machined 24-hour rail runs the full width of the deck. At 05:00
+  Manila the NOW cursor stands exactly where New York's arc dies and Sydney's
+  arc ignites — the same coordinate. A light seam travels the New York lane
+  westward into that cursor, the cursor flares, and the light re-emerges out of
+  the Sydney lane and runs on. The tape being physically handed across the
+  world, on one line, forever.
+
+  CONCEPT PREVIEW · SAMPLE DATA · NOTHING LIVE
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trader Journal — Session Horizon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════
+   1 · CLAY V3 TOKENS
+   ══════════════════════════════════════════════════════════════ */
+:root{
+  --surface-0:#080b12;
+  --surface-1:#0c1119;
+  --surface-2:#111823;
+  --surface-3:#16202d;
+  --surface-inset:#05080e;
+  --line:#151d28;
+  --line-strong:#1b2532;
+  --text:#e6ecf5;
+  --text-soft:#8695a8;
+  --text-faint:#7c8b9e;
+  --accent:#f97316;
+  --accent-strong:#fb8b3a;
+  --pnl-pos:#34d399;
+  --pnl-neg:#f87171;
+  --warn:#f0b34e;
+  --info:#22d3ee;
+
+  /* machined light: 1px glass top-edge highlight */
+  --edge:rgba(214,222,235,.09);
+
+  /* clay elevation for a dark ground */
+  --raise:0 16px 30px -16px hsl(220 45% 3% / .8),
+          0 5px 11px -6px hsl(220 45% 3% / .55),
+          inset 0 -7px 14px -7px hsl(220 40% 2% / .55),
+          inset 0 8px 13px -7px hsl(210 20% 85% / .10);
+  --float:0 26px 44px -20px hsl(220 45% 3% / .88),
+          0 8px 16px -8px hsl(220 45% 3% / .6),
+          inset 0 -8px 16px -8px hsl(220 40% 2% / .58),
+          inset 0 9px 15px -8px hsl(210 20% 85% / .12);
+  --press:inset 0 4px 9px -2px hsl(220 45% 2% / .72),
+          inset 0 -2px 5px -3px hsl(210 20% 85% / .05);
+
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"Sora","Avenir Next",Avenir,"Segoe UI",system-ui,-apple-system,sans-serif;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   2 · BASE + APP FRAME
+   ══════════════════════════════════════════════════════════════ */
+*{box-sizing:border-box;margin:0;padding:0}
+html{overflow-x:hidden}
+body{
+  background:#080b12;                       /* literal --surface-0 */
+  color:var(--text);
+  font-family:var(--mono);
+  font-size:12px;
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum" 1;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+.app{display:grid;grid-template-columns:56px minmax(0,1fr);min-height:100vh}
+
+/* shared voices */
+.mlabel{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-faint);font-weight:600}
+.pos{color:var(--pnl-pos)}
+.neg{color:var(--pnl-neg)}
+.dsp{font-family:var(--sans);letter-spacing:-.015em}
+
+/* ── left icon rail ── */
+.rail{
+  position:sticky;top:0;height:100vh;
+  background:var(--surface-1);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;padding:10px 0 12px;gap:4px;z-index:8;
+}
+.rail .stamp{
+  width:36px;height:36px;border-radius:10px;display:grid;place-items:center;margin-bottom:12px;
+  background:linear-gradient(180deg,var(--surface-3),var(--surface-2));
+  border:1px solid var(--line-strong);box-shadow:var(--raise);
+  font-family:var(--sans);font-weight:800;font-size:13px;letter-spacing:-.02em;
+}
+.rail .glyph{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--text-faint);opacity:.6}
+.rail .glyph:hover{opacity:1;color:var(--text);background:var(--surface-2)}
+.rail .glyph.on{opacity:1;color:var(--accent);background:var(--surface-2);box-shadow:var(--press)}
+.rail .glyph svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.rail .grow{flex:1}
+
+/* ── top live ticker bar ── */
+.tickerbar{
+  position:sticky;top:0;z-index:7;height:40px;
+  display:flex;align-items:center;gap:14px;
+  background:linear-gradient(180deg,var(--surface-2),var(--surface-1));
+  border-bottom:1px solid var(--line-strong);box-shadow:inset 0 1px 0 var(--edge);padding:0 12px;
+}
+.chip-live{
+  flex:none;display:inline-flex;align-items:center;gap:6px;
+  font-size:10px;letter-spacing:.16em;font-weight:700;color:var(--info);
+  border:1px solid rgba(34,211,238,.34);border-radius:5px;padding:3px 8px;
+  background:rgba(34,211,238,.07);box-shadow:0 0 14px -4px rgba(34,211,238,.5);
+}
+.chip-live i{width:6px;height:6px;border-radius:50%;background:var(--info);animation:blink 1.6s steps(2) infinite}
+@keyframes blink{50%{opacity:.2}}
+.tickerscroll{flex:1;min-width:0;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 40px,#000 calc(100% - 40px),transparent)}
+.tickertrack{display:flex;width:max-content;gap:36px;white-space:nowrap;animation:tape 46s linear infinite}
+@keyframes tape{to{transform:translateX(-50%)}}
+.tick{font-size:11px;color:var(--text-soft)}
+.tick b{color:var(--text);font-weight:600}
+.honesty{
+  flex:none;font-size:9px;letter-spacing:.17em;color:var(--text-faint);
+  border:1px dashed var(--line-strong);border-radius:5px;padding:3px 8px;
+}
+.tclock{flex:none;font-size:11px;color:var(--text-soft);letter-spacing:.06em}
+.tclock b{color:var(--text)}
+
+/* ══════════════════════════════════════════════════════════════
+   3 · CANVAS + THE CARD (precision-machined clay)
+   ══════════════════════════════════════════════════════════════ */
+.canvas{display:flex;flex-direction:column;gap:12px;padding:12px 14px 16px;min-width:0}
+.card{
+  position:relative;border-radius:14px;border:1px solid var(--line);
+  background:linear-gradient(180deg,var(--surface-2) 0%,var(--surface-1) 42%);
+  box-shadow:var(--raise);min-width:0;
+}
+.card::before{ /* 1px glass top-edge highlight */
+  content:"";position:absolute;left:12px;right:12px;top:0;height:1px;border-radius:1px;
+  background:linear-gradient(90deg,transparent,rgba(214,222,235,.22),transparent);pointer-events:none;
+}
+.card-head{
+  display:flex;align-items:center;gap:10px;height:30px;padding:0 12px;
+  border-bottom:1px solid var(--line);
+}
+.card-head .t{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-soft)}
+.card-head .r{margin-left:auto;display:flex;align-items:center;gap:10px}
+.well{background:var(--surface-inset);box-shadow:var(--press);border-radius:10px}
+
+/* buttons */
+.btn{
+  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.09em;cursor:pointer;
+  border-radius:8px;padding:6px 11px;border:1px solid var(--line-strong);
+  background:linear-gradient(180deg,var(--surface-3),var(--surface-2));color:var(--text-soft);
+  box-shadow:inset 0 1px 0 var(--edge);
+}
+.btn:hover{color:var(--text);border-color:#243043}
+.btn-primary{
+  border:none;color:#160800;background:linear-gradient(180deg,var(--accent-strong),var(--accent));
+  box-shadow:0 8px 18px -10px rgba(249,115,22,.9),inset 0 1px 0 rgba(255,255,255,.28);
+  display:inline-flex;align-items:center;gap:8px;
+}
+.btn-primary kbd{font-size:9px;background:rgba(0,0,0,.24);border-radius:4px;padding:1px 4px}
+.seg{display:inline-flex;padding:2px;gap:2px;border-radius:9px;background:var(--surface-inset);box-shadow:var(--press)}
+.seg button{
+  border:none;background:transparent;color:var(--text-faint);cursor:pointer;border-radius:7px;
+  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.09em;padding:4px 10px;
+}
+.seg button.on{color:var(--accent);background:var(--surface-2);box-shadow:inset 0 1px 0 var(--edge)}
+.eye{background:none;border:none;color:var(--text-faint);cursor:pointer;display:inline-grid;place-items:center}
+.eye:hover{color:var(--accent)}
+.eye svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.5}
+
+/* ══════════════════════════════════════════════════════════════
+   4 · HERO — halved: one 88px line
+   ══════════════════════════════════════════════════════════════ */
+.hero{
+  min-height:88px;display:flex;align-items:center;gap:18px;padding:0 16px;flex-wrap:wrap;
+  box-shadow:var(--float);
+}
+.vrule{width:1px;align-self:stretch;margin:14px 0;background:linear-gradient(180deg,transparent,var(--line-strong),transparent)}
+.greet{font-family:var(--sans);font-size:19px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.greet-sub{font-size:9.5px;letter-spacing:.13em;color:var(--text-faint);margin-top:4px;text-transform:uppercase}
+.greet-sub b{color:var(--accent);font-weight:700}
+.hero-net .n{font-family:var(--sans);font-size:34px;font-weight:800;line-height:1.05;letter-spacing:-.025em;color:var(--pnl-pos);margin-top:2px}
+.hero-bal .b{font-size:19px;font-weight:700;color:var(--text);margin-top:3px;display:flex;align-items:center;gap:8px}
+.hero-bal .s{font-size:9.5px;letter-spacing:.11em;color:var(--text-faint);margin-top:3px}
+.hero-figs{flex:1;min-width:340px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px 20px}
+.fig{display:flex;align-items:baseline;gap:7px;white-space:nowrap;height:26px}
+.fig i{font-style:normal;font-size:9px;letter-spacing:.13em;color:var(--text-faint);width:78px;flex:none}
+.fig b{font-size:13px;font-weight:700;color:var(--text)}
+.fig s{text-decoration:none;font-size:9px;letter-spacing:.1em;color:var(--text-faint)}
+.hero-ctl{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.hero-ctl .row{display:flex;align-items:center;gap:8px}
+.chip-est{font-size:9px;font-weight:700;letter-spacing:.13em;color:var(--warn);border:1px dashed rgba(240,179,78,.45);border-radius:6px;padding:3px 7px}
+
+/* ══════════════════════════════════════════════════════════════
+   5 · SESSION HORIZON BAND  ★ signature
+   ══════════════════════════════════════════════════════════════ */
+.horizon{padding:0 0 14px}
+.sess-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:12px 14px 14px}
+.sess{
+  border-radius:12px;border:1px solid var(--line);padding:11px 13px 10px;min-width:0;
+  background:linear-gradient(180deg,var(--surface-3) 0%,var(--surface-2) 60%);
+  box-shadow:var(--raise);position:relative;overflow:hidden;
+}
+.sess::before{content:"";position:absolute;left:10px;right:10px;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(214,222,235,.2),transparent)}
+.sess-top{display:flex;align-items:center;gap:8px}
+.sess-city{font-family:var(--sans);font-size:15px;font-weight:700;letter-spacing:.03em}
+.sess-local{margin-left:auto;font-size:10px;color:var(--text-faint);letter-spacing:.06em}
+.state{
+  display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:800;letter-spacing:.14em;
+  border-radius:5px;padding:2px 6px;margin-top:8px;
+}
+.state i{width:5px;height:5px;border-radius:50%;background:currentColor}
+.state.opening{color:var(--info);background:rgba(34,211,238,.09);border:1px solid rgba(34,211,238,.34);box-shadow:0 0 16px -5px rgba(34,211,238,.65)}
+.state.opening i{animation:blink 1.2s steps(2) infinite}
+.state.pre{color:var(--warn);background:rgba(240,179,78,.08);border:1px solid rgba(240,179,78,.3)}
+.state.closed{color:var(--text-faint);background:rgba(124,139,158,.06);border:1px solid var(--line-strong)}
+.state.closing{color:var(--warn);background:rgba(240,179,78,.08);border:1px solid rgba(240,179,78,.3)}
+.sess-count{display:flex;align-items:baseline;gap:8px;margin-top:8px}
+.sess-count b{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.sess-count b.now{color:var(--info)}
+.sess-count s{text-decoration:none;font-size:9px;letter-spacing:.12em;color:var(--text-faint)}
+.meter{height:5px;border-radius:3px;background:var(--surface-inset);box-shadow:var(--press);margin-top:9px;overflow:hidden}
+.meter i{display:block;height:100%;border-radius:3px}
+.meter i.cy{background:linear-gradient(90deg,rgba(34,211,238,.4),var(--info));box-shadow:0 0 10px rgba(34,211,238,.6)}
+.meter i.am{background:linear-gradient(90deg,rgba(240,179,78,.35),var(--warn))}
+.meter i.slate{background:linear-gradient(90deg,#22303f,#3b4a5e)}
+.meter-lab{display:flex;justify-content:space-between;font-size:8.5px;letter-spacing:.12em;color:var(--text-faint);margin-top:5px}
+
+/* — the rail: 24h, four lanes, one horizon — */
+.rail24{position:relative;margin:0 14px;padding:14px 14px 10px;border-radius:12px;background:var(--surface-inset);box-shadow:var(--press)}
+.railgrid{display:grid;grid-template-columns:84px minmax(0,1fr);gap:12px}
+.tags{display:flex;flex-direction:column;gap:6px}
+.tags span{height:13px;display:flex;align-items:center;font-size:8.5px;letter-spacing:.14em;color:var(--text-faint);white-space:nowrap}
+.tags span.on{color:var(--info)}
+.tags span.off{color:var(--warn)}
+.lanes{position:relative;display:flex;flex-direction:column;gap:6px;
+  /* machined 3-hour hairlines behind the daylight arcs */
+  background:repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px 12.5%);
+  background-size:100% 100%;
+}
+.lane{position:relative;height:13px;border-radius:7px;background:rgba(134,149,168,.05);box-shadow:inset 0 1px 2px rgba(0,0,0,.65);overflow:hidden}
+.arc{position:absolute;top:0;bottom:0;border-radius:7px;background:linear-gradient(90deg,rgba(134,149,168,.26),rgba(134,149,168,.12));box-shadow:inset 0 1px 0 rgba(214,222,235,.14)}
+.arc.syd{background:linear-gradient(90deg,rgba(34,211,238,.72),rgba(34,211,238,.12));box-shadow:inset 0 1px 0 rgba(214,222,235,.2),0 0 22px -3px rgba(34,211,238,.6)}
+.arc.ny{background:linear-gradient(90deg,rgba(240,179,78,.42),rgba(240,179,78,.12))}
+.arc.nydie{background:linear-gradient(90deg,rgba(240,179,78,.14),rgba(240,179,78,.62))}
+.arc .fill{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:linear-gradient(90deg,rgba(214,222,235,.06),rgba(214,222,235,.16))}
+.spark{position:absolute;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:var(--info);box-shadow:0 0 12px 3px rgba(34,211,238,.8);z-index:5}
+.spark.pulse{animation:sparkp 2.4s ease-in-out infinite}
+@keyframes sparkp{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.65}}
+
+/* NOW cursor — the only accent on the rail */
+.nowcur{position:absolute;top:-6px;bottom:-6px;width:2px;background:var(--accent);z-index:6;box-shadow:0 0 14px 2px rgba(249,115,22,.55)}
+.nowcur::after{content:"";position:absolute;inset:-2px -5px;background:radial-gradient(closest-side,rgba(249,115,22,.35),transparent);animation:flare 6s linear infinite}
+@keyframes flare{0%,42%{opacity:.25}50%{opacity:1}62%,100%{opacity:.25}}
+.nowchip{
+  position:absolute;top:-26px;transform:translateX(-50%);z-index:7;white-space:nowrap;
+  font-size:9px;font-weight:800;letter-spacing:.14em;color:#160800;
+  background:linear-gradient(180deg,var(--accent-strong),var(--accent));border-radius:5px;padding:2px 7px;
+  box-shadow:0 8px 16px -8px rgba(249,115,22,.9);
+}
+
+/* ★ THE LIGHT SEAM — NY lane hands the tape to Sydney lane, across the cursor */
+.seam{position:absolute;top:0;bottom:0;width:90px;pointer-events:none;border-radius:6px;z-index:5;
+  background:linear-gradient(90deg,transparent,rgba(230,242,255,.85),transparent);
+  mix-blend-mode:screen;opacity:0}
+.seam.a{animation:seamNY 6s cubic-bezier(.5,0,.5,1) infinite}   /* NY lane → cursor */
+.seam.b{animation:seamSYD 6s cubic-bezier(.5,0,.5,1) infinite}  /* cursor → Sydney */
+@keyframes seamNY{
+  0%{left:-90px;opacity:0}
+  8%{opacity:.9}
+  44%{left:calc(20.833% - 45px);opacity:1}
+  50%{left:calc(20.833% - 45px);opacity:0}
+  100%{left:calc(20.833% - 45px);opacity:0}
+}
+@keyframes seamSYD{
+  0%,48%{left:calc(20.833% - 45px);opacity:0}
+  54%{left:calc(20.833% - 45px);opacity:1}
+  96%{left:calc(58.333% - 45px);opacity:0}
+  100%{left:calc(58.333% - 45px);opacity:0}
+}
+.axis{position:relative;height:16px;margin:10px 0 0 96px;border-top:1px solid var(--line-strong)}
+.axis span{position:absolute;top:4px;transform:translateX(-50%);font-size:8.5px;letter-spacing:.1em;color:var(--text-faint)}
+.axis span::before{content:"";position:absolute;left:50%;top:-5px;width:1px;height:4px;background:var(--line-strong)}
+.rail-legend{display:flex;gap:16px;align-items:center;margin:10px 14px 0;font-size:9px;letter-spacing:.12em;color:var(--text-faint)}
+.rail-legend em{font-style:normal;display:inline-flex;align-items:center;gap:6px}
+.rail-legend b{width:14px;height:5px;border-radius:3px;display:inline-block}
+
+/* ══════════════════════════════════════════════════════════════
+   6 · AI MICRO DESK — four glass instruments
+   ══════════════════════════════════════════════════════════════ */
+.sechead{display:flex;align-items:center;gap:12px;padding:0 2px}
+.sechead h2{font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--text-soft)}
+.sechead .hr{flex:1;height:1px;background:linear-gradient(90deg,var(--line-strong),transparent)}
+.tag-ai{font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--text-faint);border:1px dashed var(--line-strong);border-radius:6px;padding:3px 8px}
+.desk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.inst{padding:13px 14px 12px;display:flex;flex-direction:column;min-width:0;box-shadow:var(--float)}
+.inst-top{display:flex;align-items:flex-start;gap:10px}
+.inst-sym{font-family:var(--sans);font-size:16px;font-weight:700;letter-spacing:.02em}
+.inst-px{font-size:12px;color:var(--text-soft);margin-top:3px;letter-spacing:.04em}
+.verdict{
+  margin-left:auto;font-size:9px;font-weight:800;letter-spacing:.14em;border-radius:6px;padding:4px 8px;
+  display:inline-flex;align-items:center;gap:5px;
+}
+.verdict.bull{color:var(--pnl-pos);background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.32)}
+.verdict.bear{color:var(--pnl-neg);background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.32)}
+.inst-mid{display:flex;align-items:center;gap:14px;margin-top:12px}
+.gauge{
+  position:relative;width:74px;height:74px;flex:none;border-radius:50%;
+  background:conic-gradient(from 180deg,#5b6f85 0deg,#e6ecf5 var(--deg),rgba(134,149,168,.10) var(--deg));
+  box-shadow:0 12px 22px -14px hsl(220 45% 3% / .9);
+}
+.gauge::after{
+  content:"";position:absolute;inset:9px;border-radius:50%;
+  background:var(--surface-1);box-shadow:var(--press);
+}
+.gauge .v{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;z-index:2}
+.gauge .v b{font-size:19px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.gauge .v i{font-style:normal;font-size:7.5px;letter-spacing:.16em;color:var(--text-faint);margin-top:3px}
+.inst-bias{flex:1;min-width:0}
+.bias-row{display:flex;justify-content:space-between;font-size:9px;letter-spacing:.11em;color:var(--text-faint)}
+.bias-bar{height:6px;border-radius:3px;background:var(--surface-inset);box-shadow:var(--press);margin-top:6px;overflow:hidden;display:flex}
+.bias-bar i{display:block;height:100%}
+.bias-bar i.g{background:linear-gradient(90deg,rgba(52,211,153,.45),var(--pnl-pos))}
+.bias-bar i.r{background:linear-gradient(90deg,var(--pnl-neg),rgba(248,113,113,.45))}
+.inst-note{display:flex;gap:8px;margin-top:9px;font-size:9px;letter-spacing:.1em;color:var(--text-faint)}
+.inst-body{
+  margin-top:12px;font-size:11.5px;line-height:1.62;color:var(--text-soft);
+  border-top:1px solid var(--line);padding-top:11px;flex:1;
+}
+.inst-body b{color:var(--text);font-weight:600}
+.inst-foot{
+  margin-top:11px;display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;
+  background:var(--surface-inset);box-shadow:var(--press);
+}
+.inst-foot .k{font-size:8.5px;letter-spacing:.14em;color:var(--text-faint)}
+.inst-foot .n{margin-left:auto;font-size:13px;font-weight:700;color:var(--text)}
+.inst-foot .room{font-size:9px;letter-spacing:.1em;color:var(--text-faint)}
+
+/* ══════════════════════════════════════════════════════════════
+   7 · ANALYTICS GRID — 12 columns
+   ══════════════════════════════════════════════════════════════ */
+.grid12{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px}
+.c5{grid-column:span 5}.c4{grid-column:span 4}.c3{grid-column:span 3}
+.pad{padding:10px 12px 12px}
+
+/* equity */
+.eq-chart{position:relative;height:186px}
+.eq-chart svg{position:absolute;inset:0;width:100%;height:100%}
+.eq-y{position:absolute;right:4px;font-size:8.5px;color:var(--text-faint);letter-spacing:.1em}
+.eq-x{position:absolute;bottom:-2px;font-size:8.5px;color:var(--text-faint);letter-spacing:.1em}
+.eq-last{position:absolute;top:8px;right:8px;text-align:right;font-size:12px;font-weight:700;color:var(--pnl-pos)}
+.eq-last small{display:block;font-weight:400;font-size:8.5px;color:var(--text-faint);letter-spacing:.13em}
+.dd{position:relative;height:38px;margin-top:6px;border-top:1px solid var(--line)}
+.dd svg{position:absolute;inset:0;width:100%;height:100%}
+.dd span{position:absolute;left:0;top:3px;font-size:8px;letter-spacing:.14em;color:var(--text-faint)}
+.stats{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--line);background:var(--surface-inset);border-radius:0 0 13px 13px}
+.stat{padding:9px 8px;border-right:1px solid var(--line);min-width:0}
+.stat:last-child{border-right:none}
+.stat .v{display:block;font-size:14px;font-weight:700;margin-top:3px;white-space:nowrap}
+.stat .mlabel{font-size:8.5px;white-space:nowrap;display:block;overflow:hidden;text-overflow:ellipsis}
+
+/* daily bars */
+/* zero line sits at 72.1% — the split between the +$1,036 ceiling and −$400 floor */
+.bars{
+  display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;height:196px;align-items:stretch;
+  background:linear-gradient(180deg,transparent 72.1%,var(--line-strong) 72.1%,var(--line-strong) calc(72.1% + 1px),transparent calc(72.1% + 1px));
+}
+.barcol{display:grid;grid-template-rows:72.1% 27.9%;min-width:0;position:relative}
+.barcol .up{align-self:end;width:100%;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--pnl-pos),rgba(52,211,153,.35));box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.barcol .dn{align-self:start;width:100%;border-radius:0 0 4px 4px;background:linear-gradient(0deg,var(--pnl-neg),rgba(248,113,113,.35))}
+.barcol .lb{position:absolute;left:50%;transform:translateX(-50%);font-size:8px;color:var(--text-faint);letter-spacing:.02em}
+.barcol .lb.top{top:-2px}
+.barcol .lb.bot{bottom:-2px}
+.bars-foot{display:flex;gap:16px;align-items:center;margin-top:14px;padding-top:9px;border-top:1px solid var(--line);font-size:10px;letter-spacing:.09em;color:var(--text-soft)}
+.bars-foot b{color:var(--text)}
+
+/* review queue (4 of 12) */
+.q-head,.q-row{display:grid;grid-template-columns:56px 42px 34px 78px minmax(0,1fr) 62px;gap:8px;align-items:center}
+.q-head{padding:8px 12px;background:var(--surface-inset);border-bottom:1px solid var(--line)}
+.q-head span{font-size:8.5px;letter-spacing:.13em;color:var(--text-faint);font-weight:600;text-transform:uppercase}
+.q-head span:nth-child(3),.q-head span:nth-child(4){text-align:right}
+.q-row{padding:9px 12px;border-bottom:1px solid var(--line);font-size:11px}
+.q-row:hover{background:var(--surface-2)}
+.q-row .d{color:var(--text);font-weight:600}
+.q-row .s{color:var(--text-soft);letter-spacing:.06em}
+.q-row .t,.q-row .p{text-align:right}
+.q-row .t{color:var(--text-soft)}
+.q-row .p{font-weight:700}
+.q-row .r{color:var(--text-faint);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.q-row .src{font-size:8.5px;letter-spacing:.1em;color:var(--text-faint);border:1px solid var(--line-strong);border-radius:5px;padding:2px 5px;text-align:center}
+.q-row .src.est{color:var(--warn);border-color:rgba(240,179,78,.4);border-style:dashed}
+.q-foot{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface-inset);border-radius:0 0 13px 13px;font-size:10px;letter-spacing:.09em;color:var(--text-faint)}
+.q-foot b{color:var(--text)}
+.q-foot a{margin-left:auto;color:var(--accent);text-decoration:none;font-weight:700;letter-spacing:.11em}
+.q-foot a:hover{color:var(--accent-strong)}
+
+/* calendar */
+.cal{display:grid;grid-template-rows:auto repeat(5,minmax(0,1fr))}
+.cal-h,.cal-r{display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
+.cal-h{border-bottom:1px solid var(--line)}
+.cal-h span{padding:6px 10px;font-size:8.5px;letter-spacing:.16em;color:var(--text-faint);font-weight:600}
+.cal-r{border-bottom:1px solid var(--line)}
+.cal-r:last-child{border-bottom:none}
+.cell{position:relative;border-right:1px solid var(--line);padding:16px 10px 8px;min-width:0;height:56px;overflow:hidden}
+.cell:last-child{border-right:none}
+.cell .day{position:absolute;top:5px;left:10px;font-size:8.5px;color:var(--text-faint);letter-spacing:.06em}
+.cell .pnl{font-size:13px;font-weight:700;white-space:nowrap}
+.cell .n{font-size:8.5px;color:var(--text-faint);letter-spacing:.06em}
+.cell.dim .pnl{color:#1b2532;font-weight:400}
+.cell.carry{background:rgba(134,149,168,.03)}
+.cell.today{box-shadow:inset 0 0 0 1px var(--accent);background:rgba(249,115,22,.05)}
+.cell.today .day{color:var(--accent);font-weight:700}
+.cal-f{display:flex;gap:18px;align-items:center;padding:9px 12px;background:var(--surface-inset);border-top:1px solid var(--line);border-radius:0 0 13px 13px;font-size:10px;letter-spacing:.09em;color:var(--text-soft)}
+.cal-f b{color:var(--text)}
+
+/* market TV */
+.tvscreen{position:relative;aspect-ratio:16/9;border-radius:11px;overflow:hidden;background:radial-gradient(120% 100% at 30% 0%,#122032 0%,#070b12 65%);box-shadow:var(--press);display:flex;flex-direction:column}
+.tv-top{display:flex;align-items:center;gap:9px;padding:10px 12px}
+.tv-bug{font-family:var(--sans);font-size:11px;font-weight:800;letter-spacing:.12em;border:1px solid var(--line-strong);border-radius:6px;padding:3px 8px;background:rgba(12,17,25,.8)}
+.tv-live{display:inline-flex;align-items:center;gap:5px;font-size:8.5px;font-weight:800;letter-spacing:.15em;color:#04161a;background:var(--info);border-radius:5px;padding:3px 7px}
+.tv-live i{width:5px;height:5px;border-radius:50%;background:#04161a;animation:blink 1.2s steps(2) infinite}
+.tv-t{margin-left:auto;font-size:9.5px;color:var(--text-faint);letter-spacing:.1em}
+.tv-main{flex:1;display:flex;align-items:center;gap:16px;padding:0 14px;min-height:0}
+.tv-q .sym{font-size:9px;letter-spacing:.17em;color:var(--text-faint);display:block}
+.tv-q .px{font-family:var(--sans);font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.08}
+.tv-q .chg{font-size:11px;font-weight:700;color:var(--pnl-pos);letter-spacing:.06em}
+.tv-spark{flex:1;height:66%;min-width:0}
+.tv-spark svg{width:100%;height:100%}
+.tv-l3{background:linear-gradient(180deg,rgba(9,14,22,.6),rgba(5,8,14,.95));border-top:1px solid var(--line-strong);padding:7px 12px;display:flex;align-items:center;gap:9px}
+.l3tag{flex:none;font-size:8px;font-weight:800;letter-spacing:.15em;color:#160800;background:var(--warn);border-radius:4px;padding:2px 6px}
+.l3text{font-family:var(--sans);font-weight:600;font-size:11px;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wire{margin-top:10px;border-top:1px solid var(--line)}
+.wrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:11px}
+.wrow:last-child{border-bottom:none}
+.wrow .tm{width:64px;flex:none;color:var(--text-faint);font-size:10px}
+.wrow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wrow .cd{font-weight:700;color:var(--accent);font-size:10px;letter-spacing:.08em}
+.imp{font-size:8px;font-weight:800;letter-spacing:.13em;border-radius:4px;padding:2px 5px}
+.imp.hi{color:#160800;background:var(--warn)}
+.imp.md{color:var(--text-faint);border:1px solid var(--line-strong)}
+
+/* dock */
+.dock{display:flex;flex-direction:column;gap:8px;padding:12px}
+.dchip{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);box-shadow:inset 0 1px 0 var(--edge);font-size:11px}
+.dchip .k{font-size:9px;letter-spacing:.13em;color:var(--text-faint);flex:none;width:88px}
+.dchip .v{font-weight:700;color:var(--text);margin-left:auto}
+.dmeter{flex:1;height:5px;border-radius:3px;background:var(--surface-inset);box-shadow:var(--press);overflow:hidden}
+.dmeter i{display:block;height:100%;background:linear-gradient(90deg,rgba(52,211,153,.4),var(--pnl-pos))}
+.dmeter i.warn{background:linear-gradient(90deg,rgba(240,179,78,.4),var(--warn))}
+
+/* footer honesty */
+.footline{display:flex;align-items:center;gap:14px;padding:2px 4px 0;font-size:9px;letter-spacing:.15em;color:var(--text-faint)}
+.footline .hr{flex:1;height:1px;background:var(--line)}
+
+/* ══════════════════════════════════════════════════════════════
+   8 · 1440 FIT — compress, never clip
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width:1600px){
+  .hero-figs{grid-template-columns:repeat(2,minmax(0,1fr));min-width:260px}
+  .fig s{display:none}
+  .greet{font-size:17px}
+  .hero-net .n{font-size:30px}
+  .inst-body{font-size:11px;line-height:1.55}
+  .gauge{width:66px;height:66px}
+  .gauge .v b{font-size:17px}
+  .stat{padding:8px 6px}
+  .stat .v{font-size:12px;overflow:hidden;text-overflow:ellipsis}
+  .stat .mlabel{font-size:8px;letter-spacing:.1em}
+  .eq-chart{height:164px}
+  .bars{height:172px}
+  .tv-q .px{font-size:25px}
+  .q-head,.q-row{grid-template-columns:52px 38px 30px 72px minmax(0,1fr) 56px;gap:6px}
+}
+@media (max-width:1200px){
+  .desk,.sess-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .c5,.c4,.c3{grid-column:span 12}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ═════════ LEFT ICON RAIL ═════════ -->
+  <nav class="rail">
+    <div class="stamp">TJ</div>
+    <div class="glyph on" title="Dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div>
+    <div class="glyph" title="Journal"><svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 4v13"/></svg></div>
+    <div class="glyph" title="Calendar"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+    <div class="glyph" title="Analytics"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg></div>
+    <div class="glyph" title="Sessions"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 3 2.6 14 0 17M12 3.5c-2.6 3-2.6 14 0 17"/></svg></div>
+    <div class="glyph" title="AI desk"><svg viewBox="0 0 24 24"><path d="M12 3l2.2 4.6L19 9.8l-3.5 3.4.8 4.8L12 15.7l-4.3 2.3.8-4.8L5 9.8l4.8-2.2z"/></svg></div>
+    <div class="glyph" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.2 2.2M16.9 16.9l2.2 2.2M19.1 4.9l-2.2 2.2M7.1 16.9l-2.2 2.2"/></svg></div>
+    <div class="grow"></div>
+    <div class="glyph" title="Theme"><svg viewBox="0 0 24 24"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg></div>
+  </nav>
+
+  <div>
+    <!-- ═════════ TOP LIVE TICKER BAR ═════════ -->
+    <header class="tickerbar">
+      <span class="chip-live"><i></i>LIVE</span>
+      <div class="tickerscroll">
+        <div class="tickertrack">
+          <span class="tick"><b>M2K</b> Russell 3,024 <span class="pos">▲0.2%</span></span>
+          <span class="tick"><b>MGC</b> Gold 4,671 <span class="pos">▲0.24%</span></span>
+          <span class="tick"><b>MCL</b> Crude 82.94 <span class="neg">▼0.4%</span></span>
+          <span class="tick"><b>M6E</b> Euro FX 1.1660 <span class="pos">▲0.0008</span></span>
+          <span class="tick"><b>MBT</b> Bitcoin 111,890 <span class="neg">▼560</span></span>
+          <span class="tick"><b>M2K</b> Russell 3,024 <span class="pos">▲0.2%</span></span>
+          <span class="tick"><b>MGC</b> Gold 4,671 <span class="pos">▲0.24%</span></span>
+          <span class="tick"><b>MCL</b> Crude 82.94 <span class="neg">▼0.4%</span></span>
+          <span class="tick"><b>M6E</b> Euro FX 1.1660 <span class="pos">▲0.0008</span></span>
+          <span class="tick"><b>MBT</b> Bitcoin 111,890 <span class="neg">▼560</span></span>
+        </div>
+      </div>
+      <span class="honesty">CONCEPT PREVIEW · SAMPLE DATA · NOTHING LIVE</span>
+      <span class="tclock">WED SEP 2 · <b id="clk">05:00</b> · MANILA GMT+8</span>
+    </header>
+
+    <main class="canvas">
+
+      <!-- ═════════ HERO · halved to one 88px line ═════════ -->
+      <section class="card hero">
+        <div>
+          <div class="greet">Good morning, Leon.</div>
+          <div class="greet-sub">Wed · Sep 2 2026 · <b>05:00</b> Manila · Dawn handover</div>
+        </div>
+        <div class="vrule"></div>
+        <div class="hero-net">
+          <span class="mlabel">Net P&amp;L</span>
+          <div class="n">+$3,253.00</div>
+        </div>
+        <div class="hero-bal">
+          <span class="mlabel">Account balance</span>
+          <div class="b">$53,253.00
+            <button class="eye" aria-label="Hide balance" title="Hide balance"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/></svg></button>
+          </div>
+          <div class="s">START $50,000 · +6.51%</div>
+        </div>
+        <div class="vrule"></div>
+        <div class="hero-figs">
+          <span class="fig"><i>TODAY</i><b>$0</b><s>NO TRADES</s></span>
+          <span class="fig"><i>THIS WEEK</i><b class="pos">+$328</b><s>AUG 31 · SEP 1</s></span>
+          <span class="fig"><i>OPEN P&amp;L</i><b>FLAT</b><s>NO POSITIONS</s></span>
+          <span class="fig"><i>GREEN STREAK</i><b class="pos">4 DAYS</b><s>AUG 27 → SEP 1</s></span>
+          <span class="fig"><i>NEXT EVENT</i><b style="color:var(--warn)">GDP Q/Q</b><s>9H AWAY</s></span>
+          <span class="fig"><i>RISK STATE</i><b class="pos">AT HIGHS</b><s>DD $0.00</s></span>
+        </div>
+        <div class="hero-ctl">
+          <div class="row">
+            <span class="seg"><button class="on">1M</button><button>3M</button><button>ALL</button></span>
+            <span class="chip-est">EST</span>
+          </div>
+          <div class="row">
+            <button class="btn">QUICK IMPORT</button>
+            <button class="btn btn-primary">LOG A TRADE <kbd>⌘K</kbd></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════ SESSION HORIZON ★ ═════════ -->
+      <section class="card horizon">
+        <div class="card-head">
+          <span class="t">World session state</span>
+          <span class="mlabel" style="letter-spacing:.1em">Horizon · 24h Manila</span>
+          <span class="r">
+            <span class="mlabel">Sydney takes the tape from New York</span>
+            <span class="chip-live"><i></i>HANDOVER 05:00</span>
+          </span>
+        </div>
+
+        <!-- four session instruments -->
+        <div class="sess-cards">
+          <article class="sess">
+            <div class="sess-top"><span class="sess-city">SYDNEY</span><span class="sess-local">07:00 AEST</span></div>
+            <span class="state opening"><i></i>OPENING</span>
+            <div class="sess-count"><b class="now">NOW</b><s>BELL RINGS · 05:00–14:00</s></div>
+            <div class="meter"><i class="cy" style="width:1%"></i></div>
+            <div class="meter-lab"><span>0% ELAPSED</span><span>9H SESSION</span></div>
+          </article>
+          <article class="sess">
+            <div class="sess-top"><span class="sess-city">TOKYO / ASIA</span><span class="sess-local">06:00 JST</span></div>
+            <span class="state pre"><i></i>PRE-MARKET</span>
+            <div class="sess-count"><b>3h 00m</b><s>OPENS 08:00</s></div>
+            <!-- countdown meters run on one 12h runway: (12 − hours to open) / 12 -->
+            <div class="meter"><i class="am" style="width:75%"></i></div>
+            <div class="meter-lab"><span>COUNTDOWN TO OPEN</span><span>08:00–17:00</span></div>
+          </article>
+          <article class="sess">
+            <div class="sess-top"><span class="sess-city">LONDON</span><span class="sess-local">22:00 BST · SEP 1</span></div>
+            <span class="state closed"><i></i>CLOSED</span>
+            <div class="sess-count"><b>10h 00m</b><s>OPENS 15:00</s></div>
+            <div class="meter"><i class="slate" style="width:16.7%"></i></div>
+            <div class="meter-lab"><span>COUNTDOWN TO OPEN</span><span>15:00–24:00</span></div>
+          </article>
+          <article class="sess">
+            <div class="sess-top"><span class="sess-city">NEW YORK</span><span class="sess-local">17:00 EDT · SEP 1</span></div>
+            <span class="state closing"><i></i>CLOSING</span>
+            <div class="sess-count"><b>NOW</b><s>SESSION ENDS · 20:00–05:00</s></div>
+            <div class="meter"><i class="am" style="width:100%"></i></div>
+            <div class="meter-lab"><span>100% ELAPSED</span><span>HANDING WEST</span></div>
+          </article>
+        </div>
+
+        <!-- ── THE HORIZON RAIL: one machined line, four arcs of daylight ── -->
+        <div class="rail24">
+         <div class="railgrid">
+          <div class="tags">
+            <span class="on">SYDNEY</span><span>TOKYO</span><span>LONDON</span><span class="off">NEW YORK</span>
+          </div>
+          <div class="lanes">
+            <!-- lane 1 · SYDNEY 05:00–14:00 → left 20.833% width 37.5% -->
+            <div class="lane">
+              <div class="arc syd" style="left:20.833%;width:37.5%"><span class="fill" style="width:0"></span></div>
+              <span class="seam b"></span>
+            </div>
+            <!-- lane 2 · TOKYO 08:00–17:00 → left 33.333% width 37.5% -->
+            <div class="lane">
+              <div class="arc" style="left:33.333%;width:37.5%"><span class="fill" style="width:0"></span></div>
+            </div>
+            <!-- lane 3 · LONDON 15:00–24:00 → left 62.5% width 37.5% -->
+            <div class="lane">
+              <div class="arc" style="left:62.5%;width:37.5%"><span class="fill" style="width:0"></span></div>
+            </div>
+            <!-- lane 4 · NEW YORK 20:00–05:00 wraps midnight → 83.333%+16.667% and 0%+20.833% -->
+            <div class="lane">
+              <div class="arc nydie" style="left:0;width:20.833%"><span class="fill" style="width:100%"></span></div>
+              <div class="arc ny" style="left:83.333%;width:16.667%"><span class="fill" style="width:100%"></span></div>
+              <span class="seam a"></span>
+            </div>
+            <!-- ignition spark where Sydney lights, at the NOW coordinate -->
+            <span class="spark pulse" style="left:calc(20.833% - 3.5px);top:6px"></span>
+            <!-- NOW cursor · 05:00 = 20.833% of 24h -->
+            <span class="nowcur" style="left:20.833%"></span>
+            <span class="nowchip" style="left:20.833%">NOW 05:00 · HANDOVER</span>
+          </div>
+         </div>
+          <div class="axis">
+            <span style="left:0%">00</span><span style="left:12.5%">03</span><span style="left:25%">06</span>
+            <span style="left:37.5%">09</span><span style="left:50%">12</span><span style="left:62.5%">15</span>
+            <span style="left:75%">18</span><span style="left:87.5%">21</span><span style="left:100%">24</span>
+          </div>
+        </div>
+        <div class="rail-legend">
+          <em><b class="arc syd" style="position:static"></b>SYDNEY · IGNITING</em>
+          <em><b style="background:rgba(134,149,168,.2)"></b>TOKYO 08–17</em>
+          <em><b style="background:rgba(134,149,168,.2)"></b>LONDON 15–24</em>
+          <em><b style="background:rgba(240,179,78,.5)"></b>NEW YORK · DYING</em>
+          <em style="margin-left:auto;color:var(--accent)">◆ THE LIGHT SEAM — THE TAPE HANDED WESTWARD ACROSS ONE LINE</em>
+        </div>
+      </section>
+
+      <!-- ═════════ AI MICRO DESK ═════════ -->
+      <div class="sechead">
+        <h2>AI micro desk</h2>
+        <span class="mlabel" style="letter-spacing:.1em">Read at 05:00 Manila · pre-Tokyo</span>
+        <span class="hr"></span>
+        <span class="tag-ai">AI DESK · SAMPLE OUTPUT · NOT ADVICE</span>
+      </div>
+      <section class="desk">
+
+        <article class="card inst">
+          <div class="inst-top">
+            <div><div class="inst-sym">XAUUSD</div><div class="inst-px">4,671.2 <span class="pos">▲0.24%</span></div></div>
+            <span class="verdict bull">▲ BULLISH</span>
+          </div>
+          <div class="inst-mid">
+            <div class="gauge" style="--deg:280.8deg"><span class="v"><b>78%</b><i>CONF</i></span></div>
+            <div class="inst-bias">
+              <div class="bias-row"><span>BIAS WEIGHT</span><span>78 / 22</span></div>
+              <div class="bias-bar"><i class="g" style="width:78%"></i><i class="r" style="width:22%"></i></div>
+              <div class="inst-note"><span>HORIZON · TO NY OPEN</span><span style="margin-left:auto">MODEL v3</span></div>
+            </div>
+          </div>
+          <p class="inst-body">Gold is holding its highs after a slow <b>+0.24%</b> grind through the New York close, and nothing in the overnight tape argues with it. Sydney's bid will stay thin until Tokyo joins at <b>08:00</b>, so the first three hours are noise, not signal. The real risk is the <b>GDP Q/Q</b> print nine hours out.</p>
+          <div class="inst-foot"><span class="k">INVALIDATION</span><span class="room">ROOM 30.2</span><span class="n">4,641.0</span></div>
+        </article>
+
+        <article class="card inst">
+          <div class="inst-top">
+            <div><div class="inst-sym">US100</div><div class="inst-px">24,812 <span class="pos">▲ DRIFT</span></div></div>
+            <span class="verdict bull">▲ BULLISH</span>
+          </div>
+          <div class="inst-mid">
+            <div class="gauge" style="--deg:230.4deg"><span class="v"><b>64%</b><i>CONF</i></span></div>
+            <div class="inst-bias">
+              <div class="bias-row"><span>BIAS WEIGHT</span><span>64 / 36</span></div>
+              <div class="bias-bar"><i class="g" style="width:64%"></i><i class="r" style="width:36%"></i></div>
+              <div class="inst-note"><span>HORIZON · TO NY OPEN</span><span style="margin-left:auto">MODEL v3</span></div>
+            </div>
+          </div>
+          <p class="inst-body">The index drifted up through the overnight with no volume behind it, which is a direction rather than a trend. Breadth is narrow — the move is carried by a handful of names, not the tape. Confirmation waits for tonight's <b>New York open at 20:00</b> Manila; until then this is a lean, not a position.</p>
+          <div class="inst-foot"><span class="k">INVALIDATION</span><span class="room">ROOM 182</span><span class="n">24,630</span></div>
+        </article>
+
+        <article class="card inst">
+          <div class="inst-top">
+            <div><div class="inst-sym">US30</div><div class="inst-px">46,930 <span class="neg">▼ LAGGING</span></div></div>
+            <span class="verdict bear">▼ BEARISH</span>
+          </div>
+          <div class="inst-mid">
+            <div class="gauge" style="--deg:205.2deg"><span class="v"><b>57%</b><i>CONF</i></span></div>
+            <div class="inst-bias">
+              <div class="bias-row"><span>BIAS WEIGHT</span><span>43 / 57</span></div>
+              <div class="bias-bar"><i class="g" style="width:43%"></i><i class="r" style="width:57%"></i></div>
+              <div class="inst-note"><span>HORIZON · TO NY OPEN</span><span style="margin-left:auto">MODEL v3</span></div>
+            </div>
+          </div>
+          <p class="inst-body">The Dow has lagged the US100 for three straight sessions and the cyclicals inside it are heavy. Price sits under the <b>47,120</b> supply shelf with a 190-point gap to fill before any of that changes. Conviction is low: this is a relative-weakness read, not a short signal, and a strong <b>GDP</b> print would erase it.</p>
+          <div class="inst-foot"><span class="k">INVALIDATION</span><span class="room">GAP 190</span><span class="n">47,120</span></div>
+        </article>
+
+        <article class="card inst">
+          <div class="inst-top">
+            <div><div class="inst-sym">BTCUSD</div><div class="inst-px">111,890 <span class="neg">▼560</span></div></div>
+            <span class="verdict bear">▼ BEARISH</span>
+          </div>
+          <div class="inst-mid">
+            <div class="gauge" style="--deg:219.6deg"><span class="v"><b>61%</b><i>CONF</i></span></div>
+            <div class="inst-bias">
+              <div class="bias-row"><span>BIAS WEIGHT</span><span>39 / 61</span></div>
+              <div class="bias-bar"><i class="g" style="width:39%"></i><i class="r" style="width:61%"></i></div>
+              <div class="inst-note"><span>HORIZON · TO NY OPEN</span><span style="margin-left:auto">MODEL v3</span></div>
+            </div>
+          </div>
+          <p class="inst-body">Realized volatility keeps compressing while price fails at <b>113,200</b> for the second time, and a market that cannot take its own high usually gives some back. Liquidity is thin in the Sydney window and stays thin until Tokyo. Down <b>560</b> on the session with 1,310 of room to the failed level overhead.</p>
+          <div class="inst-foot"><span class="k">INVALIDATION</span><span class="room">ROOM 1,310</span><span class="n">113,200</span></div>
+        </article>
+
+      </section>
+
+      <!-- ═════════ ANALYTICS GRID · row 1 ═════════
+           Queue narrowed 6→4 cols. The two freed columns (plus one from equity)
+           become the NET DAILY P&L instrument, promoted out of a footer strip. -->
+      <section class="grid12">
+
+        <article class="card c5">
+          <div class="card-head">
+            <span class="t">Equity / drawdown</span>
+            <span class="r">
+              <span class="mlabel">Aug 17 → Sep 1</span>
+              <span class="seg"><button class="on">1M</button><button>3M</button><button>ALL</button></span>
+            </span>
+          </div>
+          <div class="pad">
+            <div class="eq-chart">
+              <!-- 13 closes, $49K–$54K scale · x 40→790 step 62.5 -->
+              <svg viewBox="0 0 820 280" preserveAspectRatio="none" aria-label="Equity curve $50,000 to $53,253">
+                <defs>
+                  <linearGradient id="eqline" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0" stop-color="#1f9c74"/><stop offset="1" stop-color="#34d399"/>
+                  </linearGradient>
+                  <linearGradient id="eqfill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="rgba(52,211,153,.20)"/><stop offset="1" stop-color="rgba(52,211,153,0)"/>
+                  </linearGradient>
+                </defs>
+                <line x1="0" y1="30" x2="820" y2="30" stroke="#151d28" vector-effect="non-scaling-stroke"/>
+                <line x1="0" y1="150" x2="820" y2="150" stroke="#151d28" stroke-dasharray="3 5" vector-effect="non-scaling-stroke"/>
+                <line x1="0" y1="270" x2="820" y2="270" stroke="#1b2532" vector-effect="non-scaling-stroke"/>
+                <polygon fill="url(#eqfill)" points="40,222 102.5,187.7 165,138 227.5,129.2 290,120.8 352.5,112.9 415,92.1 477.5,111 540,130.2 602.5,96.3 665,81.6 727.5,73.7 790,65.9 790,270 40,270"/>
+                <polyline fill="none" stroke="url(#eqline)" stroke-width="2.25" stroke-linejoin="round" vector-effect="non-scaling-stroke"
+                  points="40,222 102.5,187.7 165,138 227.5,129.2 290,120.8 352.5,112.9 415,92.1 477.5,111 540,130.2 602.5,96.3 665,81.6 727.5,73.7 790,65.9"/>
+                <circle cx="415" cy="92.1" r="3.2" fill="#080b12" stroke="#8695a8" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+                <circle cx="540" cy="130.2" r="3.2" fill="#080b12" stroke="#f87171" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+                <circle cx="790" cy="65.9" r="4.5" fill="#f97316"/>
+                <circle cx="790" cy="65.9" r="4.5" fill="none" stroke="#f97316" stroke-width="1.5" vector-effect="non-scaling-stroke">
+                  <animate attributeName="r" values="4.5;13" dur="2.4s" repeatCount="indefinite"/>
+                  <animate attributeName="opacity" values=".85;0" dur="2.4s" repeatCount="indefinite"/>
+                </circle>
+              </svg>
+              <span class="eq-y" style="top:6%">$54K</span>
+              <span class="eq-y" style="top:50%">$51.5K</span>
+              <span class="eq-y" style="top:92%">$49K</span>
+              <span class="eq-x" style="left:4%">AUG 17</span>
+              <span class="eq-x" style="left:48%">AUG 24</span>
+              <span class="eq-x" style="right:2%">SEP 1</span>
+              <div class="eq-last">$53,253<small>AT HIGHS</small></div>
+            </div>
+            <div class="dd">
+              <!-- drawdown from peak 52,707 · 0–2% scale -->
+              <svg viewBox="0 0 820 40" preserveAspectRatio="none" aria-label="Drawdown from peak">
+                <line x1="0" y1="4" x2="820" y2="4" stroke="#151d28" vector-effect="non-scaling-stroke"/>
+                <polygon fill="rgba(248,113,113,.20)" stroke="#f87171" stroke-width="1.25" vector-effect="non-scaling-stroke"
+                  points="40,4 415,4 477.5,17 540,31.2 602.5,7.4 665,4 790,4"/>
+              </svg>
+              <span>DD FROM PEAK · 0–2% · MAX −1.51% ($795 · AUG 26)</span>
+            </div>
+          </div>
+          <div class="stats">
+            <div class="stat"><span class="mlabel">Trades</span><span class="v">58</span></div>
+            <div class="stat"><span class="mlabel">Win rate</span><span class="v">48.3%</span></div>
+            <div class="stat"><span class="mlabel">Profit fctr</span><span class="v">1.74</span></div>
+            <div class="stat"><span class="mlabel">Expectancy</span><span class="v">$56.09</span></div>
+            <div class="stat"><span class="mlabel">Avg W / L</span><span class="v"><span class="pos">$274</span><span style="color:var(--text-faint)">/</span><span class="neg">$152</span></span></div>
+            <div class="stat"><span class="mlabel">Max DD</span><span class="v neg">$795.00</span></div>
+            <div class="stat"><span class="mlabel">Curr DD</span><span class="v">$0.00</span></div>
+          </div>
+        </article>
+
+        <article class="card c3">
+          <div class="card-head"><span class="t">Net daily P&amp;L</span><span class="r mlabel">12 trading days</span></div>
+          <div class="pad">
+            <div class="bars">
+              <!-- up-bars scaled to the +1,036 max within the 72.1% positive row; dn-bars to −400 within the 27.9% negative row -->
+              <div class="barcol"><span class="lb top">715</span><span class="up" style="height:69.0%"></span></div>
+              <div class="barcol"><span class="lb top">1,036</span><span class="up" style="height:100%"></span></div>
+              <div class="barcol"><span class="lb top">183</span><span class="up" style="height:17.7%"></span></div>
+              <div class="barcol"><span class="lb top">174</span><span class="up" style="height:16.8%"></span></div>
+              <div class="barcol"><span class="lb top">165</span><span class="up" style="height:15.9%"></span></div>
+              <div class="barcol"><span class="lb top">434</span><span class="up" style="height:41.9%"></span></div>
+              <div class="barcol"><span></span><span class="dn" style="height:98.6%"></span><span class="lb bot">−395</span></div>
+              <div class="barcol"><span></span><span class="dn" style="height:100%"></span><span class="lb bot">−400</span></div>
+              <div class="barcol"><span class="lb top">706</span><span class="up" style="height:68.1%"></span></div>
+              <div class="barcol"><span class="lb top">307</span><span class="up" style="height:29.6%"></span></div>
+              <div class="barcol"><span class="lb top">164</span><span class="up" style="height:15.8%"></span></div>
+              <div class="barcol"><span class="lb top">164</span><span class="up" style="height:15.8%"></span></div>
+            </div>
+            <div class="bars-foot">
+              <span>GREEN <b class="pos">10</b></span>
+              <span>RED <b class="neg">2</b></span>
+              <span>BEST <b class="pos">+$1,036</b></span>
+              <span>WORST <b class="neg">−$400</b></span>
+              <span style="margin-left:auto">NET <b class="pos">+$3,253</b></span>
+            </div>
+          </div>
+        </article>
+
+        <!-- REVIEW QUEUE · narrowed 6 → 4 of 12 columns -->
+        <article class="card c4">
+          <div class="card-head">
+            <span class="t">Review queue</span>
+            <span class="r">
+              <span class="mlabel">Day-grouped</span>
+              <span class="chip-est">58 PENDING</span>
+            </span>
+          </div>
+          <div class="q-head"><span>Date</span><span>Symbol</span><span>Trd</span><span>Net P&amp;L</span><span>Reason</span><span>Source</span></div>
+          <div class="q-row"><span class="d">SEP 1</span><span class="s">MGC</span><span class="t">1</span><span class="p pos">+$164.00</span><span class="r">No notes · fill estimated</span><span class="src est">EST</span></div>
+          <div class="q-row"><span class="d">AUG 31</span><span class="s">MGC</span><span class="t">1</span><span class="p pos">+$164.00</span><span class="r">No notes</span><span class="src">CSV</span></div>
+          <div class="q-row"><span class="d">AUG 28</span><span class="s">MGC</span><span class="t">14</span><span class="p pos">+$307.00</span><span class="r">14 fills, no tags</span><span class="src">CSV</span></div>
+          <div class="q-row"><span class="d">AUG 27</span><span class="s">MGC</span><span class="t">4</span><span class="p pos">+$706.00</span><span class="r">Missing screenshots</span><span class="src">CSV</span></div>
+          <div class="q-row"><span class="d">AUG 26</span><span class="s">MGC</span><span class="t">3</span><span class="p neg">−$400.00</span><span class="r">Loss day · needs review</span><span class="src">CSV</span></div>
+          <div class="q-row"><span class="d">AUG 25</span><span class="s">MGC</span><span class="t">1</span><span class="p neg">−$395.00</span><span class="r">Loss day · needs review</span><span class="src">CSV</span></div>
+          <div class="q-row"><span class="d">AUG 24</span><span class="s">MGC</span><span class="t">8</span><span class="p pos">+$434.00</span><span class="r">8 fills, no tags</span><span class="src">CSV</span></div>
+          <div class="q-row"><span class="d">AUG 21</span><span class="s">MGC</span><span class="t">1</span><span class="p pos">+$165.00</span><span class="r">No notes</span><span class="src">CSV</span></div>
+          <div class="q-foot">
+            <span><b>8</b> of 12 days shown</span>
+            <span>SHOWN <b class="pos">+$1,145.00</b> · 33 TRADES</span>
+            <a href="#">REVIEW ALL →</a>
+          </div>
+        </article>
+      </section>
+
+      <!-- ═════════ ANALYTICS GRID · row 2 ═════════ -->
+      <section class="grid12">
+
+        <article class="card c5">
+          <div class="card-head"><span class="t">Trading days · September 2026</span><span class="r mlabel">Aug carry · Mon–Fri</span></div>
+          <div class="cal">
+            <div class="cal-h"><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span></div>
+            <div class="cal-r">
+              <div class="cell carry"><span class="day">AUG 17</span><span class="pnl pos">+$715</span><span class="n">8 TRADES</span></div>
+              <div class="cell carry"><span class="day">AUG 18</span><span class="pnl pos">+$1,036</span><span class="n">15 TRADES</span></div>
+              <div class="cell carry"><span class="day">AUG 19</span><span class="pnl pos">+$183</span><span class="n">1 TRADE</span></div>
+              <div class="cell carry"><span class="day">AUG 20</span><span class="pnl pos">+$174</span><span class="n">1 TRADE</span></div>
+              <div class="cell carry"><span class="day">AUG 21</span><span class="pnl pos">+$165</span><span class="n">1 TRADE</span></div>
+            </div>
+            <div class="cal-r">
+              <div class="cell carry"><span class="day">AUG 24</span><span class="pnl pos">+$434</span><span class="n">8 TRADES</span></div>
+              <div class="cell carry"><span class="day">AUG 25</span><span class="pnl neg">−$395</span><span class="n">1 TRADE</span></div>
+              <div class="cell carry"><span class="day">AUG 26</span><span class="pnl neg">−$400</span><span class="n">3 TRADES</span></div>
+              <div class="cell carry"><span class="day">AUG 27</span><span class="pnl pos">+$706</span><span class="n">4 TRADES</span></div>
+              <div class="cell carry"><span class="day">AUG 28</span><span class="pnl pos">+$307</span><span class="n">14 TRADES</span></div>
+            </div>
+            <div class="cal-r">
+              <div class="cell carry"><span class="day">AUG 31</span><span class="pnl pos">+$164</span><span class="n">1 TRADE</span></div>
+              <div class="cell"><span class="day">SEP 1</span><span class="pnl pos">+$164</span><span class="n">1 TRADE</span></div>
+              <div class="cell today"><span class="day">SEP 2 · TODAY</span><span class="pnl">$0</span><span class="n">NO TRADES</span></div>
+              <div class="cell dim"><span class="day">3</span><span class="pnl">—</span></div>
+              <div class="cell dim"><span class="day">4</span><span class="pnl">—</span></div>
+            </div>
+            <div class="cal-r">
+              <div class="cell dim"><span class="day">7</span><span class="pnl">—</span></div>
+              <div class="cell dim"><span class="day">8</span><span class="pnl">—</span></div>
+              <div class="cell dim"><span class="day">9</span><span class="pnl">—</span></div>
+              <div class="cell dim"><span class="day">10</span><span class="pnl">—</span></div>
+              <div class="cell dim"><span class="day">11</span><span class="pnl">—</span></div>
+            </div>
+            <div class="cal-r">
+              <div class="cell dim"><span class="day">14</span><span class="pnl">—</span></div>
+              <div class="cell dim"><span class="day">15</span><span class="pnl">—</span></div>
+              <div class="cell dim"><span class="day">16</span><span class="pnl">—</span></div>
+              <div class="cell dim"><span class="day">17</span><span class="pnl">—</span></div>
+              <div class="cell dim"><span class="day">18</span><span class="pnl">—</span></div>
+            </div>
+          </div>
+          <div class="cal-f">
+            <span>AUGUST <b class="pos">+$3,089</b> · 57 TRADES</span>
+            <span>SEPTEMBER <b class="pos">+$164</b> · 1 TRADE</span>
+            <span style="margin-left:auto">ALL TIME <b class="pos">+$3,253</b> · 58 TRADES</span>
+          </div>
+        </article>
+
+        <article class="card c4">
+          <div class="card-head">
+            <span class="t">Market TV</span>
+            <span class="r"><span class="mlabel">Simulated feed</span><span class="tv-live"><i></i>LIVE</span></span>
+          </div>
+          <div class="pad">
+            <div class="tvscreen">
+              <div class="tv-top">
+                <span class="tv-bug">MKT</span><span class="tv-live"><i></i>LIVE</span>
+                <span class="tv-t">05:00 MANILA</span>
+              </div>
+              <div class="tv-main">
+                <div class="tv-q">
+                  <span class="sym">MGC · GOLD</span>
+                  <span class="px">4,671</span>
+                  <span class="chg">▲ 0.24% SESSION</span>
+                </div>
+                <div class="tv-spark">
+                  <svg viewBox="0 0 300 90" preserveAspectRatio="none">
+                    <polyline fill="none" stroke="#34d399" stroke-width="1.6" vector-effect="non-scaling-stroke"
+                      points="0,72 26,66 52,70 78,57 104,60 130,46 156,50 182,37 208,41 234,26 262,30 300,20"/>
+                    <polygon fill="rgba(52,211,153,.09)" points="0,72 26,66 52,70 78,57 104,60 130,46 156,50 182,37 208,41 234,26 262,30 300,20 300,90 0,90"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="tv-l3">
+                <span class="l3tag">DEVELOPING</span>
+                <span class="l3text">SYDNEY OPEN: GOLD HOLDS 4,671 INTO GDP — DESKS EYE 14:00 PRINT</span>
+              </div>
+            </div>
+            <div class="wire">
+              <div class="wrow"><span class="tm">14:00</span><span class="nm">GDP Q/Q</span><span class="imp hi">HIGH</span><span class="cd">IN 9H 00M</span></div>
+              <div class="wrow"><span class="tm">21:00</span><span class="nm">Fed speaker</span><span class="imp md">MED</span><span class="cd">IN 16H</span></div>
+              <div class="wrow"><span class="tm">FRI</span><span class="nm">Tokyo CPI</span><span class="imp md">MED</span><span class="cd">SEP 4</span></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card c3">
+          <div class="card-head"><span class="t">Account &amp; discipline</span><span class="r mlabel">Dock</span></div>
+          <div class="dock">
+            <div class="dchip"><span class="k">ACCOUNT</span><span class="v">TOPSTEP-50K</span><span class="chip-live" style="padding:2px 6px"><i></i>LIVE</span></div>
+            <div class="dchip"><span class="k">DISCIPLINE</span><span class="dmeter"><i style="width:82%"></i></span><span class="v">82</span></div>
+            <div class="dchip"><span class="k">EDGE SCORE</span><span class="dmeter"><i style="width:71%"></i></span><span class="v">71</span></div>
+            <div class="dchip"><span class="k">DAILY LOSS</span><span class="dmeter"><i class="warn" style="width:0%"></i></span><span class="v">$0 / $500</span></div>
+            <div class="dchip"><span class="k">CHECKLIST</span><span class="v pos">5 / 5 ARMED</span></div>
+            <div class="dchip"><span class="k">AVG R</span><span class="v pos">+0.43R</span></div>
+            <div class="dchip"><span class="k">RETURN</span><span class="v pos">+6.51%</span></div>
+          </div>
+        </article>
+      </section>
+
+      <div class="footline">
+        <span>SESSION HORIZON · CONCEPT PREVIEW · SAMPLE DATA · NOTHING LIVE</span>
+        <span class="hr"></span>
+        <span>AI DESK · SAMPLE OUTPUT · NOT ADVICE</span>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+/* only permitted JS: stamp the canonical clock text */
+document.getElementById('clk').textContent = '05:00';
+</script>
+</body>
+</html>

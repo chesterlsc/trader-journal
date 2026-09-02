@@ -1,0 +1,781 @@
+<!doctype html>
+<!--
+  TRADER JOURNAL — FEATURE ADD · CONCEPT 3 — "COMMAND FUSION"
+  ══════════════════════════════════════════════════════════════════════
+  SIGNATURE MOMENT — "ONE GLASS, YOUR MONEY AND THE PLANET":
+  The halved hero and the world session state are not two modules. They
+  are ONE machined card split by a single hairline: +$3,253.00 on the
+  left, the planet on the right. At 05:00 Manila the greeting reads
+  "Good morning, Leon." and only SYDNEY's capsule is lit — oxide glow,
+  bell ringing NOW — while NEW YORK fades out at the far edge, handing
+  the tape over. Every capsule carries the SAME 24h Manila ruler with
+  the same NOW cursor at 20.83%, so the four sessions read as one clock.
+
+  Below it the AI MICRO DESK: four flagship instrument cards, clay-float
+  elevation, a wide precision arc gauge for confidence, the analysis as
+  the body, the verdict tint washing the inset footer.
+
+  SIZING: hero halved (~176px → 108px fused band). Review queue 6/12 →
+  4/12 columns; the two freed columns carry the compact Market TV dock
+  and the accounts / discipline chips.
+
+  CONCEPT PREVIEW · SAMPLE DATA · NOTHING LIVE.
+  Fits 1999×1150 (hero + full session module + all four AI cards land in
+  the first ~900px). No horizontal scroll at 1999 or 1440.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trader Journal — Command Fusion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ═══ Clay V3 tokens ═══════════════════════════════════════════════ */
+:root{
+  --surface-0:#080b12; --surface-1:#0c1119; --surface-2:#111823;
+  --surface-3:#16202d; --surface-inset:#05080e;
+  --line:#151d28; --line-strong:#1b2532;
+  --text:#e6ecf5; --text-soft:#8695a8; --text-faint:#7c8b9e;
+  --accent:#f97316; --accent-strong:#fb8b3a;
+  --pnl-pos:#34d399; --pnl-neg:#f87171; --warn:#f0b34e; --info:#22d3ee;
+
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"Sora","Avenir Next",Avenir,"Segoe UI",system-ui,-apple-system,sans-serif;
+
+  /* clay elevation for a dark ground */
+  --clay-raised:
+    0 16px 30px -16px hsl(220 45% 3% / .8),
+    0 5px 11px -6px hsl(220 45% 3% / .55),
+    inset 0 -7px 14px -7px hsl(220 40% 2% / .55),
+    inset 0 8px 13px -7px hsl(210 20% 85% / .10);
+  --clay-float:
+    0 28px 52px -22px hsl(220 45% 2% / .9),
+    0 10px 20px -10px hsl(220 45% 3% / .6),
+    inset 0 -9px 18px -9px hsl(220 40% 2% / .6),
+    inset 0 9px 15px -8px hsl(210 20% 85% / .12);
+  --clay-pressed:
+    inset 0 4px 9px -2px hsl(220 45% 2% / .72),
+    inset 0 -2px 5px -3px hsl(210 20% 85% / .05);
+  --edge:inset 0 1px 0 rgba(214,224,238,.08);   /* 1px glass top highlight */
+  --hair:1px solid var(--line);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{background:#080b12}
+body{
+  background:#080b12;color:var(--text);
+  font-family:var(--mono);font-size:12px;
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum";
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+.up{color:var(--pnl-pos)} .down{color:var(--pnl-neg)}
+.lbl{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-faint);font-weight:500;white-space:nowrap}
+.dsp{font-family:var(--sans);letter-spacing:-.02em}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes crawl{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes bell{0%,100%{box-shadow:0 0 0 1px rgba(249,115,22,.55),0 0 22px -4px rgba(249,115,22,.55),var(--edge)}
+                50%{box-shadow:0 0 0 1px rgba(249,115,22,.85),0 0 34px -2px rgba(249,115,22,.85),var(--edge)}}
+
+/* ═══ App frame ════════════════════════════════════════════════════ */
+.app{display:grid;grid-template-columns:56px minmax(0,1fr);min-height:100dvh}
+.rail{
+  background:var(--surface-1);border-right:var(--hair);
+  display:flex;flex-direction:column;align-items:center;padding:10px 0 12px;gap:5px;
+}
+.stamp{
+  width:32px;height:32px;border:1px solid var(--line-strong);border-radius:8px;
+  background:var(--surface-2);box-shadow:var(--clay-raised);
+  display:grid;place-items:center;font-weight:700;font-size:12px;letter-spacing:.04em;margin-bottom:10px;
+}
+.rail nav{display:flex;flex-direction:column;gap:4px}
+.rlink{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;color:var(--text-faint)}
+.rlink svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.rlink.on{background:var(--surface-3);color:var(--text);box-shadow:var(--clay-raised)}
+.rail .moon{margin-top:auto}
+.main{display:grid;grid-template-rows:38px minmax(0,1fr);min-width:0}
+
+/* ═══ LIVE ticker bar ══════════════════════════════════════════════ */
+.tickbar{background:var(--surface-1);border-bottom:var(--hair);display:flex;align-items:center;gap:14px;padding:0 14px;min-width:0}
+.livechip{
+  display:flex;align-items:center;gap:6px;flex:none;border:1px solid rgba(34,211,238,.35);
+  border-radius:5px;padding:2px 8px;color:var(--info);font-size:9px;letter-spacing:.18em;font-weight:700;
+  box-shadow:0 0 18px -8px rgba(34,211,238,.8),var(--edge);
+}
+.livechip i{width:6px;height:6px;border-radius:50%;background:var(--info);animation:pulse 1.6s ease-in-out infinite}
+.clock{flex:none;color:var(--text-soft);font-size:10.5px;letter-spacing:.08em}
+.crawlmask{flex:1;overflow:hidden;min-width:0;mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent)}
+.crawl{display:flex;width:max-content;gap:34px;animation:crawl 52s linear infinite;white-space:nowrap;font-size:10.5px}
+.crawl span{color:var(--text-soft)} .crawl b{color:var(--text);font-weight:600;margin-right:6px}
+.tickbar .tag{flex:none;font-size:8px;letter-spacing:.16em;color:var(--warn);opacity:.8}
+
+/* ═══ Glass stack ══════════════════════════════════════════════════ */
+.glass{display:flex;flex-direction:column;gap:12px;padding:12px;min-width:0}
+.card{
+  background:var(--surface-1);border:var(--hair);border-radius:14px;
+  box-shadow:var(--clay-raised);min-width:0;
+}
+.phead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 13px;border-bottom:var(--hair);flex:none}
+.phead .t{font-size:10px;letter-spacing:.18em;font-weight:700;color:var(--text)}
+.phead .m{font-size:9px;color:var(--text-faint);letter-spacing:.1em;white-space:nowrap}
+.seg{display:flex;border:1px solid var(--line-strong);border-radius:7px;overflow:hidden;flex:none;background:var(--surface-inset)}
+.seg span{padding:3px 9px;font-size:9px;color:var(--text-faint);letter-spacing:.12em;cursor:pointer}
+.seg .sel{background:var(--surface-3);color:var(--text);box-shadow:var(--edge)}
+
+/* ═══ THE FUSED BAND — money | hairline | planet ═══════════════════ */
+.fusion{
+  display:flex;align-items:stretch;min-height:108px;
+  background:linear-gradient(180deg,var(--surface-2),var(--surface-1) 62%);
+  border:var(--hair);border-radius:14px;box-shadow:var(--clay-float);overflow:hidden;
+}
+.money{flex:0 1 55%;display:flex;align-items:center;gap:clamp(12px,1.5vw,26px);padding:10px 16px;min-width:0}
+.split{flex:none;width:1px;background:linear-gradient(180deg,transparent,var(--line-strong) 18%,var(--line-strong) 82%,transparent);
+       box-shadow:1px 0 0 rgba(214,224,238,.05)}
+.planet{flex:1 1 45%;display:flex;flex-direction:column;gap:6px;padding:10px 16px 10px 18px;min-width:0}
+
+/* money side */
+.pnlblock{flex:none;display:flex;flex-direction:column;gap:2px}
+.pnlblock .big{font-family:var(--sans);font-weight:800;font-size:clamp(28px,2.05vw,36px);line-height:1.04;letter-spacing:-.028em}
+.balline{display:flex;align-items:baseline;gap:8px;margin-top:1px}
+.balline .v{font-size:15px;font-weight:600}
+.balline .st{font-size:9px;color:var(--text-faint);letter-spacing:.08em}
+.eye{border:1px solid var(--line-strong);background:var(--surface-2);color:var(--text-soft);
+     border-radius:5px;width:22px;height:17px;display:grid;place-items:center;cursor:pointer;box-shadow:var(--edge)}
+.eye svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.5}
+.nowfigs{flex:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px clamp(8px,1vw,18px);min-width:0}
+.fig{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fig .v{font-size:11.5px;font-weight:600;white-space:nowrap}
+.fig.next .v{color:var(--accent-strong)}
+.streak{display:inline-flex;gap:3px;margin-right:5px;vertical-align:1px}
+.streak i{width:6px;height:6px;border-radius:2px;background:var(--pnl-pos);box-shadow:0 0 6px -1px rgba(52,211,153,.9)}
+.ctrls{flex:none;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.ctrlrow{display:flex;align-items:center;gap:6px}
+.btn{font-family:var(--mono);font-size:10px;letter-spacing:.1em;border-radius:8px;padding:7px 12px;cursor:pointer;white-space:nowrap}
+.btn.ghost{background:var(--surface-2);border:1px solid var(--line-strong);color:var(--text-soft);box-shadow:var(--clay-raised)}
+.btn.primary{background:linear-gradient(180deg,var(--accent-strong),var(--accent));border:1px solid #c85c0d;color:#150900;font-weight:700;
+             box-shadow:0 10px 22px -12px rgba(249,115,22,.9),var(--edge)}
+.btn.primary kbd{font-family:var(--mono);font-weight:700;opacity:.7;margin-left:7px}
+.est{border:1px solid var(--line-strong);background:var(--surface-inset);border-radius:6px;padding:3px 7px;font-size:9px;letter-spacing:.14em;color:var(--text-faint)}
+
+/* planet side — greeting + four session capsules */
+.greet{display:flex;align-items:baseline;justify-content:space-between;gap:12px;min-width:0}
+.greet .hi{font-family:var(--sans);font-weight:700;font-size:clamp(15px,1.1vw,19px);letter-spacing:-.02em;white-space:nowrap}
+.greet .hi em{font-style:normal;color:var(--text-soft)}
+.greet .meta{font-size:9px;letter-spacing:.14em;color:var(--text-faint);white-space:nowrap}
+.caps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;flex:1;min-width:0}
+.cap{
+  position:relative;background:var(--surface-2);border:1px solid var(--line-strong);border-radius:10px;
+  padding:6px 8px 7px;display:flex;flex-direction:column;gap:4px;min-width:0;box-shadow:var(--clay-raised);
+}
+.cap .r1{display:flex;align-items:baseline;justify-content:space-between;gap:6px;min-width:0}
+.cap .city{font-family:var(--sans);font-weight:700;font-size:10.5px;letter-spacing:.1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cap .loc{font-size:8.5px;color:var(--text-faint);white-space:nowrap}
+.cap .r2{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
+.cap .state{font-size:8px;letter-spacing:.16em;font-weight:700;color:var(--text-faint)}
+.cap .cd{font-size:10px;font-weight:600;color:var(--text-soft);white-space:nowrap}
+/* the shared 24h Manila ruler — same scale in all four capsules */
+.ruler{position:relative;height:5px;border-radius:3px;background:var(--surface-inset);box-shadow:var(--clay-pressed);overflow:hidden}
+.ruler .win{position:absolute;top:0;bottom:0;background:rgba(134,149,168,.28)}
+.ruler .now{position:absolute;top:-2px;bottom:-2px;left:20.833%;width:1.5px;background:var(--accent);
+            box-shadow:0 0 8px rgba(249,115,22,.9)}
+/* live state — SYDNEY */
+.cap.live{background:linear-gradient(180deg,#1a1206,var(--surface-2) 70%);border-color:rgba(249,115,22,.55);animation:bell 2.6s ease-in-out infinite}
+.cap.live .city{color:var(--accent-strong)}
+.cap.live .state,.cap.live .cd{color:var(--accent-strong)}
+.cap.live .ruler .win{background:linear-gradient(90deg,rgba(249,115,22,.85),rgba(249,115,22,.18))}
+/* pre-market */
+.cap.pre .state{color:var(--warn)}
+.cap.pre .ruler .win{background:rgba(240,179,78,.35)}
+/* closing / handing over — fades at the far edge */
+.cap.out{opacity:.52}
+.cap.out .state{color:var(--info)}
+.cap.out .ruler .win{background:rgba(34,211,238,.32)}
+.cap.shut{opacity:.62}
+
+/* ═══ AI MICRO DESK ════════════════════════════════════════════════ */
+.deskhead{display:flex;align-items:center;gap:12px;padding:0 2px}
+.deskhead .t{font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:.2em}
+.deskhead .m{font-size:9px;letter-spacing:.12em;color:var(--text-faint)}
+.deskhead .warntag{margin-left:auto;font-size:8.5px;letter-spacing:.16em;color:var(--warn);
+  border:1px solid rgba(240,179,78,.32);border-radius:6px;padding:3px 8px;background:rgba(240,179,78,.05)}
+.desk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.ai{
+  display:flex;flex-direction:column;border-radius:14px;border:1px solid var(--line-strong);
+  background:linear-gradient(180deg,var(--surface-3),var(--surface-1) 46%);
+  box-shadow:var(--clay-float);overflow:hidden;min-width:0;
+}
+.ai .head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 13px 8px}
+.ai .sym{font-family:var(--sans);font-weight:800;font-size:17px;letter-spacing:-.01em;line-height:1.1}
+.ai .px{font-size:11px;color:var(--text-soft);letter-spacing:.06em;margin-top:2px}
+.verdict{
+  font-size:9px;font-weight:700;letter-spacing:.16em;padding:5px 9px;border-radius:8px;flex:none;
+  border:1px solid var(--vb);color:var(--v);background:var(--vw);box-shadow:var(--clay-raised)
+}
+.ai.bull{--v:var(--pnl-pos);--vb:rgba(52,211,153,.45);--vw:rgba(52,211,153,.08)}
+.ai.bear{--v:var(--pnl-neg);--vb:rgba(248,113,113,.45);--vw:rgba(248,113,113,.08)}
+/* wide precision arc gauge */
+.gauge{padding:0 10px;position:relative}
+.gauge svg{display:block;width:100%;height:auto}
+.gauge .track{fill:none;stroke:var(--surface-inset);stroke-width:9;stroke-linecap:round}
+/* machined notches, cut across the filled arc AND the empty track */
+.gauge .ticks{fill:none;stroke:rgba(5,8,14,.75);stroke-width:11;stroke-dasharray:1.6 18.35}
+.gauge .fill{fill:none;stroke:url(#steel);stroke-width:9;stroke-linecap:butt;stroke-dasharray:var(--dash) 400}
+.gauge .dot{fill:none;stroke:var(--text);stroke-width:9;stroke-linecap:round;stroke-dasharray:.01 400;stroke-dashoffset:calc(0px - var(--dash) * 1px)}
+.gauge .num{fill:var(--text);font-family:var(--mono);font-weight:700;font-size:34px;text-anchor:middle}
+.gauge .cap2{fill:var(--text-faint);font-family:var(--mono);font-size:9px;letter-spacing:2.6px;text-anchor:middle}
+.ai .body{
+  font-family:var(--sans);font-size:12.5px;line-height:1.52;color:var(--text-soft);
+  padding:2px 13px 10px;flex:1;min-height:0;
+}
+.ai .body b{color:var(--text);font-weight:600}
+.ai .foot{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:8px 13px 9px;
+  border-top:1px solid var(--line-strong);background:linear-gradient(180deg,var(--vw),rgba(5,8,14,.7));
+  box-shadow:var(--clay-pressed);
+}
+.ai .foot .k{font-size:8px;letter-spacing:.14em;color:var(--text-faint);white-space:nowrap}
+.ai .foot .n{font-size:12px;font-weight:600;margin-top:2px;white-space:nowrap}
+.ai .foot .n.acc{color:var(--v)}
+
+/* ═══ Analytics grid — 12 columns ══════════════════════════════════ */
+.analytics{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;align-items:stretch}
+.span4{grid-column:span 4} .span2{grid-column:span 2}
+.pane{display:flex;flex-direction:column;min-height:470px;overflow:hidden}
+.colstack{display:flex;flex-direction:column;gap:12px;min-width:0}
+
+/* equity + drawdown */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);flex:none}
+.stat{background:var(--surface-1);padding:7px 10px}
+.stat .n{font-size:13px;font-weight:600;margin-top:2px;white-space:nowrap}
+.curvewrap{flex:1;min-height:0;position:relative;padding:6px 10px 4px;background:var(--surface-inset);box-shadow:var(--clay-pressed)}
+.curvewrap svg{position:absolute;inset:0;width:100%;height:100%}
+.axlab{position:absolute;font-size:8.5px;color:var(--text-faint);letter-spacing:.08em}
+
+/* calendar */
+.calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));
+  grid-template-rows:auto repeat(5,minmax(0,1fr));gap:3px;padding:8px 10px;flex:1;min-height:0}
+.dow{font-size:8px;letter-spacing:.12em;color:var(--text-faint);text-align:center;padding-bottom:2px}
+.day{
+  border-radius:6px;border:1px solid var(--line);background:var(--surface-2);
+  padding:3px 4px;display:flex;flex-direction:column;justify-content:space-between;min-width:0;min-height:24px;overflow:hidden;
+}
+.day .d{font-size:9px;color:var(--text-faint)}
+.day .p{font-size:8.5px;line-height:1.35;font-weight:600;white-space:nowrap;overflow:hidden}
+.day.pos{background:rgba(52,211,153,.11);border-color:rgba(52,211,153,.3)} .day.pos .p{color:var(--pnl-pos)}
+.day.pos.strong{background:rgba(52,211,153,.2)}
+.day.carry{opacity:.55}
+.day.future{background:var(--surface-1);opacity:.55}
+.day.weekend{background:var(--surface-inset);opacity:.4}
+.day.today{border-color:var(--accent);box-shadow:0 0 0 1px rgba(249,115,22,.35),0 0 18px -6px rgba(249,115,22,.7)}
+.day.today .d{color:var(--accent-strong)}
+.day .ev{font-size:7px;letter-spacing:.06em;color:var(--warn);white-space:nowrap;overflow:hidden}
+.pfoot{display:flex;justify-content:space-between;gap:8px;padding:6px 11px;border-top:var(--hair);
+       background:var(--surface-inset);font-size:9.5px;color:var(--text-soft);letter-spacing:.06em;flex:none}
+
+/* daily P&L bars — a 4-row grid so every bar shares one zero line */
+.bars{display:flex;align-items:stretch;gap:4px;padding:10px 10px 6px;flex:1;min-height:0}
+.bar{flex:1;display:grid;grid-template-rows:minmax(0,72fr) 1px minmax(0,28fr) auto;min-width:0}
+.bar .p{grid-row:1;align-self:end;width:100%;border-radius:3px 3px 0 0;
+        background:linear-gradient(180deg,#3ee0a6,rgba(52,211,153,.35))}
+.bar .z{grid-row:2;background:var(--line-strong)}
+.bar .n{grid-row:3;align-self:start;width:100%;border-radius:0 0 3px 3px;
+        background:linear-gradient(180deg,rgba(248,113,113,.35),#f87171)}
+.bar .lb{grid-row:4;font-size:7.5px;color:var(--text-faint);margin-top:3px;text-align:center}
+
+/* review queue */
+.qwrap{flex:1;min-height:0;overflow:auto}
+table.q{width:100%;border-collapse:collapse;font-size:11px}
+table.q th{position:sticky;top:0;background:var(--surface-inset);color:var(--text-faint);
+  font-size:8.5px;letter-spacing:.14em;text-align:left;font-weight:500;padding:6px 9px;border-bottom:1px solid var(--line-strong)}
+table.q td{padding:6px 9px;border-bottom:var(--hair);white-space:nowrap}
+table.q td.r,table.q th.r{text-align:right}
+table.q tr:hover td{background:var(--surface-2)}
+.badge{font-size:7.5px;border:1px solid var(--line-strong);border-radius:4px;padding:1px 5px;color:var(--text-faint);letter-spacing:.1em}
+.badge.est{color:var(--warn);border-color:rgba(240,179,78,.35)}
+.cnt{background:var(--surface-3);border:1px solid var(--line-strong);border-radius:5px;padding:1px 7px;font-size:9px;color:var(--warn)}
+
+/* market TV dock */
+.tvscreen{position:relative;margin:10px;border-radius:10px;overflow:hidden;aspect-ratio:16/9;
+  background:var(--surface-inset);border:1px solid var(--line-strong);box-shadow:var(--clay-pressed)}
+.tvscreen>svg{position:absolute;inset:0;width:100%;height:100%}
+.tvbug{position:absolute;left:8px;top:8px;background:rgba(8,11,18,.8);border:1px solid var(--line-strong);
+  border-radius:5px;padding:2px 7px;font-size:8.5px;font-weight:700;letter-spacing:.2em;color:var(--text-soft)}
+.tvlive{position:absolute;right:8px;top:8px;display:flex;align-items:center;gap:4px;background:rgba(6,26,31,.85);
+  border:1px solid rgba(34,211,238,.45);border-radius:5px;padding:2px 7px;font-size:8px;font-weight:700;letter-spacing:.2em;color:var(--info);
+  box-shadow:0 0 16px -6px rgba(34,211,238,.9)}
+.tvlive i{width:4px;height:4px;border-radius:50%;background:var(--info);animation:pulse 1.4s ease-in-out infinite}
+.tvlower{position:absolute;left:0;right:0;bottom:0;padding:14px 8px 7px;
+  background:linear-gradient(180deg,rgba(5,8,14,0),rgba(5,8,14,.94) 40%)}
+.tvhl{border-left:2px solid var(--accent);padding:4px 7px;background:rgba(12,17,25,.9);
+  font-family:var(--sans);font-weight:600;font-size:9.5px;line-height:1.35;color:var(--text)}
+.tvbigpx{position:absolute;right:10px;top:26%;font-family:var(--sans);font-weight:800;font-size:22px;color:rgba(230,236,245,.1)}
+
+/* accounts / discipline chips */
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:10px}
+.chip{border:1px solid var(--line-strong);background:var(--surface-2);border-radius:8px;padding:5px 9px;
+  box-shadow:var(--clay-raised);display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 44%;overflow:hidden}
+.chip .n{font-size:11px;font-weight:600;white-space:nowrap}
+.chip.ok .n{color:var(--pnl-pos)}
+
+/* bottom honesty dock */
+.dock{display:flex;align-items:center;gap:14px;padding:0 12px;height:28px;border-radius:9px;
+  background:var(--surface-1);border:var(--hair);box-shadow:var(--clay-raised);
+  font-size:9px;letter-spacing:.12em;color:var(--text-faint);overflow:hidden;white-space:nowrap}
+.dock .honesty{margin-left:auto;color:var(--warn);opacity:.85}
+kbd{background:var(--surface-inset);border:1px solid var(--line-strong);border-radius:4px;padding:1px 4px;font-size:8px;color:var(--text-soft)}
+
+/* ═══ Compression for 1440×900 — nothing clips, everything shrinks ═ */
+@media (max-width:1700px){
+  .money{gap:12px;padding:10px 12px}
+  .nowfigs{gap:5px 10px}
+  .ai .body{font-size:11.5px;line-height:1.46}
+  .cap{padding:5px 7px 6px}
+  .cap .loc{display:none}
+}
+@media (max-width:1600px){
+  /* the now-figures fold to two columns before their values can collide */
+  .nowfigs{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px}
+  .fig .v{font-size:10.5px}
+  .fusion{min-height:104px}
+  .pnlblock .big{font-size:26px}
+  .btn{padding:6px 9px;font-size:9px}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pane{min-height:440px}
+  .greet .meta{display:none}
+  .day{padding:2px} .day .p{font-size:7.5px} .day .ev{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ══ Left icon rail ══════════════════════════════════════════ -->
+  <aside class="rail">
+    <div class="stamp">TJ</div>
+    <nav>
+      <div class="rlink on" title="Dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div>
+      <div class="rlink" title="Journal"><svg viewBox="0 0 24 24"><path d="M5 4h13a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5z"/><path d="M5 4v16M9 9h6M9 13h6"/></svg></div>
+      <div class="rlink" title="Analytics"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M21 20H3"/></svg></div>
+      <div class="rlink" title="Calendar"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg></div>
+      <div class="rlink" title="AI desk"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22M5 5l2.4 2.4M16.6 16.6L19 19M19 5l-2.4 2.4M7.4 16.6L5 19"/></svg></div>
+      <div class="rlink" title="Market TV"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 21h8M12 18v3"/></svg></div>
+      <div class="rlink" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9L7 7M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg></div>
+    </nav>
+    <div class="rlink moon" title="Theme"><svg viewBox="0 0 24 24"><path d="M21 13A8.5 8.5 0 0 1 11 3a8.5 8.5 0 1 0 10 10z"/></svg></div>
+  </aside>
+
+  <div class="main">
+
+    <!-- ══ LIVE ticker bar ═══════════════════════════════════════ -->
+    <header class="tickbar">
+      <div class="livechip"><i></i>LIVE</div>
+      <div class="clock">WED SEP 2 2026 · 05:00 MANILA GMT+8</div>
+      <div class="crawlmask"><div class="crawl">
+        <span><b>M2K RUSSELL</b>3,024 <em class="up">▲0.2%</em></span>
+        <span><b>MGC GOLD</b>4,671 <em class="up">▲0.24%</em></span>
+        <span><b>MCL CRUDE</b>82.94 <em class="down">▼0.4%</em></span>
+        <span><b>M6E EURO FX</b>1.1660 <em class="up">▲0.0008</em></span>
+        <span><b>MBT BITCOIN</b>111,890 <em class="down">▼560</em></span>
+        <span><b>M2K RUSSELL</b>3,024 <em class="up">▲0.2%</em></span>
+        <span><b>MGC GOLD</b>4,671 <em class="up">▲0.24%</em></span>
+        <span><b>MCL CRUDE</b>82.94 <em class="down">▼0.4%</em></span>
+        <span><b>M6E EURO FX</b>1.1660 <em class="up">▲0.0008</em></span>
+        <span><b>MBT BITCOIN</b>111,890 <em class="down">▼560</em></span>
+      </div></div>
+      <div class="tag">CONCEPT PREVIEW</div>
+    </header>
+
+    <div class="glass">
+
+      <!-- ══ SIGNATURE MOMENT — ONE GLASS: YOUR MONEY AND THE PLANET ══ -->
+      <section class="fusion">
+
+        <!-- money: halved hero, one-line composition -->
+        <div class="money">
+          <div class="pnlblock">
+            <span class="lbl">Net P&amp;L · since Aug 17</span>
+            <span class="big up">+$3,253.00</span>
+            <div class="balline">
+              <span class="v">$53,253.00</span>
+              <button class="eye" title="Hide balance"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/></svg></button>
+              <span class="st">START $50,000</span>
+            </div>
+          </div>
+
+          <div class="nowfigs">
+            <div class="fig"><span class="lbl">Today</span><span class="v" style="color:var(--text-soft)">$0 · NO TRADES</span></div>
+            <div class="fig"><span class="lbl">This week</span><span class="v up">+$328</span></div>
+            <div class="fig"><span class="lbl">Open P&amp;L</span><span class="v" style="color:var(--text-soft)">FLAT</span></div>
+            <div class="fig"><span class="lbl">Green streak</span><span class="v up"><span class="streak"><i></i><i></i><i></i><i></i></span>4 DAYS</span></div>
+            <div class="fig next"><span class="lbl">Next event</span><span class="v">GDP Q/Q · 9H AWAY</span></div>
+            <div class="fig"><span class="lbl">Risk state</span><span class="v up">AT HIGHS</span></div>
+          </div>
+
+          <div class="ctrls">
+            <div class="ctrlrow">
+              <button class="btn ghost">⤓ QUICK IMPORT</button>
+              <div class="seg"><span class="sel">1M</span><span>3M</span><span>ALL</span></div>
+              <span class="est">EST</span>
+            </div>
+            <div class="ctrlrow">
+              <button class="btn primary">LOG A TRADE<kbd>⌘K</kbd></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- the single machined hairline -->
+        <div class="split"></div>
+
+        <!-- planet: greeting + four session capsules on one shared ruler -->
+        <div class="planet">
+          <div class="greet">
+            <span class="hi">Good morning, Leon. <em>Sydney takes the tape.</em></span>
+            <span class="meta">WORLD SESSION STATE · 24H RULER · MANILA GMT+8</span>
+          </div>
+          <div class="caps">
+
+            <!-- SYDNEY 05:00–14:00 → OPENING, bell now -->
+            <div class="cap live">
+              <div class="r1"><span class="city">SYDNEY</span><span class="loc">07:00 AEST</span></div>
+              <div class="r2"><span class="state">OPENING</span><span class="cd">BELL NOW</span></div>
+              <div class="ruler"><i class="win" style="left:20.833%;width:37.5%"></i><i class="now"></i></div>
+            </div>
+
+            <!-- TOKYO 08:00–17:00 → pre-market, +3h -->
+            <div class="cap pre">
+              <div class="r1"><span class="city">TOKYO / ASIA</span><span class="loc">06:00 JST</span></div>
+              <div class="r2"><span class="state">PRE-MARKET</span><span class="cd">IN 3H 00M</span></div>
+              <div class="ruler"><i class="win" style="left:33.333%;width:37.5%"></i><i class="now"></i></div>
+            </div>
+
+            <!-- LONDON 15:00–24:00 → closed, +10h -->
+            <div class="cap shut">
+              <div class="r1"><span class="city">LONDON</span><span class="loc">22:00 BST · SEP 1</span></div>
+              <div class="r2"><span class="state">CLOSED</span><span class="cd">IN 10H 00M</span></div>
+              <div class="ruler"><i class="win" style="left:62.5%;width:37.5%"></i><i class="now"></i></div>
+            </div>
+
+            <!-- NEW YORK 20:00–05:00 → closing NOW, fades at the far edge -->
+            <div class="cap out">
+              <div class="r1"><span class="city">NEW YORK</span><span class="loc">17:00 EDT · SEP 1</span></div>
+              <div class="r2"><span class="state">CLOSING</span><span class="cd">ENDS NOW</span></div>
+              <div class="ruler"><i class="win" style="left:0;width:20.833%"></i><i class="win" style="left:83.333%;width:16.667%"></i><i class="now"></i></div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ AI MICRO DESK ═════════════════════════════════════════ -->
+      <div class="deskhead">
+        <span class="t">AI MICRO DESK</span>
+        <span class="m">READ AT 05:00 MANILA · NEXT REFRESH 08:00 TOKYO OPEN · GDP Q/Q 14:00</span>
+        <span class="warntag">AI DESK · SAMPLE OUTPUT · NOT ADVICE</span>
+      </div>
+
+      <section class="desk">
+
+        <!-- gradient shared by all four gauges -->
+        <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+          <linearGradient id="steel" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#5c6c80"/><stop offset="60%" stop-color="#8695a8"/><stop offset="100%" stop-color="#e6ecf5"/>
+          </linearGradient>
+        </defs></svg>
+
+        <!-- XAUUSD · BULLISH 78% · dash = 78 × 3.99 = 311.2 of 399 arc units -->
+        <article class="ai bull">
+          <div class="head">
+            <div><div class="sym">XAUUSD</div><div class="px">4,671.2 <span class="up">▲0.24%</span></div></div>
+            <span class="verdict">BULLISH</span>
+          </div>
+          <div class="gauge" style="--dash:311.2">
+            <svg viewBox="0 0 400 100" aria-label="Confidence 78 percent">
+              <path class="track" d="M12,88 A340,340 0 0 1 388,88"/>
+              <path class="fill"  d="M12,88 A340,340 0 0 1 388,88"/>
+              <path class="ticks" d="M12,88 A340,340 0 0 1 388,88"/>
+              <path class="dot"   d="M12,88 A340,340 0 0 1 388,88"/>
+              <text class="num" x="200" y="74">78%</text>
+              <text class="cap2" x="200" y="92">CONFIDENCE</text>
+            </svg>
+          </div>
+          <p class="body">Holding the top of the range after a <b>+0.24%</b> grind; every dip since Aug 27 has been bought above <b>4,641</b>. Sydney's book is thin until Tokyo at 08:00, so the first hour is noise, not signal. The 14:00 <b>GDP Q/Q</b> print is the only real threat to the structure.</p>
+          <div class="foot">
+            <div><div class="k">INVALIDATION</div><div class="n">4,641</div></div>
+            <div><div class="k">ROOM TO LEVEL</div><div class="n acc">30.2</div></div>
+            <div><div class="k">RISK WINDOW</div><div class="n">14:00 · 9H</div></div>
+          </div>
+        </article>
+
+        <!-- US100 · BULLISH 64% · dash = 64 × 3.99 = 255.4 -->
+        <article class="ai bull">
+          <div class="head">
+            <div><div class="sym">US100</div><div class="px">24,812 <span class="up">▲ OVERNIGHT</span></div></div>
+            <span class="verdict">BULLISH</span>
+          </div>
+          <div class="gauge" style="--dash:255.4">
+            <svg viewBox="0 0 400 100" aria-label="Confidence 64 percent">
+              <path class="track" d="M12,88 A340,340 0 0 1 388,88"/>
+              <path class="fill"  d="M12,88 A340,340 0 0 1 388,88"/>
+              <path class="ticks" d="M12,88 A340,340 0 0 1 388,88"/>
+              <path class="dot"   d="M12,88 A340,340 0 0 1 388,88"/>
+              <text class="num" x="200" y="74">64%</text>
+              <text class="cap2" x="200" y="92">CONFIDENCE</text>
+            </svg>
+          </div>
+          <p class="body">Overnight drift is constructive but <b>breadth is narrow</b> — a handful of names are carrying it. Asia can only hold the level; confirmation has to come from tonight's New York open. Below <b>24,630</b> the drift becomes distribution.</p>
+          <div class="foot">
+            <div><div class="k">INVALIDATION</div><div class="n">24,630</div></div>
+            <div><div class="k">ROOM TO LEVEL</div><div class="n acc">182</div></div>
+            <div><div class="k">CONFIRMS</div><div class="n">NY OPEN</div></div>
+          </div>
+        </article>
+
+        <!-- US30 · BEARISH 57% · dash = 57 × 3.99 = 227.4 -->
+        <article class="ai bear">
+          <div class="head">
+            <div><div class="sym">US30</div><div class="px">46,930 <span class="down">▼ LAGGING</span></div></div>
+            <span class="verdict">BEARISH</span>
+          </div>
+          <div class="gauge" style="--dash:227.4">
+            <svg viewBox="0 0 400 100" aria-label="Confidence 57 percent">
+              <path class="track" d="M12,88 A340,340 0 0 1 388,88"/>
+              <path class="fill"  d="M12,88 A340,340 0 0 1 388,88"/>
+              <path class="ticks" d="M12,88 A340,340 0 0 1 388,88"/>
+              <path class="dot"   d="M12,88 A340,340 0 0 1 388,88"/>
+              <text class="num" x="200" y="74">57%</text>
+              <text class="cap2" x="200" y="92">CONFIDENCE</text>
+            </svg>
+          </div>
+          <p class="body">Lagging US100 for <b>three straight sessions</b> with cyclicals heavy into the close. Price is pinned under the <b>47,120</b> supply shelf and there is no bid in Sydney hours to test it. Low conviction — a fade, not a trend.</p>
+          <div class="foot">
+            <div><div class="k">INVALIDATION</div><div class="n">47,120</div></div>
+            <div><div class="k">GAP TO SUPPLY</div><div class="n acc">190</div></div>
+            <div><div class="k">CONVICTION</div><div class="n">LOW</div></div>
+          </div>
+        </article>
+
+        <!-- BTCUSD · BEARISH 61% · dash = 61 × 3.99 = 243.4 -->
+        <article class="ai bear">
+          <div class="head">
+            <div><div class="sym">BTCUSD</div><div class="px">111,890 <span class="down">▼560</span></div></div>
+            <span class="verdict">BEARISH</span>
+          </div>
+          <div class="gauge" style="--dash:243.4">
+            <svg viewBox="0 0 400 100" aria-label="Confidence 61 percent">
+              <path class="track" d="M12,88 A340,340 0 0 1 388,88"/>
+              <path class="fill"  d="M12,88 A340,340 0 0 1 388,88"/>
+              <path class="ticks" d="M12,88 A340,340 0 0 1 388,88"/>
+              <path class="dot"   d="M12,88 A340,340 0 0 1 388,88"/>
+              <text class="num" x="200" y="74">61%</text>
+              <text class="cap2" x="200" y="92">CONFIDENCE</text>
+            </svg>
+          </div>
+          <p class="body">Realized vol keeps <b>compressing</b> while price fails <b>113,200</b> for the second time. Weekend liquidity is thin and the tape handed Sydney a −560 close. Range-bottom probes stay the base case until 113,200 clears on volume.</p>
+          <div class="foot">
+            <div><div class="k">INVALIDATION</div><div class="n">113,200</div></div>
+            <div><div class="k">ROOM TO LEVEL</div><div class="n acc">1,310</div></div>
+            <div><div class="k">LIQUIDITY</div><div class="n">THIN</div></div>
+          </div>
+        </article>
+      </section>
+
+      <!-- ══ Analytics — 12 columns: 4 equity · 2 calendar+bars · 4 queue · 2 TV/dock ══ -->
+      <section class="analytics">
+
+        <!-- ── EQUITY & DRAWDOWN (4/12) ── -->
+        <div class="card pane span4">
+          <div class="phead">
+            <span class="t">EQUITY &amp; DRAWDOWN</span>
+            <span class="m">AUG 17 → SEP 1 · 12 SESSIONS</span>
+            <div class="seg"><span class="sel">1M</span><span>3M</span><span>ALL</span></div>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="lbl">Total trades</div><div class="n">58</div></div>
+            <div class="stat"><div class="lbl">Win rate</div><div class="n">48.3%</div></div>
+            <div class="stat"><div class="lbl">W · L · scratch</div><div class="n">28 · 29 · 1</div></div>
+            <div class="stat"><div class="lbl">Profit factor</div><div class="n">1.74</div></div>
+            <div class="stat"><div class="lbl">Expectancy</div><div class="n up">$56.09</div></div>
+            <div class="stat"><div class="lbl">Avg win / loss</div><div class="n"><span class="up">$274</span> <span class="down">−$152</span></div></div>
+            <div class="stat"><div class="lbl">Max drawdown</div><div class="n down">$795.00</div></div>
+            <div class="stat"><div class="lbl">Current drawdown</div><div class="n">$0.00 <span style="color:var(--text-faint);font-size:10px">(0.00%)</span></div></div>
+          </div>
+          <div class="curvewrap">
+            <!-- y-map: $49,800 → y190, $53,400 → y10 (0.05px per $) -->
+            <svg viewBox="0 0 600 200" preserveAspectRatio="none" aria-label="Equity curve">
+              <g stroke="#151d28" stroke-width="1" vector-effect="non-scaling-stroke">
+                <line x1="0" y1="40" x2="600" y2="40"/><line x1="0" y1="90" x2="600" y2="90"/><line x1="0" y1="140" x2="600" y2="140"/>
+              </g>
+              <!-- start balance $50,000 -->
+              <line x1="0" y1="180" x2="600" y2="180" stroke="#1b2532" stroke-width="1" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/>
+              <defs>
+                <linearGradient id="eq" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="rgba(52,211,153,.30)"/><stop offset="100%" stop-color="rgba(52,211,153,0)"/>
+                </linearGradient>
+                <linearGradient id="eqline" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#1e6f57"/><stop offset="100%" stop-color="#3ee0a6"/>
+                </linearGradient>
+              </defs>
+              <path fill="url(#eq)" d="M5,180 L54,144.3 L103,92.5 L152,83.3 L201,74.6 L250,66.4 L299,44.7 L348,64.4 L397,84.4 L446,49.1 L495,33.8 L544,25.6 L593,17.4 L593,196 L5,196 Z"/>
+              <path fill="none" stroke="url(#eqline)" stroke-width="2" vector-effect="non-scaling-stroke"
+                    d="M5,180 L54,144.3 L103,92.5 L152,83.3 L201,74.6 L250,66.4 L299,44.7 L348,64.4 L397,84.4 L446,49.1 L495,33.8 L544,25.6 L593,17.4"/>
+              <!-- drawdown underlay: peak 52,707 → −0.75% / −1.51% / −0.17%, then new highs -->
+              <path fill="rgba(248,113,113,.13)" d="M299,186 L348,190 L397,194 L446,187 L495,186 Z"/>
+              <path fill="none" stroke="rgba(248,113,113,.55)" stroke-width="1.2" vector-effect="non-scaling-stroke"
+                    d="M5,186 L299,186 L348,190 L397,194 L446,187 L495,186 L593,186"/>
+              <circle cx="593" cy="17.4" r="4" fill="#3ee0a6"/>
+            </svg>
+            <span class="axlab" style="right:10px;top:6px">$53,253 · AT HIGHS</span>
+            <span class="axlab" style="left:12px;top:79%">$50,000 START</span>
+            <span class="axlab" style="left:12px;bottom:4px">DRAWDOWN · MAX −1.51% (AUG 26)</span>
+            <span class="axlab" style="right:10px;bottom:4px">SEP 1</span>
+          </div>
+        </div>
+
+        <!-- ── CALENDAR + DAILY BARS (2/12) ── -->
+        <div class="colstack span2">
+          <div class="card" style="flex:1.35;display:flex;flex-direction:column;min-height:0;overflow:hidden">
+            <div class="phead"><span class="t">SEPTEMBER 2026</span><span class="m">AUG CARRY</span></div>
+            <div class="calgrid">
+              <div class="dow">S</div><div class="dow">M</div><div class="dow">T</div><div class="dow">W</div><div class="dow">T</div><div class="dow">F</div><div class="dow">S</div>
+              <!-- week 1: Aug 30–31 carry, Sep 1–5 -->
+              <div class="day carry weekend"><span class="d">30</span></div>
+              <div class="day carry pos"><span class="d">31</span><span class="p">+164</span></div>
+              <div class="day pos"><span class="d">1</span><span class="p">+164</span></div>
+              <div class="day today"><span class="d">2</span><span class="ev">GDP</span><span class="p" style="color:var(--text-soft)">$0</span></div>
+              <div class="day future"><span class="d">3</span></div>
+              <div class="day future"><span class="d">4</span><span class="ev">CPI</span></div>
+              <div class="day weekend"><span class="d">5</span></div>
+              <!-- week 2 -->
+              <div class="day weekend"><span class="d">6</span></div>
+              <div class="day future"><span class="d">7</span></div><div class="day future"><span class="d">8</span></div>
+              <div class="day future"><span class="d">9</span></div><div class="day future"><span class="d">10</span></div>
+              <div class="day future"><span class="d">11</span></div><div class="day weekend"><span class="d">12</span></div>
+              <!-- week 3 -->
+              <div class="day weekend"><span class="d">13</span></div>
+              <div class="day future"><span class="d">14</span></div><div class="day future"><span class="d">15</span></div>
+              <div class="day future"><span class="d">16</span></div><div class="day future"><span class="d">17</span></div>
+              <div class="day future"><span class="d">18</span></div><div class="day weekend"><span class="d">19</span></div>
+              <!-- week 4 -->
+              <div class="day weekend"><span class="d">20</span></div>
+              <div class="day future"><span class="d">21</span></div><div class="day future"><span class="d">22</span></div>
+              <div class="day future"><span class="d">23</span></div><div class="day future"><span class="d">24</span></div>
+              <div class="day future"><span class="d">25</span></div><div class="day weekend"><span class="d">26</span></div>
+              <!-- week 5 -->
+              <div class="day weekend"><span class="d">27</span></div>
+              <div class="day future"><span class="d">28</span></div><div class="day future"><span class="d">29</span></div>
+              <div class="day future"><span class="d">30</span></div>
+              <div class="day future" style="opacity:.2"></div><div class="day future" style="opacity:.2"></div><div class="day future" style="opacity:.2"></div>
+            </div>
+            <div class="pfoot"><span>SEP <b class="up">+$164</b> · 1T</span><span>AUG <b class="up">+$3,089</b> · 57T</span></div>
+          </div>
+
+          <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden">
+            <div class="phead"><span class="t">NET DAILY P&amp;L</span><span class="m">12 SESSIONS</span></div>
+            <!-- positive zone scaled to the +$1,036 max; negative zone to −$400 -->
+            <div class="bars">
+              <div class="bar"><i class="p" style="height:69.0%"></i><i class="z"></i><span class="lb">17</span></div>
+              <div class="bar"><i class="p" style="height:100%"></i><i class="z"></i><span class="lb">18</span></div>
+              <div class="bar"><i class="p" style="height:17.7%"></i><i class="z"></i><span class="lb">19</span></div>
+              <div class="bar"><i class="p" style="height:16.8%"></i><i class="z"></i><span class="lb">20</span></div>
+              <div class="bar"><i class="p" style="height:15.9%"></i><i class="z"></i><span class="lb">21</span></div>
+              <div class="bar"><i class="p" style="height:41.9%"></i><i class="z"></i><span class="lb">24</span></div>
+              <div class="bar"><i class="z"></i><i class="n" style="height:98.8%"></i><span class="lb">25</span></div>
+              <div class="bar"><i class="z"></i><i class="n" style="height:100%"></i><span class="lb">26</span></div>
+              <div class="bar"><i class="p" style="height:68.1%"></i><i class="z"></i><span class="lb">27</span></div>
+              <div class="bar"><i class="p" style="height:29.6%"></i><i class="z"></i><span class="lb">28</span></div>
+              <div class="bar"><i class="p" style="height:15.8%"></i><i class="z"></i><span class="lb">31</span></div>
+              <div class="bar"><i class="p" style="height:15.8%"></i><i class="z"></i><span class="lb">1</span></div>
+            </div>
+            <div class="pfoot"><span>BEST <b class="up">+$1,036</b> AUG 18</span><span>WORST <b class="down">−$400</b> AUG 26</span></div>
+          </div>
+        </div>
+
+        <!-- ── REVIEW QUEUE — now 4/12 (was 6/12), day-grouped ── -->
+        <div class="card pane span4">
+          <div class="phead">
+            <span class="t">REVIEW QUEUE</span>
+            <span class="m">GROUPED BY DAY</span>
+            <span class="cnt">58 PENDING · 12 DAYS</span>
+          </div>
+          <div class="qwrap">
+            <table class="q">
+              <thead><tr>
+                <th>DATE</th><th>SYMBOL</th><th class="r">TRADES</th><th class="r">NET P&amp;L</th><th>REASON</th><th>SOURCE</th>
+              </tr></thead>
+              <tbody>
+                <tr><td>SEP 1</td><td>MGC</td><td class="r">1</td><td class="r up">+$164.00</td><td>Estimated fill</td><td><span class="badge est">EST</span></td></tr>
+                <tr><td>AUG 31</td><td>MGC</td><td class="r">1</td><td class="r up">+$164.00</td><td>No notes</td><td><span class="badge">CSV</span></td></tr>
+                <tr><td>AUG 28</td><td>MGC</td><td class="r">14</td><td class="r up">+$307.00</td><td>Unreviewed</td><td><span class="badge">CSV</span></td></tr>
+                <tr><td>AUG 27</td><td>MGC</td><td class="r">4</td><td class="r up">+$706.00</td><td>Unreviewed</td><td><span class="badge">CSV</span></td></tr>
+                <tr><td>AUG 26</td><td>MGC</td><td class="r">3</td><td class="r down">−$400.00</td><td>Exit note missing</td><td><span class="badge">CSV</span></td></tr>
+                <tr><td>AUG 25</td><td>MGC</td><td class="r">1</td><td class="r down">−$395.00</td><td>Exit note missing</td><td><span class="badge">CSV</span></td></tr>
+                <tr><td>AUG 24</td><td>MGC</td><td class="r">8</td><td class="r up">+$434.00</td><td>Unreviewed</td><td><span class="badge">CSV</span></td></tr>
+                <tr><td>AUG 21</td><td>MGC</td><td class="r">1</td><td class="r up">+$165.00</td><td>No notes</td><td><span class="badge">CSV</span></td></tr>
+                <tr><td>AUG 20</td><td>MGC</td><td class="r">1</td><td class="r up">+$174.00</td><td>No notes</td><td><span class="badge">CSV</span></td></tr>
+                <tr><td>AUG 19</td><td>MGC</td><td class="r">1</td><td class="r up">+$183.00</td><td>No notes</td><td><span class="badge">CSV</span></td></tr>
+                <tr><td>AUG 18</td><td>MGC</td><td class="r">15</td><td class="r up">+$1,036.00</td><td>Tag pending</td><td><span class="badge">CSV</span></td></tr>
+                <tr><td>AUG 17</td><td>MGC</td><td class="r">8</td><td class="r up">+$715.00</td><td>Tag pending</td><td><span class="badge">CSV</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pfoot"><span>12 OF 12 DAYS SHOWN · 58 TRADES</span><span>RUNNING TOTAL <b class="up">+$3,253.00</b></span></div>
+        </div>
+
+        <!-- ── FREED COLUMNS: MARKET TV DOCK + ACCOUNTS / DISCIPLINE (2/12) ── -->
+        <div class="colstack span2">
+          <div class="card" style="display:flex;flex-direction:column;overflow:hidden">
+            <div class="phead"><span class="t">MARKET TV</span><span class="m">DESK FEED</span></div>
+            <div class="tvscreen">
+              <svg viewBox="0 0 320 180" preserveAspectRatio="none" aria-hidden="true">
+                <defs>
+                  <linearGradient id="tvbg" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#0d1622"/><stop offset="100%" stop-color="#05080e"/>
+                  </linearGradient>
+                </defs>
+                <rect width="320" height="180" fill="url(#tvbg)"/>
+                <g stroke="rgba(214,224,238,.05)" stroke-width="1">
+                  <line x1="0" y1="45" x2="320" y2="45"/><line x1="0" y1="90" x2="320" y2="90"/><line x1="0" y1="135" x2="320" y2="135"/>
+                </g>
+                <path fill="none" stroke="#f0b34e" stroke-width="1.6"
+                      d="M6,120 L34,112 L62,116 L90,101 L118,96 L146,104 L174,88 L202,84 L230,90 L258,76 L286,72 L314,68"/>
+                <circle cx="314" cy="68" r="3" fill="#f0b34e"/>
+              </svg>
+              <div class="tvbug">MKT</div>
+              <div class="tvlive"><i></i>LIVE</div>
+              <div class="tvbigpx">4,671</div>
+              <div class="tvlower">
+                <div class="tvhl">SYDNEY OPEN: GOLD HOLDS 4,671 INTO GDP — DESKS EYE 14:00 PRINT</div>
+              </div>
+            </div>
+            <div class="pfoot"><span>05:00 MANILA</span><span>NEXT: FED SPEAKER 21:00</span></div>
+          </div>
+
+          <div class="card" style="display:flex;flex-direction:column;overflow:hidden">
+            <div class="phead"><span class="t">ACCOUNTS &amp; DISCIPLINE</span></div>
+            <div class="chips">
+              <div class="chip" style="flex:1 1 100%"><span class="lbl">Primary account</span><span class="n">$53,253.00 <span class="up" style="font-size:10px">+6.51%</span></span></div>
+              <div class="chip"><span class="lbl">Risk / trade</span><span class="n">1.0% · $533</span></div>
+              <div class="chip"><span class="lbl">Loss cap</span><span class="n">$500</span></div>
+              <div class="chip ok"><span class="lbl">Rules kept</span><span class="n">5 / 5</span></div>
+              <div class="chip ok"><span class="lbl">Green streak</span><span class="n">4 DAYS</span></div>
+              <div class="chip"><span class="lbl">Open pos</span><span class="n" style="color:var(--text-soft)">FLAT</span></div>
+              <div class="chip"><span class="lbl">Today</span><span class="n" style="color:var(--text-soft)">NO TRADES</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ Bottom dock ═══════════════════════════════════════════ -->
+      <div class="dock">
+        <span><kbd>⌘K</kbd> LOG A TRADE</span>
+        <span><kbd>⌘I</kbd> QUICK IMPORT</span>
+        <span><kbd>⌘/</kbd> AI DESK REFRESH</span>
+        <span>SYDNEY OPEN · TOKYO IN 3H 00M · GDP Q/Q IN 9H 00M</span>
+        <span class="honesty">CONCEPT PREVIEW · SAMPLE DATA · NOTHING LIVE</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

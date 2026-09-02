@@ -1,0 +1,840 @@
+<!doctype html>
+<!--
+  TRADER JOURNAL — ONE-GLASS DASHBOARD · CONCEPT B — "CONTROL ROOM"
+  ================================================================
+  The dashboard is a broadcast control room and the trader IS one of the
+  networks. Two program monitors share one monitor wall: PGM 1 is the market
+  feed (MKT), PGM 2 is the trader's own channel — TJ-1 · YOUR TAPE — their
+  equity curve broadcast as the program picture, their numbers as chyron.
+
+  SIGNATURE MOMENT — "BREAKING ON YOUR OWN CHANNEL":
+  The trader's latest trade (Aug 28 · 13:06 · MGC Short · +$60.00) renders as
+  a breaking-news lower-third ON TJ-1 — accent BREAKING slab, Sora headline
+  ("MGC SHORT COVERED FOR +$60.00 — DAY GOES TO +$190"), context-stamped with
+  the session (NY AFTERNOON) and the next catalyst (GDP M/M in 1h 48m).
+  It sits over the equity picture on PGM 2 and is the loudest thing on screen.
+
+  CONCEPT PREVIEW · SAMPLE DATA · NOTHING LIVE — no page scroll at 1999x1150
+  or 1440x900; the only scrolling element is the review-queue list.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trader Journal — Control Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============ Clay V3 tokens ============ */
+:root{
+  --surface-0:#080b12;   /* page */
+  --surface-1:#0c1119;   /* panels */
+  --surface-2:#111823;   /* raised */
+  --surface-3:#16202d;   /* hover */
+  --surface-inset:#05080e; /* wells / screens */
+  --line:#151d28;
+  --line-strong:#1b2532;
+  --text:#e6ecf5;
+  --text-soft:#8695a8;
+  --text-faint:#7c8b9e;
+  --accent:#f97316;        /* interaction + NOW only */
+  --accent-strong:#fb8b3a;
+  --pnl-pos:#34d399;
+  --pnl-neg:#f87171;
+  --warn:#f0b34e;
+  --info:#22d3ee;          /* LIVE / terminal signals */
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"Sora","Avenir Next",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --edge:inset 0 1px 0 rgba(214,222,235,.07); /* raised top-edge highlight */
+}
+
+/* ============ frame ============ */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{overflow:hidden;height:100%}
+body{
+  background:#080b12; /* literal — the page keeps its own light */
+  color:var(--text);
+  font-family:var(--mono);
+  font-size:12px;
+  font-variant-numeric:tabular-nums;
+  display:grid;
+  grid-template-columns:56px minmax(0,1fr);
+  grid-template-rows:clamp(38px,4vh,46px) minmax(0,1fr);
+  height:100dvh;
+}
+.num{font-variant-numeric:tabular-nums}
+.pos{color:var(--pnl-pos)}
+.neg{color:var(--pnl-neg)}
+.lbl{ /* letter-spaced uppercase micro-label */
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--text-faint);font-weight:500;
+}
+
+/* ============ left icon rail ============ */
+#rail{
+  grid-row:1/3;grid-column:1;
+  background:var(--surface-1);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;
+  padding:10px 0;gap:6px;min-height:0;
+}
+#rail .stamp{
+  width:34px;height:34px;border:1px solid var(--line-strong);border-radius:7px;
+  background:var(--surface-2);box-shadow:var(--edge);
+  display:grid;place-items:center;
+  font-weight:800;font-size:12px;letter-spacing:.06em;color:var(--text);
+  margin-bottom:10px;flex:none;
+}
+#rail nav{display:flex;flex-direction:column;gap:4px;align-items:center}
+#rail .glyph{
+  width:34px;height:34px;border-radius:7px;display:grid;place-items:center;
+  color:var(--text-faint);opacity:.62;cursor:pointer;
+}
+#rail .glyph:hover{background:var(--surface-3);opacity:1;color:var(--text)}
+#rail .glyph.on{background:var(--surface-2);opacity:1;color:var(--text);box-shadow:var(--edge)}
+#rail .moon{margin-top:auto}
+#rail svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5}
+
+/* ============ top LIVE ticker bar ============ */
+#tickerbar{
+  grid-row:1;grid-column:2;
+  background:var(--surface-1);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:12px;
+  padding:0 12px;min-width:0;
+}
+.live-chip{
+  display:inline-flex;align-items:center;gap:6px;flex:none;
+  border:1px solid var(--line-strong);border-radius:4px;
+  background:var(--surface-inset);padding:3px 8px;
+  color:var(--info);font-size:10px;font-weight:700;letter-spacing:.16em;
+}
+.live-chip .dot{width:6px;height:6px;border-radius:50%;background:var(--info);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.tape{flex:1;overflow:hidden;min-width:0;-webkit-mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent);mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent)}
+.tape-inner{display:inline-flex;white-space:nowrap;width:max-content;animation:crawl 46s linear infinite}
+@keyframes crawl{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.tape-seg{display:inline-flex;gap:26px;padding-right:26px}
+.tk{display:inline-flex;gap:7px;align-items:baseline;font-size:11px}
+.tk .s{color:var(--text-soft)}
+.tk .p{color:var(--text);font-weight:600}
+.honesty{
+  flex:none;border:1px dashed var(--line-strong);border-radius:4px;
+  color:var(--text-faint);font-size:9px;letter-spacing:.13em;padding:3px 8px;
+}
+#clockbox{flex:none;display:flex;align-items:baseline;gap:8px;font-size:11px;color:var(--text-soft)}
+#clockbox b{color:var(--text);font-weight:700;font-size:12px}
+#clockbox .sess{color:var(--info);font-size:10px;letter-spacing:.12em}
+
+/* ============ the glass ============ */
+#glass{
+  grid-row:2;grid-column:2;min-height:0;min-width:0;
+  display:grid;gap:8px;padding:10px;
+  grid-template-rows:auto minmax(0,1.52fr) minmax(0,1fr) auto;
+}
+#glass>*{min-height:0;min-width:0}
+
+/* ---------- hero strip ---------- */
+#hero{
+  background:var(--surface-1);border:1px solid var(--line);border-radius:8px;
+  box-shadow:var(--edge);
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;gap:clamp(12px,1.4vw,28px);
+  padding:10px clamp(12px,1.2vw,18px);
+}
+#hero .pnl-block{display:flex;align-items:baseline;gap:clamp(10px,1vw,18px)}
+#hero .pnl-main{display:flex;flex-direction:column;gap:2px}
+#hero .pnl-fig{
+  font-size:clamp(28px,2.4vw,42px);font-weight:800;line-height:1;
+  color:var(--pnl-pos);letter-spacing:-.01em;
+}
+#hero .bal{display:flex;flex-direction:column;gap:2px;padding-left:clamp(10px,1vw,18px);border-left:1px solid var(--line)}
+#hero .bal-fig{font-size:clamp(15px,1.2vw,20px);font-weight:700;display:flex;align-items:center;gap:8px}
+#hero .bal-sub{font-size:10px;color:var(--text-faint)}
+.eye{
+  width:22px;height:18px;border:1px solid var(--line-strong);border-radius:4px;
+  background:var(--surface-2);display:inline-grid;place-items:center;cursor:pointer;color:var(--text-faint);
+}
+.eye:hover{background:var(--surface-3);color:var(--text)}
+.eye svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.5}
+
+/* now-grid — six control-desk readouts */
+#nowgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.now-cell{
+  background:var(--surface-2);border:1px solid var(--line);border-radius:6px;
+  box-shadow:var(--edge);padding:6px 9px;display:flex;flex-direction:column;gap:3px;min-width:0;
+}
+.now-cell .v{font-size:clamp(12px,1vw,15px);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now-cell .sub{font-size:9px;color:var(--text-faint);letter-spacing:.08em}
+.now-cell.next .v{color:var(--accent)} /* the NOW readout */
+
+#hero .actions{display:flex;align-items:center;gap:8px}
+.btn{
+  border:1px solid var(--line-strong);border-radius:6px;cursor:pointer;
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;
+  padding:8px 12px;background:var(--surface-2);color:var(--text);box-shadow:var(--edge);
+  white-space:nowrap;
+}
+.btn:hover{background:var(--surface-3)}
+.btn.primary{
+  background:var(--accent);border-color:var(--accent-strong);color:#080b12;
+}
+.btn.primary:hover{background:var(--accent-strong)}
+.btn .kbd{opacity:.72;font-weight:600;margin-left:6px;font-size:10px}
+
+/* ---------- monitor wall ---------- */
+#wall{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr);gap:8px}
+.monitor{
+  background:var(--surface-1);border:1px solid var(--line);border-radius:8px;
+  box-shadow:var(--edge);display:flex;flex-direction:column;min-height:0;min-width:0;
+}
+.mon-head{
+  display:flex;align-items:center;gap:10px;flex:none;
+  padding:7px 10px;border-bottom:1px solid var(--line);
+}
+.pgm-tag{
+  border:1px solid var(--line-strong);border-radius:3px;background:var(--surface-inset);
+  font-size:9px;letter-spacing:.16em;color:var(--text-soft);padding:2px 6px;font-weight:700;
+}
+.mon-head .name{font-size:10px;letter-spacing:.14em;color:var(--text);font-weight:700}
+.tally{display:inline-flex;align-items:center;gap:5px;margin-left:auto;font-size:9px;letter-spacing:.16em;color:var(--info);font-weight:700}
+.tally .dot{width:6px;height:6px;border-radius:50%;background:var(--info);animation:pulse 1.6s ease-in-out infinite}
+
+/* range control lives in TJ-1 monitor head (real affordance) */
+.range{display:inline-flex;border:1px solid var(--line-strong);border-radius:4px;overflow:hidden;margin-left:10px}
+.range button{
+  font-family:var(--mono);font-size:9px;letter-spacing:.1em;font-weight:700;cursor:pointer;
+  border:0;background:var(--surface-inset);color:var(--text-faint);padding:3px 8px;
+}
+.range button+button{border-left:1px solid var(--line-strong)}
+.range button.on{background:var(--accent);color:#080b12}
+.range button:not(.on):hover{color:var(--text)}
+
+/* the inset screen */
+.screen{
+  flex:1;min-height:0;position:relative;overflow:hidden;
+  margin:8px;border-radius:6px;
+  background:var(--surface-inset);
+  border:1px solid var(--line-strong);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.5), inset 0 2px 14px rgba(0,0,0,.55);
+}
+/* broadcast texture: scanlines + vignette */
+.screen::before{
+  content:"";position:absolute;inset:0;z-index:9;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.022) 0 1px,transparent 1px 3px);
+}
+.screen::after{
+  content:"";position:absolute;inset:0;z-index:9;pointer-events:none;
+  background:radial-gradient(120% 95% at 50% 42%,transparent 58%,rgba(0,0,0,.42) 100%);
+}
+.bug{ /* channel monogram bug */
+  position:absolute;top:8px;right:10px;z-index:8;
+  border:1px solid var(--line-strong);border-radius:3px;background:rgba(12,17,25,.8);
+  padding:3px 7px;font-size:9px;letter-spacing:.18em;font-weight:800;color:var(--text-soft);
+}
+.onair{
+  position:absolute;top:8px;left:10px;z-index:8;display:flex;gap:6px;align-items:center;
+}
+.chip{
+  display:inline-flex;align-items:center;gap:5px;
+  border:1px solid var(--line-strong);border-radius:3px;background:rgba(12,17,25,.8);
+  padding:3px 7px;font-size:9px;letter-spacing:.14em;font-weight:700;color:var(--text-soft);
+}
+.chip.cyan{color:var(--info)}
+.chip.cyan .dot{width:5px;height:5px;border-radius:50%;background:var(--info);animation:pulse 1.6s ease-in-out infinite}
+.chip.green{color:var(--pnl-pos)}
+
+/* lower-third scaffolding shared by both channels */
+.lower3{
+  position:absolute;left:0;right:0;z-index:7;display:flex;flex-direction:column;gap:0;
+}
+.l3-band{
+  background:linear-gradient(180deg,rgba(12,17,25,.94),rgba(8,11,18,.97));
+  border-top:1px solid var(--line-strong);
+  padding:7px 12px 8px;display:flex;flex-direction:column;gap:3px;
+}
+.l3-tagrow{display:flex;align-items:center;gap:8px}
+.l3-head{
+  font-family:var(--sans);font-weight:800;letter-spacing:.01em;line-height:1.15;
+  font-size:clamp(13px,1.05vw,19px);color:var(--text);
+}
+.l3-sub{font-size:clamp(9px,.62vw,11px);color:var(--text-soft);letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slab{
+  font-size:9px;font-weight:800;letter-spacing:.2em;padding:3px 8px;border-radius:2px;flex:none;
+}
+.slab.breaking{background:var(--accent);color:#080b12}
+.slab.cyanline{border:1px solid var(--info);color:var(--info);background:rgba(34,211,238,.06)}
+.slab.dim{border:1px solid var(--line-strong);color:var(--text-faint)}
+
+/* chyron crawl (bottom of screen) */
+.chyron{
+  background:#05080e;border-top:1px solid var(--line-strong);
+  display:flex;align-items:center;overflow:hidden;height:24px;
+}
+.chyron .flag{
+  flex:none;height:100%;display:flex;align-items:center;padding:0 9px;
+  border-right:1px solid var(--line-strong);font-size:9px;font-weight:800;letter-spacing:.16em;
+}
+.chyron .roll{flex:1;overflow:hidden;min-width:0}
+.chyron .roll-inner{display:inline-flex;white-space:nowrap;width:max-content;animation:crawl 42s linear infinite;font-size:10px;color:var(--text-soft)}
+.chyron .roll-inner .seg{padding-right:34px}
+.chyron .roll-inner b{color:var(--text);font-weight:700}
+
+/* --- PGM 1 · MKT screen content --- */
+#scr-mkt .stage{
+  position:absolute;inset:0 0 96px 0;display:grid;
+  grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);
+  gap:10px;padding:34px 12px 8px;
+}
+.mkt-chart{display:flex;flex-direction:column;min-width:0;min-height:0}
+.mkt-chart .qline{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.mkt-chart .sym{font-size:10px;letter-spacing:.14em;color:var(--text-soft);font-weight:700}
+.mkt-chart .big{font-size:clamp(22px,1.9vw,34px);font-weight:800;line-height:1}
+.mkt-chart .chg{font-size:clamp(11px,.9vw,14px);font-weight:700;color:var(--pnl-pos)}
+.mkt-chart .hl{font-size:9px;color:var(--text-faint);letter-spacing:.08em}
+.mkt-chart svg{flex:1;min-height:0;width:100%;margin-top:6px}
+.board{
+  border:1px solid var(--line-strong);border-radius:5px;background:rgba(12,17,25,.55);
+  display:flex;flex-direction:column;min-height:0;overflow:hidden;
+}
+.board .bh{padding:5px 9px;border-bottom:1px solid var(--line);font-size:9px;letter-spacing:.16em;color:var(--text-faint);font-weight:700}
+.board .rows{flex:1;display:flex;flex-direction:column;justify-content:space-evenly;padding:2px 0;min-height:0}
+.brow{display:grid;grid-template-columns:44px minmax(0,1fr) auto auto;gap:8px;align-items:baseline;padding:2px 9px;font-size:clamp(10px,.72vw,12px)}
+.brow .bs{color:var(--text-soft);font-weight:700}
+.brow .bn{color:var(--text-faint);font-size:9px;letter-spacing:.06em;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.brow .bp{font-weight:700}
+.brow .bc{font-size:10px;font-weight:600}
+.brow.hot{background:rgba(34,211,238,.05);box-shadow:inset 2px 0 0 var(--info)}
+#scr-mkt .lower3{bottom:24px}
+
+/* --- PGM 2 · TJ-1 screen content --- */
+#scr-tj .picture{position:absolute;inset:0 0 96px 0;padding:30px 8px 4px 8px;display:flex;flex-direction:column}
+#scr-tj .curve{flex:1;min-height:0;position:relative}
+#scr-tj .curve svg{position:absolute;inset:0;width:100%;height:100%}
+.ylab{position:absolute;left:8px;transform:translateY(-50%);font-size:9px;color:var(--text-faint);letter-spacing:.06em;z-index:6;background:rgba(5,8,14,.6);padding:0 3px}
+.xlab{position:absolute;bottom:2px;font-size:9px;color:var(--text-faint);letter-spacing:.08em;z-index:6}
+.ddband{flex:none;height:15%;min-height:26px;position:relative;border-top:1px dashed var(--line);margin-top:2px}
+.ddband svg{position:absolute;inset:0;width:100%;height:100%}
+.ddband .tag{position:absolute;right:6px;top:2px;font-size:8px;letter-spacing:.14em;color:var(--text-faint);z-index:6}
+.peak-dot{position:absolute;z-index:6;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(249,115,22,.25);animation:pulse 1.6s ease-in-out infinite}
+.peak-flag{position:absolute;z-index:6;font-size:9px;font-weight:700;color:var(--accent);letter-spacing:.08em;white-space:nowrap}
+#scr-tj .lower3{bottom:24px}
+
+/* under-monitor strips */
+.mon-strip{
+  flex:none;border-top:1px solid var(--line);
+  display:flex;align-items:center;gap:6px;padding:6px 10px;min-width:0;overflow:hidden;
+}
+.stat{display:flex;flex-direction:column;gap:1px;padding:0 10px;border-left:1px solid var(--line);min-width:0;flex:1}
+.stat:first-child{border-left:0;padding-left:2px}
+.stat .k{font-size:8px;letter-spacing:.12em;color:var(--text-faint);text-transform:uppercase;white-space:nowrap}
+.stat .v{font-size:clamp(11px,.8vw,13px);font-weight:700;white-space:nowrap}
+.vu{display:flex;align-items:flex-end;gap:2px;height:16px;flex:none}
+.vu i{width:3px;background:var(--info);opacity:.75;border-radius:1px;animation:vu 1.1s ease-in-out infinite alternate}
+.vu i:nth-child(1){height:6px;animation-delay:0s}
+.vu i:nth-child(2){height:11px;animation-delay:.18s}
+.vu i:nth-child(3){height:14px;animation-delay:.33s}
+.vu i:nth-child(4){height:9px;animation-delay:.09s}
+.vu i:nth-child(5){height:12px;animation-delay:.26s}
+@keyframes vu{from{transform:scaleY(.45)}to{transform:scaleY(1)}}
+.stripline{font-size:10px;color:var(--text-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.stripline b{color:var(--text)}
+.stripline .t-accent{color:var(--accent);font-weight:700}
+
+/* ---------- control desk row ---------- */
+#desk{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,1.18fr) minmax(0,1fr);gap:8px}
+.panel{
+  background:var(--surface-1);border:1px solid var(--line);border-radius:8px;
+  box-shadow:var(--edge);display:flex;flex-direction:column;min-height:0;min-width:0;
+}
+.panel-h{
+  flex:none;display:flex;align-items:center;gap:8px;
+  padding:7px 10px;border-bottom:1px solid var(--line);
+}
+.panel-h .t{font-size:10px;letter-spacing:.16em;color:var(--text);font-weight:700}
+.panel-h .meta{margin-left:auto;font-size:9px;letter-spacing:.1em;color:var(--text-faint)}
+.panel-f{
+  flex:none;display:flex;align-items:center;gap:14px;
+  padding:6px 10px;border-top:1px solid var(--line);
+  font-size:10px;color:var(--text-soft);
+}
+.panel-f b{color:var(--text);font-weight:700}
+
+/* rundown */
+#rundown .slots{flex:1;min-height:0;display:flex;flex-direction:column;padding:6px 8px;gap:4px;overflow:hidden}
+.slot{
+  display:grid;grid-template-columns:30px 64px minmax(0,1fr) auto auto;
+  gap:8px;align-items:center;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:5px;
+  box-shadow:var(--edge);padding:6px 8px;flex:1;min-height:0;
+}
+.slot .id{font-size:9px;letter-spacing:.1em;color:var(--text-faint);font-weight:700}
+.slot .at{font-size:11px;font-weight:700;color:var(--text-soft)}
+.slot .ev{font-size:clamp(11px,.78vw,12px);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot .imp{font-size:8px;letter-spacing:.14em;font-weight:800;border-radius:2px;padding:2px 5px}
+.imp.high{color:var(--warn);border:1px solid var(--warn)}
+.imp.med{color:var(--text-faint);border:1px solid var(--line-strong)}
+.slot .tminus{font-size:clamp(12px,.9vw,14px);font-weight:800}
+.slot.next{border-color:var(--accent);box-shadow:var(--edge),inset 2px 0 0 var(--accent)}
+.slot.next .tminus{color:var(--accent)}
+.wirenotes{flex:none;display:flex;flex-direction:column;gap:3px;padding:2px 8px 7px}
+.wnote{display:flex;gap:7px;align-items:baseline;font-size:10px;color:var(--text-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wnote .w{color:var(--info);font-size:8px;letter-spacing:.16em;font-weight:800;flex:none}
+
+/* calendar — the month's trading days (Mon–Fri) */
+#calendar .grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:auto repeat(5,minmax(0,1fr));gap:3px;padding:6px 8px}
+#calendar .wd{font-size:8px;letter-spacing:.18em;color:var(--text-faint);text-align:center;align-self:center}
+.day{
+  border:1px solid var(--line);border-radius:4px;background:var(--surface-2);
+  box-shadow:var(--edge);position:relative;min-height:0;min-width:0;overflow:hidden;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;padding:2px;
+}
+.day .dn{position:absolute;top:2px;left:4px;font-size:8px;color:var(--text-faint)}
+.day .dp{font-size:clamp(10px,.72vw,12px);font-weight:700;line-height:1}
+.day .dt{font-size:8px;color:var(--text-faint);letter-spacing:.06em}
+.day.flat{background:var(--surface-1);box-shadow:none}
+.day.flat .dp{color:var(--line-strong);font-weight:400}
+.day.g{background:rgba(52,211,153,.07)}
+.day.r{background:rgba(248,113,113,.07)}
+.day.today{border-color:var(--accent);box-shadow:var(--edge),0 0 0 1px var(--accent)}
+.day.today .dn{color:var(--accent);font-weight:700}
+
+/* review queue */
+#queue .list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+#queue .list::-webkit-scrollbar{width:8px}
+#queue .list::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:4px}
+#queue .list::-webkit-scrollbar-track{background:var(--surface-inset)}
+.qhead,.qrow{
+  display:grid;grid-template-columns:52px 44px 40px 52px minmax(0,1fr);
+  gap:8px;align-items:center;padding:4px 10px;
+}
+.qhead{
+  position:sticky;top:0;z-index:2;background:var(--surface-inset);
+  border-bottom:1px solid var(--line);font-size:8px;letter-spacing:.16em;color:var(--text-faint);
+  padding-top:5px;padding-bottom:5px;
+}
+.qrow{border-bottom:1px solid var(--line);font-size:11px}
+.qrow:hover{background:var(--surface-3)}
+.qrow .qd{color:var(--text-soft)}
+.qrow .qt{color:var(--text-faint);font-size:10px}
+.qrow .qs{font-weight:700}
+.qrow .side{
+  font-size:8px;letter-spacing:.1em;font-weight:800;border:1px solid var(--line-strong);
+  border-radius:2px;padding:2px 4px;text-align:center;color:var(--text-faint);background:var(--surface-2);
+}
+.qrow .qp{text-align:right;font-weight:700}
+.qcount{
+  border:1px solid var(--line-strong);border-radius:3px;background:var(--surface-inset);
+  color:var(--warn);font-size:9px;font-weight:800;letter-spacing:.1em;padding:2px 6px;
+}
+
+/* ---------- F-key dock (compressed modules) ---------- */
+#dock{
+  background:var(--surface-1);border:1px solid var(--line);border-radius:8px;
+  box-shadow:var(--edge);
+  display:flex;align-items:stretch;gap:0;overflow:hidden;
+}
+.fk{
+  display:flex;align-items:center;gap:7px;padding:7px 11px;min-width:0;
+  border-right:1px solid var(--line);cursor:pointer;white-space:nowrap;
+}
+.fk:hover{background:var(--surface-3)}
+.fk .key{
+  border:1px solid var(--line-strong);border-radius:3px;background:var(--surface-inset);
+  font-size:8px;font-weight:800;letter-spacing:.06em;color:var(--text-faint);padding:2px 5px;flex:none;
+}
+.fk .fn{font-size:9px;letter-spacing:.12em;color:var(--text-faint);font-weight:700;flex:none}
+.fk .fv{font-size:10px;color:var(--text-soft);overflow:hidden;text-overflow:ellipsis}
+.fk .fv b{color:var(--text);font-weight:700}
+.meter{width:34px;height:4px;border-radius:2px;background:var(--surface-inset);border:1px solid var(--line-strong);overflow:hidden;flex:none}
+.meter i{display:block;height:100%;background:var(--info)}
+#dock .spacer{flex:1;border-right:0}
+#dock .honesty{margin:auto 10px}
+
+/* ---------- 1440x900 compression ---------- */
+@media (max-width:1560px){
+  body{font-size:11px}
+  #nowgrid{gap:4px}
+  .now-cell{padding:5px 7px}
+  .fk{padding:6px 8px;gap:5px}
+  .fk .fv{font-size:9px}
+  .stat{padding:0 7px}
+  .brow{gap:6px}
+  .tape-seg{gap:18px;padding-right:18px}
+  .slot{gap:6px;padding:5px 7px}
+  .fk .fv .wide{display:none} /* drop per-setup trade counts so all 8 F-keys fit */
+}
+</style>
+</head>
+<body>
+
+<!-- ======== left icon rail ======== -->
+<aside id="rail">
+  <div class="stamp">TJ</div>
+  <nav>
+    <span class="glyph on" title="Control room"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg></span>
+    <span class="glyph" title="Journal"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 10h8M8 14h8"/></svg></span>
+    <span class="glyph" title="Calendar"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg></span>
+    <span class="glyph" title="Analytics"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M21 20H3"/></svg></span>
+    <span class="glyph" title="Market TV"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M9 21h6"/></svg></span>
+    <span class="glyph" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg></span>
+  </nav>
+  <span class="glyph moon" title="Theme"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5z"/></svg></span>
+</aside>
+
+<!-- ======== top LIVE ticker bar ======== -->
+<header id="tickerbar">
+  <span class="live-chip"><span class="dot"></span>LIVE</span>
+  <div class="tape" aria-label="live tickers">
+    <div class="tape-inner">
+      <span class="tape-seg">
+        <span class="tk"><span class="s">TRADER JOURNAL</span><span class="p pos">▲3</span></span>
+        <span class="tk"><span class="s">M2K RUSSELL</span><span class="p">3,019</span><span class="pos">▲0.3</span></span>
+        <span class="tk"><span class="s">MGC GOLD</span><span class="p">4,660</span><span class="pos">▲3.5</span></span>
+        <span class="tk"><span class="s">MCL CRUDE</span><span class="p">83.27</span><span class="pos">▲0.01</span></span>
+        <span class="tk"><span class="s">M6E EURO FX</span><span class="p">1.1652</span><span class="pos">▲0.0002</span></span>
+        <span class="tk"><span class="s">MBT BITCOIN</span><span class="p">112,450</span><span class="pos">▲210</span></span>
+      </span>
+      <span class="tape-seg" aria-hidden="true">
+        <span class="tk"><span class="s">TRADER JOURNAL</span><span class="p pos">▲3</span></span>
+        <span class="tk"><span class="s">M2K RUSSELL</span><span class="p">3,019</span><span class="pos">▲0.3</span></span>
+        <span class="tk"><span class="s">MGC GOLD</span><span class="p">4,660</span><span class="pos">▲3.5</span></span>
+        <span class="tk"><span class="s">MCL CRUDE</span><span class="p">83.27</span><span class="pos">▲0.01</span></span>
+        <span class="tk"><span class="s">M6E EURO FX</span><span class="p">1.1652</span><span class="pos">▲0.0002</span></span>
+        <span class="tk"><span class="s">MBT BITCOIN</span><span class="p">112,450</span><span class="pos">▲210</span></span>
+      </span>
+    </div>
+  </div>
+  <span class="honesty">CONCEPT PREVIEW · SAMPLE DATA · NOTHING LIVE</span>
+  <span id="clockbox"><span>FRI AUG 28 2026</span><b id="clk">18:42:07</b><span class="sess">NY AFTERNOON</span></span>
+</header>
+
+<!-- ======== the one glass ======== -->
+<main id="glass">
+
+  <!-- hero: net P&L + balance + now-grid + real affordances -->
+  <section id="hero">
+    <div class="pnl-block">
+      <div class="pnl-main">
+        <span class="lbl">Net P&amp;L · All time</span>
+        <span class="pnl-fig num">+$2,808.00</span>
+      </div>
+      <div class="bal">
+        <span class="lbl">Account balance</span>
+        <span class="bal-fig num">$52,808.00
+          <span class="eye" title="Hide balance"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/></svg></span>
+        </span>
+        <span class="bal-sub num">START $50,000 · TOPSTEP-50K</span>
+      </div>
+    </div>
+
+    <div id="nowgrid">
+      <div class="now-cell"><span class="lbl">Today</span><span class="v pos num">+$190</span><span class="sub">2 TRADES</span></div>
+      <div class="now-cell"><span class="lbl">This week</span><span class="v pos num">+$535</span><span class="sub">WK AUG 24–28</span></div>
+      <div class="now-cell"><span class="lbl">Open P&amp;L</span><span class="v num">FLAT</span><span class="sub">NO POSITION</span></div>
+      <div class="now-cell"><span class="lbl">Green streak</span><span class="v pos num">2 DAYS</span><span class="sub">AUG 27–28</span></div>
+      <div class="now-cell next"><span class="lbl">Next event</span><span class="v num">GDP M/M</span><span class="sub">2H AWAY · HIGH</span></div>
+      <div class="now-cell"><span class="lbl">Risk state</span><span class="v pos num">AT HIGHS</span><span class="sub">DD $0.00</span></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn" type="button">QUICK IMPORT</button>
+      <button class="btn primary" type="button">LOG A TRADE<span class="kbd">⌘K</span></button>
+    </div>
+  </section>
+
+  <!-- ======== monitor wall ======== -->
+  <section id="wall">
+
+    <!-- PGM 1 · MKT — the market TV, first-class monitor -->
+    <article class="monitor" id="mon-mkt">
+      <div class="mon-head">
+        <span class="pgm-tag">PGM 1</span>
+        <span class="name">MKT — MARKET FEED</span>
+        <span class="tally"><span class="dot"></span>LIVE</span>
+      </div>
+      <div class="screen" id="scr-mkt">
+        <span class="onair"><span class="chip cyan"><span class="dot"></span>LIVE</span><span class="chip">6:42 PM ET</span></span>
+        <span class="bug">MKT</span>
+
+        <div class="stage">
+          <div class="mkt-chart">
+            <div class="qline">
+              <span class="sym">MGC · GOLD DEC</span>
+              <span class="big num">4,660.0</span>
+              <span class="chg num">▲3.5</span>
+              <span class="hl num">H 4,663.2 · L 4,641.0</span>
+            </div>
+            <!-- intraday session line, invented shape anchored to H/L stamps -->
+            <svg viewBox="0 0 600 200" preserveAspectRatio="none" aria-hidden="true">
+              <line x1="0" y1="50" x2="600" y2="50" stroke="#151d28" stroke-width="1"/>
+              <line x1="0" y1="100" x2="600" y2="100" stroke="#151d28" stroke-width="1"/>
+              <line x1="0" y1="150" x2="600" y2="150" stroke="#151d28" stroke-width="1"/>
+              <line x1="0" y1="82" x2="600" y2="82" stroke="#1b2532" stroke-width="1" stroke-dasharray="4 4"/>
+              <path d="M0,158 L40,150 L70,161 L110,140 L150,146 L190,122 L230,131 L270,104 L310,116 L350,92 L390,101 L430,72 L470,84 L510,60 L550,70 L600,52"
+                    fill="none" stroke="#22d3ee" stroke-width="2" vector-effect="non-scaling-stroke"/>
+              <path d="M0,158 L40,150 L70,161 L110,140 L150,146 L190,122 L230,131 L270,104 L310,116 L350,92 L390,101 L430,72 L470,84 L510,60 L550,70 L600,52 L600,200 L0,200 Z"
+                    fill="rgba(34,211,238,.07)" stroke="none"/>
+            </svg>
+          </div>
+
+          <aside class="board">
+            <div class="bh">MARKET BOARD</div>
+            <div class="rows">
+              <div class="brow"><span class="bs">M2K</span><span class="bn">RUSSELL</span><span class="bp num">3,019.0</span><span class="bc pos num">▲0.3</span></div>
+              <div class="brow hot"><span class="bs">MGC</span><span class="bn">GOLD</span><span class="bp num">4,660.0</span><span class="bc pos num">▲3.5</span></div>
+              <div class="brow"><span class="bs">MCL</span><span class="bn">CRUDE</span><span class="bp num">83.27</span><span class="bc pos num">▲0.01</span></div>
+              <div class="brow"><span class="bs">M6E</span><span class="bn">EURO FX</span><span class="bp num">1.1652</span><span class="bc pos num">▲0.0002</span></div>
+              <div class="brow"><span class="bs">MBT</span><span class="bn">BITCOIN</span><span class="bp num">112,450</span><span class="bc pos num">▲210</span></div>
+            </div>
+          </aside>
+        </div>
+
+        <div class="lower3">
+          <div class="l3-band">
+            <div class="l3-tagrow"><span class="slab cyanline">MARKETS NOW</span></div>
+            <div class="l3-head">GOLD HOLDS HIGHS AFTER +3.5 SESSION AS 8:30 GDP LOOMS</div>
+            <div class="l3-sub num">FED CHAIR &amp; PRELIM GDP PRICE INDEX FOLLOW AT 10:00 PM · BITCOIN QUIET, REALIZED VOL COMPRESSING</div>
+          </div>
+        </div>
+        <div class="chyron" style="position:absolute;left:0;right:0;bottom:0;z-index:7">
+          <span class="flag" style="color:var(--info)">WIRE</span>
+          <span class="roll"><span class="roll-inner">
+            <span class="seg num">GDP M/M 8:30 PM · <b>T−1:48</b> ··· FED CHAIR SPEAKS 10:00 PM · <b>T−3:18</b> ··· PRELIM GDP PRICE INDEX 10:00 PM · <b>T−3:18</b> ··· GOLD HOLDING HIGHS AFTER +3.5 SESSION ··· BITCOIN QUIET — REALIZED VOL COMPRESSING ··· </span>
+            <span class="seg num" aria-hidden="true">GDP M/M 8:30 PM · <b>T−1:48</b> ··· FED CHAIR SPEAKS 10:00 PM · <b>T−3:18</b> ··· PRELIM GDP PRICE INDEX 10:00 PM · <b>T−3:18</b> ··· GOLD HOLDING HIGHS AFTER +3.5 SESSION ··· BITCOIN QUIET — REALIZED VOL COMPRESSING ··· </span>
+          </span></span>
+        </div>
+      </div>
+      <div class="mon-strip">
+        <span class="vu" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="stripline">AUD 1 · SIG LOCKED</span>
+        <span class="stripline" style="margin-left:auto">NEXT ON WIRE: <b>GDP M/M</b> · <span class="t-accent num">T−1:48</span> · HIGH IMPACT</span>
+      </div>
+    </article>
+
+    <!-- PGM 2 · TJ-1 — the trader broadcast as television -->
+    <article class="monitor" id="mon-tj">
+      <div class="mon-head">
+        <span class="pgm-tag">PGM 2</span>
+        <span class="name">TJ-1 — YOUR TAPE</span>
+        <span class="range" role="group" aria-label="Equity range">
+          <button type="button" class="on">1M</button><button type="button">3M</button><button type="button">ALL</button>
+        </span>
+        <span class="tally"><span class="dot"></span>ON AIR</span>
+      </div>
+      <div class="screen" id="scr-tj">
+        <span class="onair"><span class="chip cyan"><span class="dot"></span>ON AIR</span><span class="chip">EQUITY · AUG 17–28</span><span class="chip green">STREAK 2</span><span class="chip green">RISK: AT HIGHS</span></span>
+        <span class="bug">TJ-1</span>
+
+        <!-- program picture: the equity curve, $50,000 → $52,808 on a $45K–$55K stage -->
+        <div class="picture">
+          <div class="curve">
+            <svg viewBox="0 0 1000 500" preserveAspectRatio="none" aria-hidden="true">
+              <!-- $55K / $52.5K / $50K / $47.5K / $45K gridlines -->
+              <line x1="0" y1="0"   x2="1000" y2="0"   stroke="#151d28" stroke-width="1"/>
+              <line x1="0" y1="125" x2="1000" y2="125" stroke="#151d28" stroke-width="1"/>
+              <line x1="0" y1="250" x2="1000" y2="250" stroke="#1b2532" stroke-width="1" stroke-dasharray="5 5"/>
+              <line x1="0" y1="375" x2="1000" y2="375" stroke="#151d28" stroke-width="1"/>
+              <line x1="0" y1="499" x2="1000" y2="499" stroke="#151d28" stroke-width="1"/>
+              <line x1="100" y1="0" x2="100" y2="500" stroke="#10161f" stroke-width="1"/>
+              <line x1="300" y1="0" x2="300" y2="500" stroke="#10161f" stroke-width="1"/>
+              <line x1="500" y1="0" x2="500" y2="500" stroke="#10161f" stroke-width="1"/>
+              <line x1="700" y1="0" x2="700" y2="500" stroke="#10161f" stroke-width="1"/>
+              <line x1="900" y1="0" x2="900" y2="500" stroke="#10161f" stroke-width="1"/>
+              <!-- day-end balances: 50,000·50,715·51,751·51,934·52,108·52,273·52,707·52,312·51,912·52,618·52,808 -->
+              <path d="M0,250 L100,214.3 L200,162.5 L300,153.3 L400,144.6 L500,136.4 L600,114.7 L700,134.4 L800,154.4 L900,119.1 L1000,109.6 L1000,500 L0,500 Z"
+                    fill="rgba(52,211,153,.08)" stroke="none"/>
+              <path d="M0,250 L100,214.3 L200,162.5 L300,153.3 L400,144.6 L500,136.4 L600,114.7 L700,134.4 L800,154.4 L900,119.1 L1000,109.6"
+                    fill="none" stroke="#34d399" stroke-width="2" vector-effect="non-scaling-stroke"/>
+            </svg>
+            <span class="ylab" style="top:2%">$55K</span>
+            <span class="ylab" style="top:25%">$52.5K</span>
+            <span class="ylab" style="top:50%">$50K</span>
+            <span class="ylab" style="top:75%">$47.5K</span>
+            <span class="ylab" style="top:97%">$45K</span>
+            <span class="xlab" style="left:10%">AUG 17</span>
+            <span class="xlab" style="left:50%">AUG 21</span>
+            <span class="xlab" style="left:70%">AUG 25</span>
+            <span class="xlab" style="right:2%">AUG 28</span>
+            <!-- the NOW point: equity high, pulsing -->
+            <span class="peak-dot" style="right:2px;top:calc(21.9% - 4px)"></span>
+            <span class="peak-flag num" style="right:14px;top:calc(21.9% - 22px)">$52,808 · ATH</span>
+          </div>
+          <!-- drawdown subline, 0 to −2% of running peak -->
+          <div class="ddband">
+            <svg viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true">
+              <line x1="0" y1="50" x2="1000" y2="50" stroke="#151d28" stroke-width="1" stroke-dasharray="4 4"/>
+              <path d="M0,2 L100,2 L200,2 L300,2 L400,2 L500,2 L600,2 L700,37 L800,75 L900,8 L1000,2 L1000,0 L0,0 Z"
+                    fill="rgba(248,113,113,.12)" stroke="none"/>
+              <path d="M0,2 L100,2 L200,2 L300,2 L400,2 L500,2 L600,2 L700,37 L800,75 L900,8 L1000,2"
+                    fill="none" stroke="#f87171" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+            </svg>
+            <span class="tag">DRAWDOWN 0 → −2% · MAX −$795</span>
+          </div>
+        </div>
+
+        <!-- ======= SIGNATURE MOMENT: BREAKING ON YOUR OWN CHANNEL ======= -->
+        <div class="lower3">
+          <div class="l3-band">
+            <div class="l3-tagrow">
+              <span class="slab breaking">BREAKING</span>
+              <span class="slab dim">TRADE #44</span>
+              <span class="slab dim">MGC · SHORT</span>
+            </div>
+            <div class="l3-head num">MGC SHORT COVERED FOR +$60.00 — DAY GOES TO +$190</div>
+            <div class="l3-sub num">AUG 28 · 13:06 · NY AFTERNOON · SECOND GREEN TRADE OF THE SESSION · NEXT CATALYST: GDP M/M IN 1H 48M</div>
+          </div>
+        </div>
+        <div class="chyron" style="position:absolute;left:0;right:0;bottom:0;z-index:7">
+          <span class="flag" style="color:var(--accent)">TJ-1</span>
+          <span class="roll"><span class="roll-inner">
+            <span class="seg num">NET P&amp;L <b>+$2,808.00</b> · BALANCE <b>$52,808.00</b> · TODAY <b>+$190</b> (2 TRADES) · THIS WEEK <b>+$535</b> · OPEN P&amp;L <b>FLAT</b> · GREEN STREAK <b>2 DAYS</b> · RISK STATE <b>AT HIGHS</b> · WIN RATE <b>47.7%</b> · PROFIT FACTOR <b>1.86</b> · </span>
+            <span class="seg num" aria-hidden="true">NET P&amp;L <b>+$2,808.00</b> · BALANCE <b>$52,808.00</b> · TODAY <b>+$190</b> (2 TRADES) · THIS WEEK <b>+$535</b> · OPEN P&amp;L <b>FLAT</b> · GREEN STREAK <b>2 DAYS</b> · RISK STATE <b>AT HIGHS</b> · WIN RATE <b>47.7%</b> · PROFIT FACTOR <b>1.86</b> · </span>
+          </span></span>
+        </div>
+      </div>
+
+      <!-- the channel's engineering readout: the 7 stats -->
+      <div class="mon-strip">
+        <span class="stat"><span class="k">Total trades</span><span class="v num">44</span></span>
+        <span class="stat"><span class="k">Win rate</span><span class="v num">47.7%</span></span>
+        <span class="stat"><span class="k">Profit factor</span><span class="v num">1.86</span></span>
+        <span class="stat"><span class="k">Expectancy</span><span class="v num">$63.82</span></span>
+        <span class="stat"><span class="k">Avg win / loss</span><span class="v num"><span class="pos">$289</span> / <span class="neg">$149</span></span></span>
+        <span class="stat"><span class="k">Max drawdown</span><span class="v num neg">$795.00</span></span>
+        <span class="stat"><span class="k">Current DD</span><span class="v num pos">$0.00 (0.00%)</span></span>
+      </div>
+    </article>
+  </section>
+
+  <!-- ======== control desk: rundown · month · review queue ======== -->
+  <section id="desk">
+
+    <!-- producer's rundown: coming up on the wire -->
+    <article class="panel" id="rundown">
+      <div class="panel-h">
+        <span class="t">RUNDOWN — COMING UP</span>
+        <span class="meta num">VS CLOCK 18:42</span>
+      </div>
+      <div class="slots">
+        <div class="slot next">
+          <span class="id">A1</span><span class="at num">8:30 PM</span>
+          <span class="ev">GDP M/M</span>
+          <span class="imp high">HIGH</span>
+          <span class="tminus num">T−1:48</span>
+        </div>
+        <div class="slot">
+          <span class="id">A2</span><span class="at num">10:00 PM</span>
+          <span class="ev">FED CHAIR SPEAKS</span>
+          <span class="imp med">MED</span>
+          <span class="tminus num">T−3:18</span>
+        </div>
+        <div class="slot">
+          <span class="id">A3</span><span class="at num">10:00 PM</span>
+          <span class="ev">PRELIM GDP PRICE INDEX</span>
+          <span class="imp med">MED</span>
+          <span class="tminus num">T−3:18</span>
+        </div>
+      </div>
+      <div class="wirenotes">
+        <span class="wnote"><span class="w">WIRE</span><span>GOLD holding highs after <b class="pos num">+3.5</b> session</span></span>
+        <span class="wnote"><span class="w">WIRE</span><span>BITCOIN quiet — realized vol compressing</span></span>
+      </div>
+    </article>
+
+    <!-- the month's trading days, Mon–Fri desk grid -->
+    <article class="panel" id="calendar">
+      <div class="panel-h">
+        <span class="t">AUGUST 2026 — TRADING DAYS</span>
+        <span class="meta num">NET +$2,808 · 44 TRADES</span>
+      </div>
+      <div class="grid">
+        <span class="wd">MON</span><span class="wd">TUE</span><span class="wd">WED</span><span class="wd">THU</span><span class="wd">FRI</span>
+
+        <div class="day flat"><span class="dn">3</span><span class="dp">—</span></div>
+        <div class="day flat"><span class="dn">4</span><span class="dp">—</span></div>
+        <div class="day flat"><span class="dn">5</span><span class="dp">—</span></div>
+        <div class="day flat"><span class="dn">6</span><span class="dp">—</span></div>
+        <div class="day flat"><span class="dn">7</span><span class="dp">—</span></div>
+
+        <div class="day flat"><span class="dn">10</span><span class="dp">—</span></div>
+        <div class="day flat"><span class="dn">11</span><span class="dp">—</span></div>
+        <div class="day flat"><span class="dn">12</span><span class="dp">—</span></div>
+        <div class="day flat"><span class="dn">13</span><span class="dp">—</span></div>
+        <div class="day flat"><span class="dn">14</span><span class="dp">—</span></div>
+
+        <div class="day g"><span class="dn">17</span><span class="dp pos num">+$715</span><span class="dt">8 TR</span></div>
+        <div class="day g"><span class="dn">18</span><span class="dp pos num">+$1,036</span><span class="dt">15 TR</span></div>
+        <div class="day g"><span class="dn">19</span><span class="dp pos num">+$183</span><span class="dt">1 TR</span></div>
+        <div class="day g"><span class="dn">20</span><span class="dp pos num">+$174</span><span class="dt">1 TR</span></div>
+        <div class="day g"><span class="dn">21</span><span class="dp pos num">+$165</span><span class="dt">1 TR</span></div>
+
+        <div class="day g"><span class="dn">24</span><span class="dp pos num">+$434</span><span class="dt">8 TR</span></div>
+        <div class="day r"><span class="dn">25</span><span class="dp neg num">−$395</span><span class="dt">1 TR</span></div>
+        <div class="day r"><span class="dn">26</span><span class="dp neg num">−$400</span><span class="dt">3 TR</span></div>
+        <div class="day g"><span class="dn">27</span><span class="dp pos num">+$706</span><span class="dt">4 TR</span></div>
+        <div class="day g today"><span class="dn">28</span><span class="dp pos num">+$190</span><span class="dt">2 TR</span></div>
+
+        <div class="day flat"><span class="dn">31</span><span class="dp">—</span></div>
+        <div class="day flat" style="visibility:hidden"></div>
+        <div class="day flat" style="visibility:hidden"></div>
+        <div class="day flat" style="visibility:hidden"></div>
+        <div class="day flat" style="visibility:hidden"></div>
+      </div>
+      <div class="panel-f"><span>GREEN DAYS <b class="pos num">8</b></span><span>AVG <b class="pos num">+$281</b></span><span style="margin-left:auto" class="num">10 SESSIONS TRADED</span></div>
+    </article>
+
+    <!-- review queue — the only scrolling element on the glass -->
+    <article class="panel" id="queue">
+      <div class="panel-h">
+        <span class="t">REVIEW QUEUE</span>
+        <span class="qcount num">44 PENDING</span>
+        <span class="meta">ALL SOURCE: ESTIMATED</span>
+      </div>
+      <div class="list">
+        <div class="qhead"><span>DATE</span><span>TIME</span><span>SYM</span><span>SIDE</span><span style="text-align:right">NET P&amp;L</span></div>
+        <div class="qrow"><span class="qd num">AUG 28</span><span class="qt num">13:05</span><span class="qs">MGC</span><span class="side">SHORT</span><span class="qp pos num">+$130.00</span></div>
+        <div class="qrow"><span class="qd num">AUG 28</span><span class="qt num">13:06</span><span class="qs">MGC</span><span class="side">SHORT</span><span class="qp pos num">+$60.00</span></div>
+        <div class="qrow"><span class="qd num">AUG 27</span><span class="qt num">06:17</span><span class="qs">MGC</span><span class="side">LONG</span><span class="qp pos num">+$315.00</span></div>
+        <div class="qrow"><span class="qd num">AUG 27</span><span class="qt num">00:46</span><span class="qs">MGC</span><span class="side">LONG</span><span class="qp pos num">+$462.00</span></div>
+        <div class="qrow"><span class="qd num">AUG 27</span><span class="qt num">00:56</span><span class="qs">MGC</span><span class="side">LONG</span><span class="qp pos num">+$61.00</span></div>
+        <div class="qrow"><span class="qd num">AUG 27</span><span class="qt num">01:02</span><span class="qs">MGC</span><span class="side">LONG</span><span class="qp neg num">−$132.00</span></div>
+        <div class="qrow"><span class="qd num">AUG 26</span><span class="qt num">07:02</span><span class="qs">MGC</span><span class="side">LONG</span><span class="qp num">$0.00</span></div>
+        <div class="qrow"><span class="qd num">AUG 26</span><span class="qt num">07:23</span><span class="qs">MGC</span><span class="side">LONG</span><span class="qp neg num">−$275.00</span></div>
+        <div class="qrow"><span class="qd num">AUG 26</span><span class="qt num">07:25</span><span class="qs">MGC</span><span class="side">LONG</span><span class="qp neg num">−$125.00</span></div>
+        <div class="qrow"><span class="qd num">AUG 26</span><span class="qt num">06:42</span><span class="qs">MGC</span><span class="side">SHORT</span><span class="qp neg num">−$222.00</span></div>
+        <div class="qrow"><span class="qd num">AUG 25</span><span class="qt num">06:56</span><span class="qs">MGC</span><span class="side">SHORT</span><span class="qp neg num">−$395.00</span></div>
+        <div class="qrow"><span class="qd num">AUG 24</span><span class="qt num">07:21</span><span class="qs">MGC</span><span class="side">SHORT</span><span class="qp neg num">−$28.00</span></div>
+        <div class="qrow"><span class="qd num">AUG 24</span><span class="qt num">07:42</span><span class="qs">MGC</span><span class="side">LONG</span><span class="qp neg num">−$50.00</span></div>
+        <div class="qrow"><span class="qd num">AUG 24</span><span class="qt num">07:53</span><span class="qs">MGC</span><span class="side">LONG</span><span class="qp pos num">+$101.00</span></div>
+      </div>
+      <div class="panel-f"><span>SHOWING 14 OF 44</span><span style="margin-left:auto">RUNNING TOTAL <b class="pos num">+$346.00</b></span></div>
+    </article>
+  </section>
+
+  <!-- ======== F-key dock: every remaining module, compressed ======== -->
+  <footer id="dock">
+    <div class="fk"><span class="key">F1</span><span class="fn">PLAYBOOK</span><span class="fv num">ORB <b>≈62%</b><span class="wide">·21</span> / FADE <b>≈42%</b><span class="wide">·12</span> / VWAP <b>≈45%</b><span class="wide">·11</span></span></div>
+    <div class="fk"><span class="key">F2</span><span class="fn">DISCIPLINE</span><span class="fv num"><b>82</b></span><span class="meter"><i style="width:82%"></i></span></div>
+    <div class="fk"><span class="key">F3</span><span class="fn">EDGE</span><span class="fv num"><b>71</b></span><span class="meter"><i style="width:71%"></i></span></div>
+    <div class="fk"><span class="key">F4</span><span class="fn">CHECKLIST</span><span class="fv num"><b>5/5</b> ARMED</span></div>
+    <div class="fk"><span class="key">F5</span><span class="fn">RISK</span><span class="fv num">DAILY <b>$0</b> / $500</span></div>
+    <div class="fk"><span class="key">F6</span><span class="fn">ACCOUNTS</span><span class="fv">TOPSTEP-50K <b style="color:var(--info)">LIVE</b></span></div>
+    <div class="fk"><span class="key">F7</span><span class="fn">PSYCH</span><span class="fv">REPORT READY</span></div>
+    <div class="fk"><span class="key">F8</span><span class="fn">R-MULT</span><span class="fv num">AVG <b>0.43R</b></span></div>
+    <div class="spacer"></div>
+  </footer>
+</main>
+
+<script>
+/* clock only — no rAF, ticks from the sample-data time 18:42:07 */
+(function(){
+  var s = 18*3600 + 42*60 + 7, el = document.getElementById('clk');
+  function p(n){ return (n<10?'0':'')+n; }
+  setInterval(function(){
+    s = (s+1) % 86400;
+    el.textContent = p(Math.floor(s/3600)) + ':' + p(Math.floor(s%3600/60)) + ':' + p(s%60);
+  }, 1000);
+})();
+</script>
+</body>
+</html>

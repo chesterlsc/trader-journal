@@ -1,0 +1,932 @@
+<!doctype html>
+<!--
+  TRADER JOURNAL — FEATURE ADD · VARIATION 2 — "THE DESK RAIL"
+  ===========================================================
+  The production Clay V3 dashboard, unchanged in its bones, with the
+  Personal Financial Newspaper installed as a right-hand rail where the
+  Market TV used to live alone. The TV now docks BELOW the paper, smaller.
+
+  SIGNATURE MOMENT — "THE MORNING NOTES":
+  The four AI MICRO DESK cards are not four widgets. They are ONE continuous
+  analyst column running down the rail — hairline-separated, no boxes, no
+  gutters — datelined 05:00 MANILA at the top and initialed "— AI DESK, 05:00"
+  at the bottom, exactly the way a broker's overnight note lands on a desk
+  before the trader does. It reads top to bottom as prose, and it sits
+  directly above the Market TV it will be arguing with all day.
+
+  SIZING CHANGES APPLIED
+  · NET P&L hero: 176px -> 88px (one-line composition, 34px headline,
+    balance inline, now-figures compact).
+  · Review queue: 6/12 -> 4/12 analytics columns. The freed 8 columns go to
+    NET DAILY P&L, which widens into a full-span daily tape beside it.
+
+  CONCEPT PREVIEW · SAMPLE DATA · NOTHING LIVE.
+  Canonical clock: Wednesday, September 2, 2026 · 05:00 Manila (GMT+8).
+  Hero band, the entire newspaper rail, all four AI cards and the TV land
+  inside the first 1150px at 1999 wide. No horizontal scroll at 1999 or 1440.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trader Journal — The Desk Rail</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Sora:wght@400;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   1 · CLAY V3 TOKENS  (literal values — the page carries its own light)
+   ========================================================================== */
+:root{
+  --surface-0:#080b12;      /* page ground */
+  --surface-1:#0c1119;      /* panels */
+  --surface-2:#111823;      /* raised */
+  --surface-3:#16202d;      /* hover / chips */
+  --surface-inset:#05080e;  /* wells, screens, tape */
+  --line:#151d28;
+  --line-strong:#1b2532;
+  --text:#e6ecf5;
+  --text-soft:#8695a8;
+  --text-faint:#7c8b9e;
+  --accent:#f97316;         /* interaction + NOW only */
+  --accent-strong:#fb8b3a;
+  --pnl-pos:#34d399;
+  --pnl-neg:#f87171;
+  --warn:#f0b34e;
+  --info:#22d3ee;           /* LIVE / terminal cyan */
+
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"Sora","Avenir Next",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --serif:"Source Serif 4","Iowan Old Style",Georgia,"Times New Roman",serif;
+
+  --edge:inset 0 1px 0 rgba(214,222,235,.07);            /* raised top edge */
+  --well:inset 0 1px 2px rgba(0,0,0,.55);                /* inset well */
+  --r:8px;
+}
+
+/* ==========================================================================
+   2 · RESET + PRIMITIVES
+   ========================================================================== */
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#080b12}
+body{
+  background:#080b12;
+  color:var(--text);
+  font-family:var(--mono);
+  font-size:12px;
+  font-variant-numeric:tabular-nums;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  display:grid;
+  grid-template-columns:56px minmax(0,1fr);
+  grid-template-rows:40px minmax(0,1fr);
+  min-height:1150px;
+}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.pos{color:var(--pnl-pos)}
+.neg{color:var(--pnl-neg)}
+.flat{color:var(--text-soft)}
+/* letter-spaced uppercase micro-label — 10/11px, the whole system speaks in these */
+.lbl{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-faint);font-weight:500;line-height:1}
+.lbl11{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-soft);font-weight:600;line-height:1}
+.hair{height:1px;background:var(--line);border:0}
+
+/* raised panel — machined hairline + top-edge highlight */
+.panel{
+  background:var(--surface-1);
+  border:1px solid var(--line);
+  border-radius:var(--r);
+  box-shadow:var(--edge);
+  display:flex;flex-direction:column;min-width:0;min-height:0;
+}
+.panel > header{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;border-bottom:1px solid var(--line);flex:none;
+}
+.panel > header .t{font-family:var(--sans);font-weight:700;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase}
+.panel > header .r{margin-left:auto;display:flex;align-items:center;gap:8px}
+
+.chip{
+  display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;
+  border:1px solid var(--line-strong);border-radius:5px;background:var(--surface-2);
+  font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-soft);font-weight:600;
+  box-shadow:var(--edge);white-space:nowrap;
+}
+.chip.on{color:var(--text);background:var(--surface-3)}
+.chip.acc{color:var(--accent);border-color:#3a2412;background:#1a1109}
+.chip.cy{color:var(--info);border-color:#123038;background:#08191d}
+.chip.up{color:var(--pnl-pos);border-color:#13342a;background:#08170f}
+.chip.dn{color:var(--pnl-neg);border-color:#3a1c1c;background:#190c0c}
+.chip.wn{color:var(--warn);border-color:#3a2f13;background:#181206}
+.dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex:none}
+.pulse{animation:blip 2s ease-in-out infinite}
+@keyframes blip{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* ==========================================================================
+   3 · APP FRAME — left icon rail + LIVE ticker
+   ========================================================================== */
+#rail{
+  grid-row:1/3;grid-column:1;
+  background:var(--surface-1);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;padding:9px 0;gap:5px;
+}
+#rail .mono-stamp{
+  width:36px;height:36px;border-radius:8px;background:var(--surface-2);
+  border:1px solid var(--line-strong);box-shadow:var(--edge);
+  display:grid;place-items:center;margin-bottom:12px;
+  font-family:var(--sans);font-weight:800;font-size:12px;letter-spacing:.04em;
+}
+#rail .g{
+  width:34px;height:34px;border-radius:7px;display:grid;place-items:center;
+  color:var(--text-faint);opacity:.55;
+}
+#rail .g.on{opacity:1;color:var(--text);background:var(--surface-2);box-shadow:var(--edge)}
+#rail .g svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+#rail .moon{margin-top:auto;opacity:.45}
+
+#tape{
+  grid-row:1;grid-column:2;
+  background:var(--surface-inset);border-bottom:1px solid var(--line);
+  box-shadow:var(--well);
+  display:flex;align-items:center;gap:0;padding:0 14px 0 12px;overflow:hidden;
+}
+#tape .live{display:flex;align-items:center;gap:6px;color:var(--info);font-size:10px;letter-spacing:.18em;font-weight:700;padding-right:14px;border-right:1px solid var(--line-strong);margin-right:2px}
+#tape .q{display:flex;align-items:baseline;gap:7px;padding:0 15px;border-right:1px solid #10161f;white-space:nowrap}
+#tape .q b{font-weight:700;font-size:11px;letter-spacing:.06em;color:var(--text-soft)}
+#tape .q i{font-style:normal;font-size:11.5px;font-weight:600;color:var(--text)}
+#tape .q s{text-decoration:none;font-size:10.5px;font-weight:600}
+#tape .clock{margin-left:auto;display:flex;align-items:center;gap:10px;padding-left:14px}
+#tape .clock .c{font-size:11px;color:var(--text-soft);letter-spacing:.08em}
+.preview-tag{
+  font-size:9.5px;letter-spacing:.16em;color:#5d6b7d;border:1px solid var(--line-strong);
+  border-radius:4px;padding:3px 7px;white-space:nowrap;
+}
+
+/* ==========================================================================
+   4 · SHELL — main column + the desk rail
+   ========================================================================== */
+#shell{
+  grid-row:2;grid-column:2;
+  padding:14px 16px 16px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) clamp(430px,31.5vw,620px);
+  gap:14px;align-items:start;
+}
+#main{display:flex;flex-direction:column;gap:12px;min-width:0}
+
+/* ==========================================================================
+   5 · HERO — halved: 176px -> 88px, one line
+   ========================================================================== */
+#hero{
+  height:88px;flex:none;
+  background:linear-gradient(180deg,var(--surface-2),var(--surface-1));
+  border:1px solid var(--line-strong);border-radius:var(--r);box-shadow:var(--edge);
+  display:flex;align-items:center;gap:0;padding:0 14px;overflow:hidden;
+}
+#hero .net{display:flex;flex-direction:column;gap:5px;padding-right:16px;flex:none}
+#hero .net .top{display:flex;align-items:center;gap:8px}
+#hero .net .fig{font-size:34px;font-weight:700;line-height:1;letter-spacing:-.02em}
+#hero .net .bal{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-soft)}
+#hero .net .bal b{color:var(--text);font-weight:600}
+#hero .eye{width:18px;height:18px;display:grid;place-items:center;color:var(--text-faint);border:1px solid var(--line);border-radius:4px}
+#hero .eye svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.5}
+#hero .sep{width:1px;align-self:stretch;background:var(--line-strong);margin:16px 0}
+#hero .cols{display:flex;flex:1;min-width:0;height:100%;align-items:center}
+#hero .col{padding:0 15px;display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}
+#hero .col .v{font-size:14px;font-weight:600;line-height:1;white-space:nowrap}
+#hero .col .sub{font-size:10px;color:var(--text-faint);letter-spacing:.06em;white-space:nowrap}
+#hero .ctl{display:flex;align-items:center;gap:8px;padding-left:14px;flex:none}
+.seg{display:flex;border:1px solid var(--line-strong);border-radius:5px;overflow:hidden;box-shadow:var(--edge)}
+.seg span{padding:0 9px;height:22px;display:grid;place-items:center;font-size:10px;letter-spacing:.1em;color:var(--text-faint);background:var(--surface-2);border-right:1px solid var(--line)}
+.seg span:last-child{border-right:0}
+.seg span.on{background:var(--surface-3);color:var(--text)}
+.btn{
+  height:26px;padding:0 11px;display:inline-flex;align-items:center;gap:7px;
+  border-radius:6px;border:1px solid var(--line-strong);background:var(--surface-2);
+  color:var(--text-soft);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;box-shadow:var(--edge);
+}
+.btn.primary{background:#1c1206;border-color:#4a2c10;color:var(--accent-strong)}
+.btn kbd{font-family:var(--mono);font-size:9px;color:var(--text-faint);border:1px solid var(--line);border-radius:3px;padding:1px 3px}
+
+/* ==========================================================================
+   6 · ANALYTICS GRID — 12 columns. Review queue is now 4 (was 6).
+   ========================================================================== */
+.grid12{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px}
+.c4{grid-column:span 4}.c5{grid-column:span 5}.c7{grid-column:span 7}.c8{grid-column:span 8}.c12{grid-column:span 12}
+
+/* --- equity / drawdown ---------------------------------------------------- */
+#equity{height:262px}
+#equity .stats{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line);flex:none}
+#equity .stat{padding:10px 12px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:6px;min-width:0}
+#equity .stat:last-child{border-right:0}
+#equity .stat .v{font-size:17px;font-weight:700;line-height:1;white-space:nowrap}
+#equity .stat .n{font-size:10px;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#equity .curvewrap{flex:1;position:relative;background:var(--surface-inset);box-shadow:var(--well);margin:10px;border-radius:6px;border:1px solid var(--line);min-height:0}
+#equity svg{position:absolute;inset:0;width:100%;height:100%}
+#equity .axis{position:absolute;left:9px;top:7px;display:flex;gap:14px}
+#equity .axisr{position:absolute;right:9px;top:7px;text-align:right}
+#equity .foot{position:absolute;left:9px;right:9px;bottom:6px;display:flex;justify-content:space-between}
+
+/* --- calendar ------------------------------------------------------------- */
+#cal{height:300px}
+#cal .dow{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--line);flex:none}
+#cal .dow div{padding:5px 0;text-align:center}
+#cal .weeks{flex:1;display:grid;grid-template-rows:repeat(5,1fr);min-height:0}
+#cal .wk{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--line)}
+#cal .wk:last-child{border-bottom:0}
+#cal .d{border-right:1px solid var(--line);padding:5px 6px;display:flex;flex-direction:column;gap:2px;min-width:0;position:relative}
+#cal .d:last-child{border-right:0}
+#cal .d .n{font-size:10.5px;color:var(--text-faint)}
+#cal .d .p{font-size:11.5px;font-weight:700;line-height:1.1}
+#cal .d .t{font-size:9px;color:#5f6d80}
+#cal .d.out{background:#070a10}
+#cal .d.out .n{color:#3d4756}
+#cal .d.carry .n{color:#5f6d80}
+#cal .d.win{background:linear-gradient(180deg,rgba(52,211,153,.08),rgba(52,211,153,.02))}
+#cal .d.loss{background:linear-gradient(180deg,rgba(248,113,113,.08),rgba(248,113,113,.02))}
+#cal .d.today{background:#12100b;box-shadow:inset 0 0 0 1px var(--accent)}
+#cal .d.today .n{color:var(--accent);font-weight:700}
+#cal .foot{flex:none;border-top:1px solid var(--line);padding:7px 12px;display:flex;gap:16px;align-items:center}
+
+/* --- side stack: wire + accounts + discipline ------------------------------ */
+#side{height:300px;gap:0}
+#side .wire{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+#side .ev{display:flex;align-items:center;gap:9px}
+#side .ev .when{font-size:10.5px;color:var(--text-faint);width:96px;flex:none}
+#side .ev .what{font-size:11.5px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#side .ev.hot .what{color:var(--accent-strong)}
+#side .acct{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:7px}
+#side .acct .row{display:flex;align-items:baseline;gap:8px}
+#side .acct .row .v{margin-left:auto;font-weight:700;font-size:13px}
+#side .bar{height:6px;border-radius:3px;background:var(--surface-inset);box-shadow:var(--well);overflow:hidden}
+#side .bar i{display:block;height:100%;background:linear-gradient(90deg,#1f6f57,var(--pnl-pos))}
+#side .disc{padding:10px 12px;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;flex:1;overflow:hidden}
+
+/* --- day bars ------------------------------------------------------------- */
+#bars{height:300px}
+#bars .plot{flex:1;margin:10px;background:var(--surface-inset);border:1px solid var(--line);border-radius:6px;box-shadow:var(--well);position:relative;min-height:0}
+#bars svg{position:absolute;inset:0;width:100%;height:100%}
+#bars .foot{flex:none;border-top:1px solid var(--line);padding:7px 12px;display:flex;gap:16px;align-items:center}
+
+/* --- review queue (4/12) --------------------------------------------------- */
+#queue{height:300px}
+#queue table{width:100%;border-collapse:collapse;table-layout:fixed}
+#queue th{
+  font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--text-faint);
+  font-weight:600;text-align:left;padding:7px 6px;border-bottom:1px solid var(--line-strong);background:var(--surface-1);
+}
+#queue td{padding:6px;border-bottom:1px solid var(--line);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#queue tr:last-child td{border-bottom:0}
+#queue .sym{color:var(--text-soft);font-weight:600}
+#queue .r{text-align:right}
+#queue .src{font-size:9.5px;color:#5f6d80;letter-spacing:.06em}
+#queue .why{color:var(--warn);font-size:10px;letter-spacing:.04em}
+#queue .scroll{flex:1;overflow:hidden;min-height:0}
+#queue .foot{flex:none;border-top:1px solid var(--line-strong);padding:8px 10px;display:flex;align-items:center;gap:10px}
+
+/* ==========================================================================
+   7 · THE DESK RAIL — the personal financial newspaper
+   ========================================================================== */
+#deskrail{
+  display:flex;flex-direction:column;gap:12px;min-width:0;
+  height:calc(1150px - 40px - 30px);
+}
+#paper{
+  flex:1;min-height:0;
+  background:linear-gradient(180deg,#0d131c,var(--surface-1));
+  border:1px solid var(--line-strong);border-radius:var(--r);box-shadow:var(--edge);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+
+/* --- masthead + greeting --------------------------------------------------- */
+#paper .masthead{padding:11px 14px 10px;border-bottom:2px solid var(--line-strong);flex:none}
+#paper .mh-top{display:flex;align-items:baseline;gap:10px}
+#paper .mh{
+  font-family:var(--serif);font-weight:700;font-size:23px;line-height:1;
+  letter-spacing:.005em;color:var(--text);
+}
+#paper .mh em{font-style:italic;font-weight:400;color:var(--text-soft)}
+#paper .mh-rule{margin:8px 0 8px;height:1px;background:var(--line-strong)}
+#paper .edition{
+  display:flex;justify-content:space-between;gap:10px;
+  font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:#5f6d80;
+}
+#paper .greet{
+  font-family:var(--sans);font-weight:700;font-size:21px;letter-spacing:-.01em;margin-top:9px;
+}
+#paper .greet .n{color:var(--accent)}
+#paper .greetsub{font-size:10.5px;color:var(--text-faint);margin-top:5px;letter-spacing:.04em}
+
+/* --- world sessions -------------------------------------------------------- */
+#sessions{flex:none;border-bottom:1px solid var(--line-strong)}
+#sessions .hd{display:flex;align-items:center;gap:8px;padding:8px 14px 6px}
+#sessions .s{
+  display:grid;grid-template-columns:34px minmax(0,1fr) auto;
+  align-items:center;gap:11px;padding:7px 14px;border-top:1px solid var(--line);
+}
+#sessions .s .city{font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:.02em}
+#sessions .s .win{font-size:9.5px;color:#5f6d80;letter-spacing:.09em;margin-top:3px}
+#sessions .s .right{text-align:right;display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+#sessions .s .cd{font-size:11.5px;font-weight:600;color:var(--text-soft)}
+#sessions .s .cd.now{color:var(--accent);font-weight:700}
+#sessions .s.open{background:linear-gradient(90deg,rgba(249,115,22,.07),transparent 60%)}
+/* tiny analog clock figure — local time in that city at the canonical hour */
+.tclock{width:30px;height:30px;display:block}
+.tclock .face{fill:var(--surface-inset);stroke:var(--line-strong);stroke-width:1}
+.tclock .tick{stroke:#3d4756;stroke-width:1.2;stroke-linecap:round}
+.tclock .hh,.tclock .mh2{stroke:var(--text-soft);stroke-linecap:round}
+.tclock .hh{stroke-width:1.8}.tclock .mh2{stroke-width:1.2}
+.tclock.live .hh,.tclock.live .mh2{stroke:var(--accent)}
+.tclock.live .face{stroke:#4a2c10}
+
+/* --- THE MORNING NOTES — one continuous analyst column -------------------- */
+#notes{flex:1;min-height:0;display:flex;flex-direction:column}
+#notes .dateline{
+  display:flex;align-items:center;gap:9px;padding:9px 14px 7px;flex:none;
+}
+#notes .dateline .dl{
+  font-family:var(--serif);font-style:italic;font-size:12px;color:var(--text-soft);
+}
+#notes .col{flex:1;min-height:0;display:flex;flex-direction:column}
+#notes .note{
+  padding:8px 14px 9px;border-top:1px solid var(--line);
+  display:flex;flex-direction:column;gap:5px;flex:1;min-height:0;justify-content:center;
+}
+#notes .note .l1{display:flex;align-items:baseline;gap:9px}
+#notes .note .ins{font-family:var(--sans);font-weight:700;font-size:13.5px;letter-spacing:.03em}
+#notes .note .px{font-size:12.5px;font-weight:600;color:var(--text-soft);margin-left:auto}
+#notes .note .px b{color:var(--text);font-weight:700}
+#notes .note .l2{display:flex;align-items:center;gap:10px}
+#notes .note .meter{flex:1;height:5px;border-radius:3px;background:var(--surface-inset);box-shadow:var(--well);overflow:hidden;min-width:40px}
+/* confidence meters stay NEUTRAL — never accent, never direction-coloured */
+#notes .note .meter i{display:block;height:100%;background:linear-gradient(90deg,#2b3746,#6d7c8f)}
+#notes .note .conf{font-size:10.5px;color:var(--text-faint);letter-spacing:.08em;white-space:nowrap}
+#notes .note .body{
+  font-family:var(--serif);font-size:12.5px;line-height:1.34;color:#c3cede;
+}
+#notes .note .body .k{color:var(--text);font-weight:600}
+#notes .signoff{
+  flex:none;border-top:1px solid var(--line-strong);padding:8px 14px;
+  display:flex;align-items:center;gap:10px;background:#0a0f16;
+}
+#notes .signoff .init{font-family:var(--serif);font-style:italic;font-size:12px;color:var(--text-soft)}
+
+/* --- docked market TV ------------------------------------------------------ */
+#tv{
+  flex:none;height:184px;background:var(--surface-inset);
+  border:1px solid var(--line-strong);border-radius:var(--r);box-shadow:var(--edge),var(--well);
+  position:relative;overflow:hidden;
+}
+#tv .pic{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(120% 80% at 22% 8%, rgba(34,211,238,.07), transparent 60%),
+    radial-gradient(90% 70% at 82% 96%, rgba(249,115,22,.06), transparent 62%),
+    linear-gradient(180deg,#0a1017,#060a10);
+}
+#tv .scan{position:absolute;inset:0;background:repeating-linear-gradient(180deg,rgba(255,255,255,.018) 0 1px,transparent 1px 3px)}
+#tv .fakechart{position:absolute;left:0;right:0;bottom:44px;height:96px;opacity:.85}
+#tv .fakechart svg{width:100%;height:100%}
+#tv .bug{
+  position:absolute;top:10px;left:12px;display:flex;align-items:center;gap:7px;
+}
+#tv .bug .m{
+  width:26px;height:26px;border-radius:5px;border:1px solid var(--line-strong);background:#0b1119;
+  display:grid;place-items:center;font-family:var(--sans);font-weight:800;font-size:9.5px;letter-spacing:.04em;color:var(--text-soft);
+}
+#tv .live{
+  position:absolute;top:10px;right:12px;display:flex;align-items:center;gap:6px;
+  color:var(--info);font-size:9.5px;letter-spacing:.16em;font-weight:700;
+  border:1px solid #123038;background:#08191d;border-radius:4px;padding:3px 7px;
+}
+#tv .lower{
+  position:absolute;left:0;right:0;bottom:0;
+  background:linear-gradient(180deg,rgba(6,10,16,.2),rgba(6,10,16,.95) 45%);
+  padding:12px 12px 10px;border-top:1px solid rgba(27,37,50,.9);
+}
+#tv .lower .slug{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+#tv .lower .slug .cat{background:var(--accent);color:#120a03;font-size:9px;font-weight:800;letter-spacing:.14em;padding:2px 6px;border-radius:3px}
+#tv .lower .hl{font-family:var(--sans);font-weight:700;font-size:12.5px;line-height:1.25;letter-spacing:.01em}
+#tv .crawl{position:absolute;bottom:0;left:0;right:0;height:0}
+
+/* ==========================================================================
+   8 · 1440 COMPRESSION — nothing clips, everything narrows
+   ========================================================================== */
+@media (max-width:1700px){
+  #shell{grid-template-columns:minmax(0,1fr) clamp(400px,30vw,520px);padding:12px}
+  /* review queue takes 5/12 when the main column narrows, bars take 7 */
+  .c4{grid-column:span 5}
+  .c8{grid-column:span 7}
+  #equity .stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+  #equity{height:288px}
+  #hero .col{padding:0 10px}
+  #hero .net .fig{font-size:29px}
+  #notes .note .body{font-size:11.5px;line-height:1.32}
+  #paper .mh{font-size:19px}
+  #paper .greet{font-size:18px}
+  /* narrow column: the supplementary discipline chips drop rather than clip */
+  #side .disc .chip:nth-last-child(-n+3){display:none}
+  #queue .why{font-size:9px;letter-spacing:0}
+  #queue td,#queue th{padding:6px 4px}
+}
+@media (max-width:1200px){
+  #shell{grid-template-columns:minmax(0,1fr)}
+  #deskrail{height:auto}
+  .c4,.c5,.c7,.c8{grid-column:span 12}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================ LEFT ICON RAIL ============================ -->
+<aside id="rail">
+  <div class="mono-stamp">TJ</div>
+  <div class="g on" title="Dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></div>
+  <div class="g" title="Trades"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7h-5v5"/></svg></div>
+  <div class="g" title="Journal"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></div>
+  <div class="g" title="Calendar"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+  <div class="g" title="Accounts"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h4"/></svg></div>
+  <div class="g" title="Import"><svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="M8 10l4 4 4-4"/><path d="M4 19h16"/></svg></div>
+  <div class="g" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></div>
+  <div class="g moon" title="Dark"><svg viewBox="0 0 24 24"><path d="M20 14a8 8 0 1 1-10-10 7 7 0 0 0 10 10z"/></svg></div>
+</aside>
+
+<!-- ============================== LIVE TICKER ============================= -->
+<div id="tape">
+  <span class="live"><span class="dot pulse"></span>LIVE</span>
+  <span class="q"><b>M2K</b><span class="lbl">Russell</span><i class="num">3,024</i><s class="pos">▲0.2%</s></span>
+  <span class="q"><b>MGC</b><span class="lbl">Gold</span><i class="num">4,671</i><s class="pos">▲0.24%</s></span>
+  <span class="q"><b>MCL</b><span class="lbl">Crude</span><i class="num">82.94</i><s class="neg">▼0.4%</s></span>
+  <span class="q"><b>M6E</b><span class="lbl">Euro FX</span><i class="num">1.1660</i><s class="pos">▲0.0008</s></span>
+  <span class="q"><b>MBT</b><span class="lbl">Bitcoin</span><i class="num">111,890</i><s class="neg">▼560</s></span>
+  <div class="clock">
+    <span class="c num">WED 02 SEP 2026 · 05:00 MANILA GMT+8</span>
+    <span class="chip cy"><span class="dot"></span>SYDNEY OPEN</span>
+    <span class="preview-tag">CONCEPT PREVIEW · SAMPLE DATA · NOTHING LIVE</span>
+  </div>
+</div>
+
+<!-- ================================ SHELL ================================= -->
+<div id="shell">
+
+<!-- ------------------------------ MAIN COLUMN ----------------------------- -->
+<div id="main">
+
+  <!-- ===== HERO — halved to 88px, one-line composition ===== -->
+  <section id="hero">
+    <div class="net">
+      <div class="top">
+        <span class="lbl">Net P&amp;L</span>
+        <span class="chip up"><span class="dot"></span>At highs</span>
+      </div>
+      <div class="fig pos num">+$3,253.00</div>
+      <div class="bal">
+        <span class="lbl">Balance</span>
+        <b class="num">$53,253.00</b>
+        <span>start $50,000</span>
+        <span class="eye"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="cols">
+      <div class="col"><span class="lbl">Today</span><span class="v flat num">$0</span><span class="sub">No trades</span></div>
+      <div class="col"><span class="lbl">This week</span><span class="v pos num">+$328</span><span class="sub">Aug 31 · Sep 1</span></div>
+      <div class="col"><span class="lbl">Open P&amp;L</span><span class="v flat num">FLAT</span><span class="sub">No positions</span></div>
+      <div class="col"><span class="lbl">Green streak</span><span class="v pos num">4 DAYS</span><span class="sub">Aug 27 → Sep 1</span></div>
+      <div class="col"><span class="lbl">Next event</span><span class="v" style="color:var(--accent-strong)">GDP Q/Q</span><span class="sub num">9H AWAY · 14:00</span></div>
+      <div class="col"><span class="lbl">Risk state</span><span class="v">AT HIGHS</span><span class="sub num">DD $0.00 · 0.00%</span></div>
+    </div>
+    <div class="ctl">
+      <span class="btn">Quick import</span>
+      <span class="seg"><span class="on">1M</span><span>3M</span><span>ALL</span></span>
+      <span class="chip">EST</span>
+      <span class="btn primary">Log a trade <kbd>⌘K</kbd></span>
+    </div>
+  </section>
+
+  <!-- ===== EQUITY / DRAWDOWN ===== -->
+  <section class="panel c12" id="equity">
+    <header>
+      <span class="t">Equity &amp; drawdown</span>
+      <span class="chip">Aug 17 → Sep 1</span>
+      <div class="r">
+        <span class="chip up"><span class="dot"></span>Current DD $0.00</span>
+        <span class="chip wn">Max DD $795.00</span>
+      </div>
+    </header>
+    <div class="stats">
+      <div class="stat"><span class="lbl">Total trades</span><span class="v num">58</span><span class="n">12 trading days</span></div>
+      <div class="stat"><span class="lbl">Win rate</span><span class="v num">48.3%</span><span class="n num">28W · 29L · 1 scratch</span></div>
+      <div class="stat"><span class="lbl">Profit factor</span><span class="v num">1.74</span><span class="n num">+$7,663 / −$4,410</span></div>
+      <div class="stat"><span class="lbl">Expectancy</span><span class="v pos num">$56.09</span><span class="n num">$3,253 / 58</span></div>
+      <div class="stat"><span class="lbl">Avg win / loss</span><span class="v num"><span class="pos">$274</span> <span style="color:var(--text-faint)">/</span> <span class="neg">$152</span></span><span class="n">1.80 : 1 payoff</span></div>
+      <div class="stat"><span class="lbl">Max drawdown</span><span class="v num">$795.00</span><span class="n">Aug 24 → Aug 26</span></div>
+      <div class="stat"><span class="lbl">Current drawdown</span><span class="v num">$0.00</span><span class="n num">0.00% · at highs</span></div>
+    </div>
+    <div class="curvewrap">
+      <svg viewBox="0 0 1200 150" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="eqfill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#34d399" stop-opacity=".22"/>
+            <stop offset="100%" stop-color="#34d399" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <!-- gridlines -->
+        <g stroke="#101822" stroke-width="1">
+          <line x1="0" y1="20" x2="1200" y2="20"/><line x1="0" y1="60" x2="1200" y2="60"/>
+          <line x1="0" y1="100" x2="1200" y2="100"/><line x1="0" y1="140" x2="1200" y2="140"/>
+        </g>
+        <!-- max drawdown window: 52,707 -> 51,912 = $795 -->
+        <rect x="600" y="10" width="200" height="130" fill="#f87171" opacity=".05"/>
+        <line x1="600" y1="40.1" x2="800" y2="69.5" stroke="#f87171" stroke-width="1" stroke-dasharray="3 3" opacity=".65"/>
+        <path d="M0,140 L100,113.6 L200,75.4 L300,68.7 L400,62.2 L500,56.2 L600,40.1 L700,54.7 L800,69.5 L900,43.4 L1000,32.1 L1100,26 L1200,20 L1200,150 L0,150 Z" fill="url(#eqfill)"/>
+        <path d="M0,140 L100,113.6 L200,75.4 L300,68.7 L400,62.2 L500,56.2 L600,40.1 L700,54.7 L800,69.5 L900,43.4 L1000,32.1 L1100,26 L1200,20" fill="none" stroke="#34d399" stroke-width="1.8" vector-effect="non-scaling-stroke"/>
+        <circle cx="1200" cy="20" r="3.2" fill="#34d399"/>
+      </svg>
+      <div class="axis"><span class="lbl">Equity</span><span class="lbl num" style="color:#5f6d80">$50,000 → $53,253</span></div>
+      <div class="axisr"><span class="lbl num" style="color:#5f6d80">Peak $53,253 · Sep 1</span></div>
+      <div class="foot">
+        <span class="lbl num">Aug 17</span>
+        <span class="lbl num" style="color:var(--pnl-neg)">Max DD −$795 · Aug 24 → 26</span>
+        <span class="lbl num">Sep 1</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CALENDAR + SIDE STACK ===== -->
+  <div class="grid12">
+    <section class="panel c7" id="cal">
+      <header>
+        <span class="t">September 2026</span>
+        <span class="chip">Month P&amp;L</span>
+        <div class="r">
+          <span class="chip acc"><span class="dot"></span>Today Sep 2</span>
+          <span class="chip">Aug carry</span>
+        </div>
+      </header>
+      <div class="dow">
+        <div class="lbl">Mon</div><div class="lbl">Tue</div><div class="lbl">Wed</div><div class="lbl">Thu</div><div class="lbl">Fri</div><div class="lbl">Sat</div><div class="lbl">Sun</div>
+      </div>
+      <div class="weeks">
+        <div class="wk">
+          <div class="d carry win"><span class="n num">Aug 31</span><span class="p pos num">+$164</span><span class="t num">1 trade</span></div>
+          <div class="d win"><span class="n num">1</span><span class="p pos num">+$164</span><span class="t num">1 trade</span></div>
+          <div class="d today"><span class="n num">2</span><span class="p flat num">$0</span><span class="t">No trades yet</span></div>
+          <div class="d"><span class="n num">3</span></div>
+          <div class="d"><span class="n num">4</span></div>
+          <div class="d out"><span class="n num">5</span></div>
+          <div class="d out"><span class="n num">6</span></div>
+        </div>
+        <div class="wk">
+          <div class="d"><span class="n num">7</span></div><div class="d"><span class="n num">8</span></div>
+          <div class="d"><span class="n num">9</span></div><div class="d"><span class="n num">10</span></div>
+          <div class="d"><span class="n num">11</span></div><div class="d out"><span class="n num">12</span></div><div class="d out"><span class="n num">13</span></div>
+        </div>
+        <div class="wk">
+          <div class="d"><span class="n num">14</span></div><div class="d"><span class="n num">15</span></div>
+          <div class="d"><span class="n num">16</span></div><div class="d"><span class="n num">17</span></div>
+          <div class="d"><span class="n num">18</span></div><div class="d out"><span class="n num">19</span></div><div class="d out"><span class="n num">20</span></div>
+        </div>
+        <div class="wk">
+          <div class="d"><span class="n num">21</span></div><div class="d"><span class="n num">22</span></div>
+          <div class="d"><span class="n num">23</span></div><div class="d"><span class="n num">24</span></div>
+          <div class="d"><span class="n num">25</span></div><div class="d out"><span class="n num">26</span></div><div class="d out"><span class="n num">27</span></div>
+        </div>
+        <div class="wk">
+          <div class="d"><span class="n num">28</span></div><div class="d"><span class="n num">29</span></div>
+          <div class="d"><span class="n num">30</span></div>
+          <div class="d out"><span class="n num">Oct 1</span></div><div class="d out"><span class="n num">2</span></div>
+          <div class="d out"><span class="n num">3</span></div><div class="d out"><span class="n num">4</span></div>
+        </div>
+      </div>
+      <div class="foot">
+        <span class="lbl">Sep MTD</span><span class="pos num" style="font-weight:700">+$164</span>
+        <span class="lbl">1 trade</span>
+        <span style="margin-left:auto" class="lbl">August closed</span>
+        <span class="pos num" style="font-weight:700">+$2,925</span><span class="lbl num">57 trades</span>
+      </div>
+    </section>
+
+    <section class="panel c5" id="side">
+      <header>
+        <span class="t">Wire &amp; discipline</span>
+        <div class="r"><span class="chip wn"><span class="dot"></span>1 event in 9h</span></div>
+      </header>
+      <div class="wire">
+        <div class="ev hot"><span class="when num">14:00 · in 9H 00M</span><span class="what">GDP Q/Q — the print of the day</span><span class="chip acc">HIGH</span></div>
+        <div class="ev"><span class="when num">21:00 · in 16h</span><span class="what">Fed speaker — prepared remarks</span><span class="chip">MED</span></div>
+        <div class="ev"><span class="when num">FRI · in 2d</span><span class="what">Tokyo CPI</span><span class="chip">MED</span></div>
+      </div>
+      <div class="acct">
+        <div class="row"><span class="lbl11">Account</span><span class="chip">Sim · Micro futures</span><span class="v num pos">$53,253.00</span></div>
+        <div class="bar"><i style="width:100%"></i></div>
+        <div class="row"><span class="lbl num">Start $50,000</span><span class="lbl num" style="margin-left:auto">Growth +6.51%</span></div>
+      </div>
+      <div class="disc">
+        <span class="chip up"><span class="dot"></span>Green streak 4 days</span>
+        <span class="chip up">Drawdown 0.00%</span>
+        <span class="chip">Equity at highs</span>
+        <span class="chip wn">58 trades unjournaled</span>
+        <span class="chip">Payoff 1.80 : 1</span>
+        <span class="chip">Single symbol · MGC</span>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===== REVIEW QUEUE (4/12) + DAY BARS (8/12, the freed columns) ===== -->
+  <div class="grid12">
+    <section class="panel c4" id="queue">
+      <header>
+        <span class="t">Review queue</span>
+        <div class="r"><span class="chip wn"><span class="dot"></span>58 pending</span></div>
+      </header>
+      <div class="scroll">
+        <table>
+          <colgroup><col style="width:18%"><col style="width:13%"><col style="width:8%"><col style="width:24%"><col style="width:24%"><col style="width:13%"></colgroup>
+          <thead><tr><th>Date</th><th>Symbol</th><th class="r">T</th><th class="r">Net P&amp;L</th><th>Reason</th><th>Source</th></tr></thead>
+          <tbody>
+            <tr><td class="num">Sep 1</td><td class="sym">MGC</td><td class="r num">1</td><td class="r num pos">+$164.00</td><td class="why">Unjournaled</td><td class="src">Est.</td></tr>
+            <tr><td class="num">Aug 31</td><td class="sym">MGC</td><td class="r num">1</td><td class="r num pos">+$164.00</td><td class="why">Unjournaled</td><td class="src">Est.</td></tr>
+            <tr><td class="num">Aug 28</td><td class="sym">MGC</td><td class="r num">14</td><td class="r num pos">+$307.00</td><td class="why">Unjournaled</td><td class="src">Est.</td></tr>
+            <tr><td class="num">Aug 27</td><td class="sym">MGC</td><td class="r num">4</td><td class="r num pos">+$706.00</td><td class="why">Unjournaled</td><td class="src">Est.</td></tr>
+            <tr><td class="num">Aug 26</td><td class="sym">MGC</td><td class="r num">3</td><td class="r num neg">−$400.00</td><td class="why">Unjournaled</td><td class="src">Est.</td></tr>
+            <tr><td class="num">Aug 25</td><td class="sym">MGC</td><td class="r num">1</td><td class="r num neg">−$395.00</td><td class="why">Unjournaled</td><td class="src">Est.</td></tr>
+            <tr><td class="num">Aug 24</td><td class="sym">MGC</td><td class="r num">8</td><td class="r num pos">+$434.00</td><td class="why">Unjournaled</td><td class="src">Est.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="foot">
+        <span class="lbl num">7 of 12 days shown</span>
+        <span class="lbl num" style="color:#5f6d80">32 / 58 trades</span>
+        <span style="margin-left:auto" class="lbl">Shown net</span>
+        <span class="pos num" style="font-weight:700">+$980.00</span>
+      </div>
+    </section>
+
+    <section class="panel c8" id="bars">
+      <header>
+        <span class="t">Net daily P&amp;L</span>
+        <span class="chip">Aug 17 → Sep 2</span>
+        <div class="r">
+          <span class="chip up">10 green</span><span class="chip dn">2 red</span><span class="chip">1 flat</span>
+          <span class="chip">Best +$1,036 · Aug 18</span>
+        </div>
+      </header>
+      <div class="plot">
+        <svg viewBox="0 0 1000 150" preserveAspectRatio="none">
+          <line x1="0" y1="102" x2="1000" y2="102" stroke="#1b2532" stroke-width="1"/>
+          <g fill="#34d399">
+            <rect x="20"   y="37.3" width="37" height="64.7" rx="1.5"/>
+            <rect x="96.9" y="8.2"  width="37" height="93.8" rx="1.5"/>
+            <rect x="173.8" y="85.4" width="37" height="16.6" rx="1.5"/>
+            <rect x="250.8" y="86.2" width="37" height="15.8" rx="1.5"/>
+            <rect x="327.7" y="87.1" width="37" height="14.9" rx="1.5"/>
+            <rect x="404.6" y="62.7" width="37" height="39.3" rx="1.5"/>
+            <rect x="635.4" y="38.1" width="37" height="63.9" rx="1.5"/>
+            <rect x="712.3" y="74.2" width="37" height="27.8" rx="1.5"/>
+            <rect x="789.2" y="87.2" width="37" height="14.8" rx="1.5"/>
+            <rect x="866.2" y="87.2" width="37" height="14.8" rx="1.5"/>
+          </g>
+          <g fill="#f87171">
+            <rect x="481.5" y="102" width="37" height="35.8" rx="1.5"/>
+            <rect x="558.5" y="102" width="37" height="36.2" rx="1.5"/>
+          </g>
+          <!-- today: no trades, NOW marker in accent -->
+          <rect x="943.1" y="100" width="37" height="4" fill="#f97316" opacity=".8"/>
+        </svg>
+        <div style="position:absolute;left:0;right:0;bottom:4px;display:grid;grid-template-columns:repeat(13,1fr);padding:0 6px">
+          <span class="lbl num" style="text-align:center">17</span><span class="lbl num" style="text-align:center">18</span>
+          <span class="lbl num" style="text-align:center">19</span><span class="lbl num" style="text-align:center">20</span>
+          <span class="lbl num" style="text-align:center">21</span><span class="lbl num" style="text-align:center">24</span>
+          <span class="lbl num" style="text-align:center">25</span><span class="lbl num" style="text-align:center">26</span>
+          <span class="lbl num" style="text-align:center">27</span><span class="lbl num" style="text-align:center">28</span>
+          <span class="lbl num" style="text-align:center">31</span><span class="lbl num" style="text-align:center">1</span>
+          <span class="lbl num" style="text-align:center;color:var(--accent)">2</span>
+        </div>
+        <div style="position:absolute;left:9px;top:7px"><span class="lbl num" style="color:#5f6d80">Range −$400 → +$1,036</span></div>
+      </div>
+      <div class="foot">
+        <span class="lbl">All-time</span><span class="pos num" style="font-weight:700">+$3,253.00</span>
+        <span class="lbl num">58 trades · 12 days</span>
+        <span style="margin-left:auto" class="lbl num">Worst −$400 · Aug 26</span>
+        <span class="lbl num" style="color:var(--accent)">Today $0 · no trades</span>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- =========================== THE DESK RAIL ============================== -->
+<aside id="deskrail">
+  <section id="paper">
+
+    <!-- ---- masthead + greeting ---- -->
+    <div class="masthead">
+      <div class="mh-top">
+        <div class="mh">The Morning <em>Desk</em></div>
+        <span class="chip cy" style="margin-left:auto"><span class="dot pulse"></span>Dawn edition</span>
+      </div>
+      <div class="mh-rule"></div>
+      <div class="edition">
+        <span class="num">Vol. I · No. 245</span>
+        <span class="num">Wednesday, September 2, 2026</span>
+        <span class="num">Manila · 05:00 GMT+8</span>
+      </div>
+      <div class="greet">Good morning, <span class="n">Leon.</span></div>
+      <div class="greetsub num">Sydney takes the bell. New York is handing over. You have 9h 00m until GDP.</div>
+    </div>
+
+    <!-- ---- world sessions: state + countdown, top of the paper ---- -->
+    <div id="sessions">
+      <div class="hd">
+        <span class="lbl11">World sessions</span>
+        <span class="lbl num" style="margin-left:auto">Times shown in Manila</span>
+      </div>
+
+      <!-- SYDNEY — opening, bell rings NOW -->
+      <div class="s open">
+        <svg class="tclock live" viewBox="0 0 32 32"><circle class="face" cx="16" cy="16" r="14"/>
+          <line class="tick" x1="16" y1="4" x2="16" y2="6.5"/><line class="tick" x1="28" y1="16" x2="25.5" y2="16"/>
+          <line class="tick" x1="16" y1="28" x2="16" y2="25.5"/><line class="tick" x1="4" y1="16" x2="6.5" y2="16"/>
+          <!-- 07:00 local -->
+          <line class="hh" x1="16" y1="16" x2="16" y2="9" transform="rotate(210 16 16)"/>
+          <line class="mh2" x1="16" y1="16" x2="16" y2="6.5"/>
+        </svg>
+        <div>
+          <div class="city">Sydney</div>
+          <div class="win num">05:00–14:00 · local 07:00</div>
+        </div>
+        <div class="right">
+          <span class="chip acc"><span class="dot pulse"></span>Opening</span>
+          <span class="cd now num">Bell rings NOW</span>
+        </div>
+      </div>
+
+      <!-- TOKYO — pre-market -->
+      <div class="s">
+        <svg class="tclock" viewBox="0 0 32 32"><circle class="face" cx="16" cy="16" r="14"/>
+          <line class="tick" x1="16" y1="4" x2="16" y2="6.5"/><line class="tick" x1="28" y1="16" x2="25.5" y2="16"/>
+          <line class="tick" x1="16" y1="28" x2="16" y2="25.5"/><line class="tick" x1="4" y1="16" x2="6.5" y2="16"/>
+          <!-- 06:00 local -->
+          <line class="hh" x1="16" y1="16" x2="16" y2="9" transform="rotate(180 16 16)"/>
+          <line class="mh2" x1="16" y1="16" x2="16" y2="6.5"/>
+        </svg>
+        <div>
+          <div class="city">Tokyo / Asia</div>
+          <div class="win num">08:00–17:00 · local 06:00</div>
+        </div>
+        <div class="right">
+          <span class="chip wn"><span class="dot"></span>Pre-market</span>
+          <span class="cd num">Opens 08:00 · in 3h 00m</span>
+        </div>
+      </div>
+
+      <!-- LONDON — closed -->
+      <div class="s">
+        <svg class="tclock" viewBox="0 0 32 32"><circle class="face" cx="16" cy="16" r="14"/>
+          <line class="tick" x1="16" y1="4" x2="16" y2="6.5"/><line class="tick" x1="28" y1="16" x2="25.5" y2="16"/>
+          <line class="tick" x1="16" y1="28" x2="16" y2="25.5"/><line class="tick" x1="4" y1="16" x2="6.5" y2="16"/>
+          <!-- 22:00 local -->
+          <line class="hh" x1="16" y1="16" x2="16" y2="9" transform="rotate(300 16 16)"/>
+          <line class="mh2" x1="16" y1="16" x2="16" y2="6.5"/>
+        </svg>
+        <div>
+          <div class="city">London</div>
+          <div class="win num">15:00–24:00 · local 22:00</div>
+        </div>
+        <div class="right">
+          <span class="chip"><span class="dot"></span>Closed</span>
+          <span class="cd num">Opens 15:00 · in 10h 00m</span>
+        </div>
+      </div>
+
+      <!-- NEW YORK — closing, handing to Sydney -->
+      <div class="s">
+        <svg class="tclock" viewBox="0 0 32 32"><circle class="face" cx="16" cy="16" r="14"/>
+          <line class="tick" x1="16" y1="4" x2="16" y2="6.5"/><line class="tick" x1="28" y1="16" x2="25.5" y2="16"/>
+          <line class="tick" x1="16" y1="28" x2="16" y2="25.5"/><line class="tick" x1="4" y1="16" x2="6.5" y2="16"/>
+          <!-- 17:00 local -->
+          <line class="hh" x1="16" y1="16" x2="16" y2="9" transform="rotate(150 16 16)"/>
+          <line class="mh2" x1="16" y1="16" x2="16" y2="6.5"/>
+        </svg>
+        <div>
+          <div class="city">New York</div>
+          <div class="win num">20:00–05:00 · local 17:00</div>
+        </div>
+        <div class="right">
+          <span class="chip dn"><span class="dot pulse"></span>Closing</span>
+          <span class="cd now num">Ends NOW → Sydney</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================================================================
+         SIGNATURE MOMENT — THE MORNING NOTES
+         Four instruments, one continuous analyst column. Hairlines only.
+         ================================================================= -->
+    <div id="notes">
+      <div class="dateline">
+        <span class="lbl11" style="color:var(--text)">AI micro desk</span>
+        <span class="dl">Manila, 05:00 —</span>
+        <span class="preview-tag" style="margin-left:auto">AI DESK · SAMPLE OUTPUT · NOT ADVICE</span>
+      </div>
+
+      <div class="col">
+
+        <!-- XAUUSD -->
+        <article class="note">
+          <div class="l1">
+            <span class="ins">XAUUSD</span>
+            <span class="chip up"><span class="dot"></span>Bullish</span>
+            <span class="px num">Last <b>4,671.2</b></span>
+          </div>
+          <div class="l2">
+            <span class="lbl">Confidence</span>
+            <span class="meter"><i style="width:78%"></i></span>
+            <span class="conf num">78%</span>
+          </div>
+          <p class="body">Gold is holding its highs into the Sydney bell after yesterday's <span class="k">+0.24%</span> grind, and nothing overnight has asked it to give the level back. The bid is thin until Tokyo takes over at <span class="k">08:00</span>, so treat anything printed in the next three hours as noise rather than signal. <span class="k">4,641</span> is the line — below it this call is wrong, and the <span class="k">14:00 GDP Q/Q</span> print is the only scheduled thing that can take it there.</p>
+        </article>
+
+        <!-- US100 -->
+        <article class="note">
+          <div class="l1">
+            <span class="ins">US100</span>
+            <span class="chip up"><span class="dot"></span>Bullish</span>
+            <span class="px num">Last <b>24,812</b></span>
+          </div>
+          <div class="l2">
+            <span class="lbl">Confidence</span>
+            <span class="meter"><i style="width:64%"></i></span>
+            <span class="conf num">64%</span>
+          </div>
+          <p class="body">Overnight futures are drifting up, but the drift is being carried by very few names and breadth that narrow is a reason to size small, not a reason to lean in. Nothing confirms until New York opens <span class="k">tonight</span> at 20:00 Manila. Invalidation sits at <span class="k">24,630</span>; the 64% is deliberate, this is a lean and not a conviction trade.</p>
+        </article>
+
+        <!-- US30 -->
+        <article class="note">
+          <div class="l1">
+            <span class="ins">US30</span>
+            <span class="chip dn"><span class="dot"></span>Bearish</span>
+            <span class="px num">Last <b>46,930</b></span>
+          </div>
+          <div class="l2">
+            <span class="lbl">Confidence</span>
+            <span class="meter"><i style="width:57%"></i></span>
+            <span class="conf num">57%</span>
+          </div>
+          <p class="body">The Dow has lagged US100 for three straight sessions and the cyclicals doing the damage are still heavy this morning. Price is under <span class="k">47,120</span> supply, which keeps the path of least resistance lower while that shelf holds. Conviction is low at <span class="k">57%</span> — this is a relative-weakness read, not a short call, and a strong GDP print at 14:00 flips it fast.</p>
+        </article>
+
+        <!-- BTCUSD -->
+        <article class="note">
+          <div class="l1">
+            <span class="ins">BTCUSD</span>
+            <span class="chip dn"><span class="dot"></span>Bearish</span>
+            <span class="px num">Last <b>111,890</b></span>
+          </div>
+          <div class="l2">
+            <span class="lbl">Confidence</span>
+            <span class="meter"><i style="width:61%"></i></span>
+            <span class="conf num">61%</span>
+          </div>
+          <p class="body">Realized vol keeps compressing while price has now failed <span class="k">113,200</span> twice, and second failures at the same shelf usually resolve down. Liquidity is at its thinnest in this Sydney window, so expect a wide, dishonest tape before Tokyo. A reclaim above <span class="k">113,200</span> ends the idea outright.</p>
+        </article>
+
+      </div>
+
+      <div class="signoff">
+        <span class="init">— AI Desk, 05:00</span>
+        <span class="lbl num" style="margin-left:auto">4 instruments · 2 long · 2 short · avg conf 65%</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---- docked Market TV: smaller, below the paper it will argue with ---- -->
+  <section id="tv">
+    <div class="pic"></div>
+    <div class="fakechart">
+      <svg viewBox="0 0 600 100" preserveAspectRatio="none">
+        <defs><linearGradient id="tvfill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#22d3ee" stop-opacity=".18"/><stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+        </linearGradient></defs>
+        <path d="M0,74 L40,68 L80,71 L120,58 L160,62 L200,49 L240,53 L280,41 L320,45 L360,33 L400,37 L440,28 L480,31 L520,22 L560,26 L600,18 L600,100 L0,100 Z" fill="url(#tvfill)"/>
+        <path d="M0,74 L40,68 L80,71 L120,58 L160,62 L200,49 L240,53 L280,41 L320,45 L360,33 L400,37 L440,28 L480,31 L520,22 L560,26 L600,18" fill="none" stroke="#22d3ee" stroke-width="1.4" vector-effect="non-scaling-stroke" opacity=".8"/>
+      </svg>
+    </div>
+    <div class="scan"></div>
+    <div class="bug"><span class="m">MKT</span><span class="lbl" style="color:var(--text-soft)">Market desk</span></div>
+    <div class="live"><span class="dot pulse"></span>LIVE</div>
+    <div class="lower">
+      <div class="slug">
+        <span class="cat">SYDNEY OPEN</span>
+        <span class="lbl num">05:00 MNL</span>
+        <span class="lbl num" style="margin-left:auto">GOLD 4,671 ▲0.24% · BTC 111,890 ▼560</span>
+      </div>
+      <div class="hl">GOLD HOLDS 4,671 INTO GDP — DESKS EYE THE 14:00 PRINT</div>
+    </div>
+  </section>
+</aside>
+
+</div><!-- /shell -->
+</body>
+</html>
