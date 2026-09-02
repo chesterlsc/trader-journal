@@ -5504,6 +5504,7 @@ button.almanac-cell:focus-visible {
   }
   #dashboard.is-active .dash-now-sub { display: block; margin-top: 3px; }
   #dashboard.is-active #dashNowEventSub { font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; }
+  #dashboard.is-active .dash-now-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   /* The hero's long tail. Each keeps rendering into a hidden node, which costs
      nothing; #dashSparkline stays in the DOM so ui.dashSparkline is never null. */
   #dashboard.is-active .dash-hero .dash-spark-wrap,
@@ -5784,7 +5785,7 @@ button.almanac-cell:focus-visible {
 /* The greeting the desktop board otherwise never shows: renderGreeting writes
    it here as well as into the hidden .dash-head. */
 .dsh-greeting {
-  font: 600 13px/14px var(--font-display, var(--font-sans));
+  font: 600 13px/14px var(--font-ui);
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -5980,7 +5981,7 @@ button.almanac-cell:focus-visible {
 .dad-conf-meter i { display: block; height: 100%; border-radius: 999px; background: var(--text-soft); }
 .dad-analysis {
   margin: 0;
-  font: 400 11px/15px var(--font-sans);
+  font: 400 11px/15px var(--font-ui);
   color: var(--text-soft);
   display: -webkit-box;
   -webkit-box-orient: vertical;
