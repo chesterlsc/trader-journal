@@ -5098,14 +5098,14 @@ button.almanac-cell:focus-visible {
 
   #dashboard.is-active {
     grid-template-columns: repeat(12, minmax(0, 1fr));
-    /* 1093 view box - 32 padding-block - 36 row gaps = 1025 of track.
-       36 + 108 + 0.51x881 + 0.49x881 = 36 + 108 + 449.3 + 431.7 = 1025. */
-    /* Band D is the CHART band and band E is the LEDGER band, and they do not
-       want the same height. Measured at 0.51/0.49 the Net Daily panel came out
-       309x441 — a portrait box holding a landscape chart, 36% ink. Shortening D
-       and lengthening E fixes the ratio at both ends: the charts stop being
-       stretched and the calendar and trade list get the rows they can fill. */
-    grid-template-rows: 36px 108px minmax(0, 0.42fr) minmax(0, 0.58fr);
+    /* 1093 view box - 32 padding-block - 48 row gaps = 1013 of track.
+       80 + 140 + 188 + 0.42x605 + 0.58x605 = 408 + 254 + 351 = 1013. */
+    /* FIVE BANDS now. A: the hero, HALVED by order (156 with its eaten gap →
+       76). B: the Session Horizon. C: the AI micro desk. D stays the CHART
+       band and E the LEDGER band at the 0.42/0.58 split that fixed the
+       portrait-bars regression — both simply own less of the screen, which is
+       what the halved hero and the two new instruments paid for. */
+    grid-template-rows: 80px 140px 188px minmax(0, 0.42fr) minmax(0, 0.58fr);
     gap: 12px;
     /* padding-inline belongs to .view.is-active:not(#terminal) at (1,2,0),
        which centres on --shell-w. Only the block axis is ours; a padding
@@ -5136,6 +5136,8 @@ button.almanac-cell:focus-visible {
      inside a 384px row and the monitor 925px inside 451px. A grid item can
      only shrink if everything it contains can. */
   #dashboard.is-active .panel-grid-analytics > *,
+  #dashboard.is-active .dash-sessions > *,
+  #dashboard.is-active .dash-aidesk > *,
   #dashboard.is-active .dash-edge-mini > *,
   #dashboard.is-active .dash-board-slot > *,
   #dashboard.is-active #dashPlaybook > * { min-height: 0; min-width: 0; }
@@ -5332,20 +5334,51 @@ button.almanac-cell:focus-visible {
   #dashboard.is-active .panel-head { margin: 0; }
   #dashboard.is-active .mini-cal-footrow .month-card-mark { display: none; }
 
-  /* Type ramp: 44 / 28 / 20 / 13 / 11. It was 26/22/22/20 — a four-point band
-     holding nine unequal figures, which is a tie, not a rank. */
+  /* Type ramp: 30 / 20 / 16 / 12 / 11 — the 44-band ramp, restepped for a hero
+     HALF the height. The ranks survive; only the steps shrink. */
   #dashboard.is-active [data-metric="totalPnl"] {
-    font: 700 44px/48px var(--font-mono);
+    font: 700 30px/32px var(--font-mono);
     letter-spacing: -0.03em;
     margin: 0;
   }
   #dashboard.is-active [data-metric="accountBalance"] {
-    font: 600 13px/16px var(--font-mono);
+    font: 600 12px/14px var(--font-mono);
     color: var(--text-faint);
   }
   /* The <p> that wraps the clause carries the base paragraph margin (16px top
      AND bottom), which is what pushed the hero 17px past its 108px track. */
   #dashboard.is-active .dash-hero-equity { margin: 2px 0 0; line-height: 16px; }
+  /* The headline <p> still carried the base paragraph margin (16px top AND
+     bottom) — invisible in the 156px band, a 32px overflow in the halved one.
+     Same class of bug as .dash-hero-equity above, fixed the same way. */
+  #dashboard.is-active .dash-hero-headline { margin: 0; display: flex; align-items: center; gap: 8px; }
+  /* The eye was sized against the 48px headline; against 30px it stretched
+     the line to 42px and clipped the figure. */
+  /* min-height:0 or the base button touch-target floor re-inflates it to 42px
+     and stretches the 32px headline line under it. */
+  #dashboard.is-active .balance-eye { height: 24px; width: 24px; min-height: 0; min-width: 0; padding: 3px; }
+  /* THE OPEN-POSITIONS STRIP CANNOT LIVE IN AN 80px HERO. It only exists while
+     a trade is open, so on the one-glass grid it becomes a floating live
+     ticket pinned bottom-right — DOM identity untouched (renderers query it
+     by id), no grid budget consumed, gone the moment the position closes. */
+  #dashboard.is-active .dash-hero #progressTradeSummary {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 40;
+    width: 380px;
+    max-width: 380px;
+    margin: 0;
+    padding: 10px 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg, 10px);
+    box-shadow: var(--clay-float);
+  }
+  /* MANDATORY companion: the rule above out-specifies [hidden]. */
+  #dashboard.is-active .dash-hero #progressTradeSummary[hidden] { display: none; }
+  /* 10px caps on an 11px line clipped every descender ("Today" lost the y). */
+  #dashboard.is-active .dash-now-label { line-height: 14px; }
   #dashboard.is-active .dash-hero-top { margin: 0; }
   #dashboard.is-active #dashEquityTag {
     font: 600 11px/16px var(--font-mono);
@@ -5354,9 +5387,9 @@ button.almanac-cell:focus-visible {
     color: var(--text-faint);
     margin-right: 6px;
   }
-  #dashboard.is-active .dash-now-fig { font: 700 20px/22px var(--font-mono); }
+  #dashboard.is-active .dash-now-fig { font: 700 16px/18px var(--font-mono); }
   #dashboard.is-active #dashHeroToday,
-  #dashboard.is-active #dashNowOpen { font-size: 28px; line-height: 30px; }
+  #dashboard.is-active #dashNowOpen { font-size: 20px; line-height: 22px; }
   #dashboard.is-active .score-item strong { font-size: 20px; }  /* a discipline
                                         score is a behaviour trigger, not a footnote */
   #dashboard.is-active .dash-play-value { font-size: 17px; }    /* a per-setup
@@ -5387,14 +5420,13 @@ button.almanac-cell:focus-visible {
      on this grid, and display:contents on it would delete the surface it sits
      on. Instead the hero spans the full row and becomes the two-track grid;
      .dash-now takes track 2 and lays its own six cells out. */
-  /* BAND A IS ONE SURFACE. It SPANS rows 1-2 and eats the 12px gap between them
-     (36 + 12 + 108 = 156). The track set is deliberately NOT merged into a
-     single 156px row: both grid-template-rows strings are asserted by equality
-     in tests/instrumentPanel.check.mjs, and the span is what keeps that
-     arithmetic readable. */
+  /* BAND A IS ONE SURFACE — and HALF the surface it was. The old band spanned
+     rows 1-2 (36 + 12 + 108 = 156); the order was "reduce the hero by 50%",
+     so it is now ONE 76px row and the head row is gone with it (the greeting
+     lives on the Session Horizon band, written by the same renderGreeting). */
   #dashboard.is-active .dash-hero {
-    grid-area: 1 / 1 / 3 / -1;
-    padding: 12px 16px;
+    grid-area: 1 / 1 / 2 / -1;
+    padding: 8px 16px;
     display: grid;
     grid-template-columns: minmax(260px, 3fr) minmax(0, 9fr) auto;
     grid-auto-rows: min-content;
@@ -5482,6 +5514,34 @@ button.almanac-cell:focus-visible {
   #dashboard.is-active .dash-quad { display: none; }   /* emptied; its four keepers
                                         moved into the stat strip under the curve */
 
+  /* Desktop-only tightening for the two new bands. Every size here is under
+     the 11px phone floor that mobileFloors.check.mjs enforces, so they live
+     here, not in the base rules. */
+  #dashboard.is-active .dsh-title,
+  #dashboard.is-active .dad-title { font-size: 10px; line-height: 14px; }
+  #dashboard.is-active .dsh-clock { font-size: 10px; line-height: 14px; }
+  #dashboard.is-active .dsh-local { font-size: 10px; }
+  #dashboard.is-active .dsh-chip { font-size: 9px; line-height: 12px; }
+  #dashboard.is-active .dsh-count { font-size: 10px; line-height: 12px; }
+  #dashboard.is-active .dad-tag { font-size: 9px; line-height: 14px; }
+  #dashboard.is-active .dad-bias { font-size: 9px; line-height: 12px; }
+  #dashboard.is-active .dad-conf-label { font-size: 9px; line-height: 12px; }
+  #dashboard.is-active .dad-foot span { font-size: 9px; line-height: 12px; }
+
+  /* ── BAND B: SESSION HORIZON ── four venue cards over the 24h rail.
+     The rail is an instrument, not slack: it keeps its 20px and the cards
+     flex. Card padding is cut to what its three rows actually need — at the
+     old 8px it overdrew the track by 12px and the meter row clipped. */
+  #dashboard.is-active .dash-sessions { grid-area: 2 / 1 / 3 / -1; }
+  #dashboard.is-active .dsh-cards { flex: 1 1 auto; min-height: 0; }
+  #dashboard.is-active .dsh-rail { flex: 0 0 20px; }
+  #dashboard.is-active .dsh-card { padding: 5px 10px; gap: 3px; }
+  /* ── BAND C: AI MICRO DESK ── four bias cards. The analysis is the card's
+     major element by explicit order, so it owns a firm 3-line box (45px at
+     11/15) — the 152px track left it a single clipped line. */
+  #dashboard.is-active .dash-aidesk { grid-area: 3 / 1 / 4 / -1; }
+  #dashboard.is-active .dad-analysis { flex: 0 0 auto; height: 45px; -webkit-line-clamp: 3; }
+
   /* ── BAND C: where is my edge ──────────────────────────────────────────
      display:contents places the two chart panels directly on the outer grid,
      which is what kills .panel-span-8's `grid-column: span 8` clamp without a
@@ -5502,10 +5562,10 @@ button.almanac-cell:focus-visible {
      The Edge score and the Net Daily bars keep rendering into hidden nodes, so
      nothing downstream reads a null and both are one `display` away from coming
      back. NOT the rail: that holds the iframe. */
-  #dashboard.is-active .panel-grid-analytics > .panel-span-8 { grid-area: 3 / 1 / 4 / 9; }
+  #dashboard.is-active .panel-grid-analytics > .panel-span-8 { grid-area: 4 / 1 / 5 / 9; }
   #dashboard.is-active .panel-grid-analytics > .panel-span-4,
   #dashboard.is-active #dashEdgeScore { display: none; }
-  #dashboard.is-active #dashLedger { grid-area: 4 / 4 / 5 / 9; }
+  #dashboard.is-active #dashLedger { grid-area: 5 / 5 / 6 / 9; }
 
   /* LOAD BEARING. styles.css `.panel-chart canvas { display: block }` is
      (0,2,0) and BEATS the UA [hidden] rule — verified: hidden === true and
@@ -5519,7 +5579,7 @@ button.almanac-cell:focus-visible {
      null — but they do not take a track. NOT the rail: that holds the iframe. */
   #dashboard.is-active .dash-board-slot,
   #dashboard.is-active #dashPlaybook { display: none; }
-  #dashboard.is-active #propTracker { grid-area: 4 / 1 / 5 / 4; }
+  #dashboard.is-active #propTracker { grid-area: 5 / 1 / 6 / 5; }
   #dashboard.is-active:has(#propTracker:not([hidden])) #dashMiniCal { display: none; }
 
   /* ── THE DESK RAIL: full C+D height, right column ──────────────────────
@@ -5528,7 +5588,7 @@ button.almanac-cell:focus-visible {
      `grid-template-rows: auto minmax(0,1fr)` bounds the .dem-panel track, which
      is what makes the overflow-y:auto below actually bind. */
   #dashboard.is-active .dash-edge-mini {
-    grid-area: 3 / 9 / 5 / -1;   /* 4 columns: twice the 2-column slot it had */
+    grid-area: 4 / 9 / 6 / -1;   /* 4 columns: twice the 2-column slot it had */
     grid-template-rows: auto minmax(0, 1fr);
     position: static;            /* kills sticky, grid-row 1/30 and the bleed */
     margin: 0;
@@ -5550,7 +5610,7 @@ button.almanac-cell:focus-visible {
      they live here rather than in the base rules. */
   #dashboard.is-active .mini-cal-weekdays span { font-size: 10px; }
   #dashboard.is-active .mini-cal-day .mc-n { display: block; font: 500 9px/1 var(--font-mono); }
-  #dashboard.is-active #dashMiniCal { grid-area: 4 / 1 / 5 / 4; }
+  #dashboard.is-active #dashMiniCal { grid-area: 5 / 1 / 6 / 5; }
 
   /* ── THE BOARD CLOSES WHEN A PANEL IS OFF ──────────────────────────────
      .dash-edge-mini ships `hidden` and renderPlaybook toggles
@@ -5634,36 +5694,316 @@ button.almanac-cell:focus-visible {
 }
 
 /* ── SHORT SCREENS ───────────────────────────────────────────────────────
-   The fr rows absorb any height; the 144px of FIXED rows do not. At 1440x900
-   the budget is 843 - 32 padding - 36 gaps = 775 of track, and
-   32 + 88 + 0.48x655 + 0.52x655 = 775. Everything below is the type ramp
-   stepping down with it — same ranks, smaller steps. */
+   The fr rows absorb any height; the 332px of FIXED rows do not. At 1440x900
+   the budget is 843 - 32 padding - 48 gaps = 763 of track, and
+   64 + 132 + 136 + 0.48x431 + 0.52x431 = 763. Everything below is the type
+   ramp stepping down with it — same ranks, smaller steps. */
 @media (min-width: 1240px) and (max-height: 960px) {
-  #dashboard.is-active { grid-template-rows: 32px 88px minmax(0, 0.48fr) minmax(0, 0.52fr); }
+  #dashboard.is-active { grid-template-rows: 64px 132px 136px minmax(0, 0.48fr) minmax(0, 0.52fr); }
   #dashboard.is-active .dash-hero {
-    padding: 10px 16px;
-    grid-template-columns: minmax(240px, 3fr) minmax(0, 9fr);
+    padding: 4px 14px;
+    grid-template-columns: minmax(240px, 3fr) minmax(0, 9fr) auto;
   }
-  /* At 900px tall the third track costs the strip more than the row can spare,
-     so the cluster drops to its own line under the figures. */
+  /* 13px of label over a 28px figure over a 15px clause is 58 in a 56px
+     content box; the label gives its 2px, not the figure. */
+  #dashboard.is-active .dash-hero-top .metric-label { font-size: 9px; line-height: 11px; }
+  /* "GREEN STREAK" wraps to two lines in a 120px cell and the tallest now-cell
+     hits 60 in a 56px box. One line at 9px fits every label with room. */
+  #dashboard.is-active .dash-now-label { font-size: 9px; line-height: 11px; white-space: nowrap; }
+  #dashboard.is-active .dash-hero-equity { line-height: 13px; }
+  #dashboard.is-active .dsh-chip { padding: 1px 5px; }
+  /* The analysis-less AI card still overdraws its 85px box by 3: the gap and
+     the foot's air give it back. */
+  #dashboard.is-active .dad-card { gap: 5px; }
+  #dashboard.is-active .dad-foot { padding-top: 4px; }
+  /* A 64px hero has no second line to give: the controls STAY in track 3.
+     (Pre-halving they dropped under the figures here; that row is gone.) */
   #dashboard.is-active .dash-hero .dash-controls {
-    grid-column: 1 / -1;
-    grid-row: 10;
-    justify-self: start;
-    padding-left: 0;
-    border-left: 0;
-    margin-top: 6px;
+    grid-column: 3;
+    grid-row: 1 / span 9;
+    justify-self: end;
+    padding-left: 12px;
+    border-left: 1px solid var(--line);
+    margin-top: 0;
   }
-  #dashboard.is-active [data-metric="totalPnl"] { font-size: 34px; line-height: 38px; }
-  #dashboard.is-active [data-metric="accountBalance"] { font-size: 12px; line-height: 14px; }
-  #dashboard.is-active .dash-hero-equity { margin-top: 3px; }
+  #dashboard.is-active [data-metric="totalPnl"] { font-size: 26px; line-height: 28px; }
+  #dashboard.is-active [data-metric="accountBalance"] { font-size: 11px; line-height: 13px; }
+  #dashboard.is-active .dash-hero-equity { margin-top: 2px; }
   #dashboard.is-active #dashHeroToday,
-  #dashboard.is-active #dashNowOpen { font-size: 22px; line-height: 24px; }
-  #dashboard.is-active .dash-now-fig { font-size: 17px; line-height: 19px; }
+  #dashboard.is-active #dashNowOpen { font-size: 18px; line-height: 20px; }
+  #dashboard.is-active .dash-now-fig { font-size: 14px; line-height: 16px; }
+  /* The two new bands step down with the ramp. The analysis has no 3-line
+     budget at this height; it stands down instead of printing a clipped line. */
+  #dashboard.is-active .dsh-rail { flex-basis: 16px; }
+  /* Lane tops are sized for the 20px rail; on the 16px one the 4th lane sat
+     at 17+3 and clipped. */
+  #dashboard.is-active .dsh-lane:nth-child(1) { top: 1px; }
+  #dashboard.is-active .dsh-lane:nth-child(2) { top: 5px; }
+  #dashboard.is-active .dsh-lane:nth-child(3) { top: 9px; }
+  #dashboard.is-active .dsh-lane:nth-child(4) { top: 13px; }
+  #dashboard.is-active .dad-analysis { display: none; }
   #dashboard.is-active .eq-footnotes { flex: 0 0 52px; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, 15px); }
   #dashboard.is-active .mini-cal-footrow { display: none; }
   #dashboard.is-active .dem-tv { max-height: 120px; }
 }
+
+/* ==========================================================================
+   SESSION HORIZON + AI MICRO DESK — the C1 bands.
+   Base rules hold at every width (below 1240 they are ordinary stacked
+   panels); the 1240 grid block above only PLACES them. Same card grammar as
+   the rest of the board: surface-1 ground, machined hairlines, clay depth,
+   accent for NOW only, pos/neg for bias only.
+   ========================================================================== */
+.dash-sessions,
+.dash-aidesk {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--clay-raised);
+  min-height: 0;
+}
+.dsh-head,
+.dad-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.dsh-title,
+.dad-title {
+  font: 600 11px/15px var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+/* The greeting the desktop board otherwise never shows: renderGreeting writes
+   it here as well as into the hidden .dash-head. */
+.dsh-greeting {
+  font: 600 13px/14px var(--font-display, var(--font-sans));
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.dsh-clock {
+  margin-left: auto;
+  font: 500 11px/15px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.dsh-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  min-height: 0;
+}
+.dsh-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg, 10px);
+  box-shadow: var(--edge-highlight);
+  min-width: 0;
+}
+.dsh-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.dsh-city {
+  font: 700 12px/16px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.dsh-local {
+  font: 500 11px/16px var(--font-mono);
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.dsh-chip {
+  font: 700 11px/14px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--text-faint);
+}
+.dsh-card.is-open .dsh-chip { color: var(--pnl-pos); border-color: var(--pnl-pos-line); background: var(--pnl-pos-soft); }
+.dsh-card.is-pre .dsh-chip { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
+.dsh-card.is-open .dsh-city { color: var(--text); }
+.dsh-card.is-closed { opacity: 0.72; }
+.dsh-count {
+  font: 500 11px/13px var(--font-mono);
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+.dsh-meter {
+  display: block;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--chart-track);
+  overflow: hidden;
+}
+.dsh-meter i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--pnl-pos);
+}
+/* The 24h rail: one lane per venue, arcs in viewer-local time, the NOW cursor
+   in accent — the only accent on the band. */
+.dsh-rail {
+  position: relative;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--surface-inset);
+  box-shadow: var(--clay-pressed);
+  overflow: hidden;
+}
+.dsh-lane {
+  position: absolute;
+  inset-inline: 0;
+  height: 3px;
+}
+.dsh-lane:nth-child(1) { top: 2px; }
+.dsh-lane:nth-child(2) { top: 7px; }
+.dsh-lane:nth-child(3) { top: 12px; }
+.dsh-lane:nth-child(4) { top: 17px; }
+.dsh-arc {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--line-strong);
+}
+.dsh-arc.is-open { background: var(--pnl-pos); }
+.dsh-arc.is-pre { background: var(--warn); }
+.dsh-now {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--halo-accent);
+}
+
+.dad-tag {
+  margin-left: auto;
+  font: 600 11px/15px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+.dad-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 8px;
+  min-height: 0;
+}
+.dad-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: var(--radius-lg, 10px);
+  box-shadow: var(--edge-highlight);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.dad-card.is-bullish { border-left-color: var(--pnl-pos); }
+.dad-card.is-bearish { border-left-color: var(--pnl-neg); }
+.dad-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.dad-sym {
+  font: 700 13px/16px var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+.dad-price { font: 500 12px/16px var(--font-mono); color: var(--text-soft); }
+.dad-bias {
+  margin-left: auto;
+  font: 700 11px/14px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.dad-card.is-bullish .dad-bias { color: var(--pnl-pos); background: var(--pnl-pos-soft); border: 1px solid var(--pnl-pos-line); }
+.dad-card.is-bearish .dad-bias { color: var(--pnl-neg); background: var(--pnl-neg-soft); border: 1px solid var(--pnl-neg-line); }
+.dad-conf {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.dad-conf-fig { font: 700 15px/16px var(--font-mono); color: var(--text); }
+.dad-conf-label {
+  font: 600 11px/14px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.dad-conf-meter {
+  display: block;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--chart-track);
+  overflow: hidden;
+}
+.dad-conf-meter i { display: block; height: 100%; border-radius: 999px; background: var(--text-soft); }
+.dad-analysis {
+  margin: 0;
+  font: 400 11px/15px var(--font-sans);
+  color: var(--text-soft);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  min-height: 0;
+}
+.dad-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 5px;
+  border-top: 1px solid var(--line);
+}
+.dad-foot span {
+  font: 600 11px/14px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.dad-foot b { font: 700 11px/12px var(--font-mono); color: var(--text); }
 
 /* The Net Daily panel's figures. One row, label over value, so the space the
    bars do not need carries the numbers they cannot state. */

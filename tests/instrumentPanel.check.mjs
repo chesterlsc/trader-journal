@@ -148,14 +148,14 @@ const rowsOf = (block) => {
 const clayDecls = decls(clay);
 const tallRule = blockAt(clayDecls, clayDecls.indexOf("#dashboard.is-active {\n    grid-template-columns"));
 const tall = rowsOf(tallRule);
-assert.equal(tall, "36px 108px minmax(0, 0.42fr) minmax(0, 0.58fr)", "tall-screen track set changed");
+assert.equal(tall, "80px 140px 188px minmax(0, 0.42fr) minmax(0, 0.58fr)", "tall-screen track set changed");
 const shortBlock = clay.slice(clay.indexOf(SHORT_Q));
 const shortDecls = decls(shortBlock);
-assert.equal(rowsOf(shortDecls), "32px 88px minmax(0, 0.48fr) minmax(0, 0.52fr)", "short-screen track set changed");
-// 1093 viewport - 32 padding-block - 36 row gaps = 1025 of track
-assert.equal(36 + 108 + Math.round(0.42 * 881) + Math.round(0.58 * 881), 1025, "tall budget does not close");
-// 843 viewport - 32 - 36 = 775
-assert.equal(32 + 88 + Math.round(0.48 * 655) + Math.round(0.52 * 655), 775, "short budget does not close");
+assert.equal(rowsOf(shortDecls), "64px 132px 136px minmax(0, 0.48fr) minmax(0, 0.52fr)", "short-screen track set changed");
+// 1093 viewport - 32 padding-block - 48 row gaps (5 rows) = 1013 of track
+assert.equal(80 + 140 + 188 + Math.round(0.42 * 605) + Math.round(0.58 * 605), 1013, "tall budget does not close");
+// 843 viewport - 32 - 48 = 763
+assert.equal(64 + 132 + 136 + Math.round(0.48 * 431) + Math.round(0.52 * 431), 763, "short budget does not close");
 assert.ok(
   shortBlock.indexOf("@media") < shortBlock.indexOf("grid-template-rows"),
   "the short-screen rules must sit inside their own media block"

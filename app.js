@@ -22,7 +22,7 @@
   openTradeTriggerLevel
 } from "./src/lib/core.js";
 import { formatCurrency, formatCompactCurrency, formatStatMoney, formatChartDateLabel } from "./src/lib/format.js?v=20260822-format2";
-import { getNextSessionOpen, formatCountdown } from "./src/lib/sessions.js";
+import { getNextSessionOpen, getSessionStates, formatCountdown } from "./src/lib/sessions.js";
 import {
   buildSessionTimingReport,
   resolveTradePnl,
@@ -173,6 +173,50 @@ const DEMO_SETUPS = ["Breakout", "Liquidity Grab", "Trend Continuation", "Revers
 const DEMO_TIMEFRAMES = ["M15", "H1", "M5", "H4"];
 const DEMO_PSYCHOLOGY = ["Focused", "Perfect Execution", "Hesitant", "Focused", "Emotional"];
 const DEMO_EXECUTION = ["A+", "A", "B", "A", "C"];
+
+// AI micro desk stub payload. The band prints "Sample output · not advice"
+// because THIS is the source — a const, not a model. The upgrade path is one
+// fetch that returns this same shape; the renderer never knows the difference.
+// Declared here, well above init(): module state below init() is in TDZ during
+// the first render and has shipped broken four times.
+const AI_DESK_SAMPLE = [
+  {
+    symbol: "XAUUSD",
+    price: "4,671.2",
+    bias: "bullish",
+    confidence: 78,
+    invalidation: "4,641",
+    analysis:
+      "Holding the top of the range after a steady grind higher; every dip since the last impulse has been bought above 4,641. The next data print is the only real threat to the structure, so size stays honest into it."
+  },
+  {
+    symbol: "US100",
+    price: "24,812",
+    bias: "bullish",
+    confidence: 64,
+    invalidation: "24,630",
+    analysis:
+      "Overnight drift is constructive but breadth is narrow: a handful of names is carrying the index. Asia can only hold the level; confirmation has to come from the New York open. Below 24,630 the drift becomes distribution."
+  },
+  {
+    symbol: "US30",
+    price: "46,930",
+    bias: "bearish",
+    confidence: 57,
+    invalidation: "47,120",
+    analysis:
+      "Lagging US100 for three straight sessions with cyclicals heavy into the close. Price is pinned under the 47,120 supply shelf. Low conviction: a fade, not a trend, and no bid worth chasing until the shelf breaks."
+  },
+  {
+    symbol: "BTCUSD",
+    price: "111,890",
+    bias: "bearish",
+    confidence: 61,
+    invalidation: "113,200",
+    analysis:
+      "Realized vol keeps compressing while price fails at 113,200, twice now on shrinking volume. Range-bottom probes stay the base case until 113,200 clears on real participation, not thin-book prints."
+  }
+];
 
 const SERVER_AUTOSAVE_DEBOUNCE_MS = 900;
 const LIVE_PRICE_REFRESH_MS = 5000;
@@ -1918,6 +1962,7 @@ function bindEvents() {
   // report — no matrix rebuild, no recompute.
   window.setInterval(() => {
     renderGreeting();
+    renderSessionHorizon();
     renderNowEvent();
     renderSessionAlmanacNow(state.analytics?.sessionTiming);
   }, 60000);
@@ -8224,6 +8269,8 @@ function renderAll() {
   renderPropTracker();
   renderNavRisk();
   renderGreeting();
+  renderSessionHorizon();
+  renderAiDesk();
   renderPlaybook(state.analytics);
   renderUnjournalled();
   renderRuleCost();
@@ -10545,7 +10592,101 @@ function renderGreeting() {
   const hour = now.getHours();
   const partOfDay = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
   const name = getTraderName();
-  ui.dashHello.textContent = name ? `Good ${partOfDay}, ${name}.` : `Good ${partOfDay}.`;
+  const hello = name ? `Good ${partOfDay}, ${name}.` : `Good ${partOfDay}.`;
+  ui.dashHello.textContent = hello;
+
+  // The same greeting, restated on the session band: .dash-head is display:none
+  // on the desktop grid, so without this the address never reaches the screen
+  // the band was built for. One renderer, two nodes — never a second clock.
+  const bandHello = document.getElementById("dashSessionsGreeting");
+  if (bandHello) {
+    bandHello.textContent = hello;
+  }
+  const bandClock = document.getElementById("dashSessionsClock");
+  if (bandClock) {
+    bandClock.textContent = new Intl.DateTimeFormat("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }).format(now);
+  }
+}
+
+/* ── Session Horizon: four venue cards over one 24h rail ─────────────────── */
+function renderSessionHorizon() {
+  const cards = document.getElementById("dashSessionsCards");
+  const rail = document.getElementById("dashSessionsRail");
+  if (!cards && !rail) {
+    return;
+  }
+  const now = new Date();
+  const states = getSessionStates(now);
+
+  if (cards) {
+    setHtml(
+      cards,
+      states
+        .map((s) => {
+          const chip = s.state === "open" ? "Open" : s.state === "pre" ? "Pre-market" : "Closed";
+          const count = `${s.label} ${formatCountdown(s.countdownMinutes)}`;
+          const meter = s.state === "open" ? Math.round(s.elapsedFrac * 100) : 0;
+          return (
+            `<article class="dsh-card is-${s.state}">` +
+            `<div class="dsh-row"><span class="dsh-city">${escapeHtml(s.city)}</span>` +
+            `<span class="dsh-local">${escapeHtml(s.localClock)} · ${escapeHtml(s.venue)}</span></div>` +
+            `<div class="dsh-row"><span class="dsh-chip">${chip}</span>` +
+            `<span class="dsh-count">${escapeHtml(count)}</span></div>` +
+            `<span class="dsh-meter"><i style="width:${meter}%"></i></span>` +
+            `</article>`
+          );
+        })
+        .join("")
+    );
+  }
+
+  if (rail) {
+    // Each session is an arc of the viewer's 24h day; one that crosses local
+    // midnight is drawn as two segments. Widths in percent of 1440 minutes.
+    const lanes = states
+      .map((s) => {
+        const start = s.railStartMinutes;
+        const end = start + s.railLengthMinutes;
+        const seg = (from, to) =>
+          `<i class="dsh-arc is-${s.state}" style="left:${((from / 1440) * 100).toFixed(2)}%;width:${(((to - from) / 1440) * 100).toFixed(2)}%"></i>`;
+        const parts =
+          end <= 1440 ? seg(start, end) : seg(start, 1440) + seg(0, end - 1440);
+        return `<span class="dsh-lane" data-city="${escapeHtml(s.city)}">${parts}</span>`;
+      })
+      .join("");
+    const nowPct = (((now.getHours() * 60 + now.getMinutes()) / 1440) * 100).toFixed(2);
+    setHtml(rail, `${lanes}<i class="dsh-now" style="left:${nowPct}%"></i>`);
+  }
+}
+
+/* ── AI micro desk: four bias cards off the stub payload ─────────────────── */
+function renderAiDesk() {
+  const host = document.getElementById("dashAiDeskCards");
+  if (!host) {
+    return;
+  }
+  setHtml(
+    host,
+    AI_DESK_SAMPLE.map(
+      (card) =>
+        `<article class="dad-card is-${card.bias}">` +
+        `<div class="dad-top"><span class="dad-sym">${escapeHtml(card.symbol)}</span>` +
+        `<span class="dad-price">${escapeHtml(card.price)}</span>` +
+        `<span class="dad-bias">${card.bias === "bullish" ? "Bullish" : "Bearish"}</span></div>` +
+        `<div class="dad-conf"><span class="dad-conf-fig">${card.confidence}%</span>` +
+        `<span class="dad-conf-label">confidence</span>` +
+        `<span class="dad-conf-meter"><i style="width:${card.confidence}%"></i></span></div>` +
+        `<p class="dad-analysis">${escapeHtml(card.analysis)}</p>` +
+        `<div class="dad-foot"><span>Invalidation</span><b>${escapeHtml(card.invalidation)}</b></div>` +
+        `</article>`
+    ).join("")
+  );
 }
 
 /* ── 1a balance card ─────────────────────────────────────────────────────── */
@@ -12783,19 +12924,34 @@ function renderEquityLegend(analytics) {
 /** "Aug 21, 2026". The compact form drops the year, which is fine on a row that
  *  sits beside today's date and wrong in a queue that can hold a trade from
  *  last December. */
-function formatQueueDate(trade) {
+function parseQueueDate(trade) {
   /* parseTradeEntryDate builds a date-only string at LOCAL NOON on purpose.
      `new Date("2026-08-21")` is UTC MIDNIGHT, and formatting that with a local
      Intl formatter prints "Aug 20" anywhere west of Greenwich — every US
      trader, which is exactly who a Topstep journal and a "09:30 LOCAL" catalyst
      are for. Verified: TZ=America/New_York printed Aug 20 for an Aug 21 trade.
      Reaching past the shared helper is how this comes back. */
-  const d =
+  return (
     parseTradeEntryDate(trade.date) ||
-    new Date(trade.closedAt || trade.createdAt || trade.updatedAt || NaN);
+    new Date(trade.closedAt || trade.createdAt || trade.updatedAt || NaN)
+  );
+}
+
+function formatQueueDate(trade) {
+  const d = parseQueueDate(trade);
   return Number.isNaN(d.getTime())
     ? formatCompactTradeDate(trade)
     : new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(d);
+}
+
+/** verified | estimated | manual — the one mapping, spelled out once.
+ *  A topstepx TRADES import is the broker's own reported P&L; a
+ *  topstepx-ORDERS import is reconstructed from fills with fees estimated
+ *  from a published schedule. Getting these backwards would print a
+ *  confident lie about whether money is broker-reported. */
+function queueSourceOf(trade) {
+  const src = String(trade.importSource || "").toLowerCase();
+  return src === "topstepx" ? "verified" : src === "topstepx-orders" ? "estimated" : "manual";
 }
 
 /** The clock beside the date. A broker import can hold a dozen fills of the same
@@ -12818,7 +12974,6 @@ function renderDashLedger() {
   }
   const queue = getUnjournalledTrades();
   const isQueue = queue.length > 0;
-  const rows = (isQueue ? queue : getClosedTrades().sort(sortTradesDesc)).slice(0, 24);
 
   const title = document.getElementById("dashQueueTitle");
   if (title) {
@@ -12829,57 +12984,125 @@ function renderDashLedger() {
     badge.hidden = !isQueue;
     setText(badge, String(queue.length));
   }
+  // The queue is one row per DAY, so the third column counts trades; the
+  // per-trade fallback keeps its side column. Same table, two readings —
+  // the header must say which one is on screen.
+  const sideTh = host.closest("table")?.querySelectorAll("thead th")[2];
+  if (sideTh) {
+    setText(sideTh, isQueue ? "Trades" : "Side");
+  }
+
+  /* Renders and the footer share one list: each entry is a built <tr> plus
+     the net the footer would add for it, so the "shown" arithmetic can never
+     drift from the rows above it whichever branch built them. */
+  let rendered;
+  let dayTotal = 0;
+  if (isQueue) {
+    /* ONE ROW PER DAY. A broker import drops a dozen fills at once and the
+       queue became a wall of one day's trades; the review decision ("sit
+       down and journal that day") is per-day, so the queue reports days.
+       Group the WHOLE queue before capping — capping trades first would
+       split a day and print a wrong day total. */
+    const groups = new Map();
+    for (const trade of queue) {
+      const key = formatQueueDate(trade);
+      let g = groups.get(key);
+      if (!g) {
+        g = { date: key, at: 0, count: 0, net: 0, symbols: new Set(), reasons: new Set(), sources: new Set() };
+        groups.set(key, g);
+      }
+      const stamp = parseQueueDate(trade).getTime();
+      g.at = Math.max(g.at, Number.isNaN(stamp) ? 0 : stamp);
+      g.count += 1;
+      g.net += Number(trade.netPnl) || 0;
+      g.symbols.add(trade.asset || "—");
+      g.sources.add(queueSourceOf(trade));
+      // An Orders import records its missing setup honestly as "Not
+      // recorded"; printing that as a REASON would read as a setup by that
+      // name, so it stays out of the day's reason list.
+      const reason = String(trade.setupType || "").trim();
+      if (reason && reason.toLowerCase() !== "not recorded") {
+        g.reasons.add(reason);
+      }
+    }
+    dayTotal = groups.size;
+    rendered = [...groups.values()]
+      .sort((a, b) => b.at - a.at)
+      .slice(0, 24)
+      .map((g) => {
+        const net = round(g.net);
+        const reasonText = g.reasons.size ? [...g.reasons].join(" · ") : "—";
+        const source = g.sources.size === 1 ? [...g.sources][0] : "";
+        const sourceLabel =
+          source === "verified"
+            ? "Broker verified"
+            : source === "estimated"
+              ? "Estimated"
+              : source === "manual"
+                ? "Manual"
+                : "Mixed";
+        return {
+          net,
+          html:
+            `<tr><td>${escapeHtml(g.date)}</td>` +
+            `<td>${escapeHtml([...g.symbols].join(", "))}</td>` +
+            `<td>${g.count}</td>` +
+            `<td class="${net < 0 ? "is-neg" : net > 0 ? "is-pos" : ""}">${escapeHtml(
+              net === 0 ? formatCurrency(0) : formatSignedCurrency(net)
+            )}</td>` +
+            `<td class="lq-reason${reasonText === "—" ? " is-none" : ""}">${escapeHtml(reasonText)}</td>` +
+            `<td><span class="lq-src${source ? ` is-${source}` : ""}">${escapeHtml(sourceLabel)}</span></td></tr>`,
+        };
+      });
+  } else {
+    rendered = getClosedTrades()
+      .sort(sortTradesDesc)
+      .slice(0, 24)
+      .map((trade) => {
+        // ONE reading of a side for the whole app. A literal === "sell" is
+        // strictly weaker than normalizeDirection, which also reads "Short",
+        // "S" and untrimmed values — and this renderer painted every one of
+        // those as an uncoloured "Long", i.e. THE WRONG SIDE. normalizeTrades
+        // canonicalises on load, but four writers push straight into
+        // state.trades without it, so a raw side does reach the DOM.
+        const short = normalizeDirection(trade.direction) === "Sell";
+        const source = queueSourceOf(trade);
+        const sourceLabel =
+          source === "verified" ? "Broker verified" : source === "estimated" ? "Estimated" : "Manual";
+        // An Orders import carries no setup, and the importer records that
+        // honestly as "Not recorded". Printing it as a REASON would read as
+        // a setup called "Not recorded", so it degrades to an em dash.
+        const at = formatQueueTime(trade);
+        const reason = String(trade.setupType || "").trim();
+        const reasonText = !reason || reason.toLowerCase() === "not recorded" ? "\u2014" : reason;
+        return {
+          net: Number(trade.netPnl) || 0,
+          html:
+          `<tr><td>${escapeHtml(formatQueueDate(trade))}` +
+          // ONE call, and a real space in the text: without it textContent
+          // read "Aug 21, 202619:00", which is what a screen reader says and
+          // what a copy-paste produces.
+          `${at ? ` <i class="lq-at">${escapeHtml(at)}</i>` : ""}</td>` +
+          `<td>${escapeHtml(trade.asset || "\u2014")}</td>` +
+          `<td class="${short ? "is-neg" : ""}">${short ? "Short" : "Long"}</td>` +
+          `<td class="${trade.netPnl < 0 ? "is-neg" : trade.netPnl > 0 ? "is-pos" : ""}">${escapeHtml(
+            trade.netPnl === 0 ? formatCurrency(0) : formatSignedCurrency(trade.netPnl)
+          )}</td>` +
+          `<td class="lq-reason${reasonText === "\u2014" ? " is-none" : ""}">${escapeHtml(reasonText)}</td>` +
+          `<td><span class="lq-src is-${source}">${escapeHtml(sourceLabel)}</span></td></tr>`,
+        };
+      });
+  }
 
   setHtml(
     host,
-    rows.length
-      ? rows
-          .map((trade) => {
-            // ONE reading of a side for the whole app. A literal === "sell" is
-            // strictly weaker than normalizeDirection, which also reads "Short",
-            // "S" and untrimmed values — and this renderer painted every one of
-            // those as an uncoloured "Long", i.e. THE WRONG SIDE. normalizeTrades
-            // canonicalises on load, but four writers push straight into
-            // state.trades without it, so a raw side does reach the DOM.
-            const short = normalizeDirection(trade.direction) === "Sell";
-            const src = String(trade.importSource || "").toLowerCase();
-            /* WHICH LABEL MEANS WHAT. A topstepx TRADES import is the broker's
-               own reported P&L. A topstepx-ORDERS import is reconstructed from
-               fills with fees estimated from a published schedule — the app has
-               said so in its own provenance notice since that importer shipped.
-               Getting these backwards would print a confident lie about whether
-               money is broker-reported, so the mapping is spelled out here. */
-            const source =
-              src === "topstepx" ? "verified" : src === "topstepx-orders" ? "estimated" : "manual";
-            const sourceLabel =
-              source === "verified" ? "Broker verified" : source === "estimated" ? "Estimated" : "Manual";
-            // An Orders import carries no setup, and the importer records that
-            // honestly as "Not recorded". Printing it as a REASON would read as
-            // a setup called "Not recorded", so it degrades to an em dash.
-            const at = formatQueueTime(trade);
-            const reason = String(trade.setupType || "").trim();
-            const reasonText = !reason || reason.toLowerCase() === "not recorded" ? "\u2014" : reason;
-            return (
-              `<tr><td>${escapeHtml(formatQueueDate(trade))}` +
-              // ONE call, and a real space in the text: without it textContent
-              // read "Aug 21, 202619:00", which is what a screen reader says and
-              // what a copy-paste produces.
-              `${at ? ` <i class="lq-at">${escapeHtml(at)}</i>` : ""}</td>` +
-              `<td>${escapeHtml(trade.asset || "\u2014")}</td>` +
-              `<td class="${short ? "is-neg" : ""}">${short ? "Short" : "Long"}</td>` +
-              `<td class="${trade.netPnl < 0 ? "is-neg" : trade.netPnl > 0 ? "is-pos" : ""}">${escapeHtml(
-                trade.netPnl === 0 ? formatCurrency(0) : formatSignedCurrency(trade.netPnl)
-              )}</td>` +
-              `<td class="lq-reason${reasonText === "\u2014" ? " is-none" : ""}">${escapeHtml(reasonText)}</td>` +
-              `<td><span class="lq-src is-${source}">${escapeHtml(sourceLabel)}</span></td></tr>`
-            );
-          })
-          .join("")
+    rendered.length
+      ? rendered.map((r) => r.html).join("")
       : `<tr><td colspan="6" class="dash-ledger-empty">No closed trades yet.</td></tr>`
   );
 
   const panel = host.closest(".panel");
-  if (!panel || !rows.length) {
+  if (!panel || !rendered.length) {
     return;
   }
   // One row at a time off the bottom until the panel stops overflowing. The
@@ -12893,11 +13116,11 @@ function renderDashLedger() {
   }
 
   // The foot counts what is SHOWN, so it can never contradict the rows above it.
-  const shown = rows.slice(0, host.rows.length);
-  const net = shown.reduce((sum, trade) => sum + (Number(trade.netPnl) || 0), 0);
+  const net = rendered.slice(0, host.rows.length).reduce((sum, r) => sum + r.net, 0);
   const count = document.getElementById("dashQueueCount");
   if (count) {
-    setText(count, `${host.rows.length} of ${isQueue ? queue.length : rows.length} shown`);
+    // Day rows in queue mode, trade rows in recent mode; the unit must say so.
+    setText(count, isQueue ? `${host.rows.length} of ${dayTotal} days shown` : `${host.rows.length} of ${rendered.length} shown`);
   }
   const total = document.getElementById("dashQueueTotal");
   if (total) {

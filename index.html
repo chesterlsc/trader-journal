@@ -210,7 +210,7 @@
     <link rel="stylesheet" href="clay-v2.css?v=20260823-morningread" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260830-ref16" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260902-oneglass" />
   </head>
   <body>
     <div id="tjv" aria-hidden="true">
@@ -1764,6 +1764,35 @@
             <h3 id="dashboardEmptyHeading">No trades yet</h3>
             <p id="dashboardEmptyCopy">Log your first trade to unlock your equity curve, edge metrics, and discipline scores.</p>
             <button id="dashboardEmptyCta" class="btn primary" type="button">Log your first trade</button>
+          </section>
+
+          <!-- SESSION HORIZON. Four venue cards over one 24-hour rail drawn in
+               the VIEWER's local day: each session is an arc of that rail, and
+               the NOW cursor stands where the viewer's clock stands. All state
+               is computed client-side from src/lib/sessions.js (Intl zones, so
+               DST belongs to the platform); renderSessionHorizon repaints the
+               cards and the rail every 30s. A direct child of #dashboard so the
+               1240 grid can place it as its own band. -->
+          <section class="dash-sessions" id="dashSessions" aria-label="World session state">
+            <div class="dsh-head">
+              <span class="dsh-title">World session state</span>
+              <span class="dsh-greeting" id="dashSessionsGreeting"></span>
+              <span class="dsh-clock" id="dashSessionsClock"></span>
+            </div>
+            <div class="dsh-cards" id="dashSessionsCards"></div>
+            <div class="dsh-rail" id="dashSessionsRail" aria-hidden="true"></div>
+          </section>
+
+          <!-- AI MICRO DESK. Four bias cards painted from AI_DESK_SAMPLE in
+               app.js — a stub payload, and the band SAYS so: the sample tag is
+               part of the design, not chrome to remove. Swapping the const for
+               a fetched payload is the entire upgrade path. -->
+          <section class="dash-aidesk" id="dashAiDesk" aria-label="AI micro desk">
+            <div class="dad-head">
+              <span class="dad-title">AI micro desk</span>
+              <span class="dad-tag">Sample output · not advice</span>
+            </div>
+            <div class="dad-cards" id="dashAiDeskCards"></div>
           </section>
 
           <section class="panel-grid panel-grid-analytics">
@@ -4276,6 +4305,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260830-ref16"></script>
+    <script type="module" src="app.js?v=20260902-oneglass"></script>
   </body>
 </html>
