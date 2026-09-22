@@ -3498,6 +3498,7 @@ button.session-hour-cell {
   #dashboard .mini-cal-open,
   #dashboard .mini-cal-foot { padding-inline: 6px; }
   #dashboard .mini-cal-foot { min-height: 44px; }
+  #dashboard .mini-cal-step { width: 44px; height: 44px; }
   #dashboard .mini-cal-footrow .month-card-mark { display: none; }
 }
 
@@ -3985,6 +3986,8 @@ button.session-hour-cell {
      affordances, not surfaces — culling those would cost meaning, not chrome. */
 
   /* Ink the panels do not need at this size. */
+  #dashboard.is-active .panel-chart { position: relative; }
+  #dashboard.is-active .eq-scrub { position: absolute; top: 12px; left: 12px; right: 12px; margin: 0; z-index: 2; }
   #dashboard.is-active .eq-scrub-hint { display: none; }  /* the canvas aria-label
                                         already says how to drive it */
   #dashboard.is-active .panel-head p,
@@ -4321,6 +4324,10 @@ button.session-hour-cell {
   #dashboard.is-active #dashNowOpen { font-size: 22px; line-height: 24px; }
   #dashboard.is-active .dash-now-fig { font-size: 17px; line-height: 19px; }
   #dashboard.is-active .eq-footnotes { flex: 0 0 52px; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, 15px); }
+  /* A 15px row holds one line, so each figure goes label left, value right.
+     Stacked, the label collapsed to 0px and the value spilled 6px down. */
+  #dashboard.is-active .eq-footnotes > article { flex-direction: row; justify-content: space-between; align-items: baseline; gap: 8px; }
+  #dashboard.is-active .eq-footnotes .metric-value { font-size: 13px; line-height: 15px; }
   #dashboard.is-active .mini-cal-footrow { display: none; }
   #dashboard.is-active .dem-tv { max-height: 120px; }
 }
@@ -4389,6 +4396,9 @@ button.session-hour-cell {
 .balance-eye[aria-pressed="true"] .eye-open { display: none; }
 .balance-eye[aria-pressed="true"] .eye-shut { display: inline; }
 .balance-eye[aria-pressed="true"] { color: var(--accent); }
+@media (max-width: 899px) {
+  .balance-eye { width: 44px; height: 44px; }
+}
 
 /* WHAT "HIDDEN" HAS TO COVER. The account balance goes with the P&L: it is
    starting capital PLUS the P&L, so leaving it up while the figure above it is

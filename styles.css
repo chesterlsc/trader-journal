@@ -8425,7 +8425,7 @@ body:has(.tabbar .nav-btn[data-target="terminal"]:not([hidden])) .main-nav .shee
     display: grid;
     place-items: center;
     left: 50%;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 54px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
     translate: 46px 0;
     width: 44px;
     height: 44px;
@@ -12662,7 +12662,7 @@ body.auth-locked {
 .rev-net-basis {
   margin-inline-start: 0.3em;
   color: var(--text-faint);
-  font: 600 0.68em/1 var(--font-mono);
+  font: 600 var(--fs-micro)/1 var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }

@@ -482,6 +482,16 @@ button.calendar-cell.calendar-cell-negative:hover {
 .view-head {
   padding: var(--space-6) var(--space-6);
 }
+/* styles.css steps these down on phones, but this sheet loads later at equal
+   specificity and used to win at every width. */
+@media (max-width: 760px) {
+  .panel,
+  .view-head { padding: 12px; }
+}
+@media (max-width: 720px) {
+  .panel,
+  .view-head { padding: var(--space-5); }
+}
 
 .dash-hero {
   border-radius: var(--radius-clay-xl);

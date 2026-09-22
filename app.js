@@ -10390,7 +10390,7 @@ function renderBalanceCard(analytics) {
   if (float.open === 0) {
     setFig(openNode, "FLAT", 0, true);
   } else {
-    setFig(openNode, formatSignedCurrency(float.floating), float.floating, false);
+    setFig(openNode, nowMoney(float.floating), float.floating, false);
   }
 
   const streak = currentDayStreak(analytics.dailyPnl);
@@ -12552,7 +12552,8 @@ function renderDashLedger() {
   }
   const queue = getUnjournalledTrades();
   const isQueue = queue.length > 0;
-  const rows = (isQueue ? queue : getClosedTrades().sort(sortTradesDesc)).slice(0, 24);
+  const pool = isQueue ? queue : getClosedTrades().sort(sortTradesDesc);
+  const rows = pool.slice(0, 24);
 
   const title = document.getElementById("dashQueueTitle");
   if (title) {
@@ -12631,7 +12632,7 @@ function renderDashLedger() {
   const net = shown.reduce((sum, trade) => sum + (Number(trade.netPnl) || 0), 0);
   const count = document.getElementById("dashQueueCount");
   if (count) {
-    setText(count, `${host.rows.length} of ${isQueue ? queue.length : rows.length} shown`);
+    setText(count, `${host.rows.length} of ${pool.length} shown`);
   }
   const total = document.getElementById("dashQueueTotal");
   if (total) {
@@ -14769,7 +14770,7 @@ function renderLiveEquity() {
     setText(label, "Account equity");
   }
   if (openNode) {
-    setText(openNode, formatSignedCurrency(float.floating));
+    setText(openNode, nowMoney(float.floating));
     openNode.classList.toggle("is-pos", float.floating > 0);
     openNode.classList.toggle("is-neg", float.floating < 0);
     openNode.classList.remove("is-idle");
