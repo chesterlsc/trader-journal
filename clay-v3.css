@@ -412,9 +412,12 @@
    clay-v2 hard-codes `color: #fff` on the oxide/money chips. In dark the
    fills are bright (oxide #f0763d, rose #f7758d) and white fails AA on them;
    --text-inverse is the token that already flips per theme.
-   ========================================================================== */.topnav-badge,
+   ========================================================================== */
+.topnav-badge,
 .tabbar-badge,
 .dash-alert-mark,
+.dash-unj-count,
+.dash-unj-chevron,
 .sheet-seg-btn.is-long.is-active,
 .sheet-seg-btn.is-short.is-active {
   color: var(--text-inverse);
@@ -1505,394 +1508,23 @@ body.auth-locked .app-ticker { display: none !important; }
     width: auto;
     max-width: none;
     margin-inline: 0;
-    /* Full bleed: the almanac is a dashboard, not a reading column. */
-    padding-inline: max(var(--space-6), 20px);
+    padding-inline: max(var(--space-6), calc((100vw - var(--rail-w, 0px) - 1320px) / 2));
   }
 }
 
-/* The dashboard contract: at reference width the page IS the viewport.
-   The view stops scrolling; the matrix well, the side column and each
-   margin pane own any overflow instead, so nothing is ever unreachable. */
-@media (min-width: 1240px) {
-  #session-intelligence.session-page.is-active {
-    overflow-y: hidden;
-    grid-template-rows: max-content minmax(0, 1fr) max-content max-content;
-    row-gap: 12px;
-    padding-top: 8px;
-    padding-bottom: 14px;
-  }
-
-  #session-intelligence .session-page-head {
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 7px 24px;
-    padding: 2px 4px 8px;
-  }
-
-  #session-intelligence .session-display {
-    font-size: 27px;
-  }
-
-  #session-intelligence .session-metabar {
-    flex-wrap: nowrap;
-    font-size: 10.5px;
-  }
-
-  /* The global 48px touch target is a phone rule; on the dashboard these two
-     selects are inline text and must not set the band's height. */
-  #session-intelligence .session-meta-select {
-    min-height: 0;
-    height: auto;
-    line-height: 1.3;
-  }
-
-  /* The value speaks for itself at dashboard width; the label comes back in
-     the stacked layout below the breakpoint. */
-  #session-intelligence .session-meta-item[data-meta="range"] > .session-meta-label,
-  #session-intelligence .session-meta-item[data-meta="source"] > .session-meta-label,
-  #session-intelligence .session-meta-item[data-meta="count"] > .session-meta-label {
-    display: none;
-  }
-
-  #session-intelligence .session-almanac-layout {
-    min-height: 0;
-  }
-
-  #session-intelligence .session-almanac-visual {
-    min-height: 0;
-    grid-template-rows: auto minmax(0, 1fr) auto;
-  }
-
-  #session-intelligence .session-almanac-scroll {
-    overflow: auto;
-    min-height: 0;
-  }
-
-  #session-intelligence .session-almanac-side {
-    min-height: 0;
-    overflow-y: auto;
-  }
-
-  /* The chart is the only elastic thing in the side column: it takes the
-     slack so the column itself never needs a scrollbar. */
-  #session-intelligence .session-almanac-side > .session-cf-pane {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  #session-intelligence .session-almanac-side > .session-tilt-pane {
-    flex: 0 0 auto;
-  }
-
-  #session-intelligence .session-cf-chart {
-    flex: 1 1 auto;
-    min-height: 96px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  #session-intelligence .session-cf-chart svg {
-    height: 100%;
-    min-height: 0;
-  }
-
-  #session-intelligence .session-cf-chart .session-empty-copy {
-    min-height: 0;
-  }
-
-  /* The skipped cells wrap in full rather than scrolling; the chart above
-     is the elastic row and gives back whatever they need. */
-  #session-intelligence .session-cf-ledger {
-    max-height: none;
-    overflow: visible;
-    flex: none;
-  }
-
-  #session-intelligence .session-duration-band {
-    gap: 6px 12px;
-  }
-
-  #session-intelligence .session-strip {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    height: 262px;
-  }
-
-  /* Below a wide desktop the matrix needs the pixels more than the side
-     column does: hiding a traded hour to save width is not an option. */
-  #session-intelligence .session-almanac-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
-  }
-}
-
-@media (min-width: 1560px) {
-  #session-intelligence .session-almanac-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(400px, 440px);
-  }
-}
-
-/* Laptop tier: the same dashboard, one size down, so 1440x800 still fits. */
-@media (min-width: 1240px) and (max-width: 1679px) {
-  #session-intelligence .session-page-head {
-    gap: 5px 18px;
-    padding-bottom: 6px;
-  }
-
-  #session-intelligence .session-display {
-    font-size: 22px;
-  }
-
-  #session-intelligence .session-metabar {
-    font-size: 10px;
-  }
-
-  #session-intelligence .session-meta-item {
-    padding-inline: 8px;
-  }
-
-  #session-intelligence .session-meta-item[data-meta="source"] > strong {
-    max-width: 16ch;
-  }
-}
-
-/* Below the dashboard breakpoint the band unstacks into readable rows. */
-@media (max-width: 1239px) {
-  .session-page-head {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .session-page-head > .session-page-kicker,
-  .session-page-head > .session-data-flag,
-  .session-page-head > .session-display,
-  .session-page-head > .session-metabar,
-  .session-page-head > .session-now-strip {
-    grid-area: auto;
-  }
-
-  .session-data-flag,
-  .session-metabar,
-  .session-now-strip {
-    grid-column: 1;
-    justify-self: start;
-    justify-content: flex-start;
-  }
-
-  .session-display {
-    overflow: visible;
-    white-space: normal;
-    text-wrap: balance;
-  }
-
-  .session-metabar {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    width: 100%;
-    font-size: 11px;
-    border-block: 1px solid var(--line);
-  }
-
-  .session-meta-item {
-    display: grid;
-    align-content: center;
-    gap: 5px;
-    min-height: 52px;
-    padding: 8px 12px;
-    border-left: 0;
-    border-right: 1px solid var(--line);
-  }
-
-  .session-metabar > .session-meta-item:first-child {
-    padding-left: 12px;
-  }
-
-  .session-metabar > .session-meta-item:last-child {
-    padding-right: 12px;
-    border-right: 0;
-  }
-
-  .session-meta-item > strong,
-  .session-meta-select {
-    max-width: 100%;
-    font-size: 11.5px;
-  }
-}
-
-/* The header band: kicker, a two-tone display line, one inline mono meta
-   row, and the live clock. Three tight rows, no boxed cards. */
-/* Explicit placement: the caveat flag is optional, and auto-placement would
-   let its absence pull the display line up beside the kicker. */
 .session-page-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px 20px;
-  padding: clamp(10px, 1.6vw, 16px) 4px 12px;
+  gap: clamp(20px, 3vw, 34px);
+  padding: clamp(16px, 2.5vw, 30px) 4px 22px;
   border-bottom: 1px solid var(--line);
 }
 
-.session-page-head > .session-page-kicker {
-  grid-area: 1 / 1;
-}
-
-.session-page-head > .session-data-flag {
-  grid-area: 1 / 2;
-}
-
-.session-page-head > .session-display {
-  grid-area: 2 / 1;
-}
-
-.session-page-head > .session-metabar {
-  grid-area: 2 / 2;
-}
-
-.session-page-head > .session-now-strip {
-  grid-area: 3 / 2;
-}
-
-/* An honest caveat, never a "sample data" sticker: hidden when the report
-   carries none, and every string below is a counted figure. */
-.session-data-flag {
-  justify-self: end;
-  margin: 0;
-  padding: 3px 8px;
-  border: 1px solid var(--warn);
-  border-radius: 999px;
-  background: var(--warn-soft);
-  color: var(--warn);
-  font: 700 11px/1.2 var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.session-data-flag[hidden] {
-  display: none;
-}
-
-.session-display {
-  min-width: 0;
-  margin: 0;
-  overflow: hidden;
-  font: 450 clamp(20px, 2.2vw, 30px)/1.06 var(--font-ui);
-  letter-spacing: -0.03em;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.session-display-a {
-  color: var(--text-soft);
-}
-
-.session-display-b {
-  color: var(--text);
-  font-weight: 720;
-}
-
-.session-display-b::before {
-  content: " ";
-}
-
-.session-metabar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-self: end;
-  min-width: 0;
-  font: 600 11px/1.3 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-}
-
-.session-meta-item {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  min-width: 0;
-  padding: 1px 11px;
-  border-left: 1px solid var(--line);
-}
-
-.session-metabar > .session-meta-item:first-child {
-  padding-left: 0;
-  border-left: 0;
-}
-
-.session-metabar > .session-meta-item:last-child {
-  padding-right: 0;
-}
-
-.session-meta-label {
-  flex: none;
-  color: var(--text-soft);
-  font-weight: 700;
-}
-
-.session-meta-item > strong {
-  overflow: hidden;
-  max-width: 22ch;
-  color: var(--text);
-  font: inherit;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.session-meta-item > strong.is-positive {
-  color: var(--pnl-pos);
-}
-
-.session-meta-item > strong.is-negative {
-  color: var(--pnl-neg);
-}
-
-.session-confidence.is-reliable {
-  color: var(--pnl-pos);
-}
-
-.session-confidence.is-developing {
-  color: var(--accent);
-}
-
-.session-confidence.is-early {
-  color: var(--text-soft);
-}
-
-/* A real select stripped of chrome: the native menu and the change event are
-   untouched, only the box is gone. */
-.session-meta-select {
-  max-width: 17ch;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-weight: 700;
-  letter-spacing: inherit;
-  text-transform: uppercase;
-  text-overflow: ellipsis;
-  cursor: pointer;
-  box-shadow: none;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
-.session-meta-select:hover {
-  color: var(--accent);
-}
-
-.session-meta-select:focus-visible {
-  outline: none;
-  box-shadow: 0 2px 0 var(--accent);
+.session-page-copy {
+  max-width: 980px;
 }
 
 .session-page-kicker,
+.session-conclusion > p,
 .session-visual-head > div > p,
 .session-queue-kicker {
   margin: 0;
@@ -1900,6 +1532,34 @@ body.auth-locked .app-ticker { display: none !important; }
   font: 700 11px/1.2 var(--font-mono);
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+.session-page-copy h2 {
+  margin: 7px 0 0;
+  color: var(--text);
+  font: 720 clamp(28px, 4vw, 44px)/1.02 var(--font-ui);
+  letter-spacing: -0.045em;
+}
+
+.session-headline {
+  max-width: 900px;
+  margin: 12px 0 0;
+  color: var(--text-soft);
+  font: 450 clamp(15px, 1.7vw, 19px)/1.55 var(--font-ui);
+  text-wrap: balance;
+}
+
+.session-context {
+  display: grid;
+  grid-template-columns:
+    minmax(150px, 0.9fr)
+    minmax(150px, 0.9fr)
+    minmax(150px, 1fr)
+    minmax(120px, 0.72fr)
+    minmax(120px, 0.72fr);
+  align-items: stretch;
+  min-width: 0;
+  border-block: 1px solid var(--line);
 }
 
 .session-context-field,
@@ -1912,6 +1572,10 @@ body.auth-locked .app-ticker { display: none !important; }
   margin: 0;
   padding: 9px 14px;
   border-right: 1px solid var(--line);
+}
+
+.session-context > :last-child {
+  border-right: 0;
 }
 
 .session-context-field > span,
@@ -1948,18 +1612,205 @@ body.auth-locked .app-ticker { display: none !important; }
   white-space: nowrap;
 }
 
+.session-confidence {
+  justify-self: start;
+  padding: 4px 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-soft);
+  font: 700 11px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.session-confidence.is-reliable {
+  border-color: var(--pnl-pos-line);
+  color: var(--pnl-pos);
+}
+
+.session-confidence.is-developing {
+  border-color: var(--line-accent);
+  color: var(--accent);
+}
+
+.session-confidence.is-early {
+  color: var(--text-soft);
+}
+
 /* Tabs -------------------------------------------------------------------- */
+.session-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-width: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.session-tab {
+  position: relative;
+  min-width: 0;
+  min-height: 54px;
+  padding: 0 14px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-soft);
+  font: 650 12px/1.2 var(--font-ui);
+  cursor: pointer;
+}
+
+.session-tab:last-child {
+  border-right: 0;
+}
+
+.session-tab:hover {
+  color: var(--text);
+  background: var(--surface-1);
+}
+
+.session-tab.is-active,
+.session-tab[aria-selected="true"] {
+  color: var(--text);
+}
+
+.session-tab.is-active::after,
+.session-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  bottom: -1px;
+  left: 14px;
+  height: 2px;
+  background: var(--accent);
+}
+
+.session-tab:focus-visible {
+  z-index: 1;
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.session-tab-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  margin-left: 6px;
+  padding-inline: 5px;
+  border-radius: var(--radius-pill);
+  background: var(--pnl-neg);
+  color: var(--text-inverse);
+  font: 700 11px/1 var(--font-mono);
+}
 
 /* A single report surface. Everything inside is separated by rhythm and
    hairlines, never by a wall of nested cards. */
+.session-panels {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-top: 0;
+  border-radius: 0 0 12px 12px;
+  background: var(--surface-1);
+  /* overflow:hidden made this fixed-view grid item shrink below its content,
+     clipping lower insights while the parent still reported no overflow. */
+  overflow: visible;
+}
 
-/* No more than three readings. They share one band instead of becoming cards. */.session-score-pnl.is-positive,
+.session-panel {
+  position: relative;
+  min-width: 0;
+  padding: clamp(22px, 4vw, 46px);
+}
+
+.session-conclusion {
+  max-width: 880px;
+}
+
+.session-conclusion h3 {
+  margin: 8px 0 0;
+  color: var(--text);
+  font: 720 clamp(25px, 3.5vw, 38px)/1.1 var(--font-ui);
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.session-conclusion > span {
+  display: block;
+  margin-top: 10px;
+  color: var(--text-soft);
+  font: 450 13px/1.5 var(--font-ui);
+}
+
+/* No more than three readings. They share one band instead of becoming cards. */
+.session-primary-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
+  margin-top: clamp(24px, 4vw, 42px);
+  border-block: 1px solid var(--line);
+}
+
+.session-primary-metrics-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.session-primary-metric {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 104px;
+  padding: 18px clamp(12px, 2vw, 24px);
+  border-right: 1px solid var(--line);
+}
+
+.session-primary-metric:first-child {
+  padding-left: 0;
+}
+
+.session-primary-metric:last-child {
+  border-right: 0;
+}
+
+.session-primary-metric > span {
+  color: var(--text-faint);
+  font: 700 11px/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.session-primary-metric strong {
+  overflow: hidden;
+  color: var(--text);
+  font: 730 clamp(23px, 3vw, 34px)/1 var(--font-mono);
+  letter-spacing: -0.045em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-primary-metric small {
+  overflow: hidden;
+  color: var(--text-soft);
+  font: 500 11px/1.35 var(--font-ui);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-primary-metric strong.is-positive,
+.session-score-pnl.is-positive,
 .session-score-row.is-positive .session-score-pnl,
-.session-duration-band.is-positive .session-duration-band-head > span {
+.session-duration-band.is-positive .session-duration-band-head > span,
+.session-hour-cell.is-positive .session-hour-value,
+.session-hour-cell.is-profitable .session-hour-value {
   color: var(--pnl-pos);
-}.session-score-pnl.is-negative,
+}
+
+.session-primary-metric strong.is-negative,
+.session-score-pnl.is-negative,
 .session-score-row.is-negative .session-score-pnl,
-.session-duration-band.is-negative .session-duration-band-head > span {
+.session-duration-band.is-negative .session-duration-band-head > span,
+.session-hour-cell.is-negative .session-hour-value,
+.session-hour-cell.is-losing .session-hour-value {
   color: var(--pnl-neg);
 }
 
@@ -2204,1553 +2055,157 @@ body.auth-locked .app-ticker { display: none !important; }
   font: 500 11px/1.5 var(--font-ui);
 }
 
-/* ── The almanac pane: the instrument itself ──────────────────────────────
-   A fixed-height box in the dashboard's main row. The matrix well is the
-   only thing that ever scrolls, and only sideways when the columns cannot
-   fit. Cell washes are P&L tokens behind a ::before layer whose opacity is
-   the cell's --almanac-heat, so both themes keep their own palette and no
-   colour is ever pinned per element. */
-.session-almanac-visual {
-  margin-top: 0;
-  background: var(--surface-1);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 12px 14px;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  row-gap: 10px;
-  min-height: 0;
-}
-
-.almanac-pane-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  min-height: 40px;
-}
-
-.almanac-pane-title h4 {
-  margin: 0;
-  font: 700 14px/1.15 var(--font-ui);
-  color: var(--text);
-}
-
-.almanac-pane-title h4 span {
-  font-weight: 400;
-  color: var(--text-soft);
-}
-
-.almanac-pane-basis {
-  margin: 3px 0 0;
-  color: var(--text-faint);
-  font: 500 10px/1 var(--font-mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.almanac-pane-edge {
-  margin: 0;
-  text-align: right;
-  color: var(--text-soft);
-  font: 600 10.5px/1.3 var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-}
-
-.session-almanac-scroll {
-  overflow: auto;
-  min-height: 0;
-  padding-bottom: 2px;
-}
-
-.session-almanac-matrix {
-  display: grid;
-  grid-template-columns:
-    34px minmax(58px, 0.8fr) repeat(10, minmax(56px, 1fr)) minmax(124px, 158px);
-  grid-template-rows: 20px repeat(var(--alm-rows, 5), minmax(44px, 1fr)) 32px;
-  gap: 5px 4px;
-  min-width: 830px;
-  min-height: 100%;
-  align-items: stretch;
-}
-
-.almanac-corner {
-  min-height: 0;
-}
-
-.almanac-col-label {
-  align-self: end;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding-bottom: 3px;
-  color: var(--text-soft);
-  font: 600 10px/1 var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.almanac-col-margin {
-  justify-content: flex-end;
-  color: var(--accent);
-  letter-spacing: 0.14em;
-}
-
-.almanac-col-chip {
-  padding: 2px 4px;
-  border-radius: 3px;
-  font: 700 8.5px/1 var(--font-mono);
-  font-style: normal;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.almanac-col-chip.is-vein {
-  background: var(--pnl-pos-soft);
-  color: var(--pnl-pos);
-  border: 1px solid var(--pnl-pos-line);
-}
-
-.almanac-col-chip.is-scar {
-  background: var(--pnl-neg-soft);
-  color: var(--pnl-neg);
-  border: 1px solid var(--pnl-neg-line);
-}
-
-.almanac-row-label {
-  display: flex;
-  align-items: center;
-  color: var(--text-soft);
-  font: 700 10px/1 var(--font-mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.almanac-cell {
-  position: relative;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 3px;
-  padding: 6px 9px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-inset);
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-  overflow: hidden;
-}
-
-.almanac-cell::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  opacity: 0;
-}
-
-.almanac-cell.is-positive::before {
-  background: var(--pnl-pos);
-  opacity: calc(0.08 + var(--almanac-heat, 0) * 0.24);
-}
-
-.almanac-cell.is-negative::before {
-  background: var(--pnl-neg);
-  opacity: calc(0.08 + var(--almanac-heat, 0) * 0.24);
-}
-
-.almanac-cell.is-positive {
-  border-color: var(--pnl-pos-line);
-}
-
-.almanac-cell.is-negative {
-  border-color: var(--pnl-neg-line);
-}
-
-/* The proven vein and the deepest scar wear the brighter border. */
-.almanac-cell.is-vein {
-  border-color: var(--pnl-pos);
-}
-
-.almanac-cell.is-scar {
-  border-color: var(--pnl-neg);
-}
-
-.almanac-cell > strong {
-  position: relative;
-  font: 700 17px/1 var(--font-mono);
-}
-
-.almanac-cell.is-positive > strong {
-  color: var(--pnl-pos);
-}
-
-.almanac-cell.is-negative > strong {
-  color: var(--pnl-neg);
-}
-
-.almanac-cell > span {
-  position: relative;
-  color: var(--text-faint);
-  font: 500 10px/1 var(--font-mono);
-  letter-spacing: 0.05em;
-}
-
-/* Withheld, never estimated: hatched, the count then the word. */
-.almanac-cell.is-withheld {
-  background:
-    repeating-linear-gradient(-45deg, transparent 0 5px, var(--chart-track) 5px 6px)
-    var(--surface-inset);
-}
-
-.almanac-cell.is-withheld > strong {
-  color: var(--text-soft);
-  font-size: 13px;
-}
-
-.almanac-cell.is-withheld > span {
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-/* Empty: a plain dark cell with a hairline, no text. */
-.almanac-cell.is-empty {
-  background: var(--surface-0);
-  border-color: var(--line);
-}
-
-button.almanac-cell {
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 140ms ease, transform 140ms ease;
-}
-
-button.almanac-cell:hover,
-button.almanac-cell[aria-selected="true"] {
-  border-color: var(--line-accent);
-  transform: translateY(-1px);
-}
-
-button.almanac-cell:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-/* The clock's own cell: accent marker top left, tilt owns top right. */
-.almanac-cell.is-now {
-  box-shadow: inset 0 0 0 1px var(--line-accent);
-}
-
-.almanac-cell.is-now::after {
-  content: "";
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--chart-glow);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .almanac-cell.is-now::after {
-    animation: almanacNowPulse 2.2s ease-in-out infinite;
-  }
-}
-
-@keyframes almanacNowPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
-
-.almanac-tilt {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  padding: 2px 4px;
-  border-radius: 3px;
-  background: var(--warn-soft);
-  color: var(--warn);
-  font: 700 9px/1 var(--font-mono);
-  font-style: normal;
-  letter-spacing: 0.02em;
-}
-
-/* ── The almanac margin: what each weekday amounts to ─────────────────── */
-.almanac-margin {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  padding: 6px 8px 6px 12px;
-  border-left: 1px solid var(--line-strong);
-  min-width: 0;
-  font-variant-numeric: tabular-nums;
-}
-
-.almanac-margin.is-empty {
-  border-left-color: var(--line);
-}
-
-.almanac-margin-top {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.almanac-margin-top strong {
-  font: 700 15px/1 var(--font-mono);
-  color: var(--text);
-}
-
-.almanac-margin.is-positive .almanac-margin-top strong {
-  color: var(--pnl-pos);
-}
-
-.almanac-margin.is-negative .almanac-margin-top strong {
-  color: var(--pnl-neg);
-}
-
-.almanac-margin.is-withheld .almanac-margin-top strong {
-  color: var(--text-soft);
-  font-size: 13px;
-}
-
-.almanac-margin-top em {
-  font: 500 10px/1 var(--font-mono);
-  font-style: normal;
-  letter-spacing: 0.08em;
-  color: var(--text-faint);
-}
-
-.almanac-margin-tag {
-  align-self: flex-start;
-  padding: 2px 5px;
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  color: var(--text-soft);
-  font: 700 8.5px/1 var(--font-mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.almanac-margin-tag.is-today {
-  color: var(--accent);
-  border-color: var(--line-accent);
-}
-
-.almanac-margin-tag.is-best {
-  color: var(--pnl-pos);
-  border-color: var(--pnl-pos-line);
-  background: var(--pnl-pos-soft);
-}
-
-.almanac-margin-tag.is-worst {
-  color: var(--pnl-neg);
-  border-color: var(--pnl-neg-line);
-  background: var(--pnl-neg-soft);
-}
-
-.almanac-margin-tag.is-wh {
-  color: var(--text-faint);
-}
-
-.almanac-margin-bar {
-  display: block;
-  height: 3px;
-  border-radius: 2px;
-  background: var(--chart-track);
-  overflow: hidden;
-}
-
-.almanac-margin-bar i {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--text-soft);
-}
-
-.almanac-margin.is-positive .almanac-margin-bar i {
-  background: var(--pnl-pos);
-}
-
-.almanac-margin.is-negative .almanac-margin-bar i {
-  background: var(--pnl-neg);
-}
-
-.almanac-margin-say {
-  color: var(--text-faint);
-  font: 400 italic 10px/1.25 var(--font-mono);
-  letter-spacing: 0.02em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ── Footer net row ───────────────────────────────────────────────────── */
-.almanac-foot {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border-top: 1px solid var(--line-strong);
-  color: var(--text-soft);
-  font: 600 12px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.almanac-foot.is-positive {
-  color: var(--pnl-pos);
-}
-
-.almanac-foot.is-negative {
-  color: var(--pnl-neg);
-}
-
-.almanac-foot small {
-  color: var(--text-faint);
-  font: 500 9.5px/1 var(--font-mono);
-  letter-spacing: 0.05em;
-}
-
-.almanac-foot.is-withheld {
-  color: var(--text-faint);
-  background:
-    repeating-linear-gradient(-45deg, transparent 0 5px, var(--chart-track) 5px 6px);
-}
-
-.almanac-foot-label {
-  align-self: center;
-  border-top: 1px solid var(--line-strong);
-  padding-top: 8px;
-}
-
-.almanac-foot-total {
-  justify-content: flex-end;
-  padding-left: 12px;
-  border-left: 1px solid var(--line-strong);
-  color: var(--text);
-  font-weight: 700;
-  font-size: 13px;
-}
-
-/* ── Legend strip ─────────────────────────────────────────────────────── */
-.almanac-legend {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  min-height: 34px;
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
-  color: var(--text-faint);
-  font: 500 10px/1.2 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.almanac-legend-item {
+/* Entry time: compact timeline, never a 24-card horizontal scroller. */
+.session-metric-switch {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-}
-
-.almanac-legend-note {
-  margin-left: auto;
-  text-align: right;
-  color: var(--text-soft);
-}
-
-.almanac-sw {
-  width: 11px;
-  height: 11px;
-  border-radius: 3px;
+  padding: 3px;
   border: 1px solid var(--line);
-  flex: none;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
 }
 
-.almanac-sw.is-neg-2 {
-  background: var(--pnl-neg);
-  border-color: var(--pnl-neg-line);
-}
-
-.almanac-sw.is-neg-1 {
-  background: var(--pnl-neg-soft);
-  border-color: var(--pnl-neg-line);
-}
-
-.almanac-sw.is-pos-1 {
-  background: var(--pnl-pos-soft);
-  border-color: var(--pnl-pos-line);
-}
-
-.almanac-sw.is-pos-2 {
-  background: var(--pnl-pos);
-  border-color: var(--pnl-pos-line);
-}
-
-.almanac-sw.is-wh {
-  background:
-    repeating-linear-gradient(-45deg, transparent 0 4px, var(--chart-axis) 4px 5px)
-    var(--surface-inset);
-}
-
-.almanac-sw.is-tilt {
+.session-metric-switch button {
+  min-height: 32px;
+  padding: 0 11px;
   border: 0;
-  background: none;
-  width: auto;
-  color: var(--warn);
-  font: 700 10px/1 var(--font-mono);
-  font-style: normal;
-}
-
-/* Laptop heights: the same instrument, one size down. */
-@media (max-height: 900px) {
-  .session-almanac-visual {
-    padding: 8px 12px;
-    row-gap: 8px;
-  }
-
-  .almanac-pane-head {
-    min-height: 32px;
-  }
-
-  .almanac-pane-title h4 {
-    font-size: 13px;
-  }
-
-  .almanac-pane-basis {
-    display: none;
-  }
-
-  .session-almanac-matrix {
-    grid-template-rows: 18px repeat(var(--alm-rows, 5), minmax(38px, 1fr)) 28px;
-    gap: 4px;
-  }
-
-  .almanac-cell {
-    padding: 5px 7px;
-    gap: 2px;
-  }
-
-  .almanac-cell > strong {
-    font-size: 14px;
-  }
-
-  .almanac-cell > span {
-    font-size: 9.5px;
-  }
-
-  .almanac-margin {
-    gap: 3px;
-    padding-block: 4px;
-  }
-
-  .almanac-margin-top strong {
-    font-size: 13px;
-  }
-
-  .almanac-margin-tag,
-  .almanac-margin-say {
-    display: none;
-  }
-
-  .almanac-legend {
-    min-height: 26px;
-    padding-top: 6px;
-    gap: 12px;
-    font-size: 9.5px;
-  }
-}
-
-/* Phone: the 11px microtype floor wins over every density tier above. */
-@media (max-width: 720px) {
-  .almanac-cell > span,
-  .almanac-col-label,
-  .almanac-row-label,
-  .almanac-col-chip,
-  .almanac-margin-top em,
-  .almanac-margin-tag,
-  .almanac-margin-say,
-  .almanac-foot small,
-  .almanac-tilt,
-  .almanac-legend,
-  .almanac-sw.is-tilt,
-  .almanac-pane-basis,
-  .almanac-pane-edge {
-    font-size: 11px;
-  }
-}
-
-/* ── One-surface layout: matrix left, engine and radar right ─────────────── */
-.session-now-strip {
-  display: flex;
-  grid-column: 2;
-  justify-content: flex-end;
-  justify-self: end;
-}
-
-.session-now-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 10px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: var(--surface-1);
+  border-radius: var(--radius-pill);
+  background: transparent;
   color: var(--text-soft);
-  font: 600 11px/1.15 var(--font-mono);
-  letter-spacing: 0.06em;
-  font-variant-numeric: tabular-nums;
+  font: 650 11px/1 var(--font-ui);
+  cursor: pointer;
 }
 
-.session-now-chip::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--text-faint);
-  flex: none;
+.session-metric-switch button:hover {
+  color: var(--text);
 }
 
-.session-now-chip.is-positive {
-  border-color: var(--pnl-pos-line);
-  color: var(--pnl-pos);
+.session-metric-switch button.is-active,
+.session-metric-switch button[aria-pressed="true"] {
+  background: var(--surface-3);
+  color: var(--text);
 }
 
-.session-now-chip.is-positive::before {
+.session-metric-switch button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.session-hour-viewport {
+  min-width: 0;
+  overflow: hidden;
+  border-block: 1px solid var(--line);
+}
+
+.session-hour-rail {
+  display: grid;
+  grid-template-columns: repeat(24, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.session-hour-cell {
+  display: grid;
+  grid-template-rows: minmax(102px, 1fr) auto auto;
+  gap: 5px;
+  min-width: 0;
+  min-height: 170px;
+  padding: 10px 2px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: center;
+}
+
+button.session-hour-cell {
+  width: 100%;
+  cursor: pointer;
+}
+
+.session-hour-cell:last-child {
+  border-right: 0;
+}
+
+.session-hour-cell:hover,
+.session-hour-cell[aria-selected="true"] {
+  background: var(--surface-2);
+}
+
+.session-hour-cell:focus-visible {
+  z-index: 1;
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.session-hour-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 102px;
+  padding: 3px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.session-hour-fill {
+  display: block;
+  width: min(70%, 14px);
+  min-height: 2px;
+  height: calc(var(--session-hour-size, 0) * 100%);
+  border-radius: 3px 3px 0 0;
+  background: var(--line-strong);
+}
+
+.session-hour-cell.is-positive .session-hour-fill,
+.session-hour-cell.is-profitable .session-hour-fill {
   background: var(--pnl-pos);
-  box-shadow: 0 0 8px var(--chart-pos-glow);
 }
 
-.session-now-chip.is-negative {
-  border-color: var(--pnl-neg-line);
-  color: var(--pnl-neg);
-}
-
-.session-now-chip.is-negative::before {
+.session-hour-cell.is-negative .session-hour-fill,
+.session-hour-cell.is-losing .session-hour-fill {
   background: var(--pnl-neg);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .session-now-chip.is-positive::before,
-  .session-now-chip.is-negative::before {
-    animation: almanacNowPulse 2.2s ease-in-out infinite;
-  }
-}
-
-.session-almanac-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
-  align-items: stretch;
-}
-
-@media (min-width: 1240px) {
-  .session-almanac-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
-  }
-}
-
-.session-almanac-side {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-width: 0;
-}
-
-.session-side-pane {
-  background: var(--surface-1);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 14px 16px;
-  display: grid;
-  gap: 12px;
-  align-content: start;
-}
-
-.session-cf-pane {
-  border-color: var(--line-accent);
-}
-
-.session-side-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.session-side-head p {
-  margin: 0 0 2px;
-  color: var(--text-soft);
-  font: 700 10px/1 var(--font-mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.session-side-head h4 {
-  margin: 0;
-  color: var(--text);
-  font: 600 14px/1.3 var(--font-ui);
-}
-
-.session-cf-gapchip {
-  color: var(--text-faint);
-  font: 600 11px/1 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.session-cf-gapchip strong {
-  color: var(--pnl-pos);
-  font: 700 13px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.session-cf-gapchip strong.is-negative {
-  color: var(--pnl-neg);
-}
-
-.session-cf-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
-}
-
-.session-cf-stat {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 7px;
-  color: var(--text-soft);
-  font: 500 11px/1.4 var(--font-ui);
-}
-
-.session-cf-stat strong {
-  font: 700 13px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
-}
-
-.session-cf-stat.is-ghost-stat strong {
-  color: var(--pnl-pos);
-}
-
-.session-cf-stat small {
-  color: var(--text-faint);
-  font: 500 10.5px/1.4 var(--font-ui);
-}
-
-.session-cf-stat strong.is-negative {
-  color: var(--pnl-neg);
-}
-
-.session-side-note {
-  margin: 0;
-  color: var(--text-faint);
-  font: 500 11px/1.5 var(--font-ui);
-}
-
-.session-tilt-mark-note {
-  color: var(--text-faint);
-  font: 600 9.5px/1 var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.session-tilt-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
-  gap: 8px;
-}
-
-.session-tilt-tile {
-  background: var(--surface-inset);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 9px 11px;
-  display: grid;
-  gap: 5px;
-}
-
-.session-tilt-tile > span {
-  color: var(--text-soft);
-  font: 600 9.5px/1.25 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.session-tilt-tile strong {
-  color: var(--text);
-  font: 700 17px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.session-tilt-tile strong.is-warn {
-  color: var(--warn);
-}
-
-.session-tilt-tile strong.is-positive {
-  color: var(--pnl-pos);
-}
-
-.session-tilt-tile strong.is-negative {
-  color: var(--pnl-neg);
-}
-
-/* The decode line and its counted facts, side by side. */
-.session-tilt-read {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-}
-
-.session-tilt-facts {
-  flex: none;
-  display: grid;
-  gap: 2px;
-  margin: 0;
-  min-width: 0;
-}
-
-.session-tilt-facts > div {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.session-tilt-facts dt {
-  color: var(--text-faint);
-  font: 500 9.5px/1.3 var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.session-tilt-facts dd {
-  margin: 0;
-  color: var(--text-soft);
-  font: 700 9.5px/1.3 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-/* The status bar: provenance and the clock, once, at the foot. */
-.session-status-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 6px 4px 0;
-  border-top: 1px solid var(--line);
-  color: var(--text-faint);
-  font: 500 10px/1.2 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-}
-
-.session-status-left,
-.session-status-right {
+.session-hour-label,
+.session-hour-time {
   overflow: hidden;
-  min-width: 0;
+  color: var(--text-soft);
+  font: 700 11px/1 var(--font-mono);
+  text-overflow: ellipsis;
+}
+
+.session-hour-value,
+.session-hour-pnl {
+  overflow: hidden;
+  color: var(--text);
+  font: 700 11px/1 var(--font-mono);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.session-status-right {
-  color: var(--text-soft);
-  text-align: right;
-}
-
-.session-tilt-decode {
-  margin: 0;
-  padding-left: 10px;
-  border-left: 2px solid var(--warn);
-  color: var(--text);
-  font: 500 12px/1.5 var(--font-ui);
-}
-
-.session-almanac-edgeline {
-  margin: 0;
-  color: var(--text-soft);
-  font: 600 10.5px/1.5 var(--font-mono);
-  letter-spacing: 0.05em;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.session-almanac-legendrow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-/* The margin panes: the almanac keeps the ledgers in its margins. */
-
-/* ── The counterfactual engine ───────────────────────────────────────────── */
-.session-cf-chart {
-  background: var(--surface-inset);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px;
-}
-
-.session-cf-chart svg {
-  display: block;
-  width: 100%;
-  height: 240px;
-}
-
-.session-cf-chart .session-empty-copy {
-  min-height: 170px;
-  display: grid;
-  place-items: center;
-}
-
-.session-cf-line {
-  fill: none;
-  stroke-width: 2;
-  vector-effect: non-scaling-stroke;
-}
-
-.session-cf-line.is-real {
-  stroke: var(--chart-axis);
-}
-
-.session-cf-line.is-ghost {
-  stroke: var(--pnl-pos);
-}
-
-.session-cf-gap-fill {
-  fill: var(--pnl-pos-soft);
-  stroke: none;
-}
-
-/* When any stretch of the hypothetical line dips below the real one, the
-   ribbon stops claiming a color it cannot prove pointwise. */
-.session-cf-gap-fill.is-mixed {
-  fill: var(--chart-track);
-}
-
-.session-cf-zero {
-  stroke: var(--chart-grid);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-}
-
-.session-cf-grid {
-  stroke: var(--chart-grid);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-}
-
-.session-cf-tick,
-.session-cf-xlabel {
-  fill: var(--text-faint);
-  font: 500 9px var(--font-mono);
-  letter-spacing: 0.06em;
-}
-
-.session-cf-xlabel.is-end {
-  text-anchor: end;
-}
-
-/* Where the two lines part company. */
-.session-cf-skip {
-  stroke: var(--warn);
-  stroke-width: 1;
-  stroke-dasharray: 3 4;
-  vector-effect: non-scaling-stroke;
-}
-
-.session-cf-skiplabel {
-  fill: var(--warn);
-  font: 600 8.5px var(--font-mono);
-  letter-spacing: 0.08em;
-}
-
-.session-cf-endlabel {
-  text-anchor: end;
-  font: 700 10px var(--font-mono);
-}
-
-.session-cf-endlabel.is-real {
-  fill: var(--text);
-}
-
-.session-cf-endlabel.is-ghost {
-  fill: var(--pnl-pos);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .session-cf-line {
-    stroke-dasharray: 1;
-    stroke-dashoffset: 1;
-    animation: sessionCfDraw 1.1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-
-  .session-cf-line.is-ghost {
-    animation-delay: 0.45s;
-  }
-
-  .session-cf-gap-fill {
-    opacity: 0;
-    animation: sessionCfFade 0.7s ease 1.5s forwards;
-  }
-}
-
-@keyframes sessionCfDraw {
-  to { stroke-dashoffset: 0; }
-}
-
-@keyframes sessionCfFade {
-  to { opacity: 1; }
-}
-
-.session-cf-legend .is-real::before {
-  background: var(--chart-axis);
-}
-
-.session-cf-legend .is-ghost::before {
-  background: var(--pnl-pos);
-}
-
-.session-cf-ledger {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.session-cf-ledger:empty {
+.session-hour-count,
+.session-hour-meta {
   display: none;
 }
 
-.session-cf-chip {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  padding: 5px 9px;
-  border: 1px solid var(--pnl-neg-line);
-  border-radius: 7px;
-  background: var(--pnl-neg-soft);
-  color: var(--pnl-neg);
-  font: 600 10.5px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
+.session-hour-cell.is-empty {
+  opacity: 0.48;
 }
 
-.session-cf-chip strong {
-  color: var(--text);
-  font-weight: 700;
-}
-
-/* ── The tilt radar ──────────────────────────────────────────────────────── */
-
-/* ══ THE BOTTOM STRIP ═══════════════════════════════════════════════════════
-   Four ledgers on one skeleton: a hairline head, a body that owns any
-   overflow, a hairline foot. The HEIGHT is set once on the container, so no
-   pane can push the page into a scrollbar no matter what the data does. */
-.session-strip {
+.session-hour-empty {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 12px;
-  align-items: stretch;
-  min-width: 0;
-}
-
-.strip-pane {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 8px;
-  min-width: 0;
-  min-height: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface-1);
-}
-
-.strip-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--line);
-}
-
-.strip-title {
+  place-items: center;
+  min-height: 170px;
   margin: 0;
-  color: var(--text);
-  font: 700 11px/1 var(--font-mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.strip-caps {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  min-width: 0;
-}
-
-.strip-cap {
-  overflow: hidden;
-  color: var(--text-soft);
-  font: 600 10px/1.2 var(--font-mono);
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* The body is the ONLY scroll surface in this region. */
-.strip-body {
-  display: grid;
-  align-content: start;
-  gap: 8px;
-  min-width: 0;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  scrollbar-width: thin;
-}
-
-.strip-foot {
-  margin: 0;
-  padding-top: 6px;
-  border-top: 1px solid var(--line);
+  padding: 30px 16px;
   color: var(--text-faint);
-  font: 600 9.5px/1.3 var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font: 500 12px/1.5 var(--font-ui);
+  text-align: center;
 }
 
-.strip-empty {
-  margin: 0;
-  align-self: center;
-  color: var(--text-faint);
-  font: 500 11px/1.45 var(--font-ui);
-}
-
-/* Below a sample floor a figure is not printed small, it is not printed. */
-.strip-withheld {
-  color: var(--text-faint);
-  font: 600 10px/1 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-/* ── Hold time ───────────────────────────────────────────────────────────── */
-.hold-medians {
-  display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
-  align-items: end;
-  gap: 0 16px;
-}
-
-.hold-med {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-.hold-med-end {
-  justify-items: end;
-  text-align: right;
-}
-
-.hold-med strong {
-  color: var(--text);
-  font: 700 22px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.hold-med strong.is-positive { color: var(--pnl-pos); }
-.hold-med strong.is-negative { color: var(--pnl-neg); }
-
-.hold-med span {
-  color: var(--text-soft);
-  font: 600 9.5px/1.2 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.hold-bands {
-  display: grid;
-  align-content: start;
-  gap: 3px;
-  min-width: 0;
-}
-
-.hold-band {
-  display: grid;
-  grid-template-columns: minmax(0, 92px) minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  min-height: 22px;
-  min-width: 0;
-  padding: 2px 4px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-}
-
-.hold-band.is-best {
-  border-color: var(--pnl-pos-line);
-  background: var(--pnl-pos-soft);
-}
-
-.hold-band-label {
-  overflow: hidden;
-  color: var(--text-soft);
-  font: 600 10px/1.2 var(--font-mono);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hold-band.is-best .hold-band-label { color: var(--text); }
-
-.hold-band-bar {
-  display: block;
-  height: 4px;
-  overflow: hidden;
-  border-radius: var(--radius-pill);
-  background: var(--surface-inset);
-}
-
-.hold-band-bar::before {
-  display: block;
-  width: calc(var(--fill, 0) * 100%);
-  min-width: 2px;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--line-strong);
-  content: "";
-}
-
-.hold-band.is-positive .hold-band-bar::before { background: var(--pnl-pos); }
-.hold-band.is-negative .hold-band-bar::before { background: var(--pnl-neg); }
-
-.hold-band-val {
-  color: var(--text);
-  font: 700 11.5px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  white-space: nowrap;
-}
-
-.hold-band.is-positive .hold-band-val { color: var(--pnl-pos); }
-.hold-band.is-negative .hold-band-val { color: var(--pnl-neg); }
-
-/* ── Sessions ledger ─────────────────────────────────────────────────────── */
-.session-ledger {
-  display: grid;
-  align-content: start;
-  gap: 8px;
-  min-width: 0;
-}
-
-.ledger-row {
-  display: grid;
-  grid-template-columns: minmax(0, 66px) minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  min-height: 26px;
-  min-width: 0;
-}
-
-.ledger-name {
-  overflow: hidden;
-  color: var(--text-soft);
-  font: 600 10px/1.2 var(--font-mono);
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ledger-bar {
-  display: block;
-  height: 6px;
-  overflow: hidden;
-  border-radius: var(--radius-pill);
-  background: var(--surface-inset);
-}
-
-.ledger-bar::before {
-  display: block;
-  width: calc(var(--fill, 0) * 100%);
-  min-width: 2px;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--line-strong);
-  content: "";
-}
-
-.ledger-row.is-positive .ledger-bar::before { background: var(--pnl-pos); }
-.ledger-row.is-negative .ledger-bar::before { background: var(--pnl-neg); }
-
-.ledger-val {
-  min-width: 68px;
-  color: var(--text);
-  font: 700 12.5px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  white-space: nowrap;
-}
-
-.ledger-row.is-positive .ledger-val { color: var(--pnl-pos); }
-.ledger-row.is-negative .ledger-val { color: var(--pnl-neg); }
-
-/* ── Who closed it ───────────────────────────────────────────────────────── */
-.exit-bar {
-  display: flex;
-  height: 12px;
-  overflow: hidden;
-  border-radius: var(--radius-pill);
-  background: var(--surface-inset);
-}
-
-.exit-seg {
-  min-width: 2px;
-  height: 100%;
-}
-
-.exit-seg.is-target { background: var(--pnl-pos); }
-.exit-seg.is-manual { background: var(--warn); }
-.exit-seg.is-stop   { background: var(--pnl-neg); }
-.exit-seg.is-mixed  { background: var(--line-strong); }
-
-.exit-shares {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-}
-
-.exit-share {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-.exit-share strong {
-  color: var(--text);
-  font: 700 15px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.exit-share.is-target strong { color: var(--pnl-pos); }
-.exit-share.is-manual strong { color: var(--warn); }
-.exit-share.is-stop   strong { color: var(--pnl-neg); }
-.exit-share.is-mixed  strong { color: var(--text-soft); }
-
-.exit-share span {
-  overflow: hidden;
-  color: var(--text-soft);
-  font: 600 9.5px/1.2 var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.exit-cost {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-width: 0;
-  padding: 7px 9px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-inset);
-}
-
-.exit-cost-label {
-  color: var(--text-soft);
-  font: 600 9.5px/1.25 var(--font-mono);
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-.exit-cost-value {
-  color: var(--text);
-  font: 700 15px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.exit-cost-value.is-positive { color: var(--pnl-pos); }
-.exit-cost-value.is-negative { color: var(--pnl-neg); }
-
-/* ── Journal coverage ────────────────────────────────────────────────────── */
-.cov-figures {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  margin: 0;
-  min-width: 0;
-}
-
-.cov-figures strong {
-  color: var(--text);
-  font: 700 26px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.cov-of {
-  color: var(--text-faint);
-  font: 600 15px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.cov-pct {
-  margin-left: auto;
-  color: var(--text-soft);
-  font: 700 15px/1 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.cov-pct.is-positive { color: var(--pnl-pos); }
-.cov-pct.is-warn     { color: var(--warn); }
-
-.cov-streak { color: var(--accent); }
-
-.cov-flag {
-  padding: 1px 5px;
-  border: 1px solid var(--warn);
-  border-radius: 4px;
-  color: var(--warn);
-  font-size: 9px;
-  line-height: 1.4;
-  letter-spacing: 0.07em;
-}
-
-.cov-bar {
-  height: 8px;
-  overflow: hidden;
-  border-radius: var(--radius-pill);
-  background: var(--surface-inset);
-}
-
-.cov-bar > span {
-  display: block;
-  width: 0;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
-}
-
-.cov-rows {
-  display: grid;
-  gap: 4px;
-  margin: 0;
-  min-width: 0;
-}
-
-.cov-rows > div {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-  padding-bottom: 3px;
-  border-bottom: 1px solid var(--line);
-}
-
-.cov-rows > div:last-child { border-bottom: 0; }
-
-.cov-rows dt {
-  color: var(--text-soft);
-  font: 600 9.5px/1.3 var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.cov-rows dd {
-  overflow: hidden;
-  margin: 0;
-  color: var(--text);
-  font: 700 10.5px/1.3 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-
-/* Laptop: 1440x800 leaves about 710px of viewport after chrome. The strip
-   gives back 40px and steps its three display figures down; only the hold
-   band well loses rows, and it scrolls. */
-@media (min-width: 1240px) and (max-height: 900px) {
-  #session-intelligence .session-strip { height: 202px; }
-  #session-intelligence .hold-band { min-height: 16px; }
-  #session-intelligence .hold-med strong { line-height: 1; }
-  #session-intelligence .strip-foot { font-size: 9px; }
-  /* The status bar and the chart both give back pixels before anything
-     inside the matrix has to shrink. */
-  #session-intelligence .session-status-bar { padding-top: 4px; font-size: 9.5px; }
-  #session-intelligence .session-cf-chart { min-height: 68px; }
-  #session-intelligence .session-cf-ledger { gap: 4px; }
-  #session-intelligence .session-cf-chip { padding: 3px 7px; }
-  #session-intelligence .hold-med strong { font-size: 19px; }
-  #session-intelligence .cov-figures strong { font-size: 21px; }
-  #session-intelligence .exit-share strong { font-size: 13px; }
-  #session-intelligence .session-ledger { gap: 2px; }
-  #session-intelligence .ledger-row { min-height: 22px; }
-
-  /* Every duration band the account actually traded has to fit: hiding a
-     band would be data hiding, so the rows get tighter instead. */
-  #session-intelligence .hold-bands { gap: 1px; }
-  #session-intelligence .hold-band { min-height: 18px; padding-block: 0; }
-  #session-intelligence .hold-medians { padding-bottom: 2px; }
-  #session-intelligence .cov-rows { gap: 1px; }
-  #session-intelligence .strip-pane { gap: 6px; padding-block: 8px; }
-}
-
-/* Microtype floor. Nothing under 11px once the strip stacks. */
-@media (max-width: 640px) {.strip-cap,
-.strip-foot,
-.strip-withheld,
-.hold-med span,
-.hold-band-label,
-.hold-band-val,
-.ledger-name,
-.exit-share span,
-.exit-cost-label,
-.cov-flag,
-.cov-rows dt,
-.cov-rows dd {
-    font-size: 11px;
-  }
-
-  .hold-band {
-    grid-template-columns: minmax(0, 1fr) auto;
-    row-gap: 4px;
-  }
-
-  .hold-band-bar { grid-column: 1 / -1; }
-
-  .exit-shares { flex-wrap: wrap; }
-}
-
-/* One details panel at a time, opened only after an almanac cell is selected. */
+/* One details panel at a time, opened only after an hour is selected. */
 .session-trade-drawer {
   position: fixed;
   top: 0;
@@ -4035,6 +2490,86 @@ button.almanac-cell:focus-visible {
   background: var(--pnl-pos);
 }
 
+.session-journal-queue {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 1.45fr);
+  grid-template-areas:
+    "queue-head queue-list"
+    "queue-lede queue-list"
+    "queue-action queue-list"
+    "queue-foot queue-rule";
+  align-items: start;
+  gap: 12px 34px;
+  margin-top: 30px;
+  padding: 28px 0 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.session-journal-queue .dash-board-head {
+  grid-area: queue-head;
+  align-items: flex-start;
+  margin: 0;
+}
+
+.session-journal-queue .dash-board-head h3 {
+  margin-top: 6px;
+  font-size: 18px;
+}
+
+.session-journal-queue .dash-unj-count {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.session-journal-queue .dash-unj-lede {
+  grid-area: queue-lede;
+  max-width: 45ch;
+}
+
+.session-journal-queue .dash-unj-list {
+  grid-area: queue-list;
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+
+.session-journal-queue .dash-unj-row {
+  min-height: 50px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.session-journal-queue .dash-unj-row:hover {
+  background: transparent;
+  color: var(--accent);
+}
+
+.session-journal-queue .dash-unj-cta:not([hidden]) {
+  grid-area: queue-action;
+  display: flex;
+  max-width: 240px;
+  margin-top: 4px;
+}
+
+.session-journal-queue .dash-unj-foot {
+  grid-area: queue-foot;
+  margin: 8px 0 0;
+  padding-top: 18px;
+}
+
+.session-journal-queue .dash-unj-rule {
+  grid-area: queue-rule;
+  align-self: end;
+  margin: 0;
+  color: var(--text-faint);
+  font: 500 11px/1.45 var(--font-ui);
+}
+
 .session-queue-kicker {
   margin-bottom: 0;
 }
@@ -4116,6 +2651,33 @@ button.almanac-cell:focus-visible {
     grid-column: 1 / -1;
   }
 
+  .session-context {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .session-context > * {
+    border-top: 1px solid var(--line);
+  }
+
+  .session-context > :nth-child(-n + 2) {
+    border-top: 0;
+  }
+
+  .session-context > :nth-child(even) {
+    border-right: 0;
+  }
+
+  .session-context > :nth-child(3),
+  .session-context > :nth-child(4),
+  .session-context > :nth-child(5) {
+    grid-column: auto;
+  }
+
+  .session-context > :nth-child(5) {
+    grid-column: 1 / -1;
+    border-right: 0;
+  }
+
   .session-score-row,
   .session-duration-band {
     grid-template-columns: minmax(135px, 0.75fr) minmax(160px, 1.4fr);
@@ -4132,12 +2694,63 @@ button.almanac-cell:focus-visible {
       "duration-head duration-meta"
       "duration-track duration-track";
   }
+
+  .session-journal-queue {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "queue-head"
+      "queue-lede"
+      "queue-action"
+      "queue-list"
+      "queue-foot"
+      "queue-rule";
+  }
 }
 
 
 @media (max-width: 720px) {
   .session-page-head {
     padding-inline: 0;
+  }
+
+  .session-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-top: 1px solid var(--line);
+  }
+
+  .session-tab:nth-child(2) {
+    border-right: 0;
+  }
+
+  .session-tab:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
+
+  .session-tab.is-active::after,
+  .session-tab[aria-selected="true"]::after {
+    right: 10px;
+    left: 10px;
+  }
+
+  .session-panel {
+    padding: 24px 18px 30px;
+  }
+
+  .session-primary-metric {
+    min-height: 92px;
+    padding-inline: 10px;
+  }
+
+  .session-primary-metric:first-child {
+    padding-left: 0;
+  }
+
+  .session-primary-metric strong {
+    font-size: clamp(19px, 6vw, 26px);
+  }
+
+  .session-primary-metric small {
+    white-space: normal;
   }
 
   .session-visual-head {
@@ -4168,37 +2781,30 @@ button.almanac-cell:focus-visible {
     border-bottom: 0;
   }
 
-  /* The matrix keeps its instrument density inside its own scroller, but
-     every label steps up to the 11px phone floor. */.almanac-col-label,
-.almanac-row-label,
-.almanac-cell > span,
-.almanac-wh,
-.almanac-tilt,
-.almanac-net span,
-.almanac-foot small,
-.session-cf-chip {
-    font-size: 11px;
+  .session-hour-rail {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
   }
 
-  .almanac-cell {
-    min-height: 58px;
+  .session-hour-cell {
+    min-height: 132px;
+    padding-block: 7px;
+    border-bottom: 1px solid var(--line);
   }
 
-  .almanac-cell > strong {
-    font-size: 14px;
+  .session-hour-cell:nth-child(12) {
+    border-right: 0;
   }
 
-  .session-tilt-mark-note,
-  .session-tilt-tile > span,
-  .session-almanac-edgeline,
-  .session-side-head p,
-  .almanac-col-chip,
-  .session-cf-stat small {
-    font-size: 11px;
+  .session-hour-cell:nth-child(n + 13) {
+    border-bottom: 0;
   }
 
-  .session-almanac-edgeline {
-    text-align: left;
+  .session-hour-bar {
+    min-height: 72px;
+  }
+
+  .session-hour-value {
+    display: none;
   }
 
   .session-score-row,
@@ -4223,11 +2829,49 @@ button.almanac-cell:focus-visible {
 
 
 @media (max-width: 520px) {
+  .session-context {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .session-context > *,
+  .session-context > :nth-child(-n + 2),
+  .session-context > :nth-child(even),
+  .session-context > :nth-child(5) {
+    grid-column: auto;
+    border-top: 1px solid var(--line);
+    border-right: 0;
+  }
+
+  .session-context > :first-child {
+    border-top: 0;
+  }
 
   .session-context-field,
   .session-context-readout {
     min-height: 56px;
     padding-inline: 10px;
+  }
+
+  .session-primary-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .session-primary-metrics-two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .session-primary-metric {
+    min-height: 86px;
+    padding: 14px 7px;
+  }
+
+  .session-primary-metric > span {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+  }
+
+  .session-primary-metric strong {
+    font-size: clamp(17px, 5.4vw, 22px);
   }
 
   .session-score-row,
@@ -4264,10 +2908,26 @@ button.almanac-cell:focus-visible {
     min-width: 0;
     padding-inline: 5px;
   }
+
+  .session-journal-queue .dash-board-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .session-journal-queue .dash-unj-list {
+    display: none;
+  }
+
+  .session-journal-queue .dash-unj-cta:not([hidden]) {
+    max-width: none;
+  }
 }
 
 
-@media (prefers-reduced-motion: reduce) {.dash-session-link {
+@media (prefers-reduced-motion: reduce) {
+  .session-tab,
+  .session-hour-cell,
+  .dash-session-link {
     transition: none;
   }
 }
@@ -5098,14 +3758,14 @@ button.almanac-cell:focus-visible {
 
   #dashboard.is-active {
     grid-template-columns: repeat(12, minmax(0, 1fr));
-    /* 1093 view box - 32 padding-block - 48 row gaps = 1013 of track.
-       80 + 140 + 188 + 0.42x605 + 0.58x605 = 408 + 254 + 351 = 1013. */
-    /* FIVE BANDS now. A: the hero, HALVED by order (156 with its eaten gap →
-       76). B: the Session Horizon. C: the AI micro desk. D stays the CHART
-       band and E the LEDGER band at the 0.42/0.58 split that fixed the
-       portrait-bars regression — both simply own less of the screen, which is
-       what the halved hero and the two new instruments paid for. */
-    grid-template-rows: 80px 140px 188px minmax(0, 0.42fr) minmax(0, 0.58fr);
+    /* 1093 view box - 32 padding-block - 36 row gaps = 1025 of track.
+       36 + 108 + 0.51x881 + 0.49x881 = 36 + 108 + 449.3 + 431.7 = 1025. */
+    /* Band D is the CHART band and band E is the LEDGER band, and they do not
+       want the same height. Measured at 0.51/0.49 the Net Daily panel came out
+       309x441 — a portrait box holding a landscape chart, 36% ink. Shortening D
+       and lengthening E fixes the ratio at both ends: the charts stop being
+       stretched and the calendar and trade list get the rows they can fill. */
+    grid-template-rows: 36px 108px minmax(0, 0.42fr) minmax(0, 0.58fr);
     gap: 12px;
     /* padding-inline belongs to .view.is-active:not(#terminal) at (1,2,0),
        which centres on --shell-w. Only the block axis is ours; a padding
@@ -5136,8 +3796,6 @@ button.almanac-cell:focus-visible {
      inside a 384px row and the monitor 925px inside 451px. A grid item can
      only shrink if everything it contains can. */
   #dashboard.is-active .panel-grid-analytics > *,
-  #dashboard.is-active .dash-sessions > *,
-  #dashboard.is-active .dash-aidesk > *,
   #dashboard.is-active .dash-edge-mini > *,
   #dashboard.is-active .dash-board-slot > *,
   #dashboard.is-active #dashPlaybook > * { min-height: 0; min-width: 0; }
@@ -5334,51 +3992,20 @@ button.almanac-cell:focus-visible {
   #dashboard.is-active .panel-head { margin: 0; }
   #dashboard.is-active .mini-cal-footrow .month-card-mark { display: none; }
 
-  /* Type ramp: 30 / 20 / 16 / 12 / 11 — the 44-band ramp, restepped for a hero
-     HALF the height. The ranks survive; only the steps shrink. */
+  /* Type ramp: 44 / 28 / 20 / 13 / 11. It was 26/22/22/20 — a four-point band
+     holding nine unequal figures, which is a tie, not a rank. */
   #dashboard.is-active [data-metric="totalPnl"] {
-    font: 700 30px/32px var(--font-mono);
+    font: 700 44px/48px var(--font-mono);
     letter-spacing: -0.03em;
     margin: 0;
   }
   #dashboard.is-active [data-metric="accountBalance"] {
-    font: 600 12px/14px var(--font-mono);
+    font: 600 13px/16px var(--font-mono);
     color: var(--text-faint);
   }
   /* The <p> that wraps the clause carries the base paragraph margin (16px top
      AND bottom), which is what pushed the hero 17px past its 108px track. */
   #dashboard.is-active .dash-hero-equity { margin: 2px 0 0; line-height: 16px; }
-  /* The headline <p> still carried the base paragraph margin (16px top AND
-     bottom) — invisible in the 156px band, a 32px overflow in the halved one.
-     Same class of bug as .dash-hero-equity above, fixed the same way. */
-  #dashboard.is-active .dash-hero-headline { margin: 0; display: flex; align-items: center; gap: 8px; }
-  /* The eye was sized against the 48px headline; against 30px it stretched
-     the line to 42px and clipped the figure. */
-  /* min-height:0 or the base button touch-target floor re-inflates it to 42px
-     and stretches the 32px headline line under it. */
-  #dashboard.is-active .balance-eye { height: 24px; width: 24px; min-height: 0; min-width: 0; padding: 3px; }
-  /* THE OPEN-POSITIONS STRIP CANNOT LIVE IN AN 80px HERO. It only exists while
-     a trade is open, so on the one-glass grid it becomes a floating live
-     ticket pinned bottom-right — DOM identity untouched (renderers query it
-     by id), no grid budget consumed, gone the moment the position closes. */
-  #dashboard.is-active .dash-hero #progressTradeSummary {
-    position: fixed;
-    right: 16px;
-    bottom: 16px;
-    z-index: 40;
-    width: 380px;
-    max-width: 380px;
-    margin: 0;
-    padding: 10px 12px;
-    background: var(--surface-2);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-lg, 10px);
-    box-shadow: var(--clay-float);
-  }
-  /* MANDATORY companion: the rule above out-specifies [hidden]. */
-  #dashboard.is-active .dash-hero #progressTradeSummary[hidden] { display: none; }
-  /* 10px caps on an 11px line clipped every descender ("Today" lost the y). */
-  #dashboard.is-active .dash-now-label { line-height: 14px; }
   #dashboard.is-active .dash-hero-top { margin: 0; }
   #dashboard.is-active #dashEquityTag {
     font: 600 11px/16px var(--font-mono);
@@ -5387,9 +4014,9 @@ button.almanac-cell:focus-visible {
     color: var(--text-faint);
     margin-right: 6px;
   }
-  #dashboard.is-active .dash-now-fig { font: 700 16px/18px var(--font-mono); }
+  #dashboard.is-active .dash-now-fig { font: 700 20px/22px var(--font-mono); }
   #dashboard.is-active #dashHeroToday,
-  #dashboard.is-active #dashNowOpen { font-size: 20px; line-height: 22px; }
+  #dashboard.is-active #dashNowOpen { font-size: 28px; line-height: 30px; }
   #dashboard.is-active .score-item strong { font-size: 20px; }  /* a discipline
                                         score is a behaviour trigger, not a footnote */
   #dashboard.is-active .dash-play-value { font-size: 17px; }    /* a per-setup
@@ -5420,13 +4047,14 @@ button.almanac-cell:focus-visible {
      on this grid, and display:contents on it would delete the surface it sits
      on. Instead the hero spans the full row and becomes the two-track grid;
      .dash-now takes track 2 and lays its own six cells out. */
-  /* BAND A IS ONE SURFACE — and HALF the surface it was. The old band spanned
-     rows 1-2 (36 + 12 + 108 = 156); the order was "reduce the hero by 50%",
-     so it is now ONE 76px row and the head row is gone with it (the greeting
-     lives on the Session Horizon band, written by the same renderGreeting). */
+  /* BAND A IS ONE SURFACE. It SPANS rows 1-2 and eats the 12px gap between them
+     (36 + 12 + 108 = 156). The track set is deliberately NOT merged into a
+     single 156px row: both grid-template-rows strings are asserted by equality
+     in tests/instrumentPanel.check.mjs, and the span is what keeps that
+     arithmetic readable. */
   #dashboard.is-active .dash-hero {
-    grid-area: 1 / 1 / 2 / -1;
-    padding: 8px 16px;
+    grid-area: 1 / 1 / 3 / -1;
+    padding: 12px 16px;
     display: grid;
     grid-template-columns: minmax(260px, 3fr) minmax(0, 9fr) auto;
     grid-auto-rows: min-content;
@@ -5504,7 +4132,6 @@ button.almanac-cell:focus-visible {
   }
   #dashboard.is-active .dash-now-sub { display: block; margin-top: 3px; }
   #dashboard.is-active #dashNowEventSub { font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; }
-  #dashboard.is-active .dash-now-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   /* The hero's long tail. Each keeps rendering into a hidden node, which costs
      nothing; #dashSparkline stays in the DOM so ui.dashSparkline is never null. */
   #dashboard.is-active .dash-hero .dash-spark-wrap,
@@ -5514,34 +4141,6 @@ button.almanac-cell:focus-visible {
   #dashboard.is-active .dash-hero #dashCardDate { display: none; }
   #dashboard.is-active .dash-quad { display: none; }   /* emptied; its four keepers
                                         moved into the stat strip under the curve */
-
-  /* Desktop-only tightening for the two new bands. Every size here is under
-     the 11px phone floor that mobileFloors.check.mjs enforces, so they live
-     here, not in the base rules. */
-  #dashboard.is-active .dsh-title,
-  #dashboard.is-active .dad-title { font-size: 10px; line-height: 14px; }
-  #dashboard.is-active .dsh-clock { font-size: 10px; line-height: 14px; }
-  #dashboard.is-active .dsh-local { font-size: 10px; }
-  #dashboard.is-active .dsh-chip { font-size: 9px; line-height: 12px; }
-  #dashboard.is-active .dsh-count { font-size: 10px; line-height: 12px; }
-  #dashboard.is-active .dad-tag { font-size: 9px; line-height: 14px; }
-  #dashboard.is-active .dad-bias { font-size: 9px; line-height: 12px; }
-  #dashboard.is-active .dad-conf-label { font-size: 9px; line-height: 12px; }
-  #dashboard.is-active .dad-foot span { font-size: 9px; line-height: 12px; }
-
-  /* ── BAND B: SESSION HORIZON ── four venue cards over the 24h rail.
-     The rail is an instrument, not slack: it keeps its 20px and the cards
-     flex. Card padding is cut to what its three rows actually need — at the
-     old 8px it overdrew the track by 12px and the meter row clipped. */
-  #dashboard.is-active .dash-sessions { grid-area: 2 / 1 / 3 / -1; }
-  #dashboard.is-active .dsh-cards { flex: 1 1 auto; min-height: 0; }
-  #dashboard.is-active .dsh-rail { flex: 0 0 20px; }
-  #dashboard.is-active .dsh-card { padding: 5px 10px; gap: 3px; }
-  /* ── BAND C: AI MICRO DESK ── four bias cards. The analysis is the card's
-     major element by explicit order, so it owns a firm 3-line box (45px at
-     11/15) — the 152px track left it a single clipped line. */
-  #dashboard.is-active .dash-aidesk { grid-area: 3 / 1 / 4 / -1; }
-  #dashboard.is-active .dad-analysis { flex: 0 0 auto; height: 45px; -webkit-line-clamp: 3; }
 
   /* ── BAND C: where is my edge ──────────────────────────────────────────
      display:contents places the two chart panels directly on the outer grid,
@@ -5563,10 +4162,10 @@ button.almanac-cell:focus-visible {
      The Edge score and the Net Daily bars keep rendering into hidden nodes, so
      nothing downstream reads a null and both are one `display` away from coming
      back. NOT the rail: that holds the iframe. */
-  #dashboard.is-active .panel-grid-analytics > .panel-span-8 { grid-area: 4 / 1 / 5 / 9; }
+  #dashboard.is-active .panel-grid-analytics > .panel-span-8 { grid-area: 3 / 1 / 4 / 9; }
   #dashboard.is-active .panel-grid-analytics > .panel-span-4,
   #dashboard.is-active #dashEdgeScore { display: none; }
-  #dashboard.is-active #dashLedger { grid-area: 5 / 5 / 6 / 9; }
+  #dashboard.is-active #dashLedger { grid-area: 4 / 4 / 5 / 9; }
 
   /* LOAD BEARING. styles.css `.panel-chart canvas { display: block }` is
      (0,2,0) and BEATS the UA [hidden] rule — verified: hidden === true and
@@ -5580,7 +4179,7 @@ button.almanac-cell:focus-visible {
      null — but they do not take a track. NOT the rail: that holds the iframe. */
   #dashboard.is-active .dash-board-slot,
   #dashboard.is-active #dashPlaybook { display: none; }
-  #dashboard.is-active #propTracker { grid-area: 5 / 1 / 6 / 5; }
+  #dashboard.is-active #propTracker { grid-area: 4 / 1 / 5 / 4; }
   #dashboard.is-active:has(#propTracker:not([hidden])) #dashMiniCal { display: none; }
 
   /* ── THE DESK RAIL: full C+D height, right column ──────────────────────
@@ -5589,7 +4188,7 @@ button.almanac-cell:focus-visible {
      `grid-template-rows: auto minmax(0,1fr)` bounds the .dem-panel track, which
      is what makes the overflow-y:auto below actually bind. */
   #dashboard.is-active .dash-edge-mini {
-    grid-area: 4 / 9 / 6 / -1;   /* 4 columns: twice the 2-column slot it had */
+    grid-area: 3 / 9 / 5 / -1;   /* 4 columns: twice the 2-column slot it had */
     grid-template-rows: auto minmax(0, 1fr);
     position: static;            /* kills sticky, grid-row 1/30 and the bleed */
     margin: 0;
@@ -5611,7 +4210,7 @@ button.almanac-cell:focus-visible {
      they live here rather than in the base rules. */
   #dashboard.is-active .mini-cal-weekdays span { font-size: 10px; }
   #dashboard.is-active .mini-cal-day .mc-n { display: block; font: 500 9px/1 var(--font-mono); }
-  #dashboard.is-active #dashMiniCal { grid-area: 5 / 1 / 6 / 5; }
+  #dashboard.is-active #dashMiniCal { grid-area: 4 / 1 / 5 / 4; }
 
   /* ── THE BOARD CLOSES WHEN A PANEL IS OFF ──────────────────────────────
      .dash-edge-mini ships `hidden` and renderPlaybook toggles
@@ -5695,316 +4294,38 @@ button.almanac-cell:focus-visible {
 }
 
 /* ── SHORT SCREENS ───────────────────────────────────────────────────────
-   The fr rows absorb any height; the 332px of FIXED rows do not. At 1440x900
-   the budget is 843 - 32 padding - 48 gaps = 763 of track, and
-   64 + 132 + 136 + 0.48x431 + 0.52x431 = 763. Everything below is the type
-   ramp stepping down with it — same ranks, smaller steps. */
+   The fr rows absorb any height; the 144px of FIXED rows do not. At 1440x900
+   the budget is 843 - 32 padding - 36 gaps = 775 of track, and
+   32 + 88 + 0.48x655 + 0.52x655 = 775. Everything below is the type ramp
+   stepping down with it — same ranks, smaller steps. */
 @media (min-width: 1240px) and (max-height: 960px) {
-  #dashboard.is-active { grid-template-rows: 64px 132px 136px minmax(0, 0.48fr) minmax(0, 0.52fr); }
+  #dashboard.is-active { grid-template-rows: 32px 88px minmax(0, 0.48fr) minmax(0, 0.52fr); }
   #dashboard.is-active .dash-hero {
-    padding: 4px 14px;
-    grid-template-columns: minmax(240px, 3fr) minmax(0, 9fr) auto;
+    padding: 10px 16px;
+    grid-template-columns: minmax(240px, 3fr) minmax(0, 9fr);
   }
-  /* 13px of label over a 28px figure over a 15px clause is 58 in a 56px
-     content box; the label gives its 2px, not the figure. */
-  #dashboard.is-active .dash-hero-top .metric-label { font-size: 9px; line-height: 11px; }
-  /* "GREEN STREAK" wraps to two lines in a 120px cell and the tallest now-cell
-     hits 60 in a 56px box. One line at 9px fits every label with room. */
-  #dashboard.is-active .dash-now-label { font-size: 9px; line-height: 11px; white-space: nowrap; }
-  #dashboard.is-active .dash-hero-equity { line-height: 13px; }
-  #dashboard.is-active .dsh-chip { padding: 1px 5px; }
-  /* The analysis-less AI card still overdraws its 85px box by 3: the gap and
-     the foot's air give it back. */
-  #dashboard.is-active .dad-card { gap: 5px; }
-  #dashboard.is-active .dad-foot { padding-top: 4px; }
-  /* A 64px hero has no second line to give: the controls STAY in track 3.
-     (Pre-halving they dropped under the figures here; that row is gone.) */
+  /* At 900px tall the third track costs the strip more than the row can spare,
+     so the cluster drops to its own line under the figures. */
   #dashboard.is-active .dash-hero .dash-controls {
-    grid-column: 3;
-    grid-row: 1 / span 9;
-    justify-self: end;
-    padding-left: 12px;
-    border-left: 1px solid var(--line);
-    margin-top: 0;
+    grid-column: 1 / -1;
+    grid-row: 10;
+    justify-self: start;
+    padding-left: 0;
+    border-left: 0;
+    margin-top: 6px;
   }
-  #dashboard.is-active [data-metric="totalPnl"] { font-size: 26px; line-height: 28px; }
-  #dashboard.is-active [data-metric="accountBalance"] { font-size: 11px; line-height: 13px; }
-  #dashboard.is-active .dash-hero-equity { margin-top: 2px; }
+  #dashboard.is-active [data-metric="totalPnl"] { font-size: 34px; line-height: 38px; }
+  #dashboard.is-active [data-metric="accountBalance"] { font-size: 12px; line-height: 14px; }
+  #dashboard.is-active .dash-hero-equity { margin-top: 3px; }
   #dashboard.is-active #dashHeroToday,
-  #dashboard.is-active #dashNowOpen { font-size: 18px; line-height: 20px; }
-  #dashboard.is-active .dash-now-fig { font-size: 14px; line-height: 16px; }
-  /* The two new bands step down with the ramp. The analysis has no 3-line
-     budget at this height; it stands down instead of printing a clipped line. */
-  #dashboard.is-active .dsh-rail { flex-basis: 16px; }
-  /* Lane tops are sized for the 20px rail; on the 16px one the 4th lane sat
-     at 17+3 and clipped. */
-  #dashboard.is-active .dsh-lane:nth-child(1) { top: 1px; }
-  #dashboard.is-active .dsh-lane:nth-child(2) { top: 5px; }
-  #dashboard.is-active .dsh-lane:nth-child(3) { top: 9px; }
-  #dashboard.is-active .dsh-lane:nth-child(4) { top: 13px; }
-  #dashboard.is-active .dad-analysis { display: none; }
+  #dashboard.is-active #dashNowOpen { font-size: 22px; line-height: 24px; }
+  #dashboard.is-active .dash-now-fig { font-size: 17px; line-height: 19px; }
   #dashboard.is-active .eq-footnotes { flex: 0 0 52px; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, 15px); }
   #dashboard.is-active .mini-cal-footrow { display: none; }
   #dashboard.is-active .dem-tv { max-height: 120px; }
 }
 
-/* ==========================================================================
-   SESSION HORIZON + AI MICRO DESK — the C1 bands.
-   Base rules hold at every width (below 1240 they are ordinary stacked
-   panels); the 1240 grid block above only PLACES them. Same card grammar as
-   the rest of the board: surface-1 ground, machined hairlines, clay depth,
-   accent for NOW only, pos/neg for bias only.
-   ========================================================================== */
-.dash-sessions,
-.dash-aidesk {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px 16px;
-  background: var(--surface-1);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--clay-raised);
-  min-height: 0;
-}
-.dsh-head,
-.dad-head {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  min-width: 0;
-}
-.dsh-title,
-.dad-title {
-  font: 600 11px/15px var(--font-mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-faint);
-  white-space: nowrap;
-}
-/* The greeting the desktop board otherwise never shows: renderGreeting writes
-   it here as well as into the hidden .dash-head. */
-.dsh-greeting {
-  font: 600 13px/14px var(--font-ui);
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-.dsh-clock {
-  margin-left: auto;
-  font: 500 11px/15px var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-faint);
-  white-space: nowrap;
-}
-.dsh-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 8px;
-  min-height: 0;
-}
-.dsh-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px 10px;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg, 10px);
-  box-shadow: var(--edge-highlight);
-  min-width: 0;
-}
-.dsh-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-}
-.dsh-city {
-  font: 700 12px/16px var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text);
-}
-.dsh-local {
-  font: 500 11px/16px var(--font-mono);
-  color: var(--text-faint);
-  white-space: nowrap;
-}
-.dsh-chip {
-  font: 700 11px/14px var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 2px 6px;
-  border-radius: 999px;
-  border: 1px solid var(--line-strong);
-  color: var(--text-faint);
-}
-.dsh-card.is-open .dsh-chip { color: var(--pnl-pos); border-color: var(--pnl-pos-line); background: var(--pnl-pos-soft); }
-.dsh-card.is-pre .dsh-chip { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
-.dsh-card.is-open .dsh-city { color: var(--text); }
-.dsh-card.is-closed { opacity: 0.72; }
-.dsh-count {
-  font: 500 11px/13px var(--font-mono);
-  color: var(--text-soft);
-  white-space: nowrap;
-}
-.dsh-meter {
-  display: block;
-  height: 3px;
-  border-radius: 999px;
-  background: var(--chart-track);
-  overflow: hidden;
-}
-.dsh-meter i {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--pnl-pos);
-}
-/* The 24h rail: one lane per venue, arcs in viewer-local time, the NOW cursor
-   in accent — the only accent on the band. */
-.dsh-rail {
-  position: relative;
-  height: 20px;
-  border-radius: 6px;
-  background: var(--surface-inset);
-  box-shadow: var(--clay-pressed);
-  overflow: hidden;
-}
-.dsh-lane {
-  position: absolute;
-  inset-inline: 0;
-  height: 3px;
-}
-.dsh-lane:nth-child(1) { top: 2px; }
-.dsh-lane:nth-child(2) { top: 7px; }
-.dsh-lane:nth-child(3) { top: 12px; }
-.dsh-lane:nth-child(4) { top: 17px; }
-.dsh-arc {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--line-strong);
-}
-.dsh-arc.is-open { background: var(--pnl-pos); }
-.dsh-arc.is-pre { background: var(--warn); }
-.dsh-now {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--halo-accent);
-}
 
-.dad-tag {
-  margin-left: auto;
-  font: 600 11px/15px var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-faint);
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  padding: 1px 8px;
-  white-space: nowrap;
-}
-.dad-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 8px;
-  min-height: 0;
-}
-.dad-card {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 10px 12px;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-left-width: 3px;
-  border-radius: var(--radius-lg, 10px);
-  box-shadow: var(--edge-highlight);
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-}
-.dad-card.is-bullish { border-left-color: var(--pnl-pos); }
-.dad-card.is-bearish { border-left-color: var(--pnl-neg); }
-.dad-top {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  min-width: 0;
-}
-.dad-sym {
-  font: 700 13px/16px var(--font-mono);
-  letter-spacing: 0.04em;
-  color: var(--text);
-}
-.dad-price { font: 500 12px/16px var(--font-mono); color: var(--text-soft); }
-.dad-bias {
-  margin-left: auto;
-  font: 700 11px/14px var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 2px 7px;
-  border-radius: 999px;
-}
-.dad-card.is-bullish .dad-bias { color: var(--pnl-pos); background: var(--pnl-pos-soft); border: 1px solid var(--pnl-pos-line); }
-.dad-card.is-bearish .dad-bias { color: var(--pnl-neg); background: var(--pnl-neg-soft); border: 1px solid var(--pnl-neg-line); }
-.dad-conf {
-  display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-}
-.dad-conf-fig { font: 700 15px/16px var(--font-mono); color: var(--text); }
-.dad-conf-label {
-  font: 600 11px/14px var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-faint);
-}
-.dad-conf-meter {
-  display: block;
-  height: 3px;
-  border-radius: 999px;
-  background: var(--chart-track);
-  overflow: hidden;
-}
-.dad-conf-meter i { display: block; height: 100%; border-radius: 999px; background: var(--text-soft); }
-.dad-analysis {
-  margin: 0;
-  font: 400 11px/15px var(--font-ui);
-  color: var(--text-soft);
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
-  overflow: hidden;
-  min-height: 0;
-}
-.dad-foot {
-  margin-top: auto;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  padding-top: 5px;
-  border-top: 1px solid var(--line);
-}
-.dad-foot span {
-  font: 600 11px/14px var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-faint);
-}
-.dad-foot b { font: 700 11px/12px var(--font-mono); color: var(--text); }
 
 /* The Net Daily panel's figures. One row, label over value, so the space the
    bars do not need carries the numbers they cannot state. */
@@ -6495,19 +4816,3 @@ body.is-pnl-hidden .mini-cal-day .mc-amt::after { align-items: flex-end; }
    switchView, means navigating to Journal or Edge takes the fixed TV and its
    iframe with it. A stream that survives navigation needs #dashboard to stop
    being display:none, which is a shell-wide layout change, not a TV change. */
-
-/* The 11px microtype floor, last word in the file so no later density tier
-   can undercut it on a phone. */
-@media (max-width: 720px) {
-  .session-tilt-facts dt,
-  .session-tilt-facts dd,
-  .session-status-bar,
-  .session-cf-tick,
-  .session-cf-xlabel,
-  .session-cf-skiplabel,
-  .session-cf-endlabel,
-  #session-intelligence .session-status-bar,
-  #session-intelligence .strip-foot {
-    font-size: 11px;
-  }
-}
