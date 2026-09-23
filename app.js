@@ -1616,6 +1616,13 @@ function bindEvents() {
     });
   });
 
+  // Phones: card mode hides thead, so the headers above cannot be tapped.
+  document.getElementById("journalSortPhone")?.addEventListener("change", (event) => {
+    const [key = "", dir = "1"] = event.target.value.split(":");
+    state.journalSort = { key, dir: Number(dir) };
+    renderJournalTable();
+  });
+
   // Score-formula info popover: native <dialog>, Escape closes for free.
   ui.scoreInfoButtons.forEach((button) => {
     button.addEventListener("click", () => {
@@ -15958,6 +15965,13 @@ function renderTerminalClock() {
       "--now",
       ((now.getUTCHours() * 60 + now.getUTCMinutes()) / 1440).toFixed(4)
     );
+  }
+  // THE APPROACH's playhead. approachHead() was written for this tick and never
+  // called, so the marker sat at the axis origin whatever the clock said.
+  const appr = document.getElementById("bbAppr");
+  if (appr && appr.dataset.starts) {
+    const ms = countdown({ startsAt: appr.dataset.starts }, now).ms;
+    appr.style.setProperty("--head", approachHead(ms).toFixed(4));
   }
 }
 

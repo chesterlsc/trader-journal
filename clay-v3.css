@@ -1,3 +1,8 @@
+/* The hidden attribute always wins. Rules like .queue-badge{display:inline-grid}
+   out-rank the UA's [hidden]{display:none}, and one companion per component
+   kept being forgotten. No rule here shows a [hidden] element on purpose. */
+[hidden] { display: none !important; }
+
 /* ==========================================================================
    Trader Journal — CLAY V3: gunmetal + oxide
    Drop-in token layer. Load AFTER clay-v2.css, nothing else changes:
@@ -4826,3 +4831,38 @@ body.is-pnl-hidden .mini-cal-day .mc-amt::after { align-items: flex-end; }
    switchView, means navigating to Journal or Edge takes the fixed TV and its
    iframe with it. A stream that survives navigation needs #dashboard to stop
    being display:none, which is a shell-wide layout change, not a TV change. */
+
+
+/* ==========================================================================
+   Phone repairs, measured at 375x812.
+   ========================================================================== */
+.rev-sort-phone { display: none; }
+@media (max-width: 900px) {
+  .rev-sort-phone { display: inline-flex; }
+
+  /* The dashboard ledger stays a table. The generic card transform turned each
+     trade into six unlabelled slivers 27 to 78px wide beside a blank 96px
+     label track. Four columns fit a phone; reason and source stay on desktop. */
+  .dash-ledger { border-spacing: 0; }
+  .dash-ledger thead { display: table-header-group; }
+  .dash-ledger tbody { display: table-row-group; }
+  .dash-ledger tr,
+  .dash-ledger tbody tr { display: table-row; padding: 0; border: 0; background: none; box-shadow: none; }
+  .dash-ledger td { display: table-cell; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .dash-ledger td::before { content: none; }
+  .dash-ledger th:nth-child(n+5),
+  .dash-ledger td:nth-child(n+5) { display: none; }
+  .dash-ledger th:nth-child(1), .dash-ledger td:nth-child(1) { width: 40%; }
+  .dash-ledger th:nth-child(2), .dash-ledger td:nth-child(2) { width: 22%; }
+  .dash-ledger th:nth-child(3), .dash-ledger td:nth-child(3) { width: 14%; }
+  .dash-ledger th:nth-child(4), .dash-ledger td:nth-child(4) { width: 24%; text-align: right; }
+}
+@media (max-width: 899px) {
+  /* A 114px box pinned the radar to its 46px floor and drew the six labels
+     outside the canvas. 240 is the canvas's own data-height. */
+  #dashboard #traderScoreChart { height: 240px; }
+}
+@media (max-width: 899px), (pointer: coarse) {
+  .session-metric-switch button,
+  .list-clamp-toggle { min-height: 44px; }
+}

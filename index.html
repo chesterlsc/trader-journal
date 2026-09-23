@@ -196,21 +196,21 @@
         #tjv.out svg { transition: none; opacity: 1; transform: none; }
       }
     </style>
-    <link rel="icon" href="favicon.svg?v=20260923-uifix" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260923-uifix" sizes="180x180" />
+    <link rel="icon" href="favicon.svg?v=20260923-uifix2" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260923-uifix2" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260923-uifix" />
+    <link rel="stylesheet" href="styles.css?v=20260923-uifix2" />
     <!-- Clay V2 handoff layer — token retone + ~10 component rules. Must load
          AFTER styles.css; it overrides tokens rather than restructuring. -->
-    <link rel="stylesheet" href="clay-v2.css?v=20260923-uifix" />
+    <link rel="stylesheet" href="clay-v2.css?v=20260923-uifix2" />
     <!-- Clay V3 — gunmetal + oxide token layer. Must load AFTER clay-v2.css;
          dark becomes primary, violet dies, oxide is the only accent. -->
-    <link rel="stylesheet" href="clay-v3.css?v=20260923-uifix" />
+    <link rel="stylesheet" href="clay-v3.css?v=20260923-uifix2" />
   </head>
   <body>
     <div id="tjv" aria-hidden="true">
@@ -2979,6 +2979,17 @@
                 <option value="Perfect Execution">Perfect Execution</option>
               </select>
             </label>
+            <label class="rev-select rev-sort-phone">
+              <span class="visually-hidden">Sort trades</span>
+              <select id="journalSortPhone">
+                <option value="">Newest</option>
+                <option value="date:1">Oldest</option>
+                <option value="netPnl:-1">Best P&amp;L</option>
+                <option value="netPnl:1">Worst P&amp;L</option>
+                <option value="rMultiple:-1">Highest R</option>
+                <option value="asset:1">Symbol A to Z</option>
+              </select>
+            </label>
           </div>
 
           <details class="rev-more">
@@ -4389,6 +4400,6 @@
       <p class="footer-main">&copy; 2026 Trader Journal. All rights reserved.</p>
     </footer>
 
-    <script type="module" src="app.js?v=20260923-uifix"></script>
+    <script type="module" src="app.js?v=20260923-uifix2"></script>
   </body>
 </html>
